@@ -1,4 +1,4 @@
-# Clipper
+# Clipper2
 Polygon Clipping and Offsetting library
 
 A new version of Clipper is about to be released.<br>
