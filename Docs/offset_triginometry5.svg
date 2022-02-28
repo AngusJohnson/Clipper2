@@ -1,0 +1,496 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Created with Inkscape (http://www.inkscape.org/) -->
+
+<svg
+   xmlns:dc="http://purl.org/dc/elements/1.1/"
+   xmlns:cc="http://creativecommons.org/ns#"
+   xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+   xmlns:svg="http://www.w3.org/2000/svg"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   width="800"
+   height="600"
+   viewBox="0 0 211.66666 158.75"
+   version="1.1"
+   id="svg6562"
+   inkscape:version="0.92.1 r15371"
+   sodipodi:docname="offset_triginometry5.svg">
+  <defs
+     id="defs6556">
+    <marker
+       inkscape:stockid="Arrow1Mstart"
+       orient="auto"
+       refY="0"
+       refX="0"
+       id="Arrow1Mstart-4"
+       style="overflow:visible"
+       inkscape:isstock="true">
+      <path
+         inkscape:connector-curvature="0"
+         id="path4603-6"
+         d="M 0,0 5,-5 -12.5,0 5,5 Z"
+         style="fill:#0000ff;fill-opacity:1;fill-rule:evenodd;stroke:#0000ff;stroke-width:1.00000003pt;stroke-opacity:1"
+         transform="matrix(0.4,0,0,0.4,4,0)" />
+    </marker>
+    <marker
+       inkscape:stockid="Arrow1Mend"
+       orient="auto"
+       refY="0"
+       refX="0"
+       id="Arrow1Mend-2"
+       style="overflow:visible"
+       inkscape:isstock="true">
+      <path
+         inkscape:connector-curvature="0"
+         id="path4606-1"
+         d="M 0,0 5,-5 -12.5,0 5,5 Z"
+         style="fill:#0000ff;fill-opacity:1;fill-rule:evenodd;stroke:#0000ff;stroke-width:1.00000003pt;stroke-opacity:1"
+         transform="matrix(-0.4,0,0,-0.4,-4,0)" />
+    </marker>
+    <marker
+       inkscape:stockid="Arrow1Mstart"
+       orient="auto"
+       refY="0"
+       refX="0"
+       id="Arrow1Mstart"
+       style="overflow:visible"
+       inkscape:isstock="true">
+      <path
+         inkscape:connector-curvature="0"
+         id="path4603"
+         d="M 0,0 5,-5 -12.5,0 5,5 Z"
+         style="fill:#0000ff;fill-opacity:1;fill-rule:evenodd;stroke:#0000ff;stroke-width:1.00000003pt;stroke-opacity:1"
+         transform="matrix(0.4,0,0,0.4,4,0)" />
+    </marker>
+    <marker
+       inkscape:stockid="Arrow1Mend"
+       orient="auto"
+       refY="0"
+       refX="0"
+       id="Arrow1Mend"
+       style="overflow:visible"
+       inkscape:isstock="true">
+      <path
+         inkscape:connector-curvature="0"
+         id="path4606"
+         d="M 0,0 5,-5 -12.5,0 5,5 Z"
+         style="fill:#0000ff;fill-opacity:1;fill-rule:evenodd;stroke:#0000ff;stroke-width:1.00000003pt;stroke-opacity:1"
+         transform="matrix(-0.4,0,0,-0.4,-4,0)" />
+    </marker>
+  </defs>
+  <sodipodi:namedview
+     id="base"
+     pagecolor="#ffffff"
+     bordercolor="#666666"
+     borderopacity="1.0"
+     inkscape:pageopacity="0.0"
+     inkscape:pageshadow="2"
+     inkscape:zoom="2.3627644"
+     inkscape:cx="511.124"
+     inkscape:cy="362.55296"
+     inkscape:document-units="mm"
+     inkscape:current-layer="layer1"
+     showgrid="false"
+     units="px" />
+  <metadata
+     id="metadata6559">
+    <rdf:RDF>
+      <cc:Work
+         rdf:about="">
+        <dc:format>image/svg+xml</dc:format>
+        <dc:type
+           rdf:resource="http://purl.org/dc/dcmitype/StillImage" />
+        <dc:title />
+      </cc:Work>
+    </rdf:RDF>
+  </metadata>
+  <g
+     inkscape:label="Layer 1"
+     inkscape:groupmode="layer"
+     id="layer1"
+     transform="translate(0,-138.24998)"
+     style="display:inline">
+    <circle
+       style="opacity:1;fill:#ffff00;fill-opacity:0.28436022;stroke:#000000;stroke-width:0.43834108;stroke-linecap:square;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:0"
+       id="path4565"
+       cx="74.6576"
+       cy="210.62709"
+       r="7.7183294" />
+    <path
+       sodipodi:nodetypes="cccccccc"
+       style="color:#000000;fill:#00ff00;stroke:#000000;stroke-width:0.56567919"
+       d="m 44.688847,229.68555 -0.281846,-18.7941 -2.642759,-0.0543 4.09118,-5.53094 3.857307,5.67707 -2.642751,-0.0543 0.213848,18.87995 z"
+       id="path4815"
+       inkscape:connector-curvature="0" />
+    <text
+       id="text28"
+       x="56.887745"
+       y="178.14311"
+       line-height="125%"
+       font-size="20px"
+       xml:space="preserve"
+       style="color:#000000;font-size:5.29166651px;line-height:125%;font-family:Tahoma;text-indent:0;letter-spacing:0px;word-spacing:0px;text-transform:none;fill:#000000;stroke-width:0.26458332"><tspan
+         style="font-weight:bold;stroke-width:0.26458332"
+         id="tspan26"
+         font-weight="bold"
+         x="56.887745"
+         y="178.14311">ß</tspan></text>
+    <g
+       style="fill:none;stroke:#000000;stroke-width:1.79999995;stroke-dasharray:3.6, 3.6;stroke-opacity:0.32170542"
+       id="g114"
+       transform="matrix(0.26458333,0,0,0.26458333,-2.4847416,155.7626)">
+      <path
+         inkscape:connector-curvature="0"
+         id="path110"
+         d="M 206,78.44 241.1,18.2"
+         style="color:#000000;stroke:#000000;stroke-opacity:0.32170542" />
+      <path
+         inkscape:connector-curvature="0"
+         id="path112"
+         d="m 230.1,122.7 c 14.4,-8.7 24.1,-24.46 24.1,-42.51 0,-18.38 -10.1,-34.42 -24.9,-42.97"
+         style="color:#000000;stroke:#000000;stroke-opacity:0.32170542" />
+    </g>
+    <path
+       inkscape:connector-curvature="0"
+       id="path124"
+       d="m 35.449579,261.38586 16.699227,-31.06744 19.473333,31.72354"
+       style="color:#000000;fill:none;stroke:#0000a1;stroke-width:0.95249999;stroke-opacity:1"
+       sodipodi:nodetypes="ccc" />
+    <text
+       xml:space="preserve"
+       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:5.64444447px;line-height:1.25;font-family:Tahoma;-inkscape-font-specification:Tahoma;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.26458332"
+       x="13.735942"
+       y="151.51094"
+       id="text138"><tspan
+         sodipodi:role="line"
+         id="tspan136"
+         x="13.735942"
+         y="151.51094"
+         style="font-weight:bold;stroke-width:0.26458332">Calculating the coordinates </tspan><tspan
+         sodipodi:role="line"
+         x="13.735942"
+         y="158.5665"
+         style="font-weight:bold;stroke-width:0.26458332"
+         id="tspan4563">of a beveled offset ...</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:3.88055563px;line-height:1.25;font-family:Tahoma;-inkscape-font-specification:Tahoma;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.26458332"
+       x="51.167095"
+       y="236.47958"
+       id="text272"><tspan
+         sodipodi:role="line"
+         id="tspan270"
+         x="51.167095"
+         y="236.47958"
+         style="font-size:3.88055563px;stroke-width:0.26458332">a</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:3.88055563px;line-height:1.25;font-family:Tahoma;-inkscape-font-specification:Tahoma;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.26458332"
+       x="53.054398"
+       y="203.31187"
+       id="text272-5"><tspan
+         sodipodi:role="line"
+         id="tspan270-2"
+         x="53.054398"
+         y="203.31187"
+         style="font-size:3.88055563px;stroke-width:0.26458332">d</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:3.88055563px;line-height:1.25;font-family:Tahoma;-inkscape-font-specification:Tahoma;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.26458332"
+       x="67.416641"
+       y="209.4052"
+       id="text272-8"><tspan
+         sodipodi:role="line"
+         id="tspan270-77"
+         x="67.416641"
+         y="209.4052"
+         style="font-size:3.88055563px;stroke-width:0.26458332">c</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:3.88055563px;line-height:1.25;font-family:Tahoma;-inkscape-font-specification:Tahoma;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.26458332"
+       x="70.402107"
+       y="239.2034"
+       id="text310"><tspan
+         sodipodi:role="line"
+         id="tspan308"
+         x="70.402107"
+         y="239.2034"
+         style="font-weight:bold;font-size:5.64444447px;stroke-width:0.26458332">δ</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:3.88055563px;line-height:1.25;font-family:sans-serif;-inkscape-font-specification:sans-serif;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.26458332"
+       x="102.54327"
+       y="160.36913"
+       id="text347"><tspan
+         sodipodi:role="line"
+         x="102.54327"
+         y="160.36913"
+         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:3.17499995px;font-family:sans-serif;-inkscape-font-specification:'sans-serif, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;text-align:start;writing-mode:lr-tb;text-anchor:start;stroke-width:0.26458332"
+         id="tspan4932">Let the difference in the angle between two edges A and B be <tspan
+   style="font-weight:bold"
+   id="tspan4698">ß</tspan>. </tspan><tspan
+         sodipodi:role="line"
+         x="102.54327"
+         y="165.21982"
+         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:3.17499995px;font-family:sans-serif;-inkscape-font-specification:'sans-serif, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;text-align:start;writing-mode:lr-tb;text-anchor:start;stroke-width:0.26458332"
+         id="tspan4696">We wish to offsets these edges (offset distance = <tspan
+   style="font-weight:bold"
+   id="tspan4700">δ</tspan>), and bevel </tspan><tspan
+         sodipodi:role="line"
+         x="102.54327"
+         y="170.07051"
+         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:3.17499995px;font-family:sans-serif;-inkscape-font-specification:'sans-serif, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;text-align:start;writing-mode:lr-tb;text-anchor:start;stroke-width:0.26458332"
+         id="tspan4702">these offset edges where they join such that this bevel is exactly </tspan><tspan
+         sodipodi:role="line"
+         x="102.54327"
+         y="174.9212"
+         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:3.17499995px;font-family:sans-serif;-inkscape-font-specification:'sans-serif, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;text-align:start;writing-mode:lr-tb;text-anchor:start;stroke-width:0.26458332"
+         id="tspan4725"><tspan
+   style="font-weight:bold"
+   id="tspan4592">δ</tspan> units from the vertex (a) where the original edges joined.</tspan><tspan
+         sodipodi:role="line"
+         x="102.54327"
+         y="179.7719"
+         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:3.17499995px;font-family:sans-serif;-inkscape-font-specification:'sans-serif, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;text-align:start;writing-mode:lr-tb;text-anchor:start;stroke-width:0.26458332"
+         id="tspan4937" /><tspan
+         sodipodi:role="line"
+         x="102.54327"
+         y="184.6226"
+         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:3.17499995px;font-family:sans-serif;-inkscape-font-specification:'sans-serif, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;text-align:start;writing-mode:lr-tb;text-anchor:start;stroke-width:0.26458332"
+         id="tspan4939">Given that point b is easily derived from prior calculations of</tspan><tspan
+         sodipodi:role="line"
+         x="102.54327"
+         y="189.4733"
+         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:3.17499995px;font-family:sans-serif;-inkscape-font-specification:'sans-serif, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;text-align:start;writing-mode:lr-tb;text-anchor:start;stroke-width:0.26458332"
+         id="tspan4941">edge <tspan
+   style="font-style:italic"
+   id="tspan4945">unit normals</tspan>, and that offsetting b in the direction of e </tspan><tspan
+         sodipodi:role="line"
+         x="102.54327"
+         y="194.32399"
+         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:3.17499995px;font-family:sans-serif;-inkscape-font-specification:'sans-serif, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;text-align:start;writing-mode:lr-tb;text-anchor:start;stroke-width:0.26458332"
+         id="tspan4943">is also easily performed using pre-calculated edge <tspan
+   style="font-style:italic"
+   id="tspan4947">unit vectors</tspan>, </tspan><tspan
+         sodipodi:role="line"
+         x="102.54327"
+         y="199.17468"
+         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:3.17499995px;font-family:sans-serif;-inkscape-font-specification:'sans-serif, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;text-align:start;writing-mode:lr-tb;text-anchor:start;stroke-width:0.26458332"
+         id="tspan4951">we need to calculate how far c will be from b.</tspan><tspan
+         sodipodi:role="line"
+         x="102.54327"
+         y="204.02538"
+         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:3.17499995px;font-family:sans-serif;-inkscape-font-specification:'sans-serif, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;text-align:start;writing-mode:lr-tb;text-anchor:start;stroke-width:0.26458332"
+         id="tspan4692" /><tspan
+         sodipodi:role="line"
+         x="102.54327"
+         y="208.87607"
+         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:3.17499995px;font-family:sans-serif;-inkscape-font-specification:'sans-serif, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;text-align:start;writing-mode:lr-tb;text-anchor:start;stroke-width:0.26458332"
+         id="tspan4727">∠fec = PI - ß</tspan><tspan
+         sodipodi:role="line"
+         x="102.54327"
+         y="213.72676"
+         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:3.17499995px;font-family:sans-serif;-inkscape-font-specification:'sans-serif, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;text-align:start;writing-mode:lr-tb;text-anchor:start;stroke-width:0.26458332"
+         id="tspan4657">∠fce = ß/2</tspan><tspan
+         sodipodi:role="line"
+         x="102.54327"
+         y="218.57745"
+         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:3.17499995px;font-family:sans-serif;-inkscape-font-specification:'sans-serif, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;text-align:start;writing-mode:lr-tb;text-anchor:start;stroke-width:0.26458332"
+         id="tspan4659">∠eab = ß/2</tspan><tspan
+         sodipodi:role="line"
+         x="102.54327"
+         y="223.42816"
+         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:3.17499995px;font-family:sans-serif;-inkscape-font-specification:'sans-serif, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;text-align:start;writing-mode:lr-tb;text-anchor:start;stroke-width:0.26458332"
+         id="tspan7428">Given ∠adc = ∠abc = PI/2 </tspan><tspan
+         sodipodi:role="line"
+         x="102.54327"
+         y="228.27885"
+         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:3.17499995px;font-family:sans-serif;-inkscape-font-specification:'sans-serif, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;text-align:start;writing-mode:lr-tb;text-anchor:start;stroke-width:0.26458332"
+         id="tspan4930">and given both triangles share a common hypotenuse...</tspan><tspan
+         sodipodi:role="line"
+         x="102.54327"
+         y="233.12955"
+         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:3.17499995px;font-family:sans-serif;-inkscape-font-specification:'sans-serif, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;text-align:start;writing-mode:lr-tb;text-anchor:start;stroke-width:0.26458332"
+         id="tspan4828">∠cab = ß/4</tspan><tspan
+         sodipodi:role="line"
+         x="102.54327"
+         y="237.98024"
+         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:3.17499995px;font-family:sans-serif;-inkscape-font-specification:'sans-serif, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;text-align:start;writing-mode:lr-tb;text-anchor:start;stroke-width:0.26458332"
+         id="tspan4830">tan(ß/4) = bc/δ, hence ...</tspan><tspan
+         sodipodi:role="line"
+         x="102.54327"
+         y="242.83093"
+         id="tspan5620"
+         style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-size:3.17499995px;font-family:sans-serif;-inkscape-font-specification:'sans-serif, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;text-align:start;writing-mode:lr-tb;text-anchor:start;stroke-width:0.26458332" /><tspan
+         sodipodi:role="line"
+         x="102.54327"
+         y="247.99376"
+         style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-size:4.23333311px;font-family:sans-serif;-inkscape-font-specification:'sans-serif, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;text-align:start;writing-mode:lr-tb;text-anchor:start;stroke-width:0.26458332"
+         id="tspan4836">bc = δ * tan(ß/4) </tspan><tspan
+         sodipodi:role="line"
+         x="102.54327"
+         y="252.9733"
+         id="tspan383"
+         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:3.49250007px;font-family:sans-serif;-inkscape-font-specification:'sans-serif, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;text-align:start;writing-mode:lr-tb;text-anchor:start;stroke-width:0.26458332" /></text>
+    <text
+       xml:space="preserve"
+       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:3.88055563px;line-height:1.25;font-family:Tahoma;-inkscape-font-specification:Tahoma;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.26458332"
+       x="49.251884"
+       y="176.83821"
+       id="text272-5-8"><tspan
+         sodipodi:role="line"
+         id="tspan270-2-3"
+         x="49.251884"
+         y="176.83821"
+         style="font-size:3.88055563px;stroke-width:0.26458332">e</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:3.88055563px;line-height:1.25;font-family:Tahoma;-inkscape-font-specification:Tahoma;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.26458332"
+       x="75.162292"
+       y="222.37857"
+       id="text272-5-1"><tspan
+         sodipodi:role="line"
+         id="tspan270-2-6"
+         x="75.162292"
+         y="222.37857"
+         style="font-size:3.88055563px;stroke-width:0.26458332">b</tspan></text>
+    <path
+       style="fill:none;stroke:#000000;stroke-width:0.26458332px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
+       d="m 56.007228,228.30067 1.903939,2.80141 -3.239953,1.92375"
+       id="path5281"
+       inkscape:connector-curvature="0"
+       sodipodi:nodetypes="ccc" />
+    <path
+       inkscape:connector-curvature="0"
+       id="path12-1"
+       d="m 57.361412,236.70451 17.830229,-9.27447 -1.462707,-2.20173 6.87655,0.20565 -2.462879,6.40642 -1.462709,-2.20173 -17.93951,9.26759 z"
+       style="color:#000000;fill:#00ff00;stroke:#000000;stroke-width:0.56567919"
+       sodipodi:nodetypes="cccccccc" />
+    <text
+       xml:space="preserve"
+       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:3.88055563px;line-height:1.25;font-family:sans-serif;-inkscape-font-specification:sans-serif;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.26458332"
+       x="24.942511"
+       y="267.10669"
+       id="text5341"><tspan
+         sodipodi:role="line"
+         id="tspan5339"
+         x="24.942511"
+         y="267.10669"
+         style="font-weight:bold;stroke-width:0.26458332">edge A</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:3.88055563px;line-height:1.25;font-family:sans-serif;-inkscape-font-specification:sans-serif;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.26458332"
+       x="63.134735"
+       y="267.21252"
+       id="text5341-3"><tspan
+         sodipodi:role="line"
+         id="tspan5339-0"
+         x="63.134735"
+         y="267.21252"
+         style="font-weight:bold;stroke-width:0.26458332">edge B</tspan></text>
+    <path
+       style="fill:none;stroke:#000000;stroke-width:0.26458332px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
+       d="m 74.586914,214.43897 -3.141903,1.63699 2.194033,3.34693"
+       id="path5281-7"
+       inkscape:connector-curvature="0"
+       sodipodi:nodetypes="ccc" />
+    <path
+       style="fill:none;stroke:#0000ff;stroke-width:0.46725827;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1;marker-start:url(#Arrow1Mstart-4);marker-end:url(#Arrow1Mend-2)"
+       d="m 72.071534,205.30723 6.5645,10.08686"
+       id="path4595-7"
+       inkscape:connector-curvature="0"
+       sodipodi:nodetypes="cc" />
+    <path
+       sodipodi:nodetypes="cc"
+       inkscape:connector-curvature="0"
+       id="path4817"
+       d="M 52.125444,230.36445 76.532653,217.52026"
+       style="fill:none;stroke:#000000;stroke-width:0.25;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:0.75, 0.75;stroke-dashoffset:0;stroke-opacity:0.28909954" />
+    <path
+       sodipodi:nodetypes="cc"
+       inkscape:connector-curvature="0"
+       id="path7299"
+       d="m 51.996615,230.4012 -0.04761,-52.12634"
+       style="fill:none;stroke:#000000;stroke-width:0.34036046;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:1.02108141, 1.02108141;stroke-dashoffset:0;stroke-opacity:0.28909954" />
+    <path
+       style="fill:none;stroke:#000000;stroke-width:0.5;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
+       d="m 104.79291,262.01551 -36.001243,-56.9847 -31.810478,0.16653"
+       id="path4813"
+       inkscape:connector-curvature="0"
+       sodipodi:nodetypes="ccc" />
+    <path
+       style="fill:none;stroke:#000000;stroke-width:0.5;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
+       d="M 2.7916744,263.96819 36.852093,205.0785"
+       id="path4823"
+       inkscape:connector-curvature="0"
+       sodipodi:nodetypes="cc" />
+    <path
+       style="fill:none;stroke:#000000;stroke-width:0.5;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:1.50000006, 1.50000006;stroke-dashoffset:0;stroke-opacity:1"
+       d="m 36.981189,204.56212 14.815685,-26.81642 14.348958,23.58094 2.645835,3.70417"
+       id="path4825"
+       inkscape:connector-curvature="0"
+       sodipodi:nodetypes="cccc" />
+    <text
+       style="color:#000000;font-size:5.29166651px;line-height:125%;font-family:Tahoma;text-indent:0;letter-spacing:0px;word-spacing:0px;text-transform:none;fill:#000000;stroke-width:0.26458332"
+       xml:space="preserve"
+       font-size="20px"
+       line-height="125%"
+       y="203.31599"
+       x="58.097267"
+       id="text7395"><tspan
+         y="203.31599"
+         x="58.097267"
+         font-weight="bold"
+         id="tspan7393"
+         style="font-weight:bold;font-size:3.52777767px;stroke-width:0.26458332">ß/2</tspan></text>
+    <path
+       style="opacity:0.5;fill:none;fill-opacity:1;stroke:#000000;stroke-width:1.32283461;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:3.96850394, 3.96850394;stroke-dashoffset:0;stroke-opacity:0.32170542"
+       d="m 236.58203,214.03711 a 44.192965,44.192965 0 0 0 -20.91797,37.5332 44.192965,44.192965 0 0 0 0.004,0.0977 l 44.64453,-0.125 z"
+       transform="matrix(0.26458333,0,0,0.26458333,0,138.24998)"
+       id="path7397"
+       inkscape:connector-curvature="0" />
+    <path
+       sodipodi:nodetypes="ccc"
+       inkscape:connector-curvature="0"
+       id="path7409"
+       d="m 51.979664,208.92587 3.54149,-0.0555 -0.14051,-3.99134"
+       style="fill:none;stroke:#000000;stroke-width:0.26458332px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1" />
+    <text
+       id="text4621"
+       x="52.805595"
+       y="225.01154"
+       line-height="125%"
+       font-size="20px"
+       xml:space="preserve"
+       style="color:#000000;font-size:5.29166651px;line-height:125%;font-family:Tahoma;text-indent:0;letter-spacing:0px;word-spacing:0px;text-transform:none;fill:#000000;stroke-width:0.26458332"><tspan
+         style="font-weight:bold;font-size:3.52777767px;stroke-width:0.26458332"
+         id="tspan4619"
+         font-weight="bold"
+         x="52.805595"
+         y="225.01154">ß/2</tspan></text>
+    <path
+       inkscape:connector-curvature="0"
+       id="path4623"
+       d="m 62.303836,224.83506 c -2.100563,-3.45643 -5.838254,-5.58181 -9.882735,-5.61968 -0.0089,-0.002 -0.01774,-0.004 -0.02662,-0.006"
+       style="opacity:0.5;fill:none;fill-opacity:1;stroke:#000000;stroke-width:0.34999999;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:1.04999999, 1.04999999;stroke-dashoffset:0;stroke-opacity:0.32170542"
+       sodipodi:nodetypes="ccc" />
+    <path
+       style="fill:none;stroke:#000000;stroke-width:0.25;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:0.75, 0.75;stroke-dashoffset:0;stroke-opacity:0.28909954"
+       d="m 37.044906,229.79548 14.351593,-0.0641"
+       id="path4649"
+       inkscape:connector-curvature="0"
+       sodipodi:nodetypes="cc" />
+    <text
+       id="text4653"
+       y="209.13263"
+       x="36.650215"
+       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:3.88055563px;line-height:1.25;font-family:Tahoma;-inkscape-font-specification:Tahoma;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.26458332"
+       xml:space="preserve"><tspan
+         style="font-size:3.88055563px;stroke-width:0.26458332"
+         y="209.13263"
+         x="36.650215"
+         id="tspan4651"
+         sodipodi:role="line">f</tspan></text>
+  </g>
+</svg>

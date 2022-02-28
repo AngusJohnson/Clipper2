@@ -1,0 +1,611 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Created with Inkscape (http://www.inkscape.org/) -->
+
+<svg
+   xmlns:dc="http://purl.org/dc/elements/1.1/"
+   xmlns:cc="http://creativecommons.org/ns#"
+   xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+   xmlns:svg="http://www.w3.org/2000/svg"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   width="800"
+   height="600"
+   viewBox="0 0 211.66666 158.75"
+   version="1.1"
+   id="svg6562"
+   inkscape:version="0.92.1 r15371"
+   sodipodi:docname="offset_triginometry4.svg">
+  <defs
+     id="defs6556">
+    <marker
+       inkscape:stockid="Arrow1Mstart"
+       orient="auto"
+       refY="0"
+       refX="0"
+       id="Arrow1Mstart-4"
+       style="overflow:visible"
+       inkscape:isstock="true">
+      <path
+         inkscape:connector-curvature="0"
+         id="path4603-6"
+         d="M 0,0 5,-5 -12.5,0 5,5 Z"
+         style="fill:#0000ff;fill-opacity:1;fill-rule:evenodd;stroke:#0000ff;stroke-width:1.00000003pt;stroke-opacity:1"
+         transform="matrix(0.4,0,0,0.4,4,0)" />
+    </marker>
+    <marker
+       inkscape:stockid="Arrow1Mend"
+       orient="auto"
+       refY="0"
+       refX="0"
+       id="Arrow1Mend-2"
+       style="overflow:visible"
+       inkscape:isstock="true">
+      <path
+         inkscape:connector-curvature="0"
+         id="path4606-1"
+         d="M 0,0 5,-5 -12.5,0 5,5 Z"
+         style="fill:#0000ff;fill-opacity:1;fill-rule:evenodd;stroke:#0000ff;stroke-width:1.00000003pt;stroke-opacity:1"
+         transform="matrix(-0.4,0,0,-0.4,-4,0)" />
+    </marker>
+    <marker
+       inkscape:stockid="Arrow1Mstart"
+       orient="auto"
+       refY="0"
+       refX="0"
+       id="Arrow1Mstart"
+       style="overflow:visible"
+       inkscape:isstock="true">
+      <path
+         inkscape:connector-curvature="0"
+         id="path4603"
+         d="M 0,0 5,-5 -12.5,0 5,5 Z"
+         style="fill:#0000ff;fill-opacity:1;fill-rule:evenodd;stroke:#0000ff;stroke-width:1.00000003pt;stroke-opacity:1"
+         transform="matrix(0.4,0,0,0.4,4,0)" />
+    </marker>
+    <marker
+       inkscape:stockid="Arrow1Mend"
+       orient="auto"
+       refY="0"
+       refX="0"
+       id="Arrow1Mend"
+       style="overflow:visible"
+       inkscape:isstock="true">
+      <path
+         inkscape:connector-curvature="0"
+         id="path4606"
+         d="M 0,0 5,-5 -12.5,0 5,5 Z"
+         style="fill:#0000ff;fill-opacity:1;fill-rule:evenodd;stroke:#0000ff;stroke-width:1.00000003pt;stroke-opacity:1"
+         transform="matrix(-0.4,0,0,-0.4,-4,0)" />
+    </marker>
+  </defs>
+  <sodipodi:namedview
+     id="base"
+     pagecolor="#ffffff"
+     bordercolor="#666666"
+     borderopacity="1.0"
+     inkscape:pageopacity="0.0"
+     inkscape:pageshadow="2"
+     inkscape:zoom="1.5216797"
+     inkscape:cx="526.13581"
+     inkscape:cy="357.78967"
+     inkscape:document-units="mm"
+     inkscape:current-layer="layer1"
+     showgrid="false"
+     units="px" />
+  <metadata
+     id="metadata6559">
+    <rdf:RDF>
+      <cc:Work
+         rdf:about="">
+        <dc:format>image/svg+xml</dc:format>
+        <dc:type
+           rdf:resource="http://purl.org/dc/dcmitype/StillImage" />
+        <dc:title />
+      </cc:Work>
+    </rdf:RDF>
+  </metadata>
+  <g
+     inkscape:label="Layer 1"
+     inkscape:groupmode="layer"
+     id="layer1"
+     transform="translate(0,-138.24998)">
+    <path
+       style="color:#000000;fill:none;stroke:#000000;stroke-width:0.47624999"
+       d="M 3.8279135,261.48633 52.32604,178.27487 102.67623,259.89883"
+       id="path6"
+       inkscape:connector-curvature="0" />
+    <text
+       id="text28"
+       x="57.946079"
+       y="179.20143"
+       line-height="125%"
+       font-size="20px"
+       xml:space="preserve"
+       style="color:#000000;font-size:5.29166651px;line-height:125%;font-family:Tahoma;text-indent:0;letter-spacing:0px;word-spacing:0px;text-transform:none;fill:#000000;stroke-width:0.26458332"><tspan
+         style="font-weight:bold;stroke-width:0.26458332"
+         id="tspan26"
+         font-weight="bold"
+         x="57.946079"
+         y="179.20143">ß</tspan></text>
+    <g
+       style="fill:none;stroke:#000000;stroke-width:1.79999995;stroke-dasharray:3.6, 3.6"
+       id="g114"
+       transform="matrix(0.26458333,0,0,0.26458333,-1.9555749,156.89654)">
+      <path
+         inkscape:connector-curvature="0"
+         id="path110"
+         d="M 206,78.44 241.1,18.2"
+         style="color:#000000" />
+      <path
+         inkscape:connector-curvature="0"
+         id="path112"
+         d="m 230.1,122.7 c 14.4,-8.7 24.1,-24.46 24.1,-42.51 0,-18.38 -10.1,-34.42 -24.9,-42.97"
+         style="color:#000000" />
+    </g>
+    <text
+       id="text118"
+       x="50.114414"
+       y="188.3031"
+       line-height="125%"
+       font-size="14px"
+       xml:space="preserve"
+       style="color:#000000;font-size:3.70416665px;line-height:125%;font-family:Tahoma;text-indent:0;letter-spacing:0px;word-spacing:0px;text-transform:none;fill:#000000;stroke-width:0.26458332"><tspan
+         style="font-weight:bold;font-size:5.29166651px;stroke-width:0.26458332"
+         id="tspan116"
+         font-weight="bold"
+         font-size="20px"
+         x="50.114414"
+         y="188.3031">Ø</tspan></text>
+    <path
+       inkscape:connector-curvature="0"
+       id="path124"
+       d="m 35.449579,261.38586 16.699227,-31.06744 19.473333,31.72354"
+       style="color:#000000;fill:none;stroke:#0000a1;stroke-width:0.95249999;stroke-opacity:1"
+       sodipodi:nodetypes="ccc" />
+    <text
+       xml:space="preserve"
+       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:5.64444447px;line-height:1.25;font-family:Tahoma;-inkscape-font-specification:Tahoma;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.26458332"
+       x="13.735942"
+       y="151.51094"
+       id="text138"><tspan
+         sodipodi:role="line"
+         id="tspan136"
+         x="13.735942"
+         y="151.51094"
+         style="font-weight:bold;stroke-width:0.26458332">Calculating the coordinates </tspan><tspan
+         sodipodi:role="line"
+         x="13.735942"
+         y="158.5665"
+         style="font-weight:bold;stroke-width:0.26458332"
+         id="tspan4563">of a mitered offset ...</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:3.88055563px;line-height:1.25;font-family:Tahoma;-inkscape-font-specification:Tahoma;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.26458332"
+       x="51.091518"
+       y="226.9545"
+       id="text272"><tspan
+         sodipodi:role="line"
+         id="tspan270"
+         x="51.091518"
+         y="226.9545"
+         style="font-size:3.88055563px;stroke-width:0.26458332">a</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:3.88055563px;line-height:1.25;font-family:Tahoma;-inkscape-font-specification:Tahoma;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.26458332"
+       x="51.088951"
+       y="201.57323"
+       id="text272-5"><tspan
+         sodipodi:role="line"
+         id="tspan270-2"
+         x="51.088951"
+         y="201.57323"
+         style="font-size:3.88055563px;stroke-width:0.26458332">d</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:3.88055563px;line-height:1.25;font-family:Tahoma;-inkscape-font-specification:Tahoma;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.26458332"
+       x="78.680359"
+       y="217.94749"
+       id="text272-8"><tspan
+         sodipodi:role="line"
+         id="tspan270-77"
+         x="78.680359"
+         y="217.94749"
+         style="font-size:3.88055563px;stroke-width:0.26458332">c</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:3.88055563px;line-height:1.25;font-family:Tahoma;-inkscape-font-specification:Tahoma;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.26458332"
+       x="32.831238"
+       y="240.26172"
+       id="text310"><tspan
+         sodipodi:role="line"
+         id="tspan308"
+         x="32.831238"
+         y="240.26172"
+         style="font-weight:bold;font-size:5.64444447px;stroke-width:0.26458332">δ</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:3.88055563px;line-height:1.25;font-family:sans-serif;-inkscape-font-specification:sans-serif;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.26458332"
+       x="107.30576"
+       y="149.78593"
+       id="text347"><tspan
+         sodipodi:role="line"
+         x="107.30576"
+         y="149.78593"
+         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:3.17499995px;font-family:sans-serif;-inkscape-font-specification:'sans-serif, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;text-align:start;writing-mode:lr-tb;text-anchor:start;stroke-width:0.26458332"
+         id="tspan4606">Calculate the coordinates of a mitered offset (<tspan
+   style="font-weight:bold;font-size:3.17499995px"
+   id="tspan4617">e</tspan>) given:</tspan><tspan
+         sodipodi:role="line"
+         x="107.30576"
+         y="154.63663"
+         id="tspan5586"
+         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:3.17499995px;font-family:sans-serif;-inkscape-font-specification:'sans-serif, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;text-align:start;writing-mode:lr-tb;text-anchor:start;stroke-width:0.26458332">  1. that vertex (<tspan
+   style="font-weight:bold;font-size:3.17499995px"
+   id="tspan4615">a</tspan>) of adjoining edges A &amp; B; </tspan><tspan
+         sodipodi:role="line"
+         x="107.30576"
+         y="159.48732"
+         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:3.17499995px;font-family:sans-serif;-inkscape-font-specification:'sans-serif, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;text-align:start;writing-mode:lr-tb;text-anchor:start;stroke-width:0.26458332"
+         id="tspan4610">  2. the edge offsetting distance (<tspan
+   style="font-weight:bold;font-size:3.17499995px;stroke-width:0.26458332"
+   id="tspan4656">δ</tspan>);  </tspan><tspan
+         sodipodi:role="line"
+         x="107.30576"
+         y="164.33801"
+         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:3.17499995px;font-family:sans-serif;-inkscape-font-specification:'sans-serif, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;text-align:start;writing-mode:lr-tb;text-anchor:start;stroke-width:0.26458332"
+         id="tspan4661">  3. the <tspan
+   style="font-style:italic;font-size:3.17499995px"
+   id="tspan4604">change in angle</tspan> (<tspan
+   style="font-weight:bold;font-size:3.17499995px;stroke-width:0.26458332"
+   id="tspan4749">ß</tspan>) between the two edges; and</tspan><tspan
+         sodipodi:role="line"
+         x="107.30576"
+         y="169.18871"
+         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:3.17499995px;font-family:sans-serif;-inkscape-font-specification:'sans-serif, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;text-align:start;writing-mode:lr-tb;text-anchor:start;stroke-width:0.26458332"
+         id="tspan4714">  4. the perpendicular offsets of a: (<tspan
+   style="font-weight:bold"
+   id="tspan4732">b</tspan>) and (<tspan
+   style="font-weight:bold"
+   id="tspan4734">c</tspan>) </tspan><tspan
+         sodipodi:role="line"
+         x="107.30576"
+         y="174.03941"
+         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:3.17499995px;font-family:sans-serif;-inkscape-font-specification:'sans-serif, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;text-align:start;writing-mode:lr-tb;text-anchor:start;stroke-width:0.26458332"
+         id="tspan4736" /><tspan
+         sodipodi:role="line"
+         x="107.30576"
+         y="178.89011"
+         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:3.17499995px;font-family:sans-serif;-inkscape-font-specification:'sans-serif, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;text-align:start;writing-mode:lr-tb;text-anchor:start;stroke-width:0.26458332"
+         id="tspan4708"><tspan
+   style="font-weight:bold"
+   id="tspan4742">b</tspan> and <tspan
+   style="font-weight:bold"
+   id="tspan4744">c</tspan> are <tspan
+   style="font-weight:bold"
+   id="tspan4754">δ</tspan> multiples of the <tspan
+   style="font-style:italic"
+   id="tspan4780">normals</tspan> of precalculated </tspan><tspan
+         sodipodi:role="line"
+         x="107.30576"
+         y="183.7408"
+         id="tspan5604"
+         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:3.17499995px;font-family:sans-serif;-inkscape-font-specification:'sans-serif, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;text-align:start;writing-mode:lr-tb;text-anchor:start;stroke-width:0.26458332">edge <tspan
+   style="font-style:italic"
+   id="tspan4782">unit vectors</tspan>. The vector (<tspan
+   style="font-weight:bold"
+   id="tspan4746">ad</tspan>) is simply the sum of </tspan><tspan
+         sodipodi:role="line"
+         x="107.30576"
+         y="188.59149"
+         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:3.17499995px;font-family:sans-serif;-inkscape-font-specification:'sans-serif, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;text-align:start;writing-mode:lr-tb;text-anchor:start;stroke-width:0.26458332"
+         id="tspan4709">the vectors <tspan
+   style="font-weight:bold"
+   id="tspan4756">ab</tspan> and <tspan
+   style="font-weight:bold"
+   id="tspan4758">ac</tspan>. Hence knowing <tspan
+   style="font-weight:bold"
+   id="tspan4752">ad</tspan>, we need to </tspan><tspan
+         sodipodi:role="line"
+         x="107.30576"
+         y="193.44218"
+         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:3.17499995px;font-family:sans-serif;-inkscape-font-specification:'sans-serif, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;text-align:start;writing-mode:lr-tb;text-anchor:start;stroke-width:0.26458332"
+         id="tspan4773"><tspan
+   style="font-weight:bold"
+   id="tspan4784">scale </tspan>this vector so that it corresponds to vertex <tspan
+   style="font-weight:bold;font-size:3.17499995px;stroke-width:0.26458332"
+   id="tspan4570">e</tspan>.</tspan><tspan
+         sodipodi:role="line"
+         x="107.30576"
+         y="198.29288"
+         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:3.17499995px;font-family:sans-serif;-inkscape-font-specification:'sans-serif, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;text-align:start;writing-mode:lr-tb;text-anchor:start;stroke-width:0.26458332"
+         id="tspan4777">In other words, what is the ratio of <tspan
+   style="font-weight:bold;font-size:3.17499995px;stroke-width:0.26458332"
+   id="tspan4654">ad</tspan> to <tspan
+   style="font-weight:bold;font-size:3.17499995px;stroke-width:0.26458332"
+   id="tspan4568">ae</tspan>?</tspan><tspan
+         sodipodi:role="line"
+         x="107.30576"
+         y="203.14357"
+         id="tspan5610"
+         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:3.17499995px;font-family:sans-serif;-inkscape-font-specification:'sans-serif, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;text-align:start;writing-mode:lr-tb;text-anchor:start;stroke-width:0.26458332" /><tspan
+         sodipodi:role="line"
+         x="107.30576"
+         y="207.99426"
+         id="tspan5612"
+         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:3.17499995px;font-family:sans-serif;-inkscape-font-specification:'sans-serif, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;text-align:start;writing-mode:lr-tb;text-anchor:start;stroke-width:0.26458332">Let Ø = π – ß.</tspan><tspan
+         sodipodi:role="line"
+         x="107.30576"
+         y="212.84497"
+         id="tspan5614"
+         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:3.17499995px;font-family:sans-serif;-inkscape-font-specification:'sans-serif, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;text-align:start;writing-mode:lr-tb;text-anchor:start;stroke-width:0.26458332">∠aec = Ø/2</tspan><tspan
+         sodipodi:role="line"
+         x="107.30576"
+         y="217.69566"
+         id="tspan5616"
+         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:3.17499995px;font-family:sans-serif;-inkscape-font-specification:'sans-serif, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;text-align:start;writing-mode:lr-tb;text-anchor:start;stroke-width:0.26458332">∠eac = π/2 – Ø/2 = (π – Ø)/2 = ß/2</tspan><tspan
+         sodipodi:role="line"
+         x="107.30576"
+         y="222.54636"
+         id="tspan5618"
+         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:3.17499995px;font-family:sans-serif;-inkscape-font-specification:'sans-serif, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;text-align:start;writing-mode:lr-tb;text-anchor:start;stroke-width:0.26458332">cos(ß/2) = δ / length(ae)</tspan><tspan
+         sodipodi:role="line"
+         x="107.30576"
+         y="227.39705"
+         id="tspan5620"
+         style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-size:3.17499995px;font-family:sans-serif;-inkscape-font-specification:'sans-serif, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;text-align:start;writing-mode:lr-tb;text-anchor:start;stroke-width:0.26458332">length(ae) = δ / cos(ß/2) </tspan><tspan
+         sodipodi:role="line"
+         x="107.30576"
+         y="232.24774"
+         id="tspan5624"
+         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:3.17499995px;font-family:sans-serif;-inkscape-font-specification:'sans-serif, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;text-align:start;writing-mode:lr-tb;text-anchor:start;stroke-width:0.26458332">∠fac = ß/2</tspan><tspan
+         sodipodi:role="line"
+         x="107.30576"
+         y="237.09843"
+         id="tspan5626"
+         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:3.17499995px;font-family:sans-serif;-inkscape-font-specification:'sans-serif, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;text-align:start;writing-mode:lr-tb;text-anchor:start;stroke-width:0.26458332">cos(ß/2) = length(af) / δ</tspan><tspan
+         sodipodi:role="line"
+         x="107.30576"
+         y="241.94913"
+         id="tspan5628"
+         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:3.17499995px;font-family:sans-serif;-inkscape-font-specification:'sans-serif, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;text-align:start;writing-mode:lr-tb;text-anchor:start;stroke-width:0.26458332">length(af) = cos(ß/2) × δ</tspan><tspan
+         sodipodi:role="line"
+         x="107.30576"
+         y="246.79982"
+         id="tspan5630"
+         style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-size:3.17499995px;font-family:sans-serif;-inkscape-font-specification:'sans-serif, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;text-align:start;writing-mode:lr-tb;text-anchor:start;stroke-width:0.26458332">length(ad) = 2 × δ × cos(ß/2)</tspan><tspan
+         sodipodi:role="line"
+         x="107.30576"
+         y="251.65051"
+         id="tspan5636"
+         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:3.17499995px;font-family:sans-serif;-inkscape-font-specification:'sans-serif, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;text-align:start;writing-mode:lr-tb;text-anchor:start;stroke-width:0.26458332">Hence ... length(ad) / length(ae)</tspan><tspan
+         sodipodi:role="line"
+         x="107.30576"
+         y="256.50122"
+         id="tspan5638"
+         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:3.17499995px;font-family:sans-serif;-inkscape-font-specification:'sans-serif, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;text-align:start;writing-mode:lr-tb;text-anchor:start;stroke-width:0.26458332">  = 2 × δ × cos(ß/2) / (δ / cos(ß/2))</tspan><tspan
+         sodipodi:role="line"
+         x="107.30576"
+         y="261.3519"
+         id="tspan5640"
+         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:3.17499995px;font-family:sans-serif;-inkscape-font-specification:'sans-serif, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;text-align:start;writing-mode:lr-tb;text-anchor:start;stroke-width:0.26458332">  = 2 × cos(ß/2) / (1/cos(ß/2))</tspan><tspan
+         sodipodi:role="line"
+         x="107.30576"
+         y="266.20261"
+         id="tspan5642"
+         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:3.17499995px;font-family:sans-serif;-inkscape-font-specification:'sans-serif, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;text-align:start;writing-mode:lr-tb;text-anchor:start;stroke-width:0.26458332">  = 2 × cos²(ß/2)</tspan><tspan
+         sodipodi:role="line"
+         x="107.30576"
+         y="271.05328"
+         id="tspan5646"
+         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:3.17499995px;font-family:sans-serif;-inkscape-font-specification:'sans-serif, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;text-align:start;writing-mode:lr-tb;text-anchor:start;stroke-width:0.26458332">Given cos²(ß/2) = (1 + cos(ß))/2 **</tspan><tspan
+         sodipodi:role="line"
+         x="107.30576"
+         y="275.90399"
+         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:3.17499995px;font-family:sans-serif;-inkscape-font-specification:'sans-serif, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;text-align:start;writing-mode:lr-tb;text-anchor:start;stroke-width:0.26458332"
+         id="tspan5974">length(ad)/length(ae) = 1 + cos(ß)</tspan><tspan
+         sodipodi:role="line"
+         x="107.30576"
+         y="280.7547"
+         id="tspan5652"
+         style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-size:3.17499995px;font-family:sans-serif;-inkscape-font-specification:'sans-serif, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;text-align:start;writing-mode:lr-tb;text-anchor:start;stroke-width:0.26458332">Ratio of ad to ae = 1 + cos(ß)</tspan><tspan
+         sodipodi:role="line"
+         x="107.30576"
+         y="285.60538"
+         style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-size:3.17499995px;font-family:sans-serif;-inkscape-font-specification:'sans-serif, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;text-align:start;writing-mode:lr-tb;text-anchor:start;stroke-width:0.26458332"
+         id="tspan4728" /><tspan
+         sodipodi:role="line"
+         x="107.30576"
+         y="290.45609"
+         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:2.82222223px;font-family:sans-serif;-inkscape-font-specification:'sans-serif, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;text-align:start;writing-mode:lr-tb;text-anchor:start;stroke-width:0.26458332"
+         id="tspan5694">** see http://en.wikipedia.org/wiki/List_of_trigonometric_identities </tspan><tspan
+         sodipodi:role="line"
+         x="107.30576"
+         y="295.30676"
+         id="tspan383"
+         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:3.49250007px;font-family:sans-serif;-inkscape-font-specification:'sans-serif, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;text-align:start;writing-mode:lr-tb;text-anchor:start;stroke-width:0.26458332" /></text>
+    <text
+       xml:space="preserve"
+       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:3.88055563px;line-height:1.25;font-family:Tahoma;-inkscape-font-specification:Tahoma;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.26458332"
+       x="50.839417"
+       y="175.93106"
+       id="text272-5-8"><tspan
+         sodipodi:role="line"
+         id="tspan270-2-3"
+         x="50.839417"
+         y="175.93106"
+         style="font-size:3.88055563px;stroke-width:0.26458332">e</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:3.88055563px;line-height:1.25;font-family:Tahoma;-inkscape-font-specification:Tahoma;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.26458332"
+       x="26.025391"
+       y="216.78452"
+       id="text272-5-1"><tspan
+         sodipodi:role="line"
+         id="tspan270-2-6"
+         x="26.025391"
+         y="216.78452"
+         style="font-size:3.88055563px;stroke-width:0.26458332">b</tspan></text>
+    <path
+       style="fill:none;stroke:#000000;stroke-width:0.26458332px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
+       d="m 55.478061,228.30067 1.903939,2.80141 -3.239953,1.92375"
+       id="path5281"
+       inkscape:connector-curvature="0"
+       sodipodi:nodetypes="ccc" />
+    <path
+       style="fill:none;stroke:#000000;stroke-width:0.26458332px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
+       d="m 48.433987,228.30602 -2.073521,3.35881 3.887698,2.08372"
+       id="path5281-9"
+       inkscape:connector-curvature="0"
+       sodipodi:nodetypes="ccc" />
+    <path
+       style="fill:none;stroke:#000000;stroke-width:0.26458332;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:0.79375, 0.79375;stroke-dashoffset:0;stroke-opacity:1"
+       d="M 51.884223,230.13321 75.52554,217.19956 51.776796,202.21713 29.303151,217.19956 Z"
+       id="path5298"
+       inkscape:connector-curvature="0" />
+    <path
+       inkscape:connector-curvature="0"
+       id="path12-1"
+       d="m 57.361412,236.70451 17.830229,-9.27447 -1.462707,-2.20173 6.87655,0.20565 -2.462879,6.40642 -1.462709,-2.20173 -17.93951,9.26759 z"
+       style="color:#000000;fill:#00ff00;stroke:#000000;stroke-width:0.56567919"
+       sodipodi:nodetypes="cccccccc" />
+    <text
+       xml:space="preserve"
+       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:3.88055563px;line-height:1.25;font-family:sans-serif;-inkscape-font-specification:sans-serif;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.26458332"
+       x="24.942511"
+       y="267.10669"
+       id="text5341"><tspan
+         sodipodi:role="line"
+         id="tspan5339"
+         x="24.942511"
+         y="267.10669"
+         style="font-weight:bold;stroke-width:0.26458332">edge A</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:3.88055563px;line-height:1.25;font-family:sans-serif;-inkscape-font-specification:sans-serif;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.26458332"
+       x="63.134735"
+       y="267.21252"
+       id="text5341-3"><tspan
+         sodipodi:role="line"
+         id="tspan5339-0"
+         x="63.134735"
+         y="267.21252"
+         style="font-weight:bold;stroke-width:0.26458332">edge B</tspan></text>
+    <path
+       style="fill:none;stroke:#000000;stroke-width:0.26458332px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
+       d="m 73.679772,213.60748 -3.141903,1.63699 2.194033,3.34693"
+       id="path5281-7"
+       inkscape:connector-curvature="0"
+       sodipodi:nodetypes="ccc" />
+    <path
+       style="fill:none;stroke:#000000;stroke-width:0.26458332px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
+       d="m 31.99425,218.69773 1.903939,-2.76195 -2.851809,-1.82829"
+       id="path5281-7-0"
+       inkscape:connector-curvature="0"
+       sodipodi:nodetypes="ccc" />
+    <text
+       id="text28-3"
+       x="53.858871"
+       y="223.89607"
+       line-height="125%"
+       font-size="20px"
+       xml:space="preserve"
+       style="color:#000000;font-size:5.29166651px;line-height:125%;font-family:Tahoma;text-indent:0;letter-spacing:0px;word-spacing:0px;text-transform:none;fill:#000000;stroke-width:0.26458332"><tspan
+         style="font-weight:bold;stroke-width:0.26458332"
+         id="tspan26-0"
+         font-weight="bold"
+         x="53.858871"
+         y="223.89607">ß</tspan></text>
+    <path
+       style="color:#000000;fill:none;stroke:#000000;stroke-width:0.47624999;stroke-dasharray:0.9525, 0.9525"
+       d="m 63.403228,223.53924 c -2.222164,-3.85703 -6.337736,-6.50963 -11.112433,-6.60892 -4.861992,-0.10111 -9.16055,2.48237 -11.503663,6.35032"
+       id="path112-3"
+       inkscape:connector-curvature="0" />
+    <text
+       xml:space="preserve"
+       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:3.88055563px;line-height:1.25;font-family:Tahoma;-inkscape-font-specification:Tahoma;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.26458332"
+       x="51.140209"
+       y="214.6559"
+       id="text272-5-89"><tspan
+         sodipodi:role="line"
+         id="tspan270-2-9"
+         x="51.140209"
+         y="214.6559"
+         style="font-size:3.88055563px;stroke-width:0.26458332">f</tspan></text>
+    <path
+       style="fill:none;stroke:#000000;stroke-width:0.21166667;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:0.21166667, 0.42333333;stroke-dashoffset:0;stroke-opacity:1"
+       d="m 73.598616,216.90005 -21.482587,-0.7898 0.157959,13.1107"
+       id="path5468"
+       inkscape:connector-curvature="0" />
+    <circle
+       style="opacity:1;fill:#ffff00;fill-opacity:0.28436022;stroke:#000000;stroke-width:0.43834108;stroke-linecap:square;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:0"
+       id="path4565"
+       cx="53.015141"
+       cy="179.32512"
+       r="7.7183294" />
+    <path
+       inkscape:connector-curvature="0"
+       id="path12-7"
+       d="m 34.002443,166.67495 6.231334,3.8271 1.431594,-2.22209 2.565713,6.38329 -6.856561,0.30914 1.431594,-2.22209 -6.235271,-3.85327 z"
+       style="color:#000000;fill:#ffff00;fill-opacity:1;stroke:#000000;stroke-width:0.56567919;stroke-opacity:1"
+       sodipodi:nodetypes="cccccccc" />
+    <path
+       style="fill:none;stroke:#000000;stroke-width:0.26458332;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:0.79375, 0.79375;stroke-dashoffset:0;stroke-opacity:0.28909954"
+       d="M 54.583309,229.71465 96.2803,229.68785"
+       id="path4572"
+       inkscape:connector-curvature="0"
+       sodipodi:nodetypes="cc" />
+    <path
+       style="fill:none;stroke:#000000;stroke-width:0.26458332;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:0.79375, 0.79375;stroke-dashoffset:0;stroke-opacity:0.28909954"
+       d="m 54.124473,202.25994 41.696992,-0.0268"
+       id="path4572-4"
+       inkscape:connector-curvature="0"
+       sodipodi:nodetypes="cc" />
+    <path
+       style="fill:none;stroke:#000000;stroke-width:0.26458332;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:0.79375, 0.79375;stroke-dashoffset:0;stroke-opacity:0.28909954"
+       d="m 53.809654,177.90488 41.696992,-0.0268"
+       id="path4572-9"
+       inkscape:connector-curvature="0"
+       sodipodi:nodetypes="cc" />
+    <path
+       style="fill:none;stroke:#0000ff;stroke-width:0.5315479;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1;marker-start:url(#Arrow1Mstart);marker-end:url(#Arrow1Mend)"
+       d="m 101.43328,178.33962 0.13,50.23864 c 0,0 0,-12.55933 0,0"
+       id="path4595"
+       inkscape:connector-curvature="0"
+       sodipodi:nodetypes="ccc" />
+    <path
+       style="fill:none;stroke:#0000ff;stroke-width:0.5315479;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1;marker-start:url(#Arrow1Mstart-4);marker-end:url(#Arrow1Mend-2)"
+       d="m 94.3953,202.71477 0.129998,25.89698 c 0,0 0,-12.55933 0,0"
+       id="path4595-7"
+       inkscape:connector-curvature="0"
+       sodipodi:nodetypes="ccc" />
+    <text
+       xml:space="preserve"
+       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:3.88055563px;line-height:1.25;font-family:Tahoma;-inkscape-font-specification:Tahoma;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.26458332"
+       x="95.294189"
+       y="191.6338"
+       id="text272-5-0"><tspan
+         sodipodi:role="line"
+         id="tspan270-2-5"
+         x="95.294189"
+         y="191.6338"
+         style="font-size:3.88055563px;stroke-width:0.26458332">ae</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:3.88055563px;line-height:1.25;font-family:Tahoma;-inkscape-font-specification:Tahoma;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.26458332"
+       x="87.765244"
+       y="211.02068"
+       id="text272-5-0-6"><tspan
+         sodipodi:role="line"
+         id="tspan270-2-5-3"
+         x="87.765244"
+         y="211.02068"
+         style="font-size:3.88055563px;stroke-width:0.26458332">ad</tspan></text>
+    <path
+       inkscape:connector-curvature="0"
+       id="path12-1-6"
+       d="m 46.295458,238.64302 -16.988637,-8.04265 -1.2153,2.34738 -3.157195,-6.11239 6.796703,-0.95541 -1.215297,2.34737 17.035661,8.14154 z"
+       style="color:#000000;fill:#00ff00;stroke:#000000;stroke-width:0.56567919"
+       sodipodi:nodetypes="cccccccc" />
+  </g>
+</svg>
