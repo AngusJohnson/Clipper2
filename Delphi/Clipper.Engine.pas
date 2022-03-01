@@ -146,7 +146,7 @@ type
     procedure DisposeOutRec(index: Integer);
     procedure DisposeAllOutRecs;
     procedure DisposeVerticesAndLocalMinima;
-    procedure AddPathToVertexList(const p: TPath;
+    procedure AddPathToVertexList(const p: TPath64;
       polyType: TPathType; isOpen: Boolean);
     function IsContributingClosed(e: PActive): Boolean;
     function IsContributingOpen(e: PActive): Boolean;
@@ -181,8 +181,8 @@ type
   protected
     procedure CleanUp; //unlike Clear, CleanUp preserves added paths
     procedure ExecuteInternal(clipType: TClipType; fillRule: TFillRule);
-    function BuildPaths(out closedPaths, openPaths: TPaths): Boolean;
-    procedure BuildTree(polytree: TPolyPathBase; out openPaths: TPaths);
+    function BuildPaths(out closedPaths, openPaths: TPaths64): Boolean;
+    procedure BuildTree(polytree: TPolyPathBase; out openPaths: TPaths64);
     property IntersectNode[index: integer]: PIntersectNode
       read GetIntersectNode;
     property OutRecList : TList read FOutRecList;
@@ -194,17 +194,17 @@ type
 
     //ADDPATH & ADDPATHS METHODS ...
     //Integer paths (TPath) ...
-    procedure AddSubject(const subject: TPath; isOpen: Boolean = false); overload;
-    procedure AddSubject(const subjects: TPaths; isOpen: Boolean = false); overload;
-    procedure AddClip(const clip: TPath); overload;
-    procedure AddClip(const clips: TPaths); overload;
+    procedure AddSubject(const subject: TPath64; isOpen: Boolean = false); overload;
+    procedure AddSubject(const subjects: TPaths64; isOpen: Boolean = false); overload;
+    procedure AddClip(const clip: TPath64); overload;
+    procedure AddClip(const clips: TPaths64); overload;
     //EXECUTE METHODS ...
     function Execute(clipType: TClipType; fillRule: TFillRule;
-      out closedSolutions: TPaths): Boolean; overload; virtual;
+      out closedSolutions: TPaths64): Boolean; overload; virtual;
     function Execute(clipType: TClipType; fillRule: TFillRule;
-      out closedSolutions, openSolutions: TPaths): Boolean; overload; virtual;
+      out closedSolutions, openSolutions: TPaths64): Boolean; overload; virtual;
     function Execute(clipType: TClipType; fillRule: TFillRule;
-      var solutionTree: TPolyTree; out openSolutions: TPaths): Boolean; overload; virtual;
+      var solutionTree: TPolyTree; out openSolutions: TPaths64): Boolean; overload; virtual;
   end;
 
   //TPolyPathBase: ancestor of TPolyPath and TPolyPathD
@@ -222,7 +222,7 @@ type
     constructor Create;  virtual;
     destructor  Destroy; override;
     procedure   Clear; virtual;
-    function    AddChild(const path: TPath): TPolyPathBase; virtual; abstract;
+    function    AddChild(const path: TPath64): TPolyPathBase; virtual; abstract;
     property    IsHole: Boolean read GetIsHole;
     property    ChildCount: Integer read GetChildCnt;
     property    Child[index: Integer]: TPolyPathBase read GetChild;
@@ -230,10 +230,10 @@ type
 
   TPolyPath = class(TPolyPathBase)
   {$IFDEF STRICT}strict{$ENDIF} private
-    FPath : TPath;
+    FPath : TPath64;
   public
-    function AddChild(const path: TPath): TPolyPathBase; override;
-    property Polygon: TPath read FPath;
+    function AddChild(const path: TPath64): TPolyPathBase; override;
+    property Polygon: TPath64 read FPath;
   end;
 
   //TPolyTree: is intended as a READ-ONLY data structure to receive closed path
@@ -254,14 +254,14 @@ type
   {$IFDEF STRICT}strict{$ENDIF} private
     FScale: double;
   public
-    procedure AddSubject(const path64: TPath; isOpen: Boolean = false); overload;
+    procedure AddSubject(const path64: TPath64; isOpen: Boolean = false); overload;
     procedure AddSubject(const pathD: TPathD; isOpen: Boolean = false); overload;
-    procedure AddSubject(const paths64: TPaths; isOpen: Boolean = false); overload;
+    procedure AddSubject(const paths64: TPaths64; isOpen: Boolean = false); overload;
     procedure AddSubject(const pathsD: TPathsD; isOpen: Boolean = false); overload;
 
-    procedure AddClip(const path64: TPath); overload;
+    procedure AddClip(const path64: TPath64); overload;
     procedure AddClip(const pathD: TPathD); overload;
-    procedure AddClip(const paths64: TPaths); overload;
+    procedure AddClip(const paths64: TPaths64); overload;
     procedure AddClip(const pathsD: TPathsD); overload;
 
     constructor Create(scale: double = 0); reintroduce; overload;
@@ -279,7 +279,7 @@ type
   protected
     FScale  : double;
   public
-    function  AddChild(const path: TPath): TPolyPathBase; override;
+    function  AddChild(const path: TPath64): TPolyPathBase; override;
     property  Polygon: TPathD read FPath;
   end;
 
@@ -600,7 +600,7 @@ end;
 //------------------------------------------------------------------------------
 
 function BuildPath(op: TOutPt; isOpen: Boolean;
-  out path: TPath; out extras: TPaths): Boolean;
+  out path: TPath64; out extras: TPaths64): Boolean;
 var
   i,j, opCnt: integer;
 begin
@@ -1049,7 +1049,7 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-procedure TClipper.AddPathToVertexList(const p: TPath;
+procedure TClipper.AddPathToVertexList(const p: TPath64;
   polyType: TPathType; isOpen: Boolean);
 var
   i, highI: integer;
@@ -1148,7 +1148,7 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-procedure TClipper.AddSubject(const subject: TPath; isOpen: Boolean);
+procedure TClipper.AddSubject(const subject: TPath64; isOpen: Boolean);
 begin
   if Length(subject) < 2 then Exit;
   if isOpen then FHasOpenPaths := true;
@@ -1157,7 +1157,7 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-procedure TClipper.AddClip(const clip: TPath);
+procedure TClipper.AddClip(const clip: TPath64);
 begin
   if Length(clip) < 2 then Exit;
   FLocMinListSorted := false;
@@ -1165,7 +1165,7 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-procedure TClipper.AddSubject(const subjects: TPaths; isOpen: Boolean = false);
+procedure TClipper.AddSubject(const subjects: TPaths64; isOpen: Boolean = false);
 var
   i: Integer;
 begin
@@ -1173,7 +1173,7 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-procedure TClipper.AddClip(const clips: TPaths);
+procedure TClipper.AddClip(const clips: TPaths64);
 var
   i: Integer;
 begin
@@ -1986,9 +1986,9 @@ end;
 //------------------------------------------------------------------------------
 
 function TClipper.Execute(clipType: TClipType;
-  fillRule: TFillRule; out closedSolutions: TPaths): Boolean;
+  fillRule: TFillRule; out closedSolutions: TPaths64): Boolean;
 var
-  dummy: TPaths;
+  dummy: TPaths64;
 begin
   Result := true;
   closedSolutions := nil;
@@ -2005,7 +2005,7 @@ end;
 //------------------------------------------------------------------------------
 
 function TClipper.Execute(clipType: TClipType; fillRule: TFillRule;
-  out closedSolutions, openSolutions: TPaths): Boolean;
+  out closedSolutions, openSolutions: TPaths64): Boolean;
 begin
   Result := true;
   closedSolutions := nil;
@@ -2023,7 +2023,7 @@ end;
 //------------------------------------------------------------------------------
 
 function TClipper.Execute(clipType: TClipType; fillRule: TFillRule;
-  var solutionTree: TPolyTree; out openSolutions: TPaths): Boolean;
+  var solutionTree: TPolyTree; out openSolutions: TPaths64): Boolean;
 begin
   if not assigned(solutionTree) then RaiseError(rsClipper_PolyTreeErr);
   solutionTree.Clear;
@@ -2041,13 +2041,13 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-procedure TClipper.BuildTree(polytree: TPolyPathBase; out openPaths: TPaths);
+procedure TClipper.BuildTree(polytree: TPolyPathBase; out openPaths: TPaths64);
 var
   i,j         : Integer;
   cntOpen     : Integer;
   outRec      : TOutRec;
-  path        : TPath;
-  extras      : TPaths;
+  path        : TPath64;
+  extras      : TPaths64;
   isOpenPath  : Boolean;
   ownerPP     : TPolyPathBase;
 begin
@@ -2574,11 +2574,11 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-function TClipper.BuildPaths(out closedPaths, openPaths: TPaths): Boolean;
+function TClipper.BuildPaths(out closedPaths, openPaths: TPaths64): Boolean;
 var
   i, cntClosed, cntOpen: Integer;
   outRec: TOutRec;
-  extras, extras2: TPaths;
+  extras, extras2: TPaths64;
 begin
   try
     extras := nil;
@@ -2696,7 +2696,7 @@ end;
 // TPolyPath method
 //------------------------------------------------------------------------------
 
-function TPolyPath.AddChild(const path: TPath): TPolyPathBase;
+function TPolyPath.AddChild(const path: TPath64): TPolyPathBase;
 begin
   Result := TPolyPath.Create;
   Result.Parent := self;
@@ -2717,7 +2717,7 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-procedure TClipperD.AddSubject(const path64: TPath; isOpen: Boolean = false);
+procedure TClipperD.AddSubject(const path64: TPath64; isOpen: Boolean = false);
 begin
   RaiseError(rsClipper_ClipperDErr);
 end;
@@ -2725,7 +2725,7 @@ end;
 
 procedure TClipperD.AddSubject(const pathD: TPathD; isOpen: Boolean = false);
 var
-  p: TPath;
+  p: TPath64;
 begin
   if FScale = 0 then FScale := DefaultClipperDScale;
   p := ScalePath(pathD, FScale, FScale);
@@ -2733,7 +2733,7 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-procedure TClipperD.AddSubject(const paths64: TPaths; isOpen: Boolean = false);
+procedure TClipperD.AddSubject(const paths64: TPaths64; isOpen: Boolean = false);
 begin
   raise Exception.Create('Error: Use TClipper for TPaths');
 end;
@@ -2741,7 +2741,7 @@ end;
 
 procedure TClipperD.AddSubject(const pathsD: TPathsD; isOpen: Boolean = false);
 var
-  pp: TPaths;
+  pp: TPaths64;
 begin
   if FScale = 0 then FScale := DefaultClipperDScale;
   pp := ScalePaths(pathsD, FScale, FScale);
@@ -2749,7 +2749,7 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-procedure TClipperD.AddClip(const path64: TPath);
+procedure TClipperD.AddClip(const path64: TPath64);
 begin
   raise Exception.Create('Error: Use TClipper for TPaths');
 end;
@@ -2757,7 +2757,7 @@ end;
 
 procedure TClipperD.AddClip(const pathD: TPathD);
 var
-  p: TPath;
+  p: TPath64;
 begin
   if FScale = 0 then FScale := DefaultClipperDScale;
   p := ScalePath(pathD, FScale, FScale);
@@ -2765,7 +2765,7 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-procedure TClipperD.AddClip(const paths64: TPaths);
+procedure TClipperD.AddClip(const paths64: TPaths64);
 begin
   raise Exception.Create('Error: Use TClipper for TPaths');
 end;
@@ -2773,7 +2773,7 @@ end;
 
 procedure TClipperD.AddClip(const pathsD: TPathsD);
 var
-  pp: TPaths;
+  pp: TPaths64;
 begin
   if FScale = 0 then FScale := DefaultClipperDScale;
   pp := ScalePaths(pathsD, FScale, FScale);
@@ -2784,7 +2784,7 @@ end;
 function TClipperD.Execute(clipType: TClipType; fillRule: TFillRule;
   out closedSolutions: TPathsD): Boolean;
 var
-  closedP: TPaths;
+  closedP: TPaths64;
   invScale: double;
 begin
   invScale := 1/FScale;
@@ -2797,7 +2797,7 @@ end;
 function TClipperD.Execute(clipType: TClipType; fillRule: TFillRule;
   out closedSolutions, openSolutions: TPathsD): Boolean;
 var
-  closedP, openP: TPaths;
+  closedP, openP: TPaths64;
   invScale: double;
 begin
   if FScale = 0 then
@@ -2813,7 +2813,7 @@ end;
 function TClipperD.Execute(clipType: TClipType; fillRule: TFillRule;
   var solutionsTree: TPolyTreeD; out openSolutions: TPathsD): Boolean;
 var
-  open_Paths: TPaths;
+  open_Paths: TPaths64;
 begin
   if not assigned(solutionsTree) then RaiseError(rsClipper_PolyTreeErr);
   solutionsTree.Clear;
@@ -2836,7 +2836,7 @@ end;
 // TPolyPathD methods
 //------------------------------------------------------------------------------
 
-function TPolyPathD.AddChild(const path: TPath): TPolyPathBase;
+function TPolyPathD.AddChild(const path: TPath64): TPolyPathBase;
 begin
   Result := TPolyPathD.Create;
   Result.Parent := self;

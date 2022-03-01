@@ -231,7 +231,7 @@ end;
 
 procedure TClipperOffset.DoGroupOffset(pathGroup: TPathGroup; delta: double);
 var
-  i, lowestIdx: Integer;
+  i, len, lowestIdx: Integer;
   absDelta, arcTol, steps: Double;
   IsClosedPaths, isClockwise: Boolean;
 begin
@@ -269,14 +269,16 @@ begin
   for i := 0 to High(pathgroup.paths) do
   begin
     fInPath := StripNearDuplicates(pathgroup.paths[i], FMinEdgeLen, IsClosedPaths);
-    if fInPath = nil then Continue;
+    len := Length(fInPath);
+    if (fInPath = nil) or
+      ((pathGroup.endType in [etPolygon, etJoined]) and (len < 3)) then Continue;
 
     fNorms := nil;
     fOutPath := nil;
     fOutPathLen := 0;
 
 		//if a single vertex then build a circle or a square ...
-    if Length(fInPath) = 1 then
+    if len = 1 then
     begin
       if (pathgroup.endType = etRound) then
       begin

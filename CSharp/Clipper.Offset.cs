@@ -1,7 +1,7 @@
 ﻿/*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Version   :  10.0 (release candidate 1) - also known as Clipper2             *
-* Date      :  27 February 2022                                                *
+* Version   :  10.0 (beta) - also known as Clipper2                            *
+* Date      :  1 March 2022                                                    *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  Offsets both open and closed paths (ie polylines & polygons).   *
@@ -13,8 +13,8 @@ using System.Collections.Generic;
 
 namespace ClipperLib2
 {
-	using Path = List<Point64>;
-	using Paths = List<List<Point64>>;
+	using Path64 = List<Point64>;
+	using Paths64 = List<List<Point64>>;
 	using PathD = List<PointD>;
 	using PathsD = List<List<PointD>>;
 
@@ -64,7 +64,7 @@ namespace ClipperLib2
       _pathGroups.Clear();
     }
 
-    public void AddPath(Path path, JoinType joinType, EndType endType)
+    public void AddPath(Path64 path, JoinType joinType, EndType endType)
     {
       int cnt = path.Count;
       if (cnt == 0) return;
@@ -72,7 +72,7 @@ namespace ClipperLib2
       AddPaths(pp, joinType, endType);
     }
 
-    public void AddPaths(Paths paths, JoinType joinType, EndType endType)
+    public void AddPaths(Paths64 paths, JoinType joinType, EndType endType)
     {
       int cnt = paths.Count;
       if (cnt == 0) return;
@@ -127,7 +127,7 @@ namespace ClipperLib2
         //clean up self-intersections ...
         ClipperD c = new ClipperD();
         c.AddSubject(solution);
-        c.Execute(ClipType.Union, FillRule.Positive, out solution);
+        c.Execute(ClipType.Union, FillRule.Positive, solution);
       }
       return solution;
     }
@@ -292,9 +292,10 @@ namespace ClipperLib2
 
     private void OffsetOpenPath(PathGroup group, PathD path, EndType endType)
     {
-      int cnt = path.Count, k = 0;
+      int cnt = path.Count -1, k = 0;
       for (int i = 1; i < cnt; i++)
         OffsetPoint(group, path, i, ref k);
+      cnt++;
 
       _normals[cnt - 1] = new PointD(-_normals[cnt - 2].x, -_normals[cnt - 2].y);
 
@@ -345,18 +346,22 @@ namespace ClipperLib2
       }
     }
 
+    private bool IsFullyOpenEndType(EndType et) 
+    {
+      return (et != EndType.Polygon) && (et != EndType.Joined);
+    }
+
     private void DoGroupOffset(PathGroup group, double delta)
     {
       if (group._endType != EndType.Polygon) delta = Math.Abs(delta) / 2;
-      bool isClosedPaths = group._endType == EndType.Polygon || group._endType == EndType.Joined;
-      bool isClockwise;
+      bool isClockwise, isClosedPaths = !IsFullyOpenEndType(group._endType);
 
       if (isClosedPaths)
       {
         //th  e lowermost polygon must be an outer polygon. So we can use that as the
         //designated orientation for outer polygons (needed for tidy-up clipping)
         int lowestIdx = GetLowestPolygonIdx(group._inPaths);
-        if (lowestIdx < 0) return;
+        if (lowestIdx < 0)  return;
         isClockwise = ClipperFunc.IsClockwise(group._inPaths[lowestIdx]);
         if (!isClockwise) delta = -delta;
       }
@@ -384,8 +389,9 @@ namespace ClipperLib2
       {
         PathD path = ClipperFunc.StripNearDuplicates(group._inPaths[i], _minEdgeLen, isClosedPaths);
         int cnt = path.Count;
-        if (cnt == 0) continue;
-        group._outPath.Clear();
+        if (cnt == 0 || (cnt < 3 && !IsFullyOpenEndType(group._endType))) continue;
+
+      group._outPath.Clear();
 
         if (cnt == 1)
         {
@@ -422,7 +428,7 @@ namespace ClipperLib2
         //clean up self-intersections ...
         ClipperD c = new ClipperD();
         c.AddSubject(group._outPaths);
-        c.Execute(ClipType.Union, FillRule.Positive, out group._outPaths);
+        c.Execute(ClipType.Union, FillRule.Positive, group._outPaths);
       }
     }
   }

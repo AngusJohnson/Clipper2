@@ -20,8 +20,8 @@ uses
 type
   TPoint64    = Clipper.Core.TPoint64;
   TRect64     = Clipper.Core.TRect64;
-  TPath       = Clipper.Core.TPath;
-  TPaths      = Clipper.Core.TPaths;
+  TPath       = Clipper.Core.TPath64;
+  TPaths      = Clipper.Core.TPaths64;
 
   TPointD     = Clipper.Core.TPointD;
   TRectD      = Clipper.Core.TRectD;

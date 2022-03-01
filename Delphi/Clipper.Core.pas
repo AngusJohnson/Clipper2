@@ -35,9 +35,9 @@ type
   //paths (holes). For complex polygons (and also for overlapping polygons),
   //explicit 'filling rules' (see below) are used to indicate regions that are
   //inside (filled) and regions that are outside (unfilled) a specific polygon.
-  TPath = array of TPoint64;
-  TPaths = array of TPath;
-  TArrayOfPaths = array of TPaths;
+  TPath64  = array of TPoint64;
+  TPaths64 = array of TPath64;
+  TArrayOfPaths = array of TPaths64;
 
   TPathD = array of TPointD;
   TPathsD = array of TPathD;
@@ -89,12 +89,12 @@ type
   EClipperLibException = class(Exception);
 
 //Area: returns type double to avoid potential integer overflows
-function Area(const path: TPath): Double; overload;
+function Area(const path: TPath64): Double; overload;
 function Area(const path: TPathD): Double; overload;
-function IsClockwise(const path: TPath): Boolean; overload;
+function IsClockwise(const path: TPath64): Boolean; overload;
 function IsClockwise(const path: TPathD): Boolean; overload;
 function PointInPolygon(const pt: TPoint64;
-  const path: TPath): TPointInPolygonResult;
+  const path: TPath64): TPointInPolygonResult;
 
 function CrossProduct(const pt1, pt2, pt3: TPoint64): double; overload;
 function CrossProduct(const pt1, pt2, pt3: TPointD): double; overload;
@@ -109,9 +109,9 @@ function DistanceFromLineSqrd(const pt, linePt1, linePt2: TPointD): double; over
 function SegmentsIntersect(const seg1a, seg1b, seg2a, seg2b: TPoint64): boolean;
 //SelfIntersectIdx: returns the index of first of 4 consecutive points
 //defining intersecting edges, otherwise returns -1;
-function SelfIntersectIdx(const path: TPath): integer;
-function SplitSelfIntersect(var path: TPath; out extras: TPaths): Boolean;
-function CleanPath(const path: TPath): TPath;
+function SelfIntersectIdx(const path: TPath64): integer;
+function SplitSelfIntersect(var path: TPath64; out extras: TPaths64): Boolean;
+function CleanPath(const path: TPath64): TPath64;
 
 function PointsEqual(const pt1, pt2: TPoint64): Boolean; overload;
   {$IFDEF INLINING} inline; {$ENDIF}
@@ -133,7 +133,7 @@ function Rect64(const recD: TRectD): TRect64; overload;
 function RectD(const left, top, right, bottom: double): TRectD; overload;
 function RectD(const rec64: TRect64): TRectD; overload;
 function GetBounds(const paths: TArrayOfPaths): TRect64; overload;
-function GetBounds(const paths: TPaths): TRect64; overload;
+function GetBounds(const paths: TPaths64): TRect64; overload;
 function GetBounds(const paths: TPathsD): TRectD; overload;
 
 procedure InflateRect(var rec: TRect64; dx, dy: Int64); overload;
@@ -146,42 +146,42 @@ function RotateRect(const rec: TRectD; angleRad: double): TRectD; overload;
 procedure OffsetRect(var rec: TRect64; dx, dy: Int64); overload;
 procedure OffsetRect(var rec: TRectD; dx, dy: double); overload;
 
-function ScalePath(const path: TPath; sx, sy: double): TPath; overload;
-function ScalePath(const path: TPathD; sx, sy: double): TPath; overload;
-function ScalePaths(const paths: TPaths; sx, sy: double): TPaths; overload;
-function ScalePaths(const paths: TPathsD; sx, sy: double): TPaths; overload;
+function ScalePath(const path: TPath64; sx, sy: double): TPath64; overload;
+function ScalePath(const path: TPathD; sx, sy: double): TPath64; overload;
+function ScalePaths(const paths: TPaths64; sx, sy: double): TPaths64; overload;
+function ScalePaths(const paths: TPathsD; sx, sy: double): TPaths64; overload;
 
-function ScalePathD(const path: TPath; sx, sy: double): TPathD; overload;
+function ScalePathD(const path: TPath64; sx, sy: double): TPathD; overload;
 function ScalePathD(const path: TPathD; sx, sy: double): TPathD; overload;
-function ScalePathsD(const paths: TPaths; sx, sy: double): TPathsD; overload;
+function ScalePathsD(const paths: TPaths64; sx, sy: double): TPathsD; overload;
 function ScalePathsD(const paths: TPathsD; sx, sy: double): TPathsD; overload;
 
-function OffsetPath(const path: TPath; dx, dy: Int64): TPath; overload;
+function OffsetPath(const path: TPath64; dx, dy: Int64): TPath64; overload;
 function OffsetPath(const path: TPathD; dx, dy: double): TPathD; overload;
-function OffsetPaths(const paths: TPaths; dx, dy: Int64): TPaths; overload;
+function OffsetPaths(const paths: TPaths64; dx, dy: Int64): TPaths64; overload;
 function OffsetPaths(const paths: TPathsD; dx, dy: double): TPathsD; overload;
 
-function Paths(const pathsD: TPathsD): TPaths;
-function PathsD(const paths: TPaths): TPathsD;
+function Paths(const pathsD: TPathsD): TPaths64;
+function PathsD(const paths: TPaths64): TPathsD;
 
-function StripDuplicates(const path: TPath; isClosedPath: Boolean = false): TPath;
+function StripDuplicates(const path: TPath64; isClosedPath: Boolean = false): TPath64;
 function StripNearDuplicates(const path: TPathD;
   minLength: double; isClosedPath: Boolean): TPathD;
 
-function ReversePath(const path: TPath): TPath; overload;
+function ReversePath(const path: TPath64): TPath64; overload;
 function ReversePath(const path: TPathD): TPathD; overload;
-function ReversePaths(const paths: TPaths): TPaths; overload;
+function ReversePaths(const paths: TPaths64): TPaths64; overload;
 function ReversePaths(const paths: TPathsD): TPathsD; overload;
 
-procedure AppendPoint(var path: TPath; const pt: TPoint64); overload;
+procedure AppendPoint(var path: TPath64; const pt: TPoint64); overload;
 procedure AppendPoint(var path: TPathD; const pt: TPointD); overload;
 
-procedure AppendPath(var paths: TPaths; const extra: TPath); overload;
+procedure AppendPath(var paths: TPaths64; const extra: TPath64); overload;
 procedure AppendPath(var paths: TPathsD; const extra: TPathD); overload;
-procedure AppendPaths(var paths: TPaths; const extra: TPaths); overload;
+procedure AppendPaths(var paths: TPaths64; const extra: TPaths64); overload;
 procedure AppendPaths(var paths: TPathsD; const extra: TPathsD); overload;
 
-function ArrayOfPathsToPaths(const ap: TArrayOfPaths): TPaths;
+function ArrayOfPathsToPaths(const ap: TArrayOfPaths): TPaths64;
 
 const
   floatingPointTolerance: double = 1E-15;
@@ -245,7 +245,7 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-function StripDuplicates(const path: TPath; isClosedPath: Boolean): TPath;
+function StripDuplicates(const path: TPath64; isClosedPath: Boolean): TPath64;
 var
   i,j, len: integer;
 begin
@@ -291,7 +291,7 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-function ScalePath(const path: TPath; sx, sy: double): TPath;
+function ScalePath(const path: TPath64; sx, sy: double): TPath64;
 var
   i,len: integer;
 begin
@@ -307,7 +307,7 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-function ScalePath(const path: TPathD; sx, sy: double): TPath;
+function ScalePath(const path: TPathD; sx, sy: double): TPath64;
 var
   i,len: integer;
 begin
@@ -323,7 +323,7 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-function ScalePaths(const paths: TPaths; sx, sy: double): TPaths;
+function ScalePaths(const paths: TPaths64; sx, sy: double): TPaths64;
 var
   i,len: integer;
 begin
@@ -336,7 +336,7 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-function ScalePaths(const paths: TPathsD; sx, sy: double): TPaths;
+function ScalePaths(const paths: TPathsD; sx, sy: double): TPaths64;
 var
   i,len: integer;
 begin
@@ -349,7 +349,7 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-function ScalePathD(const path: TPath; sx, sy: double): TPathD;
+function ScalePathD(const path: TPath64; sx, sy: double): TPathD;
 var
   i: integer;
 begin
@@ -377,7 +377,7 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-function ScalePathsD(const paths: TPaths; sx, sy: double): TPathsD;
+function ScalePathsD(const paths: TPaths64; sx, sy: double): TPathsD;
 var
   i,j: integer;
 begin
@@ -415,7 +415,7 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-function OffsetPath(const path: TPath; dx, dy: Int64): TPath;
+function OffsetPath(const path: TPath64; dx, dy: Int64): TPath64;
 var
   i: integer;
 begin
@@ -453,7 +453,7 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-function OffsetPaths(const paths: TPaths; dx, dy: Int64): TPaths;
+function OffsetPaths(const paths: TPaths64; dx, dy: Int64): TPaths64;
 var
   i,j: integer;
 begin
@@ -493,7 +493,7 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-function Paths(const pathsD: TPathsD): TPaths;
+function Paths(const pathsD: TPathsD): TPaths64;
 var
   i,j,len,len2: integer;
 begin
@@ -512,7 +512,7 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-function PathsD(const paths: TPaths): TPathsD;
+function PathsD(const paths: TPaths64): TPathsD;
 var
   i,j,len,len2: integer;
 begin
@@ -531,7 +531,7 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-function ReversePath(const path: TPath): TPath;
+function ReversePath(const path: TPath64): TPath64;
 var
   i, highI: Integer;
 begin
@@ -553,7 +553,7 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-function ReversePaths(const paths: TPaths): TPaths;
+function ReversePaths(const paths: TPaths64): TPaths64;
 var
   i, j, highJ: Integer;
 begin
@@ -585,7 +585,7 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-procedure AppendPoint(var path: TPath; const pt: TPoint64);
+procedure AppendPoint(var path: TPath64; const pt: TPoint64);
 var
   len: Integer;
 begin
@@ -605,7 +605,7 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-procedure AppendPath(var paths: TPaths; const extra: TPath);
+procedure AppendPath(var paths: TPaths64; const extra: TPath64);
 var
   len: Integer;
 begin
@@ -625,7 +625,7 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-procedure AppendPaths(var paths: TPaths; const extra: TPaths);
+procedure AppendPaths(var paths: TPaths64; const extra: TPaths64);
 var
   i, len1, len2: Integer;
 begin
@@ -649,7 +649,7 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-function ArrayOfPathsToPaths(const ap: TArrayOfPaths): TPaths;
+function ArrayOfPathsToPaths(const ap: TArrayOfPaths): TPaths64;
 var
   i,j,k, len, cnt: integer;
 begin
@@ -775,7 +775,7 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-function GetBounds(const paths: TPaths): TRect64;
+function GetBounds(const paths: TPaths64): TRect64;
 var
   i,j: Integer;
   p: PPoint64;
@@ -951,7 +951,7 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-function Area(const path: TPath): Double;
+function Area(const path: TPath64): Double;
 var
   i, j, highI: Integer;
   d: Double;
@@ -989,7 +989,7 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-function IsClockwise(const path: TPath): Boolean;
+function IsClockwise(const path: TPath64): Boolean;
 begin
   Result := Area(path) >= 0;
 end;
@@ -1002,7 +1002,7 @@ end;
 //------------------------------------------------------------------------------
 
 function PointInPolygon(const pt: TPoint64;
-  const path: TPath): TPointInPolygonResult;
+  const path: TPath64): TPointInPolygonResult;
 var
   i, val, cnt: Integer;
   d, d2, d3: Double; //using doubles to avoid possible integer overflow
@@ -1128,7 +1128,7 @@ begin
 end;
 //---------------------------------------------------------------------------
 
-function CleanPath(const path: TPath): TPath;
+function CleanPath(const path: TPath64): TPath64;
 var
   i,j, len: integer;
   prev: TPoint64;
@@ -1206,7 +1206,7 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-function SelfIntersectIdx(const path: TPath): integer;
+function SelfIntersectIdx(const path: TPath64): integer;
 var
   i, len: integer;
 begin
@@ -1223,8 +1223,8 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-function InternalSplitSelfIntersect(const path: TPath;
-  idx: integer; out path1, path2: TPath): Boolean;
+function InternalSplitSelfIntersect(const path: TPath64;
+  idx: integer; out path1, path2: TPath64): Boolean;
 var
   i, len: integer;
   ip: TPointD;
@@ -1249,12 +1249,12 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-function SplitSelfIntersect(var path: TPath; out extras: TPaths): Boolean;
+function SplitSelfIntersect(var path: TPath64; out extras: TPaths64): Boolean;
 var
   j: integer;
-  p: TPath;
+  p: TPath64;
   a1, a2: double;
-  extra: TPath;
+  extra: TPath64;
 begin
   Result := false;
   extras := nil;

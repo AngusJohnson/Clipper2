@@ -9,15 +9,9 @@
 *******************************************************************************/
 
 using System;
-using System.Collections.Generic;
 
 namespace ClipperLib2
 {
-  using Path = List<Point64>;
-  using Paths = List<List<Point64>>;
-  using PathD = List<PointD>;
-  using PathsD = List<List<PointD>>;
-
   public struct Point64
   {
     public long X;
