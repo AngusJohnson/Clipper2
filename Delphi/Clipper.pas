@@ -2,8 +2,8 @@ unit Clipper;
 
 (*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Version   :  10.0 (release candidate 1)                                      *
-* Date      :  14 February 2022                                                *
+* Version   :  10.0 (beta) - aka Clipper2                                      *
+* Date      :  2 February 2022                                                 *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  This module provides a simple interface to the Clipper Library  *
@@ -20,8 +20,8 @@ uses
 type
   TPoint64    = Clipper.Core.TPoint64;
   TRect64     = Clipper.Core.TRect64;
-  TPath       = Clipper.Core.TPath64;
-  TPaths      = Clipper.Core.TPaths64;
+  TPath64       = Clipper.Core.TPath64;
+  TPaths64      = Clipper.Core.TPaths64;
 
   TPointD     = Clipper.Core.TPointD;
   TRectD      = Clipper.Core.TRectD;
@@ -34,18 +34,18 @@ type
   TFillRule = Clipper.Core.TFillRule;
 
 function BooleanOp(clipType: TClipType; fillRule: TFillRule;
-  const subjects, clips: TPaths): TPaths; overload;
+  const subjects, clips: TPaths64): TPaths64; overload;
 function BooleanOp(clipType: TClipType; fillRule: TFillRule;
   const subjects, clips: TPathsD; decimalPrec: integer = 2): TPathsD; overload;
 
-function Intersect(const subjects, clips: TPaths;
-  fillRule: TFillRule): TPaths; overload;
-function Union(const subjects, clips: TPaths;
-  fillRule: TFillRule): TPaths; overload;
-function Difference(const subjects, clips: TPaths;
-  fillRule: TFillRule): TPaths; overload;
-function XOR_(const subjects, clips: TPaths;
-  fillRule: TFillRule): TPaths; overload;
+function Intersect(const subjects, clips: TPaths64;
+  fillRule: TFillRule): TPaths64; overload;
+function Union(const subjects, clips: TPaths64;
+  fillRule: TFillRule): TPaths64; overload;
+function Difference(const subjects, clips: TPaths64;
+  fillRule: TFillRule): TPaths64; overload;
+function XOR_(const subjects, clips: TPaths64;
+  fillRule: TFillRule): TPaths64; overload;
 
 function Intersect(const subjects, clips: TPathsD;
   fillRule: TFillRule; decimalPrec: integer = 2): TPathsD; overload;
@@ -56,18 +56,18 @@ function Difference(const subjects, clips: TPathsD;
 function XOR_(const subjects, clips: TPathsD;
   fillRule: TFillRule; decimalPrec: integer = 2): TPathsD; overload;
 
-function InflatePaths(const paths: TPaths; delta: Double;
-  jt: TJoinType = jtRound; et: TEndType = etPolygon): TPaths; overload;
+function InflatePaths(const paths: TPaths64; delta: Double;
+  jt: TJoinType = jtRound; et: TEndType = etPolygon): TPaths64; overload;
 function InflatePaths(const paths: TPathsD; delta: Double;
   jt: TJoinType = jtRound; et: TEndType = etPolygon): TPathsD; overload;
 
 
-function PolyTreeToPaths(PolyTree: TPolyTree): TPaths;
+function PolyTreeToPaths(PolyTree: TPolyTree): TPaths64;
 function PolyTreeDToPathsD(PolyTree: TPolyTreeD): TPathsD;
 
 implementation
 
-procedure AddPolyNodeToPaths(Poly: TPolyPath; var Paths: TPaths);
+procedure AddPolyNodeToPaths(Poly: TPolyPath; var Paths: TPaths64);
 var
   i: Integer;
 begin
@@ -82,7 +82,7 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-function PolyTreeToPaths(PolyTree: TPolyTree): TPaths;
+function PolyTreeToPaths(PolyTree: TPolyTree): TPaths64;
 begin
   Result := nil;
   AddPolyNodeToPaths(PolyTree, Result);
@@ -113,7 +113,7 @@ end;
 //------------------------------------------------------------------------------
 
 function BooleanOp(clipType: TClipType; fillRule: TFillRule;
-  const subjects, clips: TPaths): TPaths;
+  const subjects, clips: TPaths64): TPaths64;
 begin
   with TClipper.Create do
   try
@@ -143,25 +143,25 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-function Intersect(const subjects, clips: TPaths; fillRule: TFillRule): TPaths;
+function Intersect(const subjects, clips: TPaths64; fillRule: TFillRule): TPaths64;
 begin
   Result := BooleanOp(ctIntersection, fillRule, subjects, clips);
 end;
 //------------------------------------------------------------------------------
 
-function Union(const subjects, clips: TPaths; fillRule: TFillRule): TPaths;
+function Union(const subjects, clips: TPaths64; fillRule: TFillRule): TPaths64;
 begin
   Result := BooleanOp(ctUnion, fillRule, subjects, clips);
 end;
 //------------------------------------------------------------------------------
 
-function Difference(const subjects, clips: TPaths; fillRule: TFillRule): TPaths;
+function Difference(const subjects, clips: TPaths64; fillRule: TFillRule): TPaths64;
 begin
   Result := BooleanOp(ctDifference, fillRule, subjects, clips);
 end;
 //------------------------------------------------------------------------------
 
-function XOR_(const subjects, clips: TPaths; fillRule: TFillRule): TPaths;
+function XOR_(const subjects, clips: TPaths64; fillRule: TFillRule): TPaths64;
 begin
   Result := BooleanOp(ctXor, fillRule, subjects, clips);
 end;
@@ -196,8 +196,8 @@ end;
 //------------------------------------------------------------------------------
 //------------------------------------------------------------------------------
 
-function InflatePaths(const paths: TPaths; delta: Double;
-  jt: TJoinType; et: TEndType): TPaths;
+function InflatePaths(const paths: TPaths64; delta: Double;
+  jt: TJoinType; et: TEndType): TPaths64;
 var
   pp: TPathsD;
 const

@@ -2,8 +2,8 @@ unit Clipper.Engine;
 
 (*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Version   :  10.0 (release candidate 1)                                      *
-* Date      :  19 February 2022                                                *
+* Version   :  10.0 (beta) - aka Clipper2                                      *
+* Date      :  2 February 2022                                                 *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  This is the main polygon clipping module                        *
@@ -1060,13 +1060,13 @@ var
   var
     lm: PLocalMinima;
   begin
-    if vfLocMin in vert.flags then Exit; //ie already added
+    if vfLocMin in vert.flags then Exit;  //ie already added
     Include(vert.flags, vfLocMin);
     new(lm);
     lm.vertex := vert;
     lm.PolyType := polyType;
     lm.IsOpen := isOpen;
-    FLocMinList.Add(lm);              //nb: sorted in Reset()
+    FLocMinList.Add(lm);                  //nb: sorted in Reset()
   end;
   //---------------------------------------------------------
 

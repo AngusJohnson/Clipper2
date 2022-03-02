@@ -2,8 +2,8 @@
 
 (*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Version   :  10.0 (release candidate 1)                                      *
-* Date      :  19 February 2022                                                *
+* Version   :  10.0 (beta) - aka Clipper2                                      *
+* Date      :  2 February 2022                                                 *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  Core Clipper Library module                                     *
