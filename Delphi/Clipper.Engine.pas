@@ -3,7 +3,7 @@ unit Clipper.Engine;
 (*******************************************************************************
 * Author    :  Angus Johnson                                                   *
 * Version   :  10.0 (beta) - aka Clipper2                                      *
-* Date      :  2 February 2022                                                 *
+* Date      :  4 March 2022                                                    *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  This is the main polygon clipping module                        *
@@ -549,9 +549,17 @@ begin
 end;
 //----------------------------------------------------------------------
 
-function IsMaxima(e: PActive): Boolean; {$IFDEF INLINING} inline; {$ENDIF}
+function IsMaxima(e: PActive): Boolean; overload;
+  {$IFDEF INLINING} inline; {$ENDIF}
 begin
   Result := vfLocMax in e.vertTop.flags;
+end;
+//------------------------------------------------------------------------------
+
+function IsMaxima(vert: PVertex): Boolean; overload;
+  {$IFDEF INLINING} inline; {$ENDIF}
+begin
+  Result := vfLocMax in vert.flags;
 end;
 //------------------------------------------------------------------------------
 
@@ -1372,9 +1380,26 @@ begin
   begin
     if PointsEqual(op1.Pt, op2.Pt) then
     begin
+      if IsMaxima(op1) or IsMaxima(op2) then // give up :)
+      begin
+        Result := true;
+        Exit;
+      end;
       pt := op1.Pt;
       op1 := NextVertex(op1, IsLeftBound(a1));
       op2 := NextVertex(op2, IsLeftBound(a2));
+    end
+    else if IsHorizontal(a1) then
+    begin
+      if IsHorizontal(a2) then
+        Result := a1.top.X < a2.top.X else
+        Result := IsHeadingLeftHorz(a1);
+      Exit;
+    end
+    else if IsHorizontal(a2) then
+    begin
+      Result := IsHeadingRightHorz(a2);
+      Exit;
     end
     else if op1.Pt.Y >= op2.Pt.Y then
     begin

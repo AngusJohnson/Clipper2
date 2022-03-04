@@ -1,10 +1,13 @@
 ﻿/*******************************************************************************
 * Author    :  Angus Johnson                                                   *
 * Version   :  10.0 (beta) - also known as Clipper2                            *
-* Date      :  1 March 2022                                                    *
+* Date      :  4 March 2022                                                    *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  This is the main polygon clipping module                        *
+* Thanks    :  Special thanks to Thong Nguyen (https://nguyen.mn/) and to      *
+*              Guus Kuiper (https://www.guuskuiper.nl/) for their invaluable   *
+*              assistance in this C# Clipper port.                             *
 * License   :  http://www.boost.org/LICENSE_1_0.txt                            *
 *******************************************************************************/
 
@@ -357,6 +360,11 @@ namespace ClipperLib2
 		static bool IsMaxima(Active ae)
 		{
 			return ((ae.vertex_top.flags & VertexFlags.LocalMax) != VertexFlags.None);
+		}
+
+		static bool IsMaxima(Vertex vert)
+		{
+			return ((vert.flags & VertexFlags.LocalMax) != VertexFlags.None);
 		}
 
 		private Active GetMaximaPair(Active ae)
@@ -1028,9 +1036,19 @@ namespace ClipperLib2
 			{
 				if (op1.pt == op2.pt)
 				{
+					if (IsMaxima(op1) || IsMaxima(op2)) return true; // give up :)
 					pt = op1.pt;
 					op1 = NextVertex(op1, IsLeftBound(a1));
 					op2 = NextVertex(op2, IsLeftBound(a2));
+				}
+				else if (IsHorizontal(a1))
+				{
+					if (IsHorizontal(a2)) return a1.top.X < a2.top.X;
+					else return IsHeadingLeftHorz(a1);
+				}
+				else if (IsHorizontal(a2)) 
+				{ 
+					return IsHeadingRightHorz(a2); 
 				}
 				else if (op1.pt.Y >= op2.pt.Y)
 				{

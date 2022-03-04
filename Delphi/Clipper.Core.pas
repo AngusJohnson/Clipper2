@@ -3,8 +3,8 @@
 (*******************************************************************************
 * Author    :  Angus Johnson                                                   *
 * Version   :  10.0 (beta) - aka Clipper2                                      *
-* Date      :  2 February 2022                                                 *
-* Website   :  http://www.angusj.com                                           *
+* Version   :  10.0 (beta) - aka Clipper2                                      *
+* Date      :  4 March 2022                                                    *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  Core Clipper Library module                                     *
 *              Contains structures and functions used throughout the library   *
