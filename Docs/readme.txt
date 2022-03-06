@@ -59,13 +59,15 @@ Additional notes:
   //      accommodates PathD and PathsD structures.
   Clipper clipperD = new ClipperD();   
 
-Documatation definition: 
-"Touching" path segments (as opposed to touching vertices) are segments that 
-are collinear with and at least partially overlap other path segments.
+Documentation definition: 
+A "touching" path segment (as opposed to a touching vertex) is one that is
+collinear with and at least partially overlaps another path's segment.
 
-Clipping solutions are commonly not in their simplest forms, and so solutions may have "touching" polygons.
+A clipping solution will likely not be in its simplest form. 
+For example, solutions may have "touching" polygons.
 
-Open subject paths may have segments that touch clipping segments. These touching segments may or may not be part of the clipping solution. Touching segments won't cross (ie intersect with) other paths. So paths that start outside a clipping region and have segments touching a clipping boundary, those segments will not be part of the solution. Likewise open paths that start inside a clipping region and touch a clipping boundary, those touching segments will be part of the clipping solution. For open path line segments that start on a clipping boundary and are "touching" that boundary, their segment placement will depend on the heading of the next segment.
+Open paths:
+Open subject paths may have segments that touch clipping segments. These touching segments may or may not be part of the clipping solution. Touching segments won't cross into or out of clipping regions. So for a path that starts outside a clipping region and touches a clipping boundary, that segment will remain outside and not be part of the clipping solution. Likewise for an open path that start inside a clipping region and touches a clipping boundary, that touching segment will be part of the clipping solution. For an open path that starts on a clipping boundary and is "touching" that boundary, its placement (whether inside or outside that boundary) will depend on the heading of the open path's next segment.
 
 Examples:
   subj_open = new Paths64();
