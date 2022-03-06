@@ -3,7 +3,7 @@ unit Clipper.Engine;
 (*******************************************************************************
 * Author    :  Angus Johnson                                                   *
 * Version   :  10.0 (beta) - aka Clipper2                                      *
-* Date      :  4 March 2022                                                    *
+* Date      :  6 March 2022                                                    *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  This is the main polygon clipping module                        *
@@ -194,8 +194,10 @@ type
 
     //ADDPATH & ADDPATHS METHODS ...
     //Integer paths (TPath) ...
-    procedure AddSubject(const subject: TPath64; isOpen: Boolean = false); overload;
-    procedure AddSubject(const subjects: TPaths64; isOpen: Boolean = false); overload;
+    procedure AddSubject(const subject: TPath64); overload;
+    procedure AddSubject(const subjects: TPaths64); overload;
+    procedure AddOpenSubject(const subject: TPath64); overload;
+    procedure AddOpenSubject(const subjects: TPaths64); overload;
     procedure AddClip(const clip: TPath64); overload;
     procedure AddClip(const clips: TPaths64); overload;
     //EXECUTE METHODS ...
@@ -254,10 +256,15 @@ type
   {$IFDEF STRICT}strict{$ENDIF} private
     FScale: double;
   public
-    procedure AddSubject(const path64: TPath64; isOpen: Boolean = false); overload;
-    procedure AddSubject(const pathD: TPathD; isOpen: Boolean = false); overload;
-    procedure AddSubject(const paths64: TPaths64; isOpen: Boolean = false); overload;
-    procedure AddSubject(const pathsD: TPathsD; isOpen: Boolean = false); overload;
+    procedure AddSubject(const path64: TPath64); overload;
+    procedure AddSubject(const pathD: TPathD); overload;
+    procedure AddSubject(const paths64: TPaths64); overload;
+    procedure AddSubject(const pathsD: TPathsD); overload;
+
+    procedure AddOpenSubject(const path64: TPath64); overload;
+    procedure AddOpenSubject(const pathD: TPathD); overload;
+    procedure AddOpenSubject(const paths64: TPaths64); overload;
+    procedure AddOpenSubject(const pathsD: TPathsD); overload;
 
     procedure AddClip(const path64: TPath64); overload;
     procedure AddClip(const pathD: TPathD); overload;
@@ -531,6 +538,15 @@ begin
   if IsLeftBound(e) then
     Result := e.vertTop.next else
     Result := e.vertTop.prev;
+end;
+//------------------------------------------------------------------------------
+
+function PrevVertex(e: PActive): PVertex;
+  {$IFDEF INLINING} inline; {$ENDIF}
+begin
+  if IsLeftBound(e) then
+    Result := e.vertTop.prev else
+    Result := e.vertTop.next;
 end;
 //------------------------------------------------------------------------------
 
@@ -1156,12 +1172,36 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-procedure TClipper.AddSubject(const subject: TPath64; isOpen: Boolean);
+procedure TClipper.AddSubject(const subject: TPath64);
 begin
   if Length(subject) < 2 then Exit;
-  if isOpen then FHasOpenPaths := true;
   FLocMinListSorted := false;
-  AddPathToVertexList(subject, ptSubject, isOpen);
+  AddPathToVertexList(subject, ptSubject, false);
+end;
+//------------------------------------------------------------------------------
+
+procedure TClipper.AddSubject(const subjects: TPaths64);
+var
+  i: Integer;
+begin
+  for i := 0 to high(subjects) do AddSubject(subjects[i]);
+end;
+//------------------------------------------------------------------------------
+
+procedure TClipper.AddOpenSubject(const subject: TPath64);
+begin
+  if Length(subject) < 2 then Exit;
+  FHasOpenPaths := true;
+  FLocMinListSorted := false;
+  AddPathToVertexList(subject, ptSubject, true);
+end;
+//------------------------------------------------------------------------------
+
+procedure TClipper.AddOpenSubject(const subjects: TPaths64);
+var
+  i: Integer;
+begin
+  for i := 0 to high(subjects) do AddOpenSubject(subjects[i]);
 end;
 //------------------------------------------------------------------------------
 
@@ -1170,14 +1210,6 @@ begin
   if Length(clip) < 2 then Exit;
   FLocMinListSorted := false;
   AddPathToVertexList(clip, ptClip, false);
-end;
-//------------------------------------------------------------------------------
-
-procedure TClipper.AddSubject(const subjects: TPaths64; isOpen: Boolean = false);
-var
-  i: Integer;
-begin
-  for i := 0 to high(subjects) do AddSubject(subjects[i], isOpen);
 end;
 //------------------------------------------------------------------------------
 
@@ -1356,7 +1388,7 @@ end;
 function IsValidAelOrder(a1, a2: PActive): Boolean;
 var
   pt: TPoint64;
-  op1, op2: PVertex;
+  a1IsNewEdge, a2IsNewEdge: Boolean;
   d: double;
 begin
   if a2.CurrX <> a1.CurrX then
@@ -1365,56 +1397,61 @@ begin
     Exit;
   end;
 
-  if (a1.bot.Y < a2.Bot.Y) then
-    d := CrossProduct(a1.bot, a1.Top, a2.bot)
-  else if (a2.bot.Y < a1.Bot.Y) then
-    d := CrossProduct(a2.bot, a2.Top, a1.bot)
-  else d := 0;
-
-  op1 := a1.VertTop;
-  op2 := a2.VertTop;
-  if d = 0 then
-    d := CrossProduct(op1.pt, a1.Bot, op2.Pt);
-
-  while d = 0 do
+  //find the common base point then get the turning
+  //direction (left or right) of the edge top points
+  if (a1.bot.Y < a2.Bot.Y) then pt := a1.bot
+  else pt := a2.bot;
+  d := CrossProduct(a1.Top, pt, a2.top);
+  if d <> 0 then
   begin
-    if PointsEqual(op1.Pt, op2.Pt) then
-    begin
-      if IsMaxima(op1) or IsMaxima(op2) then // give up :)
-      begin
-        Result := true;
-        Exit;
-      end;
-      pt := op1.Pt;
-      op1 := NextVertex(op1, IsLeftBound(a1));
-      op2 := NextVertex(op2, IsLeftBound(a2));
-    end
-    else if IsHorizontal(a1) then
-    begin
-      if IsHorizontal(a2) then
-        Result := a1.top.X < a2.top.X else
-        Result := IsHeadingLeftHorz(a1);
-      Exit;
-    end
-    else if IsHorizontal(a2) then
-    begin
-      Result := IsHeadingRightHorz(a2);
-      Exit;
-    end
-    else if op1.Pt.Y >= op2.Pt.Y then
-    begin
-      pt := op1.Pt;
-      op1 := NextVertex(op1, IsLeftBound(a1));
-    end else
-    begin
-      pt := op2.Pt;
-      op2 := NextVertex(op2, IsLeftBound(a2));
-    end;
-    if (op1.Pt.Y > pt.Y) or (op2.Pt.Y > pt.Y) then
-      d := -1 else //force a break to avoid an endless loop
-      d := CrossProduct(op1.Pt, pt, op2.Pt);
+    Result := d < 0; //true when left turning
+    Exit;
   end;
-  Result := d < 0;
+
+  //edges must be collinear to get here
+
+  //for starting open paths, place them according to
+  //the direction they're about to turn
+  if IsOpen(a1) and not IsMaxima(a1) and
+    (a1.bot.Y <= a2.bot.Y) and
+    not IsSamePolyType(a1, a2) and
+    (a1.top.Y > a2.top.Y) then
+  begin
+    Result := CrossProduct(a1.Bot, a1.Top,
+      NextVertex(a1).Pt) <= 0;
+    Exit;
+  end
+  else if IsOpen(a2) and not IsMaxima(a2) and
+    (a2.bot.Y <= a1.bot.Y) and
+    not IsSamePolyType(a1, a2) and
+    (a2.top.Y > a1.top.Y) then
+  begin
+    Result := CrossProduct(a2.Bot, a2.Top,
+      NextVertex(a2).Pt) >= 0;
+    Exit;
+  end;
+
+  a1IsNewEdge := (a1.bot.Y <= a2.bot.Y) and
+    (PrevVertex(a1) = a1.LocMin.vertex);
+  a2IsNewEdge := (a2.bot.Y <= a1.bot.Y) and
+    (PrevVertex(a2) = a2.LocMin.vertex);
+
+  if IsHorizontal(a1) then
+  begin
+    if IsHorizontal(a2) then Result := a1.top.X < a2.top.X
+    else Result := a1.Top.X < a1.bot.X;
+  end
+  else if IsHorizontal(a2) then
+  begin
+    Result := a2.Top.X > a2.bot.X;
+  end
+  //New *left edges* prefer placement to the right of collinear edges to
+  //preserve proximity with their corresponding *right edges*. *Right edges*
+  //likewise prefer left placement. With open edges and collinearity,
+  //placement is undefined.
+  else if (a2IsNewEdge) then Result := IsLeftBound(a2)
+  else if (a1IsNewEdge) then Result := not IsLeftBound(a1)
+  else Result := true; //open edge and undefined, let's stop here
 end;
 //------------------------------------------------------------------------------
 
@@ -2742,37 +2779,70 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-procedure TClipperD.AddSubject(const path64: TPath64; isOpen: Boolean = false);
+procedure TClipperD.AddSubject(const path64: TPath64);
 begin
   RaiseError(rsClipper_ClipperDErr);
 end;
 //------------------------------------------------------------------------------
 
-procedure TClipperD.AddSubject(const pathD: TPathD; isOpen: Boolean = false);
+procedure TClipperD.AddSubject(const pathD: TPathD);
 var
   p: TPath64;
 begin
   if FScale = 0 then FScale := DefaultClipperDScale;
   p := ScalePath(pathD, FScale, FScale);
-  Inherited AddSubject(p, isOpen);
+  Inherited AddSubject(p);
 end;
 //------------------------------------------------------------------------------
 
-procedure TClipperD.AddSubject(const paths64: TPaths64; isOpen: Boolean = false);
+procedure TClipperD.AddSubject(const paths64: TPaths64);
 begin
   raise Exception.Create('Error: Use TClipper for TPaths');
 end;
 //------------------------------------------------------------------------------
 
-procedure TClipperD.AddSubject(const pathsD: TPathsD; isOpen: Boolean = false);
+procedure TClipperD.AddSubject(const pathsD: TPathsD);
 var
   pp: TPaths64;
 begin
   if FScale = 0 then FScale := DefaultClipperDScale;
   pp := ScalePaths(pathsD, FScale, FScale);
-  Inherited AddSubject(pp, isOpen);
+  Inherited AddSubject(pp);
 end;
 //------------------------------------------------------------------------------
+
+procedure TClipperD.AddOpenSubject(const path64: TPath64);
+begin
+  raise Exception.Create('Error: Use TClipper for TPaths');
+end;
+//------------------------------------------------------------------------------
+
+procedure TClipperD.AddOpenSubject(const paths64: TPaths64);
+begin
+  raise Exception.Create('Error: Use TClipper for TPaths');
+end;
+//------------------------------------------------------------------------------
+
+procedure TClipperD.AddOpenSubject(const pathD: TPathD);
+var
+  p: TPath64;
+begin
+  if FScale = 0 then FScale := DefaultClipperDScale;
+  p := ScalePath(pathD, FScale, FScale);
+  Inherited AddOpenSubject(p);
+end;
+//------------------------------------------------------------------------------
+
+procedure TClipperD.AddOpenSubject(const pathsD: TPathsD);
+var
+  pp: TPaths64;
+begin
+  if FScale = 0 then FScale := DefaultClipperDScale;
+  pp := ScalePaths(pathsD, FScale, FScale);
+  Inherited AddOpenSubject(pp);
+end;
+//------------------------------------------------------------------------------
+
 
 procedure TClipperD.AddClip(const path64: TPath64);
 begin
