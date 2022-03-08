@@ -3,8 +3,7 @@
 (*******************************************************************************
 * Author    :  Angus Johnson                                                   *
 * Version   :  10.0 (beta) - aka Clipper2                                      *
-* Version   :  10.0 (beta) - aka Clipper2                                      *
-* Date      :  4 March 2022                                                    *
+* Date      :  8 March 2022                                                    *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  Core Clipper Library module                                     *
 *              Contains structures and functions used throughout the library   *
@@ -21,12 +20,25 @@ uses
 const
   sqrtTwo = 1.4142135623731;
   oneDegreeAsRadian = 0.01745329252;
+  floatingPointTolerance = 1E-15;
+  defaultMinimumEdgeLength = 0.1;
 
 type
   PPoint64  = ^TPoint64;
-  TPoint64  = record X, Y: Int64; end;
+  TPoint64  = record
+    X, Y: Int64;
+{$IFDEF USINGZ}
+    Z: Int64;
+{$ENDIF}
+  end;
+
   PPointD   = ^TPointD;
-  TPointD   = record X, Y: double; end;
+  TPointD   = record
+    X, Y: double;
+{$IFDEF USINGZ}
+    Z: double;
+{$ENDIF}
+  end;
 
   //TPath: a simple data structure to represent a series of vertices, whether
   //open (poly-line) or closed (polygon). A path may be simple or complex (self
@@ -118,14 +130,17 @@ function PointsEqual(const pt1, pt2: TPoint64): Boolean; overload;
 function PointsNearEqual(const pt1, pt2: TPointD; distanceSqrd: double): Boolean;
   {$IFDEF INLINING} inline; {$ENDIF}
 
-function Point64(const X, Y: Int64): TPoint64; overload;
-  {$IFDEF INLINING} inline; {$ENDIF}
-function Point64(const X, Y: Double): TPoint64; overload;
-  {$IFDEF INLINING} inline; {$ENDIF}
-function Point64(const pt: TPointD): TPoint64; overload;
-  {$IFDEF INLINING} inline; {$ENDIF}
-function PointD(const X, Y: Double): TPointD; overload;
-  {$IFDEF INLINING} inline; {$ENDIF}
+{$IFDEF USINGZ}
+function Point64(const X, Y: Int64; Z: Int64 = 0): TPoint64; overload; {$IFDEF INLINING} inline; {$ENDIF}
+function Point64(const X, Y: Double; Z: double = 0.0): TPoint64; overload; {$IFDEF INLINING} inline; {$ENDIF}
+function PointD(const X, Y: Double; Z: double = 0.0): TPointD; overload; {$IFDEF INLINING} inline; {$ENDIF}
+{$ELSE}
+function Point64(const X, Y: Int64): TPoint64; overload; {$IFDEF INLINING} inline; {$ENDIF}
+function Point64(const X, Y: Double): TPoint64; overload; {$IFDEF INLINING} inline; {$ENDIF}
+function PointD(const X, Y: Double): TPointD; overload; {$IFDEF INLINING} inline; {$ENDIF}
+{$ENDIF}
+
+function Point64(const pt: TPointD): TPoint64; overload; {$IFDEF INLINING} inline; {$ENDIF}
 function PointD(const pt: TPoint64): TPointD; overload;
   {$IFDEF INLINING} inline; {$ENDIF}
 function Rect64(const left, top, right, bottom: Int64): TRect64; overload;
@@ -138,23 +153,35 @@ function GetBounds(const paths: TPathsD): TRectD; overload;
 
 procedure InflateRect(var rec: TRect64; dx, dy: Int64); overload;
 procedure InflateRect(var rec: TRectD; dx, dy: double); overload;
-function UnionRect(const rec, rec2: TRect64): TRect64; overload;
-function UnionRect(const rec1, rec2: TRectD;
-  ValidateAsOpenPath: Boolean = false): TRectD; overload;
-function RotateRect(const rec: TRect64; angleRad: double): TRect64; overload;
-function RotateRect(const rec: TRectD; angleRad: double): TRectD; overload;
+function  UnionRect(const rec, rec2: TRect64): TRect64; overload;
+function  UnionRect(const rec, rec2: TRectD): TRectD; overload;
+
+function  RotateRect(const rec: TRect64; angleRad: double): TRect64; overload;
+function  RotateRect(const rec: TRectD; angleRad: double): TRectD; overload;
 procedure OffsetRect(var rec: TRect64; dx, dy: Int64); overload;
 procedure OffsetRect(var rec: TRectD; dx, dy: double); overload;
 
+function ScalePoint(const pt: TPoint64; scale: double): TPointD;
+
 function ScalePath(const path: TPath64; sx, sy: double): TPath64; overload;
 function ScalePath(const path: TPathD; sx, sy: double): TPath64; overload;
-function ScalePaths(const paths: TPaths64; sx, sy: double): TPaths64; overload;
-function ScalePaths(const paths: TPathsD; sx, sy: double): TPaths64; overload;
+function ScalePath(const path: TPath64; scale: double): TPath64; overload;
+function ScalePath(const path: TPathD; scale: double): TPath64; overload;
 
 function ScalePathD(const path: TPath64; sx, sy: double): TPathD; overload;
 function ScalePathD(const path: TPathD; sx, sy: double): TPathD; overload;
+function ScalePathD(const path: TPath64; scale: double): TPathD; overload;
+function ScalePathD(const path: TPathD; scale: double): TPathD; overload;
+
+function ScalePaths(const paths: TPaths64; sx, sy: double): TPaths64; overload;
+function ScalePaths(const paths: TPathsD; sx, sy: double): TPaths64; overload;
+function ScalePaths(const paths: TPaths64; scale: double): TPaths64; overload;
+function ScalePaths(const paths: TPathsD; scale: double): TPaths64; overload;
+
 function ScalePathsD(const paths: TPaths64; sx, sy: double): TPathsD; overload;
 function ScalePathsD(const paths: TPathsD; sx, sy: double): TPathsD; overload;
+function ScalePathsD(const paths: TPaths64; scale: double): TPathsD; overload;
+function ScalePathsD(const paths: TPathsD; scale: double): TPathsD; overload;
 
 function OffsetPath(const path: TPath64; dx, dy: Int64): TPath64; overload;
 function OffsetPath(const path: TPathD; dx, dy: double): TPathD; overload;
@@ -184,9 +211,6 @@ procedure AppendPaths(var paths: TPathsD; const extra: TPathsD); overload;
 function ArrayOfPathsToPaths(const ap: TArrayOfPaths): TPaths64;
 
 const
-  floatingPointTolerance: double = 1E-15;
-  defaultMinEdgeLen: double = 0.1;
-
   MaxInt64 = 9223372036854775807;
   NullRect64: TRect64 = (left: 0; top: 0; right: 0; Bottom: 0);
   NullRectD: TRectD = (left: 0; top: 0; right: 0; Bottom: 0);
@@ -291,6 +315,16 @@ begin
 end;
 //------------------------------------------------------------------------------
 
+function ScalePoint(const pt: TPoint64; scale: double): TPointD;
+begin
+  Result.X := pt.X * scale;
+  Result.Y := pt.Y * scale;
+{$IFDEF USINGZ}
+  Result.Z := pt.Z * scale;
+{$ENDIF}
+end;
+//------------------------------------------------------------------------------
+
 function ScalePath(const path: TPath64; sx, sy: double): TPath64;
 var
   i,len: integer;
@@ -319,6 +353,34 @@ begin
   begin
     result[i].X := Round(path[i].X * sx);
     result[i].Y := Round(path[i].Y * sy);
+  end;
+end;
+//------------------------------------------------------------------------------
+
+function ScalePath(const path: TPath64; scale: double): TPath64;
+var
+  i,len: integer;
+begin
+  len := length(path);
+  setlength(result, len);
+  for i := 0 to len -1 do
+  begin
+    result[i].X := Round(path[i].X * scale);
+    result[i].Y := Round(path[i].Y * scale);
+  end;
+end;
+//------------------------------------------------------------------------------
+
+function ScalePath(const path: TPathD; scale: double): TPath64;
+var
+  i,len: integer;
+begin
+  len := length(path);
+  setlength(result, len);
+  for i := 0 to len -1 do
+  begin
+    result[i].X := Round(path[i].X * scale);
+    result[i].Y := Round(path[i].Y * scale);
   end;
 end;
 //------------------------------------------------------------------------------
@@ -353,8 +415,6 @@ function ScalePathD(const path: TPath64; sx, sy: double): TPathD;
 var
   i: integer;
 begin
-  if sx = 0 then sx := 1;
-  if sy = 0 then sy := 1;
   setlength(result, length(path));
   for i := 0 to high(path) do
   begin
@@ -373,6 +433,38 @@ begin
   begin
     result[i].X := path[i].X * sx;
     result[i].Y := path[i].Y * sy;
+  end;
+end;
+//------------------------------------------------------------------------------
+
+function ScalePathD(const path: TPath64; scale: double): TPathD;
+var
+  i: integer;
+begin
+  setlength(result, length(path));
+  for i := 0 to high(path) do
+  begin
+    result[i].X := path[i].X * scale;
+    result[i].Y := path[i].Y * scale;
+{$IFDEF USINGZ}
+    result[i].Z := path[i].Z * scale;
+{$ENDIF}
+  end;
+end;
+//------------------------------------------------------------------------------
+
+function ScalePathD(const path: TPathD; scale: double): TPathD;
+var
+  i: integer;
+begin
+  setlength(result, length(path));
+  for i := 0 to high(path) do
+  begin
+    result[i].X := path[i].X * scale;
+    result[i].Y := path[i].Y * scale;
+{$IFDEF USINGZ}
+    result[i].Z := path[i].Z * scale;
+{$ENDIF}
   end;
 end;
 //------------------------------------------------------------------------------
@@ -410,6 +502,86 @@ begin
     begin
       result[i][j].X := paths[i][j].X * sx;
       result[i][j].Y := paths[i][j].Y * sy;
+    end;
+  end;
+end;
+//------------------------------------------------------------------------------
+
+function ScalePaths(const paths: TPaths64; scale: double): TPaths64;
+var
+  i,j: integer;
+begin
+  setlength(result, length(paths));
+  for i := 0 to high(paths) do
+  begin
+    setlength(result[i], length(paths[i]));
+    for j := 0 to high(paths[i]) do
+    begin
+      result[i][j].X := Round(paths[i][j].X * scale);
+      result[i][j].Y := Round(paths[i][j].Y * scale);
+{$IFDEF USINGZ}
+      result[i][j].Z := Round(paths[i][j].Z * scale);
+{$ENDIF}
+    end;
+  end;
+end;
+//------------------------------------------------------------------------------
+
+function ScalePaths(const paths: TPathsD; scale: double): TPaths64;
+var
+  i,j: integer;
+begin
+  setlength(result, length(paths));
+  for i := 0 to high(paths) do
+  begin
+    setlength(result[i], length(paths[i]));
+    for j := 0 to high(paths[i]) do
+    begin
+      result[i][j].X := Round(paths[i][j].X * scale);
+      result[i][j].Y := Round(paths[i][j].Y * scale);
+{$IFDEF USINGZ}
+      result[i][j].Z := Round(paths[i][j].Z * scale);
+{$ENDIF}
+    end;
+  end;
+end;
+//------------------------------------------------------------------------------
+
+function ScalePathsD(const paths: TPaths64; scale: double): TPathsD; overload;
+var
+  i,j: integer;
+begin
+  setlength(result, length(paths));
+  for i := 0 to high(paths) do
+  begin
+    setlength(result[i], length(paths[i]));
+    for j := 0 to high(paths[i]) do
+    begin
+      result[i][j].X := paths[i][j].X * scale;
+      result[i][j].Y := paths[i][j].Y * scale;
+{$IFDEF USINGZ}
+      result[i][j].Z := paths[i][j].Z * scale;
+{$ENDIF}
+    end;
+  end;
+end;
+//------------------------------------------------------------------------------
+
+function ScalePathsD(const paths: TPathsD; scale: double): TPathsD; overload;
+var
+  i,j: integer;
+begin
+  setlength(result, length(paths));
+  for i := 0 to high(paths) do
+  begin
+    setlength(result[i], length(paths[i]));
+    for j := 0 to high(paths[i]) do
+    begin
+      result[i][j].X := paths[i][j].X * scale;
+      result[i][j].Y := paths[i][j].Y * scale;
+{$IFDEF USINGZ}
+      result[i][j].Z := paths[i][j].Z * scale;
+{$ENDIF}
     end;
   end;
 end;
@@ -680,6 +852,49 @@ begin
 end;
 //------------------------------------------------------------------------------
 
+{$IFDEF USINGZ}
+function Point64(const X, Y: Int64; Z: Int64): TPoint64;
+begin
+  Result.X := X;
+  Result.Y := Y;
+  Result.Z := Z;
+end;
+//------------------------------------------------------------------------------
+
+function Point64(const X, Y: Double; Z: double): TPoint64;
+begin
+  Result.X := Round(X);
+  Result.Y := Round(Y);
+  Result.Z := Round(Z);
+end;
+//------------------------------------------------------------------------------
+
+function PointD(const X, Y: Double; Z: Double): TPointD;
+begin
+  Result.X := X;
+  Result.Y := Y;
+  Result.Z := Z;
+end;
+//------------------------------------------------------------------------------
+
+function Point64(const pt: TPointD): TPoint64;
+begin
+  Result.X := Round(pt.X);
+  Result.Y := Round(pt.Y);
+  Result.Z := Round(pt.Z);
+end;
+//------------------------------------------------------------------------------
+
+function PointD(const pt: TPoint64): TPointD;
+begin
+  Result.X := pt.X;
+  Result.Y := pt.Y;
+  Result.Z := pt.Z;
+end;
+//------------------------------------------------------------------------------
+
+{$ELSE}
+
 function Point64(const X, Y: Int64): TPoint64;
 begin
   Result.X := X;
@@ -694,17 +909,17 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-function Point64(const pt: TPointD): TPoint64;
-begin
-  Result.X := Round(pt.X);
-  Result.Y := Round(pt.Y);
-end;
-//------------------------------------------------------------------------------
-
 function PointD(const X, Y: Double): TPointD;
 begin
   Result.X := X;
   Result.Y := Y;
+end;
+//------------------------------------------------------------------------------
+
+function Point64(const pt: TPointD): TPoint64;
+begin
+  Result.X := Round(pt.X);
+  Result.Y := Round(pt.Y);
 end;
 //------------------------------------------------------------------------------
 
@@ -714,6 +929,7 @@ begin
   Result.Y := pt.Y;
 end;
 //------------------------------------------------------------------------------
+{$ENDIF}
 
 function Rect64(const left, top, right, bottom: Int64): TRect64;
 begin
@@ -912,8 +1128,10 @@ end;
 
 function UnionRect(const rec, rec2: TRect64): TRect64;
 begin
-  if rec.IsEmpty then result := rec2
-  else if rec2.IsEmpty then result := rec
+  //nb: don't use rec.IsEmpty as this will
+  //reject open axis-aligned flat paths
+  if (rec.Width <= 0) and (rec.Height <= 0) then result := rec2
+  else if (rec2.Width <= 0) and (rec2.Height <= 0) then result := rec
   else
   begin
     result.Left := min(rec.Left, rec2.Left);
@@ -924,29 +1142,18 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-function IsValidRec(const rec: TRectD; isOpen: Boolean): Boolean;
+function UnionRect(const rec, rec2: TRectD): TRectD;
 begin
-  if (rec.Height > 0) and (rec.Width > 0) then
-    Result := true
-  else
-    Result := isOpen and (rec.Height >= 0) and (rec.Width > 0) and
-      ((rec.Height > 0) or (rec.Width > 0)); //a neg. height or width is invalid
-end;
-//------------------------------------------------------------------------------
-
-function UnionRect(const rec1, rec2: TRectD;
-  ValidateAsOpenPath: Boolean = false): TRectD;
-var
-  rec1IsEmpty, rec2IsEmpty: boolean;
-begin
-  if not IsValidRec(rec1, ValidateAsOpenPath) then result := rec2
-  else if not IsValidRec(rec2, ValidateAsOpenPath) then result := rec1
+  //nb: don't use rec.IsEmpty as this will
+  //reject open axis-aligned flat paths
+  if (rec.Width <= 0) and (rec.Height <= 0) then result := rec2
+  else if (rec2.Width <= 0) and (rec2.Height <= 0) then result := rec
   else
   begin
-    result.Left := min(rec1.Left, rec2.Left);
-    result.Right := max(rec1.Right, rec2.Right);
-    result.Top := min(rec1.Top, rec2.Top);
-    result.Bottom := max(rec1.Bottom, rec2.Bottom);
+    result.Left := min(rec.Left, rec2.Left);
+    result.Right := max(rec.Right, rec2.Right);
+    result.Top := min(rec.Top, rec2.Top);
+    result.Bottom := max(rec.Bottom, rec2.Bottom);
   end;
 end;
 //------------------------------------------------------------------------------

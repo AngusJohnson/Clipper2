@@ -60,14 +60,14 @@ Additional notes:
   Clipper clipperD = new ClipperD();   
 
 Documentation definition: 
-A "touching" path segment (as opposed to a touching vertex) is one that is
-collinear with and at least partially overlaps another path's segment.
+A "touching" segment (as opposed to a touching vertex) is one that is
+collinear with and at least partially overlaps another segment.
 
-A clipping solution will likely not be in its simplest form. 
+A clipping solution will likely NOT be in its simplest form. 
 For example, solutions may have "touching" polygons.
 
-Open paths:
-Open subject paths may have segments that touch clipping segments. These touching segments may or may not be part of the clipping solution. Touching segments won't cross into or out of clipping regions. So for a path that starts outside a clipping region and touches a clipping boundary, that segment will remain outside and not be part of the clipping solution. Likewise for an open path that start inside a clipping region and touches a clipping boundary, that touching segment will be part of the clipping solution. For an open path that starts on a clipping boundary and is "touching" that boundary, its placement (whether inside or outside that boundary) will depend on the heading of the open path's next segment.
+Open paths in solutions:
+Path clipping, including open path clipping, is performed using a "sweep line" algorithm that passes from the lower-most vertex to the top-most vertex. This means that open paths aren't processed from their starts to their ends as one might expect. This is important in order to understand when open path segments become part of the clipping solution for those segments that only touch a clipping boundary. (They aren't always included and they aren't always excluded.) Touching segments don't cross. If the segment prior to a touching segemt (processing from bottom to top) is outside the clipping region, then the touching segment will **not** be part of the clipping solution. Likewise for touching segments whose prior segments are inside clipping regions, they **will** also be part of the clipping solution. For open paths that start (or end) on a clipping boundary and are "touching", their placement (whether inside or outside that boundary) will depend on the heading of the adjacent (above) segment. They will be placed inside when adjacent segments head inside the clipping region. Finally, for segments that touch a clipping boundary and have no adjacent segments, their placement is undefined.
 
 Examples:
   subj_open = new Paths64();

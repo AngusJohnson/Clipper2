@@ -1,12 +1,12 @@
 ﻿/*******************************************************************************
 * Author    :  Angus Johnson                                                   *
 * Version   :  10.0 (release candidate 1) - also known as Clipper2             *
-* Date      :  27 February 2022                                                *
+* Date      :  8 March 2022                                                    *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  This module contains simple functions that will likely cover    *
 *              most polygon boolean and offsetting needs, while also avoiding  *
-*              the complexities of the other modules in this clipping library. *
+*              the inherent complexities of the other modules.                 *
 * Thanks    :  Special thanks to Thong Nguyen (https://nguyen.mn/) and to      *
 *              Guus Kuiper (https://www.guuskuiper.nl/) for their invaluable   *
 *              assistance in this C# Clipper port.                             *
@@ -259,6 +259,19 @@ namespace ClipperLib2
           else if (paths[i][j].y > result.bottom) result.bottom = paths[i][j].y;
         }
       }
+      return result;
+    }
+
+    public static PointD ScalePoint(Point64 pt, double scale)
+    {
+      PointD result = new PointD()
+      {
+        x = pt.X * scale,
+        y = pt.Y * scale,
+      #if USINGZ
+        z = pt.Z * scale
+      #endif
+      };
       return result;
     }
 

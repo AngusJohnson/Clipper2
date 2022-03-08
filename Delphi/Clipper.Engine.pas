@@ -3,7 +3,7 @@ unit Clipper.Engine;
 (*******************************************************************************
 * Author    :  Angus Johnson                                                   *
 * Version   :  10.0 (beta) - aka Clipper2                                      *
-* Date      :  6 March 2022                                                    *
+* Date      :  8 March 2022                                                    *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  This is the main polygon clipping module                        *
@@ -54,7 +54,6 @@ type
   end;
 
   //TOutRec: a post-clipping data structure representing a solution path.
-
   TOutRec = class;            //forward declaration
 
   //TActive and edge in the Active Edge Table (Vatti's AET)
@@ -122,6 +121,13 @@ type
     State    : TOutRecState;
   end;
 
+  {$IFDEF USINGZ}
+  TZCallback64 = procedure (const bot1, top1, bot2, top2: TPoint64;
+    var intersectPt: TPoint64) of object;
+  TZCallbackD = procedure (const bot1, top1, bot2, top2: TPointD;
+    var intersectPt: TPointD) of object;
+  {$ENDIF}
+
   TClipper = class
   {$IFDEF STRICT}strict{$ENDIF} private
     FBotY               : Int64;
@@ -137,10 +143,13 @@ type
     FVertexArrayList    : TList;
     FActives            : PActive; //see AEL above
     FSel                : PActive; //see SEL above
+  {$IFDEF USINGZ}
+    FZFunc              : TZCallback64;
+  {$ENDIF}
     procedure Reset;
     procedure InsertScanLine(const Y: Int64);
-    function PopScanLine(out Y: Int64): Boolean;
-    function PopLocalMinima(Y: Int64;
+    function  PopScanLine(out Y: Int64): Boolean;
+    function  PopLocalMinima(Y: Int64;
       out localMinima: PLocalMinima): Boolean;
     procedure DisposeScanLineList;
     procedure DisposeOutRec(index: Integer);
@@ -155,11 +164,11 @@ type
     procedure InsertLocalMinimaIntoAEL(const botY: Int64);
     procedure InsertLeftEdge(e: PActive);
     procedure PushHorz(e: PActive); {$IFDEF INLINING} inline; {$ENDIF}
-    function PopHorz(out e: PActive): Boolean; {$IFDEF INLINING} inline; {$ENDIF}
-    procedure StartOpenPath(e: PActive; const pt: TPoint64);
+    function  PopHorz(out e: PActive): Boolean; {$IFDEF INLINING} inline; {$ENDIF}
+    function  StartOpenPath(e: PActive; const pt: TPoint64): TOutPt;
     procedure UpdateEdgeIntoAEL(var e: PActive);
     procedure IntersectEdges(e1, e2: PActive;
-      const pt: TPoint64; orientationCheckRequired: Boolean = false);
+      pt: TPoint64; orientationCheckRequired: Boolean = false);
     procedure DeleteFromAEL(e: PActive);
     procedure AdjustCurrXAndCopyToSEL(topY: Int64);
     procedure DoIntersections(const topY: Int64);
@@ -170,19 +179,22 @@ type
     procedure SwapPositionsInAEL(e1, e2: PActive);
     procedure DoHorizontal(horzEdge: PActive);
     procedure DoTopOfScanbeam(Y: Int64);
-    function DoMaxima(e: PActive): PActive;
-    function AddOutPt(e: PActive; const pt: TPoint64): TOutPt;
-    procedure AddLocalMinPoly(e1, e2: PActive; const pt: TPoint64;
-      IsNew: Boolean = false; orientationCheckRequired: Boolean = false);
-    procedure AddLocalMaxPoly(e1, e2: PActive; const pt: TPoint64);
+    function  DoMaxima(e: PActive): PActive;
+    function  AddOutPt(e: PActive; const pt: TPoint64): TOutPt;
+    function  AddLocalMinPoly(e1, e2: PActive; const pt: TPoint64;
+      IsNew: Boolean = false; orientationCheckRequired: Boolean = false): TOutPt;
+    function  AddLocalMaxPoly(e1, e2: PActive; const pt: TPoint64): TOutPt;
     procedure JoinOutrecPaths(e1, e2: PActive);
-    function GetIntersectNode(index: integer): PIntersectNode;
+    function  GetIntersectNode(index: integer): PIntersectNode;
       {$IFDEF INLINING} inline; {$ENDIF}
   protected
     procedure CleanUp; //unlike Clear, CleanUp preserves added paths
     procedure ExecuteInternal(clipType: TClipType; fillRule: TFillRule);
     function BuildPaths(out closedPaths, openPaths: TPaths64): Boolean;
     procedure BuildTree(polytree: TPolyPathBase; out openPaths: TPaths64);
+  {$IFDEF USINGZ}
+    procedure SetZ( e1, e2: PActive; var intersectPt: TPoint64);
+  {$ENDIF}
     property IntersectNode[index: integer]: PIntersectNode
       read GetIntersectNode;
     property OutRecList : TList read FOutRecList;
@@ -207,6 +219,9 @@ type
       out closedSolutions, openSolutions: TPaths64): Boolean; overload; virtual;
     function Execute(clipType: TClipType; fillRule: TFillRule;
       var solutionTree: TPolyTree; out openSolutions: TPaths64): Boolean; overload; virtual;
+{$IFDEF USINGZ}
+    property ZFillFunc : TZCallback64 read FZFunc write FZFunc;
+{$ENDIF}
   end;
 
   //TPolyPathBase: ancestor of TPolyPath and TPolyPathD
@@ -255,6 +270,10 @@ type
   TClipperD = class(TClipper)
   {$IFDEF STRICT}strict{$ENDIF} private
     FScale: double;
+    FInvScale: double;
+  {$IFDEF USINGZ}
+    FZFuncD : TZCallbackD;
+  {$ENDIF}
   public
     procedure AddSubject(const path64: TPath64); overload;
     procedure AddSubject(const pathD: TPathD); overload;
@@ -278,6 +297,11 @@ type
       out closedSolutions, openSolutions: TPathsD): Boolean; overload;
     function Execute(clipType: TClipType; fillRule: TFillRule;
       var solutionsTree: TPolyTreeD; out openSolutions: TPathsD): Boolean; overload;
+{$IFDEF USINGZ}
+    procedure ProxyZFillFunc(const bot1, top1, bot2, top2: TPoint64;
+      var intersectPt: TPoint64);
+    property ZFillFuncD : TZCallbackD read FZFuncD write FZFuncD;
+{$ENDIF}
   end;
 
   TPolyPathD = class(TPolyPathBase)
@@ -291,8 +315,10 @@ type
   end;
 
   TPolyTreeD = class(TPolyPathD)
+  protected
+    procedure SetScale(value: double); //alternative to friend class
   public
-    property  Scale: double read FScale write FScale;
+    property  Scale: double read FScale;
   end;
 
 implementation
@@ -532,7 +558,7 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-function NextVertex(e: PActive): PVertex; overload;
+function NextVertex(e: PActive): PVertex;
   {$IFDEF INLINING} inline; {$ENDIF}
 begin
   if IsLeftBound(e) then
@@ -550,32 +576,17 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-function NextVertex(vertex: PVertex; goingFwd: Boolean): PVertex; overload;
-  {$IFDEF INLINING} inline; {$ENDIF}
-begin
-  if goingFwd then Result := vertex.next
-  else Result := vertex.prev;
-end;
-//------------------------------------------------------------------------------
-
-function IsClockwise(op: TOutPt): boolean; overload;
+function IsClockwise(op: TOutPt): boolean;
   {$IFDEF INLINING} inline; {$ENDIF}
 begin
   Result := CrossProduct(op.prev.Pt, op.Pt, op.next.Pt) >= 0;
 end;
 //----------------------------------------------------------------------
 
-function IsMaxima(e: PActive): Boolean; overload;
+function IsMaxima(e: PActive): Boolean;
   {$IFDEF INLINING} inline; {$ENDIF}
 begin
   Result := vfLocMax in e.vertTop.flags;
-end;
-//------------------------------------------------------------------------------
-
-function IsMaxima(vert: PVertex): Boolean; overload;
-  {$IFDEF INLINING} inline; {$ENDIF}
-begin
-  Result := vfLocMax in vert.flags;
 end;
 //------------------------------------------------------------------------------
 
@@ -952,6 +963,38 @@ begin
   FSel := nil;
 end;
 //------------------------------------------------------------------------------
+
+{$IFDEF USINGZ}
+function XYCoordsEqual(const pt1, pt2: TPoint64): Boolean;
+begin
+  Result := (pt1.X = pt2.X) and (pt1.Y = pt2.Y);
+end;
+//------------------------------------------------------------------------------
+
+procedure TClipper.SetZ( e1, e2: PActive; var intersectPt: TPoint64);
+var
+  e3, e4: PActive;
+begin
+  if not Assigned(FZFunc) then Exit;
+
+  //prioritize subject vertices over clip vertices
+  //and pass the subject vertices before clip vertices in the callback
+  if (GetPolyType(e1) = ptSubject) then
+  begin
+    e3 := e1; e4 := e2;
+  end else
+  begin
+    e3 := e2; e4 := e1;
+  end;
+
+  if (XYCoordsEqual(intersectPt, e3.bot)) then intersectPt.Z := e3.bot.Z
+  else if (XYCoordsEqual(intersectPt, e4.bot)) then intersectPt.Z := e4.bot.Z
+  else if (XYCoordsEqual(intersectPt, e3.top)) then intersectPt.Z := e3.top.Z
+  else if (XYCoordsEqual(intersectPt, e4.top)) then intersectPt.Z := e4.top.Z;
+  FZFunc(e3.bot, e3.top, e4.bot, e4.top, intersectPt);
+end;
+//------------------------------------------------------------------------------
+{$ENDIF}
 
 procedure TClipper.InsertScanLine(const Y: Int64);
 var
@@ -1615,11 +1658,10 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-procedure TClipper.AddLocalMinPoly(e1, e2: PActive; const pt: TPoint64;
-  IsNew: Boolean = false; orientationCheckRequired: Boolean = false);
+function TClipper.AddLocalMinPoly(e1, e2: PActive; const pt: TPoint64;
+  IsNew: Boolean = false; orientationCheckRequired: Boolean = false): TOutPt;
 var
   outRec: TOutRec;
-  op: TOutPt;
 begin
   outRec := TOutRec.Create;
   outRec.Idx := FOutRecList.Add(outRec);
@@ -1642,22 +1684,20 @@ begin
       SetSides(outRec, e2, e1);
   end;
 
-  op := TOutPt.Create;
-  outRec.Pts := op;
-  op.Pt := pt;
-  op.Prev := op;
-  op.Next := op;
+  Result := TOutPt.Create;
+  outRec.Pts := Result;
+  Result.Pt := pt;
+  Result.Prev := Result;
+  Result.Next := Result;
 end;
 //------------------------------------------------------------------------------
 
-procedure TClipper.AddLocalMaxPoly(e1, e2: PActive; const pt: TPoint64);
-var
-  op: TOutPt;
+function TClipper.AddLocalMaxPoly(e1, e2: PActive; const pt: TPoint64): TOutPt;
 begin
   if not IsOpen(e1) and (IsFront(e1) = IsFront(e2)) then
     if not FixSides(e1) then FixSides(e2);
 
-  op := AddOutPt(e1, pt);
+  Result := AddOutPt(e1, pt);
 
   if  (e1.OutRec = e2.OutRec) then
   begin
@@ -1668,11 +1708,11 @@ begin
     //give false positives when there are tiny self-intersections at the top...
     if IsOuter(e1.OutRec) then
     begin
-      if not IsClockwise(op) and (Area(op) < 0) then
+      if not IsClockwise(Result) and (Area(Result) < 0) then
         ReverseOutPts(e1.OutRec.Pts);
     end else
     begin
-      if IsClockwise(op) and (Area(op) > 0) then
+      if IsClockwise(Result) and (Area(Result) > 0) then
         ReverseOutPts(e1.OutRec.Pts);
     end;
 
@@ -1798,10 +1838,9 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-procedure TClipper.StartOpenPath(e: PActive; const pt: TPoint64);
+function TClipper.StartOpenPath(e: PActive; const pt: TPoint64): TOutPt;
 var
   outRec: TOutRec;
-  op: TOutPt;
 begin
   outRec := TOutRec.Create;
   outRec.Idx := FOutRecList.Add(outRec);
@@ -1813,11 +1852,11 @@ begin
   outRec.backE := nil;
   e.OutRec := outRec;
 
-  op := TOutPt.Create;
-  outRec.Pts := op;
-  op.Pt := pt;
-  op.Prev := op;
-  op.Next := op;
+  Result := TOutPt.Create;
+  outRec.Pts := Result;
+  Result.Pt := pt;
+  Result.Prev := Result;
+  Result.Next := Result;
 end;
 //------------------------------------------------------------------------------
 
@@ -1833,9 +1872,10 @@ end;
 //------------------------------------------------------------------------------
 
 procedure TClipper.IntersectEdges(e1, e2: PActive;
-  const pt: TPoint64; orientationCheckRequired: Boolean = false);
+  pt: TPoint64; orientationCheckRequired: Boolean = false);
 var
   e1WindCnt, e2WindCnt, e1WindCnt2, e2WindCnt2: Integer;
+  op, op2: TOutPt;
 begin
   //MANAGE OPEN PATH INTERSECTIONS SEPARATELY ...
   if FHasOpenPaths and (IsOpen(e1) or IsOpen(e2)) then
@@ -1845,7 +1885,8 @@ begin
     if IsOpen(e2) then SwapActives(e1, e2);
     case FClipType of
       ctIntersection, ctDifference:
-        if IsSamePolyType(e1, e2) or (abs(e2.WindCnt) <> 1) then Exit;
+        if IsSamePolyType(e1, e2) or
+          (abs(e2.WindCnt) <> 1) then Exit;
       ctUnion:
         if IsHotEdge(e1) <> ((abs(e2.WindCnt) <> 1) or
           (IsHotEdge(e1) <> (e2.WindCnt2 <> 0))) then Exit; //just works!
@@ -1855,7 +1896,10 @@ begin
     //toggle contribution ...
     if IsHotEdge(e1) then
     begin
-      AddOutPt(e1, pt);
+      op := AddOutPt(e1, pt);
+      {$IFDEF USINGZ}
+      SetZ(e1, e2, op.pt);
+      {$ENDIF}
       e1.OutRec := nil;
     end
     else StartOpenPath(e1, pt);
@@ -1920,16 +1964,27 @@ begin
     if not (e1WindCnt in [0,1]) or not (e2WindCnt in [0,1]) or
       (not IsSamePolyType(e1, e2) and (fClipType <> ctXor)) then
     begin
-      AddLocalMaxPoly(e1, e2, pt);
+      op := AddLocalMaxPoly(e1, e2, pt);
+      {$IFDEF USINGZ}
+      SetZ(e1, e2, op.pt);
+      {$ENDIF}
     end else if IsFront(e1) or (e1.OutRec = e2.OutRec) then
     begin
-      AddLocalMaxPoly(e1, e2, pt);
-      AddLocalMinPoly(e1, e2, pt);
+      op := AddLocalMaxPoly(e1, e2, pt);
+      op2 := AddLocalMinPoly(e1, e2, pt);
+      {$IFDEF USINGZ}
+      SetZ(e1, e2, op.pt);
+      SetZ(e1, e2, op2.pt);
+      {$ENDIF}
     end else
     begin
       //right & left bounds touching, NOT maxima & minima ...
-      AddOutPt(e1, pt);
-      AddOutPt(e2, pt);
+      op := AddOutPt(e1, pt);
+      op2 := AddOutPt(e2, pt);
+      {$IFDEF USINGZ}
+      SetZ(e1, e2, op.pt);
+      SetZ(e1, e2, op2.pt);
+      {$ENDIF}
       SwapOutRecs(e1, e2);
     end;
   end
@@ -1937,12 +1992,18 @@ begin
   //if one or other edge is 'hot' ...
   else if IsHotEdge(e1) then
   begin
-    AddOutPt(e1, pt);
+    op := AddOutPt(e1, pt);
+    {$IFDEF USINGZ}
+    SetZ(e1, e2, op.pt);
+    {$ENDIF}
     SwapOutRecs(e1, e2);
   end
   else if IsHotEdge(e2) then
   begin
-    AddOutPt(e2, pt);
+    op := AddOutPt(e2, pt);
+    {$IFDEF USINGZ}
+    SetZ(e1, e2, op.pt);
+    {$ENDIF}
     SwapOutRecs(e1, e2);
   end
 
@@ -1968,25 +2029,34 @@ begin
 
     if not IsSamePolyType(e1, e2) then
     begin
-      AddLocalMinPoly(e1, e2, pt, false, orientationCheckRequired);
+      op := AddLocalMinPoly(e1, e2, pt, false, orientationCheckRequired);
+      {$IFDEF USINGZ}
+      SetZ(e1, e2, op.pt);
+      {$ENDIF}
     end
     else if (e1WindCnt = 1) and (e2WindCnt = 1) then
+    begin
+      op := nil;
       case FClipType of
         ctIntersection:
-          if (e1WindCnt2 > 0) and (e2WindCnt2 > 0) then
-            AddLocalMinPoly(e1, e2, pt, false, orientationCheckRequired);
+          if (e1WindCnt2 <= 0) or (e2WindCnt2 <= 0) then Exit
+          else op := AddLocalMinPoly(e1, e2, pt, false, orientationCheckRequired);
         ctUnion:
           if (e1WindCnt2 <= 0) and (e2WindCnt2 <= 0) then
-            AddLocalMinPoly(e1, e2, pt, false, orientationCheckRequired);
+            op := AddLocalMinPoly(e1, e2, pt, false, orientationCheckRequired);
         ctDifference:
           if ((GetPolyType(e1) = ptClip) and
                 (e1WindCnt2 > 0) and (e2WindCnt2 > 0)) or
               ((GetPolyType(e1) = ptSubject) and
                 (e1WindCnt2 <= 0) and (e2WindCnt2 <= 0)) then
-                  AddLocalMinPoly(e1, e2, pt, false, orientationCheckRequired);
-        ctXor:
-          AddLocalMinPoly(e1, e2, pt, false, orientationCheckRequired);
-      end
+            op := AddLocalMinPoly(e1, e2, pt, false, orientationCheckRequired);
+        else //xOr
+            op := AddLocalMinPoly(e1, e2, pt, false, orientationCheckRequired);
+      end;
+      {$IFDEF USINGZ}
+      SetZ(e1, e2, op.pt);
+      {$ENDIF}
+    end;
   end;
 end;
 //------------------------------------------------------------------------------
@@ -2773,11 +2843,31 @@ end;
 constructor TClipperD.Create(scale: double);
 begin
   inherited Create;
-  if scale = 0 then
+  if scale <= floatingPointTolerance then
     FScale := DefaultClipperDScale else
     FScale := scale;
+  FInvScale := 1/FScale;
 end;
 //------------------------------------------------------------------------------
+
+{$IFDEF USINGZ}
+procedure TClipperD.ProxyZFillFunc(const bot1, top1, bot2, top2: TPoint64;
+  var intersectPt: TPoint64);
+var
+  tmp: TPointD;
+begin
+  //de-scale coordinates
+  tmp := ScalePoint(intersectPt, FInvScale);
+  FZFuncD(
+    ScalePoint(bot1, FInvScale),
+    ScalePoint(top1, FInvScale),
+    ScalePoint(bot2, FInvScale),
+    ScalePoint(top2, FInvScale), tmp);
+  //re-scale
+  intersectPt.Z := Round(tmp.Z * FScale);
+end;
+//------------------------------------------------------------------------------
+{$ENDIF}
 
 procedure TClipperD.AddSubject(const path64: TPath64);
 begin
@@ -2790,7 +2880,7 @@ var
   p: TPath64;
 begin
   if FScale = 0 then FScale := DefaultClipperDScale;
-  p := ScalePath(pathD, FScale, FScale);
+  p := ScalePath(pathD, FScale);
   Inherited AddSubject(p);
 end;
 //------------------------------------------------------------------------------
@@ -2806,7 +2896,7 @@ var
   pp: TPaths64;
 begin
   if FScale = 0 then FScale := DefaultClipperDScale;
-  pp := ScalePaths(pathsD, FScale, FScale);
+  pp := ScalePaths(pathsD, FScale);
   Inherited AddSubject(pp);
 end;
 //------------------------------------------------------------------------------
@@ -2828,7 +2918,7 @@ var
   p: TPath64;
 begin
   if FScale = 0 then FScale := DefaultClipperDScale;
-  p := ScalePath(pathD, FScale, FScale);
+  p := ScalePath(pathD, FScale);
   Inherited AddOpenSubject(p);
 end;
 //------------------------------------------------------------------------------
@@ -2838,7 +2928,7 @@ var
   pp: TPaths64;
 begin
   if FScale = 0 then FScale := DefaultClipperDScale;
-  pp := ScalePaths(pathsD, FScale, FScale);
+  pp := ScalePaths(pathsD, FScale);
   Inherited AddOpenSubject(pp);
 end;
 //------------------------------------------------------------------------------
@@ -2855,7 +2945,7 @@ var
   p: TPath64;
 begin
   if FScale = 0 then FScale := DefaultClipperDScale;
-  p := ScalePath(pathD, FScale, FScale);
+  p := ScalePath(pathD, FScale);
   Inherited AddClip(p);
 end;
 //------------------------------------------------------------------------------
@@ -2871,21 +2961,28 @@ var
   pp: TPaths64;
 begin
   if FScale = 0 then FScale := DefaultClipperDScale;
-  pp := ScalePaths(pathsD, FScale, FScale);
+  pp := ScalePaths(pathsD, FScale);
   Inherited AddClip(pp);
 end;
 //------------------------------------------------------------------------------
 
+{$IFDEF USINGZ}
 function TClipperD.Execute(clipType: TClipType; fillRule: TFillRule;
   out closedSolutions: TPathsD): Boolean;
 var
   closedP: TPaths64;
-  invScale: double;
+  savedZFillFunc: TZCallback64;
 begin
-  invScale := 1/FScale;
-  Result := inherited Execute(clipType, fillRule, closedP);
-  if not Result then Exit;
-  closedSolutions := ScalePathsD(closedP, invScale, invScale);
+  savedZFillFunc := ZFillFunc;
+  try
+    if Assigned(ZFillFuncD) and not Assigned(ZFillFunc) then
+      ZFillFunc := ProxyZFillFunc;
+    Result := inherited Execute(clipType, fillRule, closedP);
+    if not Result then Exit;
+    closedSolutions := ScalePathsD(closedP, FInvScale);
+  finally
+    ZFillFunc := savedZFillFunc;
+  end;
 end;
 //------------------------------------------------------------------------------
 
@@ -2893,15 +2990,71 @@ function TClipperD.Execute(clipType: TClipType; fillRule: TFillRule;
   out closedSolutions, openSolutions: TPathsD): Boolean;
 var
   closedP, openP: TPaths64;
-  invScale: double;
+  savedZFillFunc: TZCallback64;
 begin
-  if FScale = 0 then
-    invScale := 1/DefaultClipperDScale else
-    invScale := 1/FScale;
-  Result := inherited Execute(clipType, fillRule, closedP, openP);
-  if not Result then Exit;
-  closedSolutions := ScalePathsD(closedP, invScale, invScale);
-  openSolutions := ScalePathsD(openP, invScale, invScale);
+  savedZFillFunc := ZFillFunc;
+  try
+    if Assigned(ZFillFuncD) and not Assigned(ZFillFunc) then
+      ZFillFunc := ProxyZFillFunc;
+    Result := inherited Execute(clipType, fillRule, closedP, openP);
+    if not Result then Exit;
+    closedSolutions := ScalePathsD(closedP, FInvScale);
+    openSolutions := ScalePathsD(openP, FInvScale);
+  finally
+    ZFillFunc := savedZFillFunc;
+  end;
+end;
+//------------------------------------------------------------------------------
+
+function TClipperD.Execute(clipType: TClipType; fillRule: TFillRule;
+  var solutionsTree: TPolyTreeD; out openSolutions: TPathsD): Boolean;
+var
+  open_Paths: TPaths64;
+  savedZFillFunc: TZCallback64;
+begin
+  if not assigned(solutionsTree) then RaiseError(rsClipper_PolyTreeErr);
+  solutionsTree.Clear;
+  solutionsTree.SetScale(fScale);
+  openSolutions := nil;
+  savedZFillFunc := ZFillFunc;
+  try try
+    if Assigned(ZFillFuncD) and not Assigned(ZFillFunc) then
+      ZFillFunc := ProxyZFillFunc;
+    ExecuteInternal(clipType, fillRule);
+    BuildTree(solutionsTree, open_Paths);
+    openSolutions := ScalePathsD(open_Paths, FInvScale);
+    Result := true;
+  except
+    Result := false;
+  end;
+  finally
+    ZFillFunc := savedZFillFunc;
+    CleanUp;
+  end;
+end;
+//------------------------------------------------------------------------------
+{$ELSE}
+
+function TClipperD.Execute(clipType: TClipType; fillRule: TFillRule;
+  out closedSolutions: TPathsD): Boolean;
+var
+  closedP: TPaths64;
+begin
+    Result := inherited Execute(clipType, fillRule, closedP);
+    if not Result then Exit;
+    closedSolutions := ScalePathsD(closedP, FInvScale);
+end;
+//------------------------------------------------------------------------------
+
+function TClipperD.Execute(clipType: TClipType; fillRule: TFillRule;
+  out closedSolutions, openSolutions: TPathsD): Boolean;
+var
+  closedP, openP: TPaths64;
+begin
+    Result := inherited Execute(clipType, fillRule, closedP, openP);
+    if not Result then Exit;
+    closedSolutions := ScalePathsD(closedP, FInvScale);
+    openSolutions := ScalePathsD(openP, FInvScale);
 end;
 //------------------------------------------------------------------------------
 
@@ -2912,13 +3065,13 @@ var
 begin
   if not assigned(solutionsTree) then RaiseError(rsClipper_PolyTreeErr);
   solutionsTree.Clear;
-  solutionsTree.Scale := fScale;
+  solutionsTree.SetScale(fScale);
   openSolutions := nil;
-  Result := true;
   try try
     ExecuteInternal(clipType, fillRule);
     BuildTree(solutionsTree, open_Paths);
-    openSolutions := ScalePathsD(open_Paths, 1/FScale, 1/FScale);
+    openSolutions := ScalePathsD(open_Paths, FInvScale);
+    Result := true;
   except
     Result := false;
   end;
@@ -2926,6 +3079,7 @@ begin
     CleanUp;
   end;
 end;
+{$ENDIF}
 
 //------------------------------------------------------------------------------
 // TPolyPathD methods
@@ -2936,8 +3090,17 @@ begin
   Result := TPolyPathD.Create;
   Result.Parent := self;
   TPolyPathD(Result).fScale := fScale;
-  TPolyPathD(Result).FPath := ScalePathD(path, 1/FScale, 1/FScale);
+  TPolyPathD(Result).FPath := ScalePathD(path, 1/FScale);
   ChildList.Add(Result);
+end;
+
+//------------------------------------------------------------------------------
+// TPolyTreeD methods
+//------------------------------------------------------------------------------
+
+procedure TPolyTreeD.SetScale(value: double);
+begin
+  FScale := value;
 end;
 
 end.
