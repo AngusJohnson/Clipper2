@@ -1654,9 +1654,9 @@ namespace ClipperLib2
 							op = AddLocalMinPoly(ae1, ae2, pt, false, orientation_check_required);
 							break;
 
-						default:	//ClipType.Intersection:
-							if (e1Wc2 > 0 && e2Wc2 > 0)
-								op = AddLocalMinPoly(ae1, ae2, pt, false, orientation_check_required);
+						default:  //ClipType.Intersection:
+							if (e1Wc2 <= 0 || e2Wc2 <= 0) return;
+							op = AddLocalMinPoly(ae1, ae2, pt, false, orientation_check_required);
 							break;
 					}
 #if USINGZ
