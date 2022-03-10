@@ -1,7 +1,7 @@
 ﻿/*******************************************************************************
 * Author    :  Angus Johnson                                                   *
 * Version   :  10.0 (beta) - also known as Clipper2                            *
-* Date      :  8 March 2022                                                    *
+* Date      :  10 March 2022                                                    *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  Offsets both open and closed paths (ie polylines & polygons).   *
@@ -108,7 +108,7 @@ namespace ClipperLib2
         return solution;
       }
 
-      _tmpLimit = (MiterLimit <= 1 ? 2 : 2 / ClipperFunc.Sqr(MiterLimit));
+      _tmpLimit = (MiterLimit <= 1 ? 2.0 : 2.0 / ClipperFunc.Sqr(MiterLimit));
 
       _minEdgeLen = (MinimumEdgeLength < InternalClipperFunc.floatingPointTolerance ?
         InternalClipperFunc.defaultMinimumEdgeLength : MinimumEdgeLength);
@@ -138,7 +138,7 @@ namespace ClipperLib2
       double dy = (pt2.y - pt1.y);
       if ((dx == 0) && (dy == 0)) return new PointD();
 
-      double f = 1 * 1.0 / Math.Sqrt(dx * dx + dy * dy);
+      double f = 1.0 / Math.Sqrt(dx * dx + dy * dy);
       dx *= f;
       dy *= f;
 

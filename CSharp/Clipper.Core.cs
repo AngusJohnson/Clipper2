@@ -1,7 +1,7 @@
 ﻿/*******************************************************************************
 * Author    :  Angus Johnson                                                   *
 * Version   :  10.0 (release candidate 1) - also known as Clipper2             *
-* Date      :  8 March 2022                                                    *
+* Date      :  10 March 2022                                                    *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  Core structures and functions for the Clipper Library           *
@@ -304,7 +304,7 @@ namespace ClipperLib2
   //PointInPolygon
   enum PipResult { Inside, Outside, OnEdge };
 
-  enum OutRecState { Undefined, Open, Outer, OuterCheck, Inner, InnerCheck };
+  enum OutRecState { Undefined, Open, Outer, Inner};
 
   public class InternalClipperFunc
   {
@@ -324,40 +324,40 @@ namespace ClipperLib2
     {
       return (vec1.x * vec2.x + vec1.y * vec2.y);
     }
-    public static bool IntersectPoint(Point64 ln1a, Point64 ln1b, Point64 ln2a, Point64 ln2b, out PointD ip)
+    public static bool GetIntersectPoint(Point64 ln1a, Point64 ln1b, Point64 ln2a, Point64 ln2b, out PointD ip)
     {
       ip = new PointD();
       double m1, b1, m2, b2;
       if (ln1b.X == ln1a.X)
       {
         if (ln2b.X == ln2a.X) return false;
-        m2 = (ln2b.Y - ln2a.Y) / (ln2b.X - ln2a.X);
+        m2 = (double)(ln2b.Y - ln2a.Y) / (ln2b.X - ln2a.X);
         b2 = ln2a.Y - m2 * ln2a.X;
         ip.x = ln1a.X;
         ip.y = m2 * ln1a.X + b2;
       }
       else if (ln2b.X == ln2a.X)
       {
-        m1 = (ln1b.Y - ln1a.Y) / (ln1b.X - ln1a.X);
+        m1 = (double)(ln1b.Y - ln1a.Y) / (ln1b.X - ln1a.X);
         b1 = ln1a.Y - m1 * ln1a.X;
         ip.x = ln2a.X;
         ip.y = m1 * ln2a.X + b1;
       }
       else
       {
-        m1 = (ln1b.Y - ln1a.Y) / (ln1b.X - ln1a.X);
+        m1 = (double)(ln1b.Y - ln1a.Y) / (ln1b.X - ln1a.X);
         b1 = ln1a.Y - m1 * ln1a.X;
-        m2 = (ln2b.Y - ln2a.Y) / (ln2b.X - ln2a.X);
+        m2 = (double)(ln2b.Y - ln2a.Y) / (ln2b.X - ln2a.X);
         b2 = ln2a.Y - m2 * ln2a.X;
         if (m1 != m2)
         {
-          ip.x = (b2 - b1) / (m1 - m2);
+          ip.x = (double)(b2 - b1) / (m1 - m2);
           ip.y = m1 * ip.x + b1;
         }
         else
         {
-          ip.x = (ln1a.X + ln1b.X) / 2;
-          ip.y = (ln1a.Y + ln1b.Y) / 2;
+          ip.x = (double)(ln1a.X + ln1b.X) / 2;
+          ip.y = (double)(ln1a.Y + ln1b.Y) / 2;
         }
       }
       return true;

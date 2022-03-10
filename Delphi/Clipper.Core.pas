@@ -86,12 +86,6 @@ type
   end;
 
   TClipType = (ctNone, ctIntersection, ctUnion, ctDifference, ctXor);
-  //TPathType:
-  //  1. only subject paths may be open
-  //  2. for closed paths, all boolean clipping operations except for
-  //     Difference are commutative. (In other words, subjects and clips
-  //     could be swapped and the same solution will be returned.)
-  TPathType = (ptSubject, ptClip);
   //By far the most widely used filling rules for polygons are EvenOdd
   //and NonZero, sometimes called Alternate and Winding respectively.
   //https://en.wikipedia.org/wiki/Nonzero-rule
@@ -122,8 +116,6 @@ function SegmentsIntersect(const seg1a, seg1b, seg2a, seg2b: TPoint64): boolean;
 //SelfIntersectIdx: returns the index of first of 4 consecutive points
 //defining intersecting edges, otherwise returns -1;
 function SelfIntersectIdx(const path: TPath64): integer;
-function SplitSelfIntersect(var path: TPath64; out extras: TPaths64): Boolean;
-function CleanPath(const path: TPath64): TPath64;
 
 function PointsEqual(const pt1, pt2: TPoint64): Boolean; overload;
   {$IFDEF INLINING} inline; {$ENDIF}
@@ -209,6 +201,7 @@ procedure AppendPaths(var paths: TPaths64; const extra: TPaths64); overload;
 procedure AppendPaths(var paths: TPathsD; const extra: TPathsD); overload;
 
 function ArrayOfPathsToPaths(const ap: TArrayOfPaths): TPaths64;
+function GetIntersectPoint(const ln1a, ln1b, ln2a, ln2b: TPoint64): TPointD;
 
 const
   MaxInt64 = 9223372036854775807;
@@ -1173,7 +1166,7 @@ begin
     Result := Result + d * (path[j].Y - path[i].Y);
     j := i;
   end;
-  Result := -Result * 0.5;
+  Result := Result * -0.5;
 end;
 //------------------------------------------------------------------------------
 
@@ -1192,19 +1185,19 @@ begin
     Result := Result + d * (path[j].Y - path[i].Y);
     j := i;
   end;
-  Result := -Result * 0.5;
+  Result := Result * -0.5;
 end;
 //------------------------------------------------------------------------------
 
 function IsClockwise(const path: TPath64): Boolean;
 begin
-  Result := Area(path) >= 0;
+  Result := (Area(path) >= 0);
 end;
 //------------------------------------------------------------------------------
 
 function IsClockwise(const path: TPathD): Boolean;
 begin
-  Result := Area(path) >= 0;
+  Result := (Area(path) >= 0);
 end;
 //------------------------------------------------------------------------------
 
@@ -1375,7 +1368,7 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-function IntersectPoint(const ln1a, ln1b, ln2a, ln2b: TPoint64): TPointD;
+function GetIntersectPoint(const ln1a, ln1b, ln2a, ln2b: TPoint64): TPointD;
 var
   m1,b1,m2,b2: double;
 begin
@@ -1427,63 +1420,6 @@ begin
         Exit;
       end;
   Result := -1;
-end;
-//------------------------------------------------------------------------------
-
-function InternalSplitSelfIntersect(const path: TPath64;
-  idx: integer; out path1, path2: TPath64): Boolean;
-var
-  i, len: integer;
-  ip: TPointD;
-begin
-  Result := false;
-  len := Length(path);
-  if (idx < 0) or (idx >= len) then Exit;
-
-  ip := IntersectPoint(path[idx], path[(idx +1) mod len],
-    path[(idx +2) mod len], path[(idx +3) mod len]);
-
-  SetLength(path2, 3);
-  path2[0] := path[(idx +1) mod len];
-  path2[1] := path[(idx +2) mod len];
-  path2[2] := Point64(ip);
-
-  SetLength(path1, len -1);
-  for i := 0 to len-3 do
-    path1[i] := path[(idx +3 +i) mod len];
-  path1[len -2] := Point64(ip);
-  Result := true;
-end;
-//------------------------------------------------------------------------------
-
-function SplitSelfIntersect(var path: TPath64; out extras: TPaths64): Boolean;
-var
-  j: integer;
-  p: TPath64;
-  a1, a2: double;
-  extra: TPath64;
-begin
-  Result := false;
-  extras := nil;
-  j := SelfIntersectIdx(path);
-  while (j >= 0) and InternalSplitSelfIntersect(path, j, p, extra) do
-  begin
-    Result := true;
-    a1 := Area(p);
-    a2 := Area(extra);
-    if Abs(a1) < Abs(a2) then
-    begin
-      path := extra;
-      extra := p;
-    end else
-    begin
-      path := p;
-    end;
-    if ((a1 <> 0) and (a2 <> 0)) and
-      ((a1 > 0) = (a2 > 0)) then
-        AppendPath(extras, extra);
-    j := SelfIntersectIdx(path);
-  end;
 end;
 //------------------------------------------------------------------------------
 

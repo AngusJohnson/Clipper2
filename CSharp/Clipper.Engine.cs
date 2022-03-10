@@ -1,7 +1,7 @@
 ﻿/*******************************************************************************
 * Author    :  Angus Johnson                                                   *
 * Version   :  10.0 (beta) - also known as Clipper2                            *
-* Date      :  8 March 2022                                                    *
+* Date      :  10 March 2022                                                    *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  This is the main polygon clipping module                        *
@@ -12,6 +12,9 @@
 *******************************************************************************/
 
 using System;
+#if DEBUG
+using System.Diagnostics;
+#endif
 using System.Collections.Generic;
 
 namespace ClipperLib2
@@ -202,22 +205,6 @@ namespace ClipperLib2
 			return ((val & 1) != 0);
 		}
 
-		static void SetCheckFlag(OutRec outrec)
-		{
-			if (outrec.state == OutRecState.Inner)
-				outrec.state = OutRecState.InnerCheck;
-			else if (outrec.state == OutRecState.Outer)
-				outrec.state = OutRecState.OuterCheck;
-		}
-
-		static void UnsetCheckFlag(OutRec outrec)
-		{
-			if (outrec.state == OutRecState.InnerCheck)
-				outrec.state = OutRecState.Inner;
-			else if (outrec.state == OutRecState.OuterCheck)
-				outrec.state = OutRecState.Outer;
-		}
-
 		private static bool IsHotEdge(Active ae)
 		{
 			return ae.outrec != null;
@@ -244,7 +231,7 @@ namespace ClipperLib2
 
 		static bool IsOuter(OutRec outrec)
 		{
-			return (outrec.state == OutRecState.Outer || outrec.state == OutRecState.OuterCheck);
+			return (outrec.state == OutRecState.Outer);
 		}
 
 		static void SetAsOuter(OutRec outrec)
@@ -254,7 +241,7 @@ namespace ClipperLib2
 
 		static bool IsInner(OutRec outrec)
 		{
-			return (outrec.state == OutRecState.Inner || outrec.state == OutRecState.InnerCheck);
+			return (outrec.state == OutRecState.Inner);
 		}
 
 		static void SetAsInner(OutRec outrec)
@@ -287,7 +274,7 @@ namespace ClipperLib2
 		{
 			double dy = pt2.Y - pt1.Y;
 			if (dy != 0)
-				return (pt2.X - pt1.X) / dy;
+				return  (pt2.X - pt1.X) / dy;
 			else if (pt2.X > pt1.X)
 				return double.NegativeInfinity;
 			else
@@ -296,6 +283,9 @@ namespace ClipperLib2
 
 		static long TopX(Active ae, long currentY)
 		{
+#if DEBUG
+			Debug.Assert(ae.dx != double.NegativeInfinity && ae.dx != double.PositiveInfinity);
+#endif
 			if ((currentY == ae.top.Y) || (ae.top.X == ae.bot.X))
 				return ae.top.X;
 			else
@@ -386,11 +376,6 @@ namespace ClipperLib2
 				return ae.vertexTop.prev; 
 			else
 				return ae.vertexTop.next;
-		}
-
-		static bool IsClockwise(OutPt op)
-		{
-			return InternalClipperFunc.CrossProduct(op.prev.pt, op.pt, op.next.pt) >= 0;
 		}
 
 		static bool IsMaxima(Active ae)
@@ -513,7 +498,7 @@ namespace ClipperLib2
 					op2 = op2.next;
 				} while (op2 != op);
 			}
-			return area * -0.5;  //positive areas for clockwise paths
+			return -area * 0.5; //positive areas for clockwise paths
 		}
 
 		static void ReverseOutPts(OutPt op)
@@ -573,10 +558,7 @@ namespace ClipperLib2
 				else
 					ae.outrec.owner = ae2.outrec;
 			}
-
 			if ((area > 0.0) != is_outer) ReverseOutPts(ae.outrec.pts);
-			UnsetCheckFlag(ae.outrec);
-
 			return result;
 		}
 
@@ -759,14 +741,14 @@ namespace ClipperLib2
 				vPrev = vPrev.prev;
 				while (vPrev != v0 && vPrev.pt.Y == v0.pt.Y) vPrev = vPrev.prev;
 				if (vPrev == v0) return; //ie a flat closed path
-				going_up = vPrev.pt.Y < v0.pt.Y;       //ie direction leading up to v0
+				going_up = v0.pt.Y < vPrev.pt.Y;       //ie direction leading up to v0
 			}
 			else
 				going_up = v0.pt.Y < vPrev.pt.Y;   //ie direction leading up to v0
 
 			going_up0 = going_up;
 			vPrev = v0;
-			vCurr = vPrev.next;
+			vCurr = v0.next;
 			//nb: polygon orientation is determined later (see InsertLocalMinimaIntoAEL).
 			while (vCurr != v0)
 			{
@@ -1255,8 +1237,7 @@ namespace ClipperLib2
 			return true;
 		}
 
-		private OutPt AddLocalMinPoly(Active ae1, Active ae2, Point64 pt, 
-			bool is_new = false, bool orientation_check_required = false)
+		private OutPt AddLocalMinPoly(Active ae1, Active ae2, Point64 pt, bool is_new = false)
 		{
 
 			OutRec outrec = new OutRec();
@@ -1268,7 +1249,6 @@ namespace ClipperLib2
 			ae1.outrec = outrec;
 			SetOwnerAndInnerOuterState(ae1);
 			//flag when orientation needs to be rechecked later ...
-			if (orientation_check_required) SetCheckFlag(outrec);
 			ae2.outrec = outrec;
 
 			if (!IsOpen(ae1))
@@ -1291,28 +1271,25 @@ namespace ClipperLib2
 			if (!IsOpen(ae1) && (IsFront(ae1) == IsFront(ae2)))
 				if (!FixSides(ae1)) FixSides(ae2);
 			OutPt op = AddOutPt(ae1, pt);
+#if USINGZ
+			SetZ(ae1, ae2, ref op.pt);
+#endif
 
 			if (ae1.outrec == ae2.outrec)
 			{
-				if (ae1.outrec.state == OutRecState.OuterCheck || ae1.outrec.state == OutRecState.InnerCheck)
-					RecheckInnerOuter(ae1);
-
-				//nb: IsClockwise() is generally faster than Area() but will occasionally
-				//give false positives when there are tiny self-intersections at the top...
-				if (IsOuter(ae1.outrec))
-				{
-					if (!IsClockwise(op) && (Area(op) < 0.0))
-						ReverseOutPts(ae1.outrec.pts);
-				}
-				else
-				{
-					if (IsClockwise(op) && (Area(op) > 0.0))
-						ReverseOutPts(ae1.outrec.pts);
-				}
+				OutRec outrec = ae1.outrec;
 				ae1.outrec.frontEdge = null;
 				ae1.outrec.backEdge = null;
 				ae1.outrec = null;
 				ae2.outrec = null;
+				if (IsOpen(ae1)) return op;
+
+				CleanCollinear(ref outrec.pts);
+				if (outrec.pts != null) 
+					FixSelfIntersects(ref outrec.pts);
+				OutPt result = outrec.pts;
+				if ((result != null) && (IsOuter(outrec) != (Area(result) > 0))) 
+					ReverseOutPts(outrec.pts);
 			}
 			//and to preserve the winding orientation of outrec ...
 			else if (ae1.outrec.idx < ae2.outrec.idx)
@@ -1455,8 +1432,7 @@ namespace ClipperLib2
 			if (!IsHorizontal(ae)) InsertScanline(ae.top.Y);
 		}
 
-		private void IntersectEdges(Active ae1, Active ae2, 
-			Point64 pt, bool orientation_check_required = false)
+		private void IntersectEdges(Active ae1, Active ae2, Point64 pt)
 		{
 			//MANAGE OPEN PATH INTERSECTIONS SEPARATELY ...
 			if (_hasOpenPaths && (IsOpen(ae1) || IsOpen(ae2)))
@@ -1627,7 +1603,7 @@ namespace ClipperLib2
 
 				if (!IsSamePolyType(ae1, ae2))
 				{
-					OutPt op = AddLocalMinPoly(ae1, ae2, pt, false, orientation_check_required);
+					OutPt op = AddLocalMinPoly(ae1, ae2, pt, false);
 #if USINGZ
 					SetZ(ae1, ae2, ref op.pt);
 #endif
@@ -1638,29 +1614,29 @@ namespace ClipperLib2
 					switch (_cliptype)
 					{
 						case ClipType.Union:
-							if (e1Wc2 <= 0 && e2Wc2 <= 0)
-								op = AddLocalMinPoly(ae1, ae2, pt, false, orientation_check_required);
+							if (e1Wc2 > 0 && e2Wc2 > 0) return;
+							op = AddLocalMinPoly(ae1, ae2, pt, false);
 							break;
 
 						case ClipType.Difference:
 							if (((GetPolyType(ae1) == PathType.Clip) && (e1Wc2 > 0) && (e2Wc2 > 0)) ||
 									((GetPolyType(ae1) == PathType.Subject) && (e1Wc2 <= 0) && (e2Wc2 <= 0)))
 							{
-								op = AddLocalMinPoly(ae1, ae2, pt, false, orientation_check_required);
+								op = AddLocalMinPoly(ae1, ae2, pt, false);
 							}
 							break;
 
 						case ClipType.Xor:
-							op = AddLocalMinPoly(ae1, ae2, pt, false, orientation_check_required);
+							op = AddLocalMinPoly(ae1, ae2, pt, false);
 							break;
 
 						default:  //ClipType.Intersection:
 							if (e1Wc2 <= 0 || e2Wc2 <= 0) return;
-							op = AddLocalMinPoly(ae1, ae2, pt, false, orientation_check_required);
+							op = AddLocalMinPoly(ae1, ae2, pt, false);
 							break;
 					}
 #if USINGZ
-					SetZ(ae1, ae2, ref op.pt);
+					if (op != null) SetZ(ae1, ae2, ref op.pt);
 #endif
 
 				}
@@ -1910,11 +1886,8 @@ namespace ClipperLib2
 					}
 				}
 
-				//Occasionally a non-minima intersection is processed before its own
-				//minima. This causes problems with orientation so we need to flag it ...
 				IntersectNode node = _intersectList[i];
-				bool flagged = (i < _intersectList.Count - 1) && (_intersectList[i + 1].pt.Y > node.pt.Y);
-				IntersectEdges(node.edge1, node.edge2, node.pt, flagged);
+				IntersectEdges(node.edge1, node.edge2, node.pt);
 				SwapPositionsInAEL(node.edge1, node.edge2);
 			}
 		}
@@ -2174,6 +2147,121 @@ namespace ClipperLib2
 			return (prev_e != null ? prev_e.nextInAEL : _actives);
 		}
 
+		private static OutPt DeleteOp(OutPt op)
+    {
+			OutPt result = (op.next == op ? null : op.next);
+			op.prev.next = op.next;
+			op.next.prev = op.prev;
+			op = null;
+			return result;
+		}
+
+		private static bool ValidatePath(ref OutPt op)
+		{
+			if (op.next != op && op.next != op.prev) return true;
+			op = null;
+			return false; 
+		}
+
+		private static void CleanCollinear(ref OutPt op)
+		{
+			if (!ValidatePath(ref op)) return;
+			OutPt startOp = op, op2 = op;
+			for (; ; )
+			{
+				if (InternalClipperFunc.CrossProduct(op2.prev.pt, op2.pt, op2.next.pt) == 0)
+				{
+					if (op2 == op) op = op2.prev;
+					op2 = DeleteOp(op2);
+					if (!ValidatePath(ref op2))
+					{
+						op = null;
+						return;
+					}
+					startOp = op2;
+					continue;
+				} 
+				else
+					op2 = op2.next;
+				if (op2 == startOp) break;
+			}
+		}
+
+		private static double AreaTriangle(Point64 pt1, Point64 pt2, Point64 pt3)
+    {
+			return 0.5 * (pt1.X - pt3.X) * (pt2.Y - pt1.Y) -
+				(pt1.X - pt2.X) * (pt3.Y - pt1.Y);
+		}
+
+		private OutPt DoSplitOp(ref OutPt outRecOp, OutPt splitOp) 
+		{
+			OutPt prevOp = splitOp.prev, nextNextOp = splitOp.next.next;
+			OutPt result = prevOp;
+			InternalClipperFunc.GetIntersectPoint(
+				prevOp.pt, splitOp.pt, splitOp.next.pt, nextNextOp.pt, out PointD ipD);
+			Point64 ip = new Point64(ipD);
+#if USINGZ
+#endif
+			double area1 = Area(outRecOp);
+			double area2 = AreaTriangle(ip, splitOp.pt, splitOp.next.pt);
+
+			if (ip == prevOp.pt || ip == nextNextOp.pt)
+			{
+				nextNextOp.prev = prevOp;
+				prevOp.next = nextNextOp;
+			} 
+			else
+			{
+				OutPt newOp = new OutPt(ip);
+				newOp.prev = prevOp;
+				newOp.next = nextNextOp;
+				nextNextOp.prev = newOp;
+				prevOp.next = newOp;
+			}
+
+			if ((Math.Abs(area2) > (Math.Abs(area1))) ||
+				((area2 > 0) == (area1 > 0))) 
+			{
+
+				OutRec newOutRec = new OutRec();
+				_outrecList.Add(newOutRec);
+				newOutRec.idx = _outrecList.Count - 1;
+				newOutRec.polypath = null;
+
+				OutPt newOp = new OutPt(ip);
+				newOp.prev = splitOp.next;
+				newOp.next = splitOp;
+				newOutRec.pts = newOp;
+				splitOp.prev = newOp;
+				splitOp.next.next = newOp;
+			} 
+			else
+				splitOp = null;
+			return result;
+		}
+
+		private void FixSelfIntersects(ref OutPt op)
+    {
+			//precondition:
+			//the 'op' linked list's length must be at least 3
+			OutPt op2 = op;
+			for (; ; )
+			{
+				//3 edged polygons can't self-intersect
+				if (op2.prev == op2.next.next) break;
+				if (InternalClipperFunc.SegmentsIntersect(op2.prev.pt,
+					op2.pt, op2.next.pt, op2.next.next.pt))
+				{
+					if (op2 == op || op2.next == op) op = op2.prev;
+					op2 = DoSplitOp(ref op, op2);
+					op = op2;
+					continue;
+				} else
+					op2	= op2.next;
+				if (op2 == op) break;
+			}
+		}
+
 		private static void CleanPath(Path64 path)
 		{
 			Point64 prev;
@@ -2210,7 +2298,7 @@ namespace ClipperLib2
 			path2.Clear();
 			int cnt = path.Count;
 			if (idx < 0 || idx >= cnt) return false;
-			if (!InternalClipperFunc.IntersectPoint(path[idx], path[(idx + 1) % cnt],
+			if (!InternalClipperFunc.GetIntersectPoint(path[idx], path[(idx + 1) % cnt],
 				path[(idx + 2) % cnt], path[(idx + 3) % cnt], out PointD ip)) return false;
 			path2.Add(path[(idx + 1) % cnt]);
 			path2.Add(path[(idx + 2) % cnt]);
@@ -2250,7 +2338,7 @@ namespace ClipperLib2
 			return has_spit;
 		}
 
-		internal bool BuildPath(OutPt op, bool is_open, Path64 path, Paths64 extras)
+		internal bool BuildPath(OutPt op, bool is_open, Path64 path)
 		{
 			int cnt = PointCount(op);
 			if (cnt < 2) return false;
@@ -2269,10 +2357,7 @@ namespace ClipperLib2
 			}
 
 			if (is_open) return path.Count > 1;
-
-			CleanPath(path);
-			SplitSelfIntersect(path, extras);
-			return path.Count > 2;
+			else return path.Count > 2;
 		}
 
 		protected bool BuildPaths(Paths64 solution_closed, Paths64 solution_open)
@@ -2291,19 +2376,15 @@ namespace ClipperLib2
 					if (outrec.pts == null) continue;
 
 					Path64 path = new Path64();
-					Paths64 extras = new Paths64();
 					if (outrec.state == OutRecState.Open)
 					{
-						if (BuildPath(outrec.pts.next, true, path, extras))
+						if (BuildPath(outrec.pts.next, true, path))
 							solution_open.Add(path);
 					}
 					else
 					{
-						if (BuildPath(outrec.pts.next, false, path, extras))
+						if (BuildPath(outrec.pts.next, false, path))
 							solution_closed.Add(path);
-						if (extras != null)
-							for (int i = 0; i < extras.Count; i++)
-								solution_closed.Add(extras[i]);
 					}
 				}
 				built = true;
@@ -2337,8 +2418,7 @@ namespace ClipperLib2
 					bool isOpenPath = outrec.state == OutRecState.Open;
 
 					Path64 path = new Path64(); 
-					Paths64 extras = new Paths64();
-					if (!BuildPath(outrec.pts.next, isOpenPath, path, extras)) continue;
+					if (!BuildPath(outrec.pts.next, isOpenPath, path)) continue;
 					
 					if (isOpenPath) { 
 						solution_open.Add(path);
@@ -2358,11 +2438,7 @@ namespace ClipperLib2
 						ownerPP = outrec.owner.polypath;
 					else
 						ownerPP = polytree;
-
 					outrec.polypath = ownerPP.AddChild(path);
-					if (extras != null) 
-					for (int j = 0; j <  extras.Count; j++) 
-							ownerPP.AddChild(extras[j]);
 				}
 			}
 			catch { return false; }

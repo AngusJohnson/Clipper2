@@ -3,7 +3,7 @@ unit Clipper.Engine;
 (*******************************************************************************
 * Author    :  Angus Johnson                                                   *
 * Version   :  10.0 (beta) - aka Clipper2                                      *
-* Date      :  8 March 2022                                                    *
+* Date      :  9 March 2022                                                    *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  This is the main polygon clipping module                        *
@@ -38,6 +38,13 @@ type
   //down. Edges consecutively going up or consecutively going down are called
   //'bounds' (or sides if they're simple polygons). 'Local Minima' refer to
   //vertices where descending bounds become ascending ones.
+
+  //TPathType:
+  //  1. only subject paths may be open
+  //  2. for closed paths, all boolean clipping operations except for
+  //     Difference are commutative. (In other words, subjects and clips
+  //     could be swapped and the same solution will be returned.)
+  TPathType = (ptSubject, ptClip);
 
   PLocalMinima = ^TLocalMinima;
   TLocalMinima = record
@@ -102,8 +109,7 @@ type
     Next     : PScanLine;
   end;
 
-  TOutRecState = (osUndefined, osOpen, osOuter,
-    osOuterCheck, osInner, osInnerCheck);
+  TOutRecState = (osUndefined, osOpen, osOuter, osInner);
 
   TPolyPathBase = class;
   TPolyTree     = class;
@@ -167,8 +173,7 @@ type
     function  PopHorz(out e: PActive): Boolean; {$IFDEF INLINING} inline; {$ENDIF}
     function  StartOpenPath(e: PActive; const pt: TPoint64): TOutPt;
     procedure UpdateEdgeIntoAEL(var e: PActive);
-    procedure IntersectEdges(e1, e2: PActive;
-      pt: TPoint64; orientationCheckRequired: Boolean = false);
+    procedure IntersectEdges(e1, e2: PActive; pt: TPoint64);
     procedure DeleteFromAEL(e: PActive);
     procedure AdjustCurrXAndCopyToSEL(topY: Int64);
     procedure DoIntersections(const topY: Int64);
@@ -181,9 +186,10 @@ type
     procedure DoTopOfScanbeam(Y: Int64);
     function  DoMaxima(e: PActive): PActive;
     function  AddOutPt(e: PActive; const pt: TPoint64): TOutPt;
-    function  AddLocalMinPoly(e1, e2: PActive; const pt: TPoint64;
-      IsNew: Boolean = false; orientationCheckRequired: Boolean = false): TOutPt;
+    function  AddLocalMinPoly(e1, e2: PActive;
+      const pt: TPoint64; IsNew: Boolean = false): TOutPt;
     function  AddLocalMaxPoly(e1, e2: PActive; const pt: TPoint64): TOutPt;
+    procedure FixSelfIntersects(var op: TOutPt);
     procedure JoinOutrecPaths(e1, e2: PActive);
     function  GetIntersectNode(index: integer): PIntersectNode;
       {$IFDEF INLINING} inline; {$ENDIF}
@@ -368,7 +374,7 @@ end;
 
 function IsOuter(outrec: TOutRec): Boolean; {$IFDEF INLINING} inline; {$ENDIF}
 begin
-  Result := outrec.State in [osOuter, osOuterCheck];
+  Result := outrec.State = osOuter;
 end;
 //------------------------------------------------------------------------------
 
@@ -380,29 +386,13 @@ end;
 
 function IsInner(outrec: TOutRec): Boolean; {$IFDEF INLINING} inline; {$ENDIF}
 begin
-  Result := outrec.State in [osInner, osInnerCheck];
+  Result := outrec.State = osInner;
 end;
 //------------------------------------------------------------------------------
 
 procedure SetAsInner(outrec: TOutRec); {$IFDEF INLINING} inline; {$ENDIF}
 begin
   outrec.State := osInner;
-end;
-//------------------------------------------------------------------------------
-
-procedure SetCheckFlag(outrec: TOutRec); {$IFDEF INLINING} inline; {$ENDIF}
-begin
-  if outrec.State = osInner then
-    outrec.State := osInnerCheck
-  else if outrec.State = osOuter then
-    outrec.State := osOuterCheck;
-end;
-//------------------------------------------------------------------------------
-
-procedure UnsetCheckFlag(outrec: TOutRec); {$IFDEF INLINING} inline; {$ENDIF}
-begin
-  if outrec.State = osInnerCheck then outrec.State := osInner
-  else if outrec.State = osOuterCheck then outrec.State := osOuter;
 end;
 //------------------------------------------------------------------------------
 
@@ -576,13 +566,6 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-function IsClockwise(op: TOutPt): boolean;
-  {$IFDEF INLINING} inline; {$ENDIF}
-begin
-  Result := CrossProduct(op.prev.Pt, op.Pt, op.next.Pt) >= 0;
-end;
-//----------------------------------------------------------------------
-
 function IsMaxima(e: PActive): Boolean;
   {$IFDEF INLINING} inline; {$ENDIF}
 begin
@@ -635,18 +618,17 @@ end;
 //------------------------------------------------------------------------------
 
 function BuildPath(op: TOutPt; isOpen: Boolean;
-  out path: TPath64; out extras: TPaths64): Boolean;
+  out path: TPath64): Boolean;
 var
-  i,j, opCnt: integer;
+  i,j, cnt: integer;
 begin
+  cnt := PointCount(op);
   result := false;
-  opCnt := PointCount(op);
-  if (opCnt < 2) then Exit;
-  setLength(path, opCnt);
+  setLength(path, cnt);
   path[0] := op.Pt;
   op := op.Next;
   j := 0;
-  for i := 0 to opCnt -2 do
+  for i := 0 to cnt -2 do
   begin
     if not PointsEqual(path[j], op.Pt) then
     begin
@@ -658,15 +640,8 @@ begin
 
   setLength(path, j+1);
   if isOpen then
-  begin
-    extras := nil;
-    Result := (Length(path) > 1);
-  end else
-  begin
-    path := CleanPath(path);
-    SplitSelfIntersect(path, extras);
-    Result := (Length(path) > 2);
-  end;
+    Result := (j > 0) else
+    Result := (j > 1);
 end;
 //------------------------------------------------------------------------------
 
@@ -813,7 +788,6 @@ begin
   end;
 
   if (area > 0) <> isOuter then ReverseOutPts(e.outrec.Pts);
-  UnsetCheckFlag(e.OutRec);
 end;
 //------------------------------------------------------------------------------
 
@@ -1658,8 +1632,8 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-function TClipper.AddLocalMinPoly(e1, e2: PActive; const pt: TPoint64;
-  IsNew: Boolean = false; orientationCheckRequired: Boolean = false): TOutPt;
+function TClipper.AddLocalMinPoly(e1, e2: PActive;
+  const pt: TPoint64; IsNew: Boolean = false): TOutPt;
 var
   outRec: TOutRec;
 begin
@@ -1670,9 +1644,6 @@ begin
 
   e1.OutRec := outRec;
   SetOwnerAndInnerOuterState(e1);
-  //flag when orientatation needs to be rechecked later ...
-  if orientationCheckRequired then SetCheckFlag(outRec);
-
   e2.OutRec := outRec;
   if not IsOpen(e1) then
   begin
@@ -1692,34 +1663,175 @@ begin
 end;
 //------------------------------------------------------------------------------
 
+function DeleteOp(op: TOutPt): TOutPt;
+  {$IFDEF INLINING} inline; {$ENDIF}
+begin
+  if op.Next = op then
+    Result := nil else
+    Result := op.Next;
+  op.Prev.Next := op.Next;
+  op.Next.Prev := op.Prev;
+  op.Free;
+end;
+//------------------------------------------------------------------------------
+
+function ValidatePath(var op: TOutPt): Boolean;
+  {$IFDEF INLINING} inline; {$ENDIF}
+begin
+  Result := (op.Next <> op) and (op.Next <> op.Prev);
+  if Result then Exit;
+  if (op.Next <> op) then op.Next.Free;
+  op.Free;
+  op := nil;
+end;
+//------------------------------------------------------------------------------
+
+procedure CleanCollinear(var op: TOutPt);
+var
+  i: integer;
+  op2, startOp: TOutPt;
+begin
+  if not ValidatePath(op) then Exit;
+  startOp := op;
+  op2 := op;
+  while true do
+  begin
+    if (CrossProduct(op2.Prev.Pt, op2.Pt, op2.Next.Pt) = 0) then
+    begin
+      if op2 = op then op := op2.Prev;
+      op2 := DeleteOp(op2);
+      if not ValidatePath(op2) then
+      begin
+        op := nil;
+        Exit;
+      end;
+      startOp := op2;
+      Continue;
+    end else
+     op2 := op2.Next;
+    if op2 = startOp then Break;
+  end;
+end;
+//------------------------------------------------------------------------------
+
+function AreaTriangle(const pt1, pt2, pt3: TPoint64): double;
+begin
+  Result := 0.5 * (pt1.X - pt3.X)*(pt2.Y - pt1.Y) -
+    (pt1.X - pt2.X)*(pt3.Y - pt1.Y);
+end;
+//------------------------------------------------------------------------------
+
+procedure TClipper.FixSelfIntersects(var op: TOutPt);
+
+  function DoSplitOp(splitOp: TOutPt): TOutPt;
+  var
+    newOp, newOp2, prevOp, nextNextOp: TOutPt;
+    ip: TPoint64;
+    area1, area2: double;
+    newOutRec: TOutRec;
+  begin
+    prevOp := splitOp.Prev;
+    nextNextOp := splitOp.Next.Next;
+    Result := prevOp;
+    ip := Point64(Clipper.Core.GetIntersectPoint(
+      prevOp.Pt, splitOp.Pt, splitOp.Next.Pt, nextNextOp.Pt));
+    {$IFDEF USINGZ}
+      //???
+    {$ENDIF}
+    area1 := Area(op);
+    area2 := AreaTriangle(ip, splitOp.Pt, splitOp.Next.Pt);
+
+    if PointsEqual(ip, prevOp.Pt) or
+      PointsEqual(ip, nextNextOp.Pt) then
+    begin
+      nextNextOp.Prev := prevOp;
+      prevOp.Next := nextNextOp;
+    end else
+    begin
+      newOp2 := TOutPt.Create;
+      newOp2.Pt := ip;
+      newOp2.Prev := prevOp;
+      newOp2.Next := nextNextOp;
+      nextNextOp.Prev := newOp2;
+      prevOp.Next := newOp2;
+    end;
+
+    if ((Abs(area2) > (Abs(area1))) or
+      ((area2 > 0) = (area1 > 0))) then
+    begin
+      newOutRec := TOutRec.Create;
+      newOutRec.Idx := FOutRecList.Add(newOutRec);
+      newOutRec.PolyPath := nil;
+
+      newOp := TOutPt.Create;
+      newOp.Pt := ip;
+      newOp.Prev := splitOp.Next;
+      newOp.Next := splitOp;
+      newOutRec.Pts := newOp;
+      splitOp.Prev := newOp;
+      splitOp.Next.Next := newOp;
+    end else
+    begin
+      splitOp.Next.Free;
+      splitOp.Free;
+      splitOp := nil;
+    end;
+  end;
+
+var
+  op2: TOutPt;
+begin
+  //precondition:
+  //the 'op' linked list's length must be at least 3
+  op2 := op;
+  while true do
+  begin
+    //3 edged polygons can't self-intersect
+    if (op2.Prev = op2.Next.Next) then
+      Break
+    else if SegmentsIntersect(op2.Prev.Pt, op2.Pt,
+      op2.Next.Pt, op2.Next.Next.Pt) then
+    begin
+      if (op2 = op) or (op2.Next = op) then
+        op := op2.Prev;
+      op2 := DoSplitOp(op2);
+      op := op2;
+      Continue;
+    end else
+      op2 := op2.Next;
+    if (op2 = op) then Break;
+  end;
+end;
+//------------------------------------------------------------------------------
+
 function TClipper.AddLocalMaxPoly(e1, e2: PActive; const pt: TPoint64): TOutPt;
+var
+  outRec: TOutRec;
 begin
   if not IsOpen(e1) and (IsFront(e1) = IsFront(e2)) then
     if not FixSides(e1) then FixSides(e2);
 
   Result := AddOutPt(e1, pt);
+  {$IFDEF USINGZ}
+  SetZ(e1, e2, Result);
+  {$ENDIF}
 
   if  (e1.OutRec = e2.OutRec) then
   begin
-    if e1.OutRec.State in [osOuterCheck, osInnerCheck] then
-      RecheckInnerOuter(e1);
-
-    //nb: IsClockwise() is generally faster than Area() but will occasionally
-    //give false positives when there are tiny self-intersections at the top...
-    if IsOuter(e1.OutRec) then
-    begin
-      if not IsClockwise(Result) and (Area(Result) < 0) then
-        ReverseOutPts(e1.OutRec.Pts);
-    end else
-    begin
-      if IsClockwise(Result) and (Area(Result) > 0) then
-        ReverseOutPts(e1.OutRec.Pts);
-    end;
-
+    outRec := e1.OutRec;
     e1.outRec.frontE := nil;
     e1.outRec.backE := nil;
     e1.OutRec := nil;
     e2.OutRec := nil;
+    if IsOpen(e1) then Exit;
+
+    CleanCollinear(outRec.Pts);
+    if assigned(outRec.Pts) then
+      FixSelfIntersects(outRec.Pts);
+    Result := outRec.Pts;
+    if assigned(Result) and
+      (IsOuter(outRec) <> (Area(Result) > 0)) then
+        ReverseOutPts(outRec.Pts);
   end
   //and to preserve the winding orientation of Outrec ...
   else if e1.OutRec.Idx < e2.OutRec.Idx then
@@ -1871,12 +1983,15 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-procedure TClipper.IntersectEdges(e1, e2: PActive;
-  pt: TPoint64; orientationCheckRequired: Boolean = false);
+{$IFNDEF USINGZ}
+{$HINTS OFF}
+{$ENDIF}
+procedure TClipper.IntersectEdges(e1, e2: PActive; pt: TPoint64);
 var
   e1WindCnt, e2WindCnt, e1WindCnt2, e2WindCnt2: Integer;
   op, op2: TOutPt;
 begin
+
   //MANAGE OPEN PATH INTERSECTIONS SEPARATELY ...
   if FHasOpenPaths and (IsOpen(e1) or IsOpen(e2)) then
   begin
@@ -1906,8 +2021,9 @@ begin
     Exit;
   end;
 
-  //UPDATE WINDING COUNTS...
+  //MANAGING CLOSED PATHS FROM HERE ON
 
+  //FIRST, UPDATE WINDING COUNTS
   if IsSamePolyType(e1, e2) then
   begin
     if FFillRule = frEvenOdd then
@@ -1956,7 +2072,7 @@ begin
   if (not IsHotEdge(e1) and not (e1WindCnt in [0,1])) or
     (not IsHotEdge(e2) and not (e2WindCnt in [0,1])) then Exit;
 
-  //NOW PROCESS THE INTERSECTION ...
+  //NOW PROCESS THE INTERSECTION
 
   //if both edges are 'hot' ...
   if IsHotEdge(e1) and IsHotEdge(e2) then
@@ -1966,14 +2082,14 @@ begin
     begin
       op := AddLocalMaxPoly(e1, e2, pt);
       {$IFDEF USINGZ}
-      SetZ(e1, e2, op.pt);
+      if Assigned(op) then SetZ(e1, e2, op.pt);
       {$ENDIF}
     end else if IsFront(e1) or (e1.OutRec = e2.OutRec) then
     begin
       op := AddLocalMaxPoly(e1, e2, pt);
       op2 := AddLocalMinPoly(e1, e2, pt);
       {$IFDEF USINGZ}
-      SetZ(e1, e2, op.pt);
+      if Assigned(op) then SetZ(e1, e2, op.pt);
       SetZ(e1, e2, op2.pt);
       {$ENDIF}
     end else
@@ -2029,7 +2145,7 @@ begin
 
     if not IsSamePolyType(e1, e2) then
     begin
-      op := AddLocalMinPoly(e1, e2, pt, false, orientationCheckRequired);
+      op := AddLocalMinPoly(e1, e2, pt, false);
       {$IFDEF USINGZ}
       SetZ(e1, e2, op.pt);
       {$ENDIF}
@@ -2040,26 +2156,29 @@ begin
       case FClipType of
         ctIntersection:
           if (e1WindCnt2 <= 0) or (e2WindCnt2 <= 0) then Exit
-          else op := AddLocalMinPoly(e1, e2, pt, false, orientationCheckRequired);
+          else op := AddLocalMinPoly(e1, e2, pt, false);
         ctUnion:
           if (e1WindCnt2 <= 0) and (e2WindCnt2 <= 0) then
-            op := AddLocalMinPoly(e1, e2, pt, false, orientationCheckRequired);
+            op := AddLocalMinPoly(e1, e2, pt, false);
         ctDifference:
           if ((GetPolyType(e1) = ptClip) and
                 (e1WindCnt2 > 0) and (e2WindCnt2 > 0)) or
               ((GetPolyType(e1) = ptSubject) and
                 (e1WindCnt2 <= 0) and (e2WindCnt2 <= 0)) then
-            op := AddLocalMinPoly(e1, e2, pt, false, orientationCheckRequired);
+            op := AddLocalMinPoly(e1, e2, pt, false);
         else //xOr
-            op := AddLocalMinPoly(e1, e2, pt, false, orientationCheckRequired);
+            op := AddLocalMinPoly(e1, e2, pt, false);
       end;
       {$IFDEF USINGZ}
-      SetZ(e1, e2, op.pt);
+      if assigned(op) then SetZ(e1, e2, op.pt);
       {$ENDIF}
     end;
   end;
 end;
 //------------------------------------------------------------------------------
+{$IFNDEF USINGZ}
+{$HINTS ON}
+{$ENDIF}
 
 procedure TClipper.DeleteFromAEL(e: PActive);
 var
@@ -2179,7 +2298,6 @@ var
   cntOpen     : Integer;
   outRec      : TOutRec;
   path        : TPath64;
-  extras      : TPaths64;
   isOpenPath  : Boolean;
   ownerPP     : TPolyPathBase;
 begin
@@ -2202,10 +2320,10 @@ begin
           outRec.Idx := i;
         end;
 
-        if not assigned(outRec.Pts) then
-          Continue;
+        if not assigned(outRec.Pts) then Continue;
         isOpenPath := IsOpen(outRec);
-        if not BuildPath(outRec.Pts.Next, isOpenPath, path, extras) then
+
+        if not BuildPath(outRec.Pts.Next, isOpenPath, path) then
           Continue;
 
         if isOpenPath then
@@ -2228,9 +2346,6 @@ begin
           ownerPP := polytree;
 
         outRec.PolyPath := ownerPP.AddChild(path);
-        if Assigned(extras) then
-          for j := 0 to High(extras) do
-            ownerPP.AddChild(extras[j]);
       end;
     setLength(openPaths, cntOpen);
   except
@@ -2353,7 +2468,7 @@ begin
           while true do
           begin
             AddNewIntersectNode(q, right, topY);
-            if q = left then break;
+            if q = left then Break;
             q := q.PrevInSEL;
           end;
 
@@ -2419,11 +2534,7 @@ begin
 
     with IntersectNode[i]^ do
     begin
-      //Occasionally a non-minima intersection is processed before its own
-      //minima. This causes problems with orientation so we need to flag it ...
-      if (i < highI) and (IntersectNode[i+1].Pt.Y > Pt.Y) then
-          IntersectEdges(Edge1, Edge2, Pt, true) else
-          IntersectEdges(Edge1, Edge2, Pt);
+      IntersectEdges(Edge1, Edge2, Pt);
       SwapPositionsInAEL(Edge1, Edge2);
     end;
   end;
@@ -2550,7 +2661,7 @@ begin
       end;
 
       //if horzEdge is a maxima, keep going until we reach
-      //its maxima pair, otherwise check for break conditions
+      //its maxima pair, otherwise check for Break conditions
       if not isMax or IsOpenEnd(horzEdge) then
       begin
         //otherwise stop when 'e' is beyond the end of the horizontal line
@@ -2724,16 +2835,14 @@ begin
 
       if IsOpen(outRec) then
       begin
-        if BuildPath(outRec.Pts.Next, true,
-          openPaths[cntOpen], extras) then
+        if BuildPath(outRec.Pts.Next,
+          true, openPaths[cntOpen]) then
             inc(cntOpen);
       end else
       begin
         if BuildPath(outRec.Pts.Next,
-          false, closedPaths[cntClosed], extras) then
+          false, closedPaths[cntClosed]) then
             inc(cntClosed);
-        if Assigned(extras) then
-          AppendPaths(extras2, extras);
       end;
     end;
     SetLength(closedPaths, cntClosed);
