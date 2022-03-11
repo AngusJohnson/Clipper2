@@ -1,7 +1,7 @@
 ﻿/*******************************************************************************
 * Author    :  Angus Johnson                                                   *
 * Version   :  10.0 (beta) - also known as Clipper2                            *
-* Date      :  10 March 2022                                                    *
+* Date      :  11 March 2022                                                    *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  This is the main polygon clipping module                        *
@@ -2090,6 +2090,9 @@ namespace ClipperLib2
 							PushHorz(ae);  //horizontals are processed later
 					}
 				}
+				else //ie not the top of the edge
+					ae.curX = TopX(ae, y);
+
 				ae = ae.nextInAEL;
 			}
 		}

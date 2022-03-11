@@ -3,7 +3,7 @@ unit Clipper.Engine;
 (*******************************************************************************
 * Author    :  Angus Johnson                                                   *
 * Version   :  10.0 (beta) - aka Clipper2                                      *
-* Date      :  9 March 2022                                                    *
+* Date      :  11 March 2022                                                   *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  This is the main polygon clipping module                        *
@@ -2749,7 +2749,8 @@ begin
         if IsHorizontal(e) then
           PushHorz(e);     //horizontals are processed later
       end;
-    end;
+    end else
+      e.CurrX := TopX(e, Y);
     e := e.NextInAEL;
   end;
 end;
