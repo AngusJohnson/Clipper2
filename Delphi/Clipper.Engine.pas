@@ -28,9 +28,9 @@ type
   PVertex = ^TVertex;
   TVertex = record
     Pt    : TPoint64;
-    next  : PVertex;
-    prev  : PVertex;
-    flags : TVertexFlags;
+    Next  : PVertex;
+    Prev  : PVertex;
+    Flags : TVertexFlags;
   end;
 
   //Every closed path (or polygon) is made up of a series of vertices forming
@@ -48,25 +48,26 @@ type
 
   PLocalMinima = ^TLocalMinima;
   TLocalMinima = record
-    vertex    : PVertex;
+    Vertex    : PVertex;
     PolyType  : TPathType;
     IsOpen    : Boolean;
   end;
 
-  //TOutPt: a post-clipping data structure representing a solution vertex.
-  TOutPt = class
+  //OutPt: a post-clipping data structure representing a solution vertex.
+  POutPt = ^TOutPt;
+  TOutPt = record
     Pt       : TPoint64;
-    Next     : TOutPt;
-    Prev     : TOutPt;
+    Next     : POutPt;
+    Prev     : POutPt;
   end;
 
-  //TOutRec: a post-clipping data structure representing a solution path.
-  TOutRec = class;            //forward declaration
+  //POutRec: a post-clipping data structure representing a solution path.
+  POutRec = ^TOutRec;
 
   //TActive and edge in the Active Edge Table (Vatti's AET)
   PActive = ^TActive;
   TActive = record
-    Op       : TOutPt;        //used in descendant classes
+    Op       : POutPt;        //used in descendant classes
     Bot      : TPoint64;
     Top      : TPoint64;
     CurrX    : Int64;
@@ -74,7 +75,7 @@ type
     WindDx   : Integer;       //wind direction (ascending: +1; descending: -1)
     WindCnt  : Integer;       //current wind count
     WindCnt2 : Integer;       //current wind count of the opposite TPolyType
-    OutRec   : TOutRec;
+    OutRec   : POutRec;
     //AEL: 'active edge list' (Vatti's AET - active edge table)
     //     a linked list of all edges (from left to right) that are present
     //     (or 'active') within the current scanbeam (a horizontal 'beam' that
@@ -86,7 +87,7 @@ type
     //     top of scanbeams, but also (re)used to process horizontals.
     PrevInSEL: PActive;
     NextInSEL: PActive;
-    Jump     : PActive;       //for merge sorting (see BuildIntersectList())
+    Jump     : PActive;       //fast merge sorting (see BuildIntersectList())
     VertTop  : PVertex;
     LocMin   : PLocalMinima;  //the bottom of an edge 'bound' (also Vatti)
   end;
@@ -117,12 +118,13 @@ type
 
   //OutRec: contains a path in the clipping solution. Edges in the AEL will
   //have OutRec pointers assigned when they form part of the clipping solution.
-  TOutRec = class
+
+  TOutRec = record
     Idx      : Integer;
-    Owner    : TOutRec;
-    frontE   : PActive;
-    backE    : PActive;
-    Pts      : TOutPt;
+    Owner    : POutRec;
+    FrontE   : PActive;
+    BackE    : PActive;
+    Pts      : POutPt;
     PolyPath : TPolyPathBase;
     State    : TOutRecState;
   end;
@@ -171,7 +173,7 @@ type
     procedure InsertLeftEdge(e: PActive);
     procedure PushHorz(e: PActive); {$IFDEF INLINING} inline; {$ENDIF}
     function  PopHorz(out e: PActive): Boolean; {$IFDEF INLINING} inline; {$ENDIF}
-    function  StartOpenPath(e: PActive; const pt: TPoint64): TOutPt;
+    function  StartOpenPath(e: PActive; const pt: TPoint64): POutPt;
     procedure UpdateEdgeIntoAEL(var e: PActive);
     procedure IntersectEdges(e1, e2: PActive; pt: TPoint64);
     procedure DeleteFromAEL(e: PActive);
@@ -185,11 +187,11 @@ type
     procedure DoHorizontal(horzEdge: PActive);
     procedure DoTopOfScanbeam(Y: Int64);
     function  DoMaxima(e: PActive): PActive;
-    function  AddOutPt(e: PActive; const pt: TPoint64): TOutPt;
+    function  AddOutPt(e: PActive; const pt: TPoint64): POutPt;
     function  AddLocalMinPoly(e1, e2: PActive;
-      const pt: TPoint64; IsNew: Boolean = false): TOutPt;
-    function  AddLocalMaxPoly(e1, e2: PActive; const pt: TPoint64): TOutPt;
-    procedure FixSelfIntersects(var op: TOutPt);
+      const pt: TPoint64; IsNew: Boolean = false): POutPt;
+    function  AddLocalMaxPoly(e1, e2: PActive; const pt: TPoint64): POutPt;
+    procedure FixSelfIntersects(var op: POutPt);
     procedure JoinOutrecPaths(e1, e2: PActive);
     function  GetIntersectNode(index: integer): PIntersectNode;
       {$IFDEF INLINING} inline; {$ENDIF}
@@ -362,35 +364,35 @@ end;
 function IsOpenEnd(e: PActive): Boolean; overload; {$IFDEF INLINING} inline; {$ENDIF}
 begin
   Result := e.LocMin.IsOpen and
-    (e.vertTop.flags * [vfOpenStart, vfOpenEnd] <> []);
+    (e.vertTop.Flags * [vfOpenStart, vfOpenEnd] <> []);
 end;
 //------------------------------------------------------------------------------
 
-function IsOpen(outrec: TOutRec): Boolean; overload; {$IFDEF INLINING} inline; {$ENDIF}
+function IsOpen(outrec: POutRec): Boolean; overload; {$IFDEF INLINING} inline; {$ENDIF}
 begin
   Result := outrec.State = osOpen;
 end;
 //------------------------------------------------------------------------------
 
-function IsOuter(outrec: TOutRec): Boolean; {$IFDEF INLINING} inline; {$ENDIF}
+function IsOuter(outrec: POutRec): Boolean; {$IFDEF INLINING} inline; {$ENDIF}
 begin
   Result := outrec.State = osOuter;
 end;
 //------------------------------------------------------------------------------
 
-procedure SetAsOuter(outrec: TOutRec); {$IFDEF INLINING} inline; {$ENDIF}
+procedure SetAsOuter(outrec: POutRec); {$IFDEF INLINING} inline; {$ENDIF}
 begin
   outrec.State := osOuter;
 end;
 //------------------------------------------------------------------------------
 
-function IsInner(outrec: TOutRec): Boolean; {$IFDEF INLINING} inline; {$ENDIF}
+function IsInner(outrec: POutRec): Boolean; {$IFDEF INLINING} inline; {$ENDIF}
 begin
   Result := outrec.State = osInner;
 end;
 //------------------------------------------------------------------------------
 
-procedure SetAsInner(outrec: TOutRec); {$IFDEF INLINING} inline; {$ENDIF}
+procedure SetAsInner(outrec: POutRec); {$IFDEF INLINING} inline; {$ENDIF}
 begin
   outrec.State := osInner;
 end;
@@ -417,11 +419,11 @@ begin
 
   if (e.OutRec.State = osOpen) then
     Result := e.WindDx > 0 else
-    Result := (e = e.OutRec.frontE);
+    Result := (e = e.OutRec.FrontE);
 end;
 //------------------------------------------------------------------------------
 
-function IsInvalidPath(op: TOutPt): Boolean; {$IFDEF INLINING} inline; {$ENDIF}
+function IsInvalidPath(op: POutPt): Boolean; {$IFDEF INLINING} inline; {$ENDIF}
 begin
   result := not assigned(op) or (op.Next = op);
 end;
@@ -552,8 +554,8 @@ function NextVertex(e: PActive): PVertex;
   {$IFDEF INLINING} inline; {$ENDIF}
 begin
   if IsLeftBound(e) then
-    Result := e.vertTop.next else
-    Result := e.vertTop.prev;
+    Result := e.vertTop.Next else
+    Result := e.vertTop.Prev;
 end;
 //------------------------------------------------------------------------------
 
@@ -561,15 +563,15 @@ function PrevVertex(e: PActive): PVertex;
   {$IFDEF INLINING} inline; {$ENDIF}
 begin
   if IsLeftBound(e) then
-    Result := e.vertTop.prev else
-    Result := e.vertTop.next;
+    Result := e.vertTop.Prev else
+    Result := e.vertTop.Next;
 end;
 //------------------------------------------------------------------------------
 
 function IsMaxima(e: PActive): Boolean;
   {$IFDEF INLINING} inline; {$ENDIF}
 begin
-  Result := vfLocMax in e.vertTop.flags;
+  Result := vfLocMax in e.vertTop.Flags;
 end;
 //------------------------------------------------------------------------------
 
@@ -603,9 +605,9 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-function PointCount(pts: TOutPt): Integer; {$IFDEF INLINING} inline; {$ENDIF}
+function PointCount(pts: POutPt): Integer; {$IFDEF INLINING} inline; {$ENDIF}
 var
-  p: TOutPt;
+  p: POutPt;
 begin
   Result := 0;
   if not Assigned(pts) then Exit;
@@ -617,13 +619,12 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-function BuildPath(op: TOutPt; isOpen: Boolean;
+function BuildPath(op: POutPt; isOpen: Boolean;
   out path: TPath64): Boolean;
 var
   i,j, cnt: integer;
 begin
   cnt := PointCount(op);
-  result := false;
   setLength(path, cnt);
   path[0] := op.Pt;
   op := op.Next;
@@ -645,24 +646,28 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-procedure DisposeOutPt(pp: TOutPt); {$IFDEF INLINING} inline; {$ENDIF}
+function DisposeOutPt(op: POutPt): POutPt;
+  {$IFDEF INLINING} inline; {$ENDIF}
 begin
-  pp.Prev.Next := pp.Next;
-  pp.Next.Prev := pp.Prev;
-  pp.Free;
+  if op.Next = op then
+    Result := nil else
+    Result := op.Next;
+  op.Prev.Next := op.Next;
+  op.Next.Prev := op.Prev;
+  Dispose(Op);
 end;
 //------------------------------------------------------------------------------
 
-procedure DisposePolyPts(pp: TOutPt);  {$IFDEF INLINING} inline; {$ENDIF}
+procedure DisposePolyPts(pp: POutPt);  {$IFDEF INLINING} inline; {$ENDIF}
 var
-  tmpPp: TOutPt;
+  tmpPp: POutPt;
 begin
   pp.Prev.Next := nil;
   while Assigned(pp) do
   begin
     tmpPp := pp;
     pp := pp.Next;
-    tmpPp.Free;
+    Dispose(tmpPp);
   end;
 end;
 //------------------------------------------------------------------------------
@@ -671,55 +676,55 @@ function LocMinListSort(item1, item2: Pointer): Integer;
 var
   dy: Int64;
 begin
-  dy := PLocalMinima(item2).vertex.Pt.Y - PLocalMinima(item1).vertex.Pt.Y;
+  dy := PLocalMinima(item2).Vertex.Pt.Y - PLocalMinima(item1).Vertex.Pt.Y;
   if dy < 0 then Result := -1
   else if dy > 0 then Result := 1
   else Result := 0;
 end;
 //------------------------------------------------------------------------------
 
-procedure SetSides(outRec: TOutRec; startEdge, endEdge: PActive);
+procedure SetSides(outRec: POutRec; startEdge, endEdge: PActive);
   {$IFDEF INLINING} inline; {$ENDIF}
 begin
-  outRec.frontE := startEdge;
-  outRec.backE := endEdge;
+  outRec.FrontE := startEdge;
+  outRec.BackE := endEdge;
 end;
 //------------------------------------------------------------------------------
 
 procedure SwapOutRecs(e1, e2: PActive);
 var
-  or1, or2: TOutRec;
+  or1, or2: POutRec;
   e: PActive;
 begin
   or1 := e1.OutRec;
   or2 := e2.OutRec;
   if (or1 = or2) then
   begin
-    e := or1.frontE;
-    or1.frontE := or1.backE;
-    or1.backE := e;
+    e := or1.FrontE;
+    or1.FrontE := or1.BackE;
+    or1.BackE := e;
     Exit;
   end;
   if assigned(or1) then
   begin
-    if e1 = or1.frontE then
-      or1.frontE := e2 else
-      or1.backE := e2;
+    if e1 = or1.FrontE then
+      or1.FrontE := e2 else
+      or1.BackE := e2;
   end;
   if assigned(or2) then
   begin
-    if e2 = or2.frontE then
-      or2.frontE := e1 else
-      or2.backE := e1;
+    if e2 = or2.FrontE then
+      or2.FrontE := e1 else
+      or2.BackE := e1;
   end;
   e1.OutRec := or2;
   e2.OutRec := or1;
 end;
 //------------------------------------------------------------------------------
 
-function Area(op: TOutPt): Double;
+function Area(op: POutPt): Double;
 var
-  op2: TOutPt;
+  op2: POutPt;
   d: Double;
 begin
   //positive results are clockwise
@@ -735,9 +740,9 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-procedure ReverseOutPts(op: TOutPt);
+procedure ReverseOutPts(op: POutPt);
 var
-  op1, op2: TOutPt;
+  op1, op2: POutPt;
 begin
   if not Assigned(op) then Exit;
   op1 := op;
@@ -750,16 +755,11 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-function RecheckInnerOuter(e: PActive): Boolean;
+procedure CheckFixInnerOuter(e: PActive);
 var
   wasOuter, isOuter: Boolean;
   e2: PActive;
-  area: double;
 begin
-  area := Clipper.Engine.Area(e.outrec.Pts);
-  result := area <> 0;
-  if not result then Exit; //returns false when area == 0
-
   wasOuter := Clipper.Engine.IsOuter(e.OutRec);
   isOuter := true;
   e2 := e.PrevInAEL;
@@ -787,32 +787,50 @@ begin
     else e.OutRec.Owner := e2.OutRec;
   end;
 
-  if (area > 0) <> isOuter then ReverseOutPts(e.outrec.Pts);
+  if (Area(e.outrec.Pts) > 0) <> isOuter then
+    ReverseOutPts(e.outrec.Pts);
 end;
 //------------------------------------------------------------------------------
 
-procedure SwapSides(outRec: TOutRec); {$IFDEF INLINING} inline; {$ENDIF}
+procedure SwapSides(outRec: POutRec); {$IFDEF INLINING} inline; {$ENDIF}
 var
   e2: PActive;
 begin
-  e2 := outRec.frontE;
-  outRec.frontE := outRec.backE;
-  outRec.backE := e2;
+  e2 := outRec.FrontE;
+  outRec.FrontE := outRec.BackE;
+  outRec.BackE := e2;
   outRec.Pts := outRec.Pts.Next;
+end;
+//------------------------------------------------------------------------------
+
+function ValidatePath(var op: POutPt): Boolean;
+  {$IFDEF INLINING} inline; {$ENDIF}
+begin
+  Result := (op.Next <> op) and (op.Next <> op.Prev);
+  if Result then Exit;
+  if (op.Next <> op) then Dispose(op.Next);
+  Dispose(op);
+  op := nil;
 end;
 //------------------------------------------------------------------------------
 
 function FixSides(e: PActive): Boolean;
 begin
-  Result := not RecheckInnerOuter(e) or (IsOuter(e.OutRec) <> IsFront(e));
-  if Result then SwapSides(e.OutRec);
+  if ValidatePath(e.OutRec.Pts) then
+  begin
+    CheckFixInnerOuter(e);
+    Result := (IsOuter(e.OutRec) <> IsFront(e));
+    if not Result then Exit; //ie swapping sides won't fix
+  end;
+  SwapSides(e.OutRec);
+  Result := true;
 end;
 //------------------------------------------------------------------------------
 
 procedure SetOwnerAndInnerOuterState(e: PActive);
 var
   e2: PActive;
-  outRec: TOutRec;
+  outRec: POutRec;
 begin
   outRec := e.OutRec;
   if IsOpen(e) then
@@ -828,7 +846,7 @@ begin
     while assigned(e2) and (not IsHotEdge(e2) or IsOpen(e2)) do
       e2 := e2.NextInAEL;
     if not assigned(e2) then outRec.Owner := nil
-    else if IsOuter(e2.OutRec) = (e2.OutRec.frontE = e2) then
+    else if IsOuter(e2.OutRec) = (e2.OutRec.FrontE = e2) then
       outRec.Owner := e2.OutRec.Owner
     else
       outRec.Owner := e2.OutRec;
@@ -837,7 +855,7 @@ begin
     e2 := GetPrevHotEdge(e);
     if not assigned(e2) then
       outRec.Owner := nil
-    else if IsOuter(e2.OutRec) = (e2.OutRec.backE = e2) then
+    else if IsOuter(e2.OutRec) = (e2.OutRec.BackE = e2) then
       outRec.Owner := e2.OutRec.Owner
     else
       outRec.Owner := e2.OutRec;
@@ -931,7 +949,7 @@ begin
   end;
 
   for i := FLocMinList.Count -1 downto 0 do
-    InsertScanLine(PLocalMinima(FLocMinList[i]).vertex.Pt.Y);
+    InsertScanLine(PLocalMinima(FLocMinList[i]).Vertex.Pt.Y);
   FCurrentLocMinIdx := 0;
   FActives := nil;
   FSel := nil;
@@ -1025,7 +1043,7 @@ begin
   Result := false;
   if FCurrentLocMinIdx = FLocMinList.Count then Exit;
   localMinima := PLocalMinima(FLocMinList[FCurrentLocMinIdx]);
-  if (localMinima.vertex.Pt.Y = Y) then
+  if (localMinima.Vertex.Pt.Y = Y) then
   begin
     inc(FCurrentLocMinIdx);
     Result := true;
@@ -1048,11 +1066,11 @@ end;
 
 procedure TClipper.DisposeOutRec(index: Integer);
 var
-  outRec: TOutRec;
+  outRec: POutRec;
 begin
   outRec := FOutRecList[index];
   if Assigned(outRec.Pts) then DisposePolyPts(outRec.Pts);
-  outRec.Free;
+  Dispose(outRec);
 end;
 //------------------------------------------------------------------------------
 
@@ -1083,10 +1101,10 @@ procedure SetVertex(v, prevV: PVertex; const point: TPoint64);
 begin
   v.pt := point;
   if assigned(prevV) then
-    prevV.next := v;
-  v.next := nil;
-  v.prev := prevV;
-  v.flags := [];
+    prevV.Next := v;
+  v.Next := nil;
+  v.Prev := prevV;
+  v.Flags := [];
 end;
 //------------------------------------------------------------------------------
 
@@ -1101,10 +1119,10 @@ var
   var
     lm: PLocalMinima;
   begin
-    if vfLocMin in vert.flags then Exit;  //ie already added
-    Include(vert.flags, vfLocMin);
+    if vfLocMin in vert.Flags then Exit;  //ie already added
+    Include(vert.Flags, vfLocMin);
     new(lm);
-    lm.vertex := vert;
+    lm.Vertex := vert;
     lm.PolyType := polyType;
     lm.IsOpen := isOpen;
     FLocMinList.Add(lm);                  //nb: sorted in Reset()
@@ -1132,10 +1150,10 @@ begin
     ascending := p[i].Y <= p[0].Y;
     if ascending then
     begin
-      va0.flags := [vfOpenStart];
+      va0.Flags := [vfOpenStart];
       AddLocMin(va0);
     end else
-      va0.flags := [vfOpenStart, vfLocMax];
+      va0.Flags := [vfOpenStart, vfLocMax];
   end
   else if p[0].Y = p[highI].Y then
   begin
@@ -1160,7 +1178,7 @@ begin
 
     if ascending and (vaCurr.pt.Y > vaPrev.pt.Y) then
     begin
-      Include(vaPrev.flags, vfLocMax);
+      Include(vaPrev.Flags, vfLocMax);
       ascending := false;
     end
     else if not ascending and (vaCurr.pt.Y < vaPrev.pt.Y) then
@@ -1170,21 +1188,21 @@ begin
     end;
   end;
 
-  vaCurr.next := va0;
-  va0.prev := vaCurr;
+  vaCurr.Next := va0;
+  va0.Prev := vaCurr;
 
   if isOpen then
   begin
-    Include(vaCurr.flags, vfOpenEnd);
+    Include(vaCurr.Flags, vfOpenEnd);
     if ascending then
-      Include(vaCurr.flags, vfLocMax) else
+      Include(vaCurr.Flags, vfLocMax) else
       AddLocMin(vaCurr);
   end
   else if ascending0 <> ascending then
   begin
     if ascending0 then
       AddLocMin(vaCurr) else
-      Include(vaCurr.flags, vfLocMax);
+      Include(vaCurr.Flags, vfLocMax);
   end;
 end;
 //------------------------------------------------------------------------------
@@ -1449,9 +1467,9 @@ begin
   end;
 
   a1IsNewEdge := (a1.bot.Y <= a2.bot.Y) and
-    (PrevVertex(a1) = a1.LocMin.vertex);
+    (PrevVertex(a1) = a1.LocMin.Vertex);
   a2IsNewEdge := (a2.bot.Y <= a1.bot.Y) and
-    (PrevVertex(a2) = a2.LocMin.vertex);
+    (PrevVertex(a2) = a2.LocMin.Vertex);
 
   if IsHorizontal(a1) then
   begin
@@ -1517,11 +1535,11 @@ var
   contributing: Boolean;
 begin
   //Add local minima (if any) at BotY ...
-  //nb: horizontal local minima edges should contain locMin.vertex.prev
+  //nb: horizontal local minima edges should contain locMin.Vertex.prev
 
   while PopLocalMinima(botY, locMin) do
   begin
-    if (vfOpenStart in locMin.vertex.flags) then
+    if (vfOpenStart in locMin.Vertex.Flags) then
     begin
       leftB := nil;
     end else
@@ -1530,15 +1548,15 @@ begin
       FillChar(leftB^, sizeof(TActive), 0);
       leftB.LocMin := locMin;
       leftB.OutRec := nil;
-      leftB.Bot := locMin.vertex.Pt;
-      leftB.vertTop := locMin.vertex.prev; //ie descending
+      leftB.Bot := locMin.Vertex.Pt;
+      leftB.vertTop := locMin.Vertex.Prev; //ie descending
       leftB.Top := leftB.vertTop.Pt;
       leftB.CurrX := leftB.Bot.X;
       leftB.WindDx := -1;
       SetDx(leftB);
     end;
 
-    if (vfOpenEnd in locMin.vertex.flags) then
+    if (vfOpenEnd in locMin.Vertex.Flags) then
     begin
       rightB := nil;
     end else
@@ -1547,8 +1565,8 @@ begin
       FillChar(rightB^, sizeof(TActive), 0);
       rightB.LocMin := locMin;
       rightB.OutRec := nil;
-      rightB.Bot := locMin.vertex.Pt;
-      rightB.vertTop := locMin.vertex.next; //ie ascending
+      rightB.Bot := locMin.Vertex.Pt;
+      rightB.vertTop := locMin.Vertex.Next; //ie ascending
       rightB.Top := rightB.vertTop.Pt;
       rightB.CurrX := rightB.Bot.X;
       rightB.WindDx := 1;
@@ -1633,11 +1651,11 @@ end;
 //------------------------------------------------------------------------------
 
 function TClipper.AddLocalMinPoly(e1, e2: PActive;
-  const pt: TPoint64; IsNew: Boolean = false): TOutPt;
+  const pt: TPoint64; IsNew: Boolean = false): POutPt;
 var
-  outRec: TOutRec;
+  outRec: POutRec;
 begin
-  outRec := TOutRec.Create;
+  new(outRec);
   outRec.Idx := FOutRecList.Add(outRec);
   outRec.Pts := nil;
   outRec.PolyPath := nil;
@@ -1655,7 +1673,7 @@ begin
       SetSides(outRec, e2, e1);
   end;
 
-  Result := TOutPt.Create;
+  new(Result);
   outRec.Pts := Result;
   Result.Pt := pt;
   Result.Prev := Result;
@@ -1663,33 +1681,9 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-function DeleteOp(op: TOutPt): TOutPt;
-  {$IFDEF INLINING} inline; {$ENDIF}
-begin
-  if op.Next = op then
-    Result := nil else
-    Result := op.Next;
-  op.Prev.Next := op.Next;
-  op.Next.Prev := op.Prev;
-  op.Free;
-end;
-//------------------------------------------------------------------------------
-
-function ValidatePath(var op: TOutPt): Boolean;
-  {$IFDEF INLINING} inline; {$ENDIF}
-begin
-  Result := (op.Next <> op) and (op.Next <> op.Prev);
-  if Result then Exit;
-  if (op.Next <> op) then op.Next.Free;
-  op.Free;
-  op := nil;
-end;
-//------------------------------------------------------------------------------
-
-procedure CleanCollinear(var op: TOutPt);
+procedure CleanCollinear(var op: POutPt);
 var
-  i: integer;
-  op2, startOp: TOutPt;
+  op2, startOp: POutPt;
 begin
   if not ValidatePath(op) then Exit;
   startOp := op;
@@ -1699,7 +1693,7 @@ begin
     if (CrossProduct(op2.Prev.Pt, op2.Pt, op2.Next.Pt) = 0) then
     begin
       if op2 = op then op := op2.Prev;
-      op2 := DeleteOp(op2);
+      op2 := DisposeOutPt(op2);
       if not ValidatePath(op2) then
       begin
         op := nil;
@@ -1721,14 +1715,14 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-procedure TClipper.FixSelfIntersects(var op: TOutPt);
+procedure TClipper.FixSelfIntersects(var op: POutPt);
 
-  function DoSplitOp(splitOp: TOutPt): TOutPt;
+  function DoSplitOp(splitOp: POutPt): POutPt;
   var
-    newOp, newOp2, prevOp, nextNextOp: TOutPt;
+    newOp, newOp2, prevOp, nextNextOp: POutPt;
     ip: TPoint64;
     area1, area2: double;
-    newOutRec: TOutRec;
+    newOutRec: POutRec;
   begin
     prevOp := splitOp.Prev;
     nextNextOp := splitOp.Next.Next;
@@ -1748,7 +1742,7 @@ procedure TClipper.FixSelfIntersects(var op: TOutPt);
       prevOp.Next := nextNextOp;
     end else
     begin
-      newOp2 := TOutPt.Create;
+      new(newOp2);
       newOp2.Pt := ip;
       newOp2.Prev := prevOp;
       newOp2.Next := nextNextOp;
@@ -1759,11 +1753,11 @@ procedure TClipper.FixSelfIntersects(var op: TOutPt);
     if ((Abs(area2) > (Abs(area1))) or
       ((area2 > 0) = (area1 > 0))) then
     begin
-      newOutRec := TOutRec.Create;
+      new(newOutRec);
       newOutRec.Idx := FOutRecList.Add(newOutRec);
       newOutRec.PolyPath := nil;
 
-      newOp := TOutPt.Create;
+      new(newOp);
       newOp.Pt := ip;
       newOp.Prev := splitOp.Next;
       newOp.Next := splitOp;
@@ -1772,14 +1766,13 @@ procedure TClipper.FixSelfIntersects(var op: TOutPt);
       splitOp.Next.Next := newOp;
     end else
     begin
-      splitOp.Next.Free;
-      splitOp.Free;
-      splitOp := nil;
+      Dispose(splitOp.Next);
+      Dispose(splitOp);
     end;
   end;
 
 var
-  op2: TOutPt;
+  op2: POutPt;
 begin
   //precondition:
   //the 'op' linked list's length must be at least 3
@@ -1804,9 +1797,9 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-function TClipper.AddLocalMaxPoly(e1, e2: PActive; const pt: TPoint64): TOutPt;
+function TClipper.AddLocalMaxPoly(e1, e2: PActive; const pt: TPoint64): POutPt;
 var
-  outRec: TOutRec;
+  outRec: POutRec;
 begin
   if not IsOpen(e1) and (IsFront(e1) = IsFront(e2)) then
     if not FixSides(e1) then FixSides(e2);
@@ -1819,8 +1812,8 @@ begin
   if  (e1.OutRec = e2.OutRec) then
   begin
     outRec := e1.OutRec;
-    e1.outRec.frontE := nil;
-    e1.outRec.backE := nil;
+    e1.outRec.FrontE := nil;
+    e1.outRec.BackE := nil;
     e1.OutRec := nil;
     e2.OutRec := nil;
     if IsOpen(e1) then Exit;
@@ -1843,7 +1836,7 @@ end;
 
 procedure TClipper.JoinOutrecPaths(e1, e2: PActive);
 var
-  p1_start, p1_end, p2_start, p2_end: TOutPt;
+  p1_start, p1_end, p2_start, p2_end: POutPt;
 begin
   if (IsFront(e1) = IsFront(e2)) then
   begin
@@ -1874,8 +1867,8 @@ begin
       e1.OutRec.Pts := p2_start;
     end else
     begin
-      e1.OutRec.frontE := e2.OutRec.frontE;
-      e1.OutRec.frontE.OutRec := e1.OutRec;
+      e1.OutRec.FrontE := e2.OutRec.FrontE;
+      e1.OutRec.FrontE.OutRec := e1.OutRec;
     end;
     //strip duplicates ...
     if (p2_end <> p2_start) and PointsEqual(p2_end.Pt, p2_end.Prev.Pt) then
@@ -1891,8 +1884,8 @@ begin
       e1.OutRec.Pts := p1_start;
     end else
     begin
-      e1.OutRec.backE := e2.OutRec.backE;
-      e1.OutRec.backE.OutRec := e1.OutRec;
+      e1.OutRec.BackE := e2.OutRec.BackE;
+      e1.OutRec.BackE.OutRec := e1.OutRec;
     end;
     //strip duplicates ...
     if (p1_end <> p1_start) and PointsEqual(p1_end.Pt, p1_end.Prev.Pt) then
@@ -1904,8 +1897,8 @@ begin
       DisposeOutPt(e1.OutRec.Pts.Prev);
 
   //after joining, the e2.OutRec must contains no vertices ...
-  e2.OutRec.frontE := nil;
-  e2.OutRec.backE := nil;
+  e2.OutRec.FrontE := nil;
+  e2.OutRec.BackE := nil;
   e2.OutRec.Pts := nil;
   e2.OutRec.Owner := e1.OutRec; //this may be redundant
 
@@ -1921,11 +1914,11 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-function TClipper.AddOutPt(e: PActive; const pt: TPoint64): TOutPt;
+function TClipper.AddOutPt(e: PActive; const pt: TPoint64): POutPt;
 var
-  opFront, opBack: TOutPt;
+  opFront, opBack: POutPt;
   toFront: Boolean;
-  outrec: TOutRec;
+  outrec: POutRec;
 begin
   //Outrec.OutPts: a circular doubly-linked-list of POutPt where ...
   //opFront[.Prev]* ~~~> opBack & opBack == opFront.Next
@@ -1939,7 +1932,7 @@ begin
     result := opBack
   else
   begin
-    Result := TOutPt.Create;
+    new(Result);
     Result.Pt := pt;
     opBack.Prev := Result;
     Result.Prev := opFront;
@@ -1950,21 +1943,21 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-function TClipper.StartOpenPath(e: PActive; const pt: TPoint64): TOutPt;
+function TClipper.StartOpenPath(e: PActive; const pt: TPoint64): POutPt;
 var
-  outRec: TOutRec;
+  outRec: POutRec;
 begin
-  outRec := TOutRec.Create;
+  new(outRec);
   outRec.Idx := FOutRecList.Add(outRec);
   outRec.Owner := nil;
   outRec.State := osOpen;
   outRec.Pts := nil;
   outRec.PolyPath := nil;
-  outRec.frontE := nil;
-  outRec.backE := nil;
+  outRec.FrontE := nil;
+  outRec.BackE := nil;
   e.OutRec := outRec;
 
-  Result := TOutPt.Create;
+  new(Result);
   outRec.Pts := Result;
   Result.Pt := pt;
   Result.Prev := Result;
@@ -1989,7 +1982,7 @@ end;
 procedure TClipper.IntersectEdges(e1, e2: PActive; pt: TPoint64);
 var
   e1WindCnt, e2WindCnt, e1WindCnt2, e2WindCnt2: Integer;
-  op, op2: TOutPt;
+  op, op2: POutPt;
 begin
 
   //MANAGE OPEN PATH INTERSECTIONS SEPARATELY ...
@@ -2296,7 +2289,7 @@ procedure TClipper.BuildTree(polytree: TPolyPathBase; out openPaths: TPaths64);
 var
   i,j         : Integer;
   cntOpen     : Integer;
-  outRec      : TOutRec;
+  outRec      : POutRec;
   path        : TPath64;
   isOpenPath  : Boolean;
   ownerPP     : TPolyPathBase;
@@ -2821,7 +2814,7 @@ end;
 function TClipper.BuildPaths(out closedPaths, openPaths: TPaths64): Boolean;
 var
   i, cntClosed, cntOpen: Integer;
-  outRec: TOutRec;
+  outRec: POutRec;
   extras, extras2: TPaths64;
 begin
   try
@@ -2872,7 +2865,7 @@ begin
       else if v.Pt.X > Result.Right then Result.Right := v.Pt.X;
       if v.Pt.Y < Result.Top then Result.Top := v.Pt.Y
       else if v.Pt.Y > Result.Bottom then Result.Bottom := v.Pt.Y;
-      v := v.next;
+      v := v.Next;
     until v = vStart;
   end;
   if Result.Left > Result.Right then Result := NullRect64;
