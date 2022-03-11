@@ -427,14 +427,6 @@ namespace ClipperLib2
 			return cnt;
 		}
 
-		static void RemoveOutPt(OutPt pp)
-		{
-			pp.prev.next = pp.next;
-			pp.next.prev = pp.prev;
-			//delete pp;
-		}
-
-
 		internal struct IntersectListSort : IComparer<IntersectNode>
 		{
 			public int Compare(IntersectNode a, IntersectNode b)
@@ -1335,7 +1327,7 @@ namespace ClipperLib2
 				}
 				//strip duplicates ...
 				if ((p2_end != p2_st) && (p2_end.pt == p2_end.prev.pt))
-					RemoveOutPt(p2_end);
+					DeleteOp(p2_end);
 			}
 			else
 			{
@@ -1354,11 +1346,11 @@ namespace ClipperLib2
 				}
 				//strip duplicates ...
 				if ((p1_end != p1_st) && (p1_end.pt == p1_end.prev.pt))
-					RemoveOutPt(p1_end);
+					DeleteOp(p1_end);
 			}
 
 			if ((ae1.outrec.pts.pt == ae1.outrec.pts.prev.pt) && !IsInvalidPath(ae1.outrec.pts))
-				RemoveOutPt(ae1.outrec.pts.prev);
+				DeleteOp(ae1.outrec.pts.prev);
 
 			//after joining, the ae2.OutRec must contains no vertices ...
 			ae2.outrec.frontEdge = null;
@@ -2155,7 +2147,6 @@ namespace ClipperLib2
 			OutPt result = (op.next == op ? null : op.next);
 			op.prev.next = op.next;
 			op.next.prev = op.prev;
-			op = null;
 			return result;
 		}
 
@@ -2212,12 +2203,10 @@ namespace ClipperLib2
 			{
 				nextNextOp.prev = prevOp;
 				prevOp.next = nextNextOp;
-			} 
+			}
 			else
 			{
-				OutPt newOp = new OutPt(ip);
-				newOp.prev = prevOp;
-				newOp.next = nextNextOp;
+				OutPt newOp = new OutPt(ip) { prev = prevOp, next = nextNextOp };
 				nextNextOp.prev = newOp;
 				prevOp.next = newOp;
 			}
@@ -2231,9 +2220,7 @@ namespace ClipperLib2
 				newOutRec.idx = _outrecList.Count - 1;
 				newOutRec.polypath = null;
 
-				OutPt newOp = new OutPt(ip);
-				newOp.prev = splitOp.next;
-				newOp.next = splitOp;
+				OutPt newOp = new OutPt(ip) { prev = splitOp.next, next = splitOp };
 				newOutRec.pts = newOp;
 				splitOp.prev = newOp;
 				splitOp.next.next = newOp;
@@ -2263,82 +2250,6 @@ namespace ClipperLib2
 					op2	= op2.next;
 				if (op2 == op) break;
 			}
-		}
-
-		private static void CleanPath(Path64 path)
-		{
-			Point64 prev;
-			int cnt = path.Count;
-			while (cnt > 2 && InternalClipperFunc.CrossProduct(path[cnt - 2], path[cnt - 1], path[0]) == 0) cnt--;
-			if (cnt < path.Count) path.RemoveRange(cnt, path.Count - cnt);
-			if (cnt < 2) return;
-			prev = path[cnt - 1];
-			int j = 0;
-			for (int i = 1; i < cnt; i++)
-			{
-				if (InternalClipperFunc.CrossProduct(prev, path[i - 1], path[i]) == 0) continue;
-				prev = path[i - 1];
-				path[j++] = prev;
-			}
-			path[j++] = path[cnt - 1];
-			if (j < path.Count) path.RemoveRange(j, path.Count - j);
-		}
-
-		private static int SelfIntersectIdx(Path64 path)
-		{
-			int cnt = path.Count;
-			if (cnt < 4) return -1;
-			for (int i = 0; i < cnt; i++)
-				if (InternalClipperFunc.SegmentsIntersect(path[i], path[(i + 1) % cnt],
-					path[(i + 2) % cnt], path[(i + 3) % cnt]))
-					return i;
-			return -1;
-		}
-
-		private static bool InternalSplitSelfIntersect(Path64 path, int idx, Path64 path1, Path64 path2)
-		{
-			path1.Clear();
-			path2.Clear();
-			int cnt = path.Count;
-			if (idx < 0 || idx >= cnt) return false;
-			if (!InternalClipperFunc.GetIntersectPoint(path[idx], path[(idx + 1) % cnt],
-				path[(idx + 2) % cnt], path[(idx + 3) % cnt], out PointD ip)) return false;
-			path2.Add(path[(idx + 1) % cnt]);
-			path2.Add(path[(idx + 2) % cnt]);
-			path2.Add(new Point64(ip.x, ip.y));
-			path1.Capacity = cnt - 1;
-			for (int i = 0; i < cnt - 2; i++)
-				path1.Add(path[(idx + 3 + i) % cnt]);
-			path1.Add(new Point64(ip.x, ip.y));
-			return true;
-		}
-
-		private bool SplitSelfIntersect(Path64 path, Paths64 extras)
-		{
-			bool has_spit = false;
-			extras.Clear();
-			double a1, a2;
-			int j = SelfIntersectIdx(path);
-			Path64 p = new Path64(), extra = new Path64();
-			while (j >= 0 && InternalSplitSelfIntersect(path, j, p, extra))
-			{
-				has_spit = true;
-				a1 = ClipperFunc.Area(p);
-				a2 = ClipperFunc.Area(extra);
-				if (Math.Abs(a1) < Math.Abs(a2))
-				{
-					path = extra;
-					extra = p;
-				}
-				else
-				{
-					path = p;
-				}
-				if ((a1 != 0.0 && a2 != 0.0) &&
-				 ((a1 > 0) == (a2 > 0))) extras.Add(extra);
-				j = SelfIntersectIdx(path);
-			}
-			return has_spit;
 		}
 
 		internal bool BuildPath(OutPt op, bool is_open, Path64 path)
