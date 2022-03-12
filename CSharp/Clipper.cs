@@ -167,6 +167,42 @@ namespace ClipperLib2
       return Area(poly) >= 0;
     }
 
+    public static Path64 OffsetPath(Path64 path, long dx, long dy)
+    {
+      int cnt = path.Count;
+      Path64 result = new Path64(cnt);
+      foreach (Point64 pt in path)
+        result.Add(new Point64(pt.X + dx, pt.Y + dy));
+      return result;
+    }
+
+    public static Paths64 OffsetPaths(Paths64 paths, long dx, long dy)
+    {
+      int cnt = paths.Count;
+      Paths64 result = new Paths64(cnt);
+      foreach (Path64 path in paths)
+        result.Add(OffsetPath(path, dx, dy));
+      return result;
+    }
+
+    public static PathD OffsetPath(PathD path, long dx, long dy)
+    {
+      int cnt = path.Count;
+      PathD result = new PathD(cnt);
+      foreach (PointD pt in path)
+        result.Add(new PointD(pt.y + dx, pt.y + dy));
+      return result;
+    }
+
+    public static PathsD OffsetPaths(PathsD paths, long dx, long dy)
+    {
+      int cnt = paths.Count;
+      PathsD result = new PathsD(cnt);
+      foreach (PathD path in paths)
+        result.Add(OffsetPath(path, dx, dy));
+      return result;
+    }
+
     public static Path64 ReversePath(Path64 path)
     {
       int cntMin1 = path.Count - 1;

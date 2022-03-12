@@ -312,13 +312,17 @@ namespace ClipperLib2
     public const double floatingPointTolerance = 1E-15;
     public const double defaultMinimumEdgeLength = 0.1;
 
-    public static long CrossProduct(Point64 pt1, Point64 pt2, Point64 pt3)
+    public static double CrossProduct(Point64 pt1, Point64 pt2, Point64 pt3)
     {
-      return ((pt2.X - pt1.X) * (pt3.Y - pt2.Y) - (pt2.Y - pt1.Y) * (pt3.X - pt2.X));
+      //typecast to double to avoid potential int overflow
+      return ((double)(pt2.X - pt1.X) * (pt3.Y - pt2.Y) - 
+        (double)(pt2.Y - pt1.Y) * (pt3.X - pt2.X));
     }
-    public static long DotProduct(Point64 pt1, Point64 pt2, Point64 pt3)
+    public static double DotProduct(Point64 pt1, Point64 pt2, Point64 pt3)
     {
-      return ((pt2.X - pt1.X) * (pt3.X - pt2.X) + (pt2.Y - pt1.Y) * (pt3.Y - pt2.Y));
+      //typecast to double to avoid potential int overflow
+      return ((double)(pt2.X - pt1.X) * (pt3.X - pt2.X) +
+        (double)(pt2.Y - pt1.Y) * (pt3.Y - pt2.Y));
     }
     public static double DotProduct(PointD vec1, PointD vec2)
     {

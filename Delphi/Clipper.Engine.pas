@@ -3,7 +3,7 @@ unit Clipper.Engine;
 (*******************************************************************************
 * Author    :  Angus Johnson                                                   *
 * Version   :  10.0 (beta) - aka Clipper2                                      *
-* Date      :  11 March 2022                                                   *
+* Date      :  12 March 2022                                                   *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  This is the main polygon clipping module                        *
@@ -144,6 +144,7 @@ type
     FCurrentLocMinIdx   : Integer;
     FClipType           : TClipType;
     FFillRule           : TFillRule;
+    FPreserveCollinear  : Boolean;
     FIntersectList      : TList;
     FOutRecList         : TList;
     FLocMinList         : TList;
@@ -219,6 +220,8 @@ type
     destructor Destroy; override;
     procedure Clear;
     function GetBounds: TRect64;
+    property PreserveCollinear: Boolean read
+      FPreserveCollinear write FPreserveCollinear;
   end;
 
   TClipper = class(TClipperBase) //for integer coordinates
@@ -895,6 +898,7 @@ begin
   FOutRecList       := TList.Create;
   FIntersectList    := TList.Create;
   FVertexArrayList  := TList.Create;
+  FPreserveCollinear := true;
 end;
 //------------------------------------------------------------------------------
 
@@ -1208,11 +1212,7 @@ end;
 procedure TClipperBase.AddPath(const path: TPath64;
   pathType: TPathType; isOpen: Boolean);
 begin
-  if isOpen then
-  begin
-    if (Length(path) < 2) then Exit;
-  end
-  else if (Length(path) < 3) then Exit;
+  if isOpen then FHasOpenPaths := true;
   FLocMinListSorted := false;
   AddPathToVertexList(path, pathType, isOpen);
 end;
@@ -1221,15 +1221,12 @@ end;
 procedure TClipperBase.AddPaths(const paths: TPaths64;
   pathType: TPathType; isOpen: Boolean);
 var
-  i, minLen: integer;
+  i: integer;
 begin
-  if isOpen then
-    minLen := 3 else
-    minLen := 2;
+  if isOpen then FHasOpenPaths := true;
   FLocMinListSorted := false;
   for i := 0 to High(paths) do
-    if Length(paths[i]) >= minLen then
-      AddPathToVertexList(paths[i], pathType, isOpen);
+    AddPathToVertexList(paths[i], pathType, isOpen);
 end;
 //------------------------------------------------------------------------------
 
@@ -1658,7 +1655,7 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-procedure CleanCollinear(var op: POutPt);
+procedure CleanCollinear(var op: POutPt; preserveCollinear: Boolean);
 var
   op2, startOp: POutPt;
 begin
@@ -1667,7 +1664,9 @@ begin
   op2 := op;
   while true do
   begin
-    if (CrossProduct(op2.Prev.Pt, op2.Pt, op2.Next.Pt) = 0) then
+    if (CrossProduct(op2.Prev.Pt, op2.Pt, op2.Next.Pt) = 0) and
+      (not preserveCollinear or
+      (DotProduct(op2.Prev.Pt, op2.Pt, op2.Next.Pt) < 0)) then //ie 180deg. spike
     begin
       if op2 = op then op := op2.Prev;
       op2 := DisposeOutPt(op2);
@@ -1780,11 +1779,7 @@ var
 begin
   if not IsOpen(e1) and (IsFront(e1) = IsFront(e2)) then
     if not FixSides(e1) then FixSides(e2);
-
   Result := AddOutPt(e1, pt);
-  {$IFDEF USINGZ}
-  SetZ(e1, e2, Result.Pt);
-  {$ENDIF}
 
   if  (e1.OutRec = e2.OutRec) then
   begin
@@ -1795,7 +1790,7 @@ begin
     e2.OutRec := nil;
     if IsOpen(e1) then Exit;
 
-    CleanCollinear(outRec.Pts);
+    CleanCollinear(outRec.Pts, FPreserveCollinear);
     if assigned(outRec.Pts) then
       FixSelfIntersects(outRec.Pts);
     Result := outRec.Pts;
@@ -2472,13 +2467,34 @@ begin
 end;
 //------------------------------------------------------------------------------
 
+function TrimHorz(horzEdge: PActive; preserveCollinear: Boolean): Boolean;
+var
+  pt: TPoint64;
+begin
+  Result := false;
+  pt := NextVertex(horzEdge).Pt;
+  //trim 180 deg. spikes in closed paths
+  while ((pt.Y = horzEdge.top.Y) and
+    (not preserveCollinear or
+    ((pt.X < horzEdge.top.X) = (horzEdge.bot.X < horzEdge.top.X)))) do
+  begin
+    horzEdge.VertTop := NextVertex(horzEdge);
+    horzEdge.top := pt;
+    Result := true;
+    if IsMaxima(horzEdge) then Break;
+    pt := NextVertex(horzEdge).Pt;
+  end;
+  if (Result) then SetDx(horzEdge); // +/-infinity
+end;
+//------------------------------------------------------------------------------
+
 procedure TClipperBase.DoHorizontal(horzEdge: PActive);
 var
   maxPair: PActive;
   horzLeft, horzRight: Int64;
   isLeftToRight: Boolean;
 
-  procedure ResetHorzDirection;
+  function ResetHorzDirection: Boolean;
   var
     e: PActive;
   begin
@@ -2490,19 +2506,19 @@ var
       e := horzEdge.NextInAEL;
       while assigned(e) and (e <> maxPair) do
         e := e.NextInAEL;
-      isLeftToRight := assigned(e);
+      Result := assigned(e);
       //nb: this block isn't yet redundant
     end
     else if horzEdge.CurrX < horzEdge.Top.X then
     begin
       horzLeft := horzEdge.CurrX;
       horzRight := horzEdge.Top.X;
-      isLeftToRight := true;
+      Result := true;
     end else
     begin
       horzLeft := horzEdge.Top.X;
       horzRight := horzEdge.CurrX;
-      isLeftToRight := false;
+      Result := false;
     end;
   end;
   //------------------------------------------------------------------------
@@ -2527,33 +2543,25 @@ begin
 *        /             |        /       |       /                              *
 *******************************************************************************)
 
-  //with closed paths, simplify consecutive horizontals into a 'single' edge ...
   horzIsOpen := IsOpen(horzEdge);
-  if not horzIsOpen then
-  begin
-    pt := horzEdge.Bot;
-    while not IsMaxima(horzEdge) and
-      (NextVertex(horzEdge).Pt.Y = pt.Y) do
-        UpdateEdgeIntoAEL(horzEdge);
-    horzEdge.Bot := pt;
-    horzEdge.CurrX := pt.X;
-    //update Dx in case of direction change ...
-    if horzEdge.Bot.X < horzEdge.Top.X then
-      horzEdge.Dx := NegInfinity else
-      horzEdge.Dx := Infinity;
-  end;
 
   maxPair := nil;
   isMax := IsMaxima(horzEdge);
+
+  //remove 180 deg.spikes and also with closed paths and not PreserveCollinear
+  //simplify consecutive horizontals into a 'single' edge ...
+  if not horzIsOpen and
+    not isMax and TrimHorz(horzEdge, FPreserveCollinear) then
+      isMax := IsMaxima(horzEdge);
+
   if isMax and not IsOpenEnd(horzEdge) then
     maxPair := GetMaximaPair(horzEdge);
 
-  ResetHorzDirection;
+  isLeftToRight := ResetHorzDirection;
   if IsHotEdge(horzEdge) then
     AddOutPt(horzEdge, Point64(horzEdge.CurrX, horzEdge.Bot.Y));
 
-  //////////////////////////////////
-  while true do //loops through consec. horizontal edges (if open)
+  while true do //loop through consec. horizontal edges
   begin
     if isLeftToRight  then
       e := horzEdge.NextInAEL else
@@ -2608,17 +2616,21 @@ begin
     end;
 
     //check if we've finished looping through consecutive horizontals
-    if isMax or (NextVertex(horzEdge).Pt.Y <> horzEdge.Top.Y) then Break;
-
-    //this must be an open path with another horizontal
-    Assert(IsOpen(horzEdge), 'oops');
+    if isMax or (NextVertex(horzEdge).Pt.Y <> horzEdge.Top.Y) then
+      Break;
 
     UpdateEdgeIntoAEL(horzEdge);
-    ResetHorzDirection;
     isMax := IsMaxima(horzEdge);
+
+    if not horzIsOpen and not isMax and
+      TrimHorz(horzEdge, FPreserveCollinear) then
+        isMax := IsMaxima(horzEdge); //ie update after TrimHorz
+
+    isLeftToRight := ResetHorzDirection;
     if isMax then maxPair := GetMaximaPair(horzEdge);
     if IsHotEdge(horzEdge) then AddOutPt(horzEdge, horzEdge.Bot);
-  end;
+
+  end; //end while horizontal
 
   if IsHotEdge(horzEdge) then
     AddOutPt(horzEdge, horzEdge.Top);

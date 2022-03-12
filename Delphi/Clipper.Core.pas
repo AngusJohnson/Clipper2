@@ -3,7 +3,7 @@
 (*******************************************************************************
 * Author    :  Angus Johnson                                                   *
 * Version   :  10.0 (beta) - aka Clipper2                                      *
-* Date      :  8 March 2022                                                    *
+* Date      :  12 March 2022                                                   *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  Core Clipper Library module                                     *
 *              Contains structures and functions used throughout the library   *
@@ -104,6 +104,7 @@ function PointInPolygon(const pt: TPoint64;
 
 function CrossProduct(const pt1, pt2, pt3: TPoint64): double; overload;
 function CrossProduct(const pt1, pt2, pt3: TPointD): double; overload;
+function DotProduct(const pt1, pt2, pt3: TPoint64): double;
 
 function DistanceSqr(const pt1, pt2: TPoint64): double; overload;
   {$IFDEF INLINING} inline; {$ENDIF}
@@ -1266,13 +1267,25 @@ end;
 
 function CrossProduct(const pt1, pt2, pt3: TPoint64): double;
 var
-  x1,x2,y1,y2: double;
+  x1,x2,y1,y2: double; //avoids potential int overflow
 begin
   x1 := pt2.X - pt1.X;
   y1 := pt2.Y - pt1.Y;
   x2 := pt3.X - pt2.X;
   y2 := pt3.Y - pt2.Y;
   result := (x1 * y2 - y1 * x2);
+end;
+//------------------------------------------------------------------------------
+
+function DotProduct(const pt1, pt2, pt3: TPoint64): double;
+var
+  x1,x2,y1,y2: double; //avoids potential int overflow
+begin
+  x1 := pt2.X - pt1.X;
+  y1 := pt2.Y - pt1.Y;
+  x2 := pt3.X - pt2.X;
+  y2 := pt3.Y - pt2.Y;
+  result := (x1 * x2 + y1 * y2);
 end;
 //------------------------------------------------------------------------------
 
