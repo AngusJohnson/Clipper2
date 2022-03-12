@@ -263,6 +263,18 @@ begin
 end;
 //------------------------------------------------------------------------------
 
+function PointsEqual(const pt1, pt2: TPoint64): Boolean;
+begin
+  Result := (pt1.X = pt2.X) and (pt1.Y = pt2.Y);
+end;
+//------------------------------------------------------------------------------
+
+function PointsNearEqual(const pt1, pt2: TPointD; distanceSqrd: double): Boolean;
+begin
+  Result := Sqr(pt1.X - pt2.X) + Sqr(pt1.Y - pt2.Y) < distanceSqrd;
+end;
+//------------------------------------------------------------------------------
+
 function StripDuplicates(const path: TPath64; isClosedPath: Boolean): TPath64;
 var
   i,j, len: integer;
@@ -831,18 +843,6 @@ begin
       result[k] := ap[i][j];
       inc(k);
     end;
-end;
-//------------------------------------------------------------------------------
-
-function PointsEqual(const pt1, pt2: TPoint64): Boolean;
-begin
-  Result := (pt1.X = pt2.X) and (pt1.Y = pt2.Y);
-end;
-//------------------------------------------------------------------------------
-
-function PointsNearEqual(const pt1, pt2: TPointD; distanceSqrd: double): Boolean;
-begin
-  Result := Sqr(pt1.X - pt2.X) + Sqr(pt1.Y - pt2.Y) < distanceSqrd;
 end;
 //------------------------------------------------------------------------------
 

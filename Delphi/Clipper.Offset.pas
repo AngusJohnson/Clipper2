@@ -3,7 +3,7 @@ unit Clipper.Offset;
 (*******************************************************************************
 * Author    :  Angus Johnson                                                   *
 * Version   :  10.0 (beta) - aka Clipper2                                      *
-* Date      :  4 March 2022                                                    *
+* Date      :  11 March 2022                                                   *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  Offset paths and clipping solutions                             *
@@ -233,7 +233,7 @@ procedure TClipperOffset.DoGroupOffset(pathGroup: TPathGroup; delta: double);
 var
   i, len, lowestIdx: Integer;
   absDelta, arcTol, steps: Double;
-  IsClosedPaths, isClockwise: Boolean;
+  IsClosedPaths: Boolean;
 begin
   if pathgroup.endType <> etPolygon then delta := Abs(delta) / 2;
 
@@ -244,10 +244,9 @@ begin
     //designated orientation for outer polygons (needed for tidy-up clipping)
     lowestIdx := GetLowestPolygonIdx(pathgroup.paths);
     if lowestIdx < 0 then Exit;
-    isClockwise := Area(pathgroup.paths[lowestIdx]) > 0;
-    if not isClockwise then delta := -delta;
-  end else
-    isClockwise := true;
+    if Area(pathgroup.paths[lowestIdx]) < 0 then
+      pathgroup.paths := ReversePaths(pathgroup.paths);
+  end;
 
   fDelta := delta;
   absDelta := Abs(fDelta);
@@ -318,8 +317,6 @@ begin
     SetLength(fOutPath, fOutPathLen);
     AppendPath(fOutPaths, fOutPath);
   end;
-  if not isClockwise then
-    fOutPaths := ReversePaths(fOutPaths);
 
   if not fMergeGroups then
   begin
@@ -456,7 +453,7 @@ begin
     fTmpLimit := 2.0;
 
   if FMinEdgeLen < floatingPointTolerance then
-    FMinEdgeLen := defaultMinEdgeLen;
+    FMinEdgeLen := defaultMinimumEdgeLength;
   FMinLenSqrd := FMinEdgeLen * FMinEdgeLen;
 
   //nb: delta will depend on whether paths are polygons or open

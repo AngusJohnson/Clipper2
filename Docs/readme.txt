@@ -1,19 +1,18 @@
 
-This is a pre-release version of Clipper2. While the code in Clipper1 
+This is a pre-release beta version of Clipper2. While the code in Clipper1 
 (ie versions 1 through to 6.4.2) was functional, in many places it is/was 
 downright ugly. This new version is a significant rewrite that should be 
 **a little** easier to understand (though unfortunately still very complex). 
-There's a modest performance improvement, and much better (simpler, more 
-efficient and almost complete) removal of spikes and micro-self-intersections 
-from clipping solutions.
+There's also a modest performance improvement. And there's much simpler and
+more efficient handling of spikes and micro-self-intersections with their 
+almost complete removal from clipping solutions.
 
-This is a pre-release version ... SO EXPECT SOME BUGS. The Delphi code
-has been fairly extensively tested for polygons, but less so for open paths.
-The C# port has not been as extensively tested as the Delphi code. 
+But since this is a pre-release version ... EXPECT SOME BUGS, even though
+both the Delphi code and its C# port have been fairly extensively tested. 
 A C++ port is also in the pipeline.
 
-There are many changes to Clipper's interface. While there are too many to 
-mention them all here, these are some notable ones:
+There are many changes to Clipper's interfacem and too numerous to mention 
+them all here. Nevertheless, these are the more important ones:
 1. The PolyFillType enumeration has been renamed FillRule.
 2. The cInt type used for path coordinates has been replaced with native  
    64bit integer types (long, Int64 or int64_t).
@@ -22,12 +21,13 @@ mention them all here, these are some notable ones:
    are new PointD and RectD classes indicating double float values.
 4. The Clipper class no longer has AddPath and AddPaths methods. These have
    been replaced with AddSubject, AddOpenSubject and AddClip methods.
-4. The Clipper class's Execute parameters have also changed with the addition 
-   of an optional OpenSolutions parameter. The second FillRule parameters has
-   also been removed.
+4. The Clipper class's Execute parameters have changed with the removal of 
+   the second FillRule parameter, and addition of an optional OpenSolutions 
+   parameter. (The second FillRule parameter was almost never needed and 
+   probably confusing).
 5. The Polytree class now only contains closed paths (ie polygons) since
-   open paths can't contain polygons. Open paths in solutions are now 
-   returned via Clipper.Execute's new OpenSolutions parameter.
+   open paths can't contain polygons and open paths in solutions are now 
+   returned via Execute's OpenSolutions parameter.
    
 When I originally translated this Library from Delphi (Pascal) to C# and C++,
 I deliberately kept a strong Delphi naming style as I thought this would help
@@ -78,3 +78,6 @@ Examples:
   subj_open.Add(MakePath(new int[] { 70,35, 70,25 }));             //undefined
   clip.Add(MakePath(new int[] { 70,20, 90,20, 90,40, 70,40 }));
 
+PreserveCollinear property
+
+This property only pertains to **closed paths**. Paths not uncommonly have consecutive segments that are collinear, where the shared vertex can be removed (and paths simplified) without altering the shape of these paths. This simplification is commonly but not always preferred for clipping solutions. However, when consecutive segments are collinear AND ALSO change direction 180 degrees, causing spikes, these are rarely desired. 'Spikes' will always be removed from closed path solutions, irrespective of the PreserveCollinear property.
