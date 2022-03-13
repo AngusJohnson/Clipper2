@@ -31,6 +31,8 @@ them all here. These are the more important ones:
 7. Clipper2's Offset behavior for open paths has changed compared to Clipper1. The
    offset value is now the full width of the resulting offset, rather than the per-side
    value. To get similar results to the Clipper1 behavior, double the offset value.
+8. Collinear vertices are retained by default, in contrast to the default behavior of 
+   Clipper1.
    
 When I originally translated this Library from Delphi (Pascal) to C# and C++,
 I deliberately kept a strong Delphi naming style as I thought this would help
