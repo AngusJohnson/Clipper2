@@ -21,13 +21,16 @@ them all here. These are the more important ones:
    new PointD and RectD classes indicating double float values.
 4. The Clipper class no longer has AddPath and AddPaths methods. These have
    been replaced with AddSubject, AddOpenSubject and AddClip methods.
-4. The Clipper class's Execute parameters have changed with the removal of 
+5. The Clipper class's Execute parameters have changed with the removal of 
    the second FillRule parameter, and addition of an optional OpenSolutions 
    parameter. (The second FillRule parameter was almost never needed and 
    probably confusing).
-5. The Polytree class now only contains closed paths (ie polygons) since
+6. The Polytree class now only contains closed paths (ie polygons) since
    open paths can't contain polygons and open paths in solutions are now 
    returned via Execute's OpenSolutions parameter.
+7. Clipper2's Offset behavior for open paths has changed compared to Clipper1. The
+   offset value is now the full width of the resulting offset, rather than the per-side
+   value. To get similar results to the Clipper1 behavior, double the offset value.
    
 When I originally translated this Library from Delphi (Pascal) to C# and C++,
 I deliberately kept a strong Delphi naming style as I thought this would help
