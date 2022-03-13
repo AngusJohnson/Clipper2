@@ -99,9 +99,11 @@ namespace ClipperLib2
     public override bool Equals(object obj)
     {
       if (obj is Point64 p)
+      {
         return this == p;
-      else
-        return false;
+      }
+
+      return false;
     }
 
     public override string ToString()
@@ -194,9 +196,11 @@ namespace ClipperLib2
     public override bool Equals(object obj)
     {
       if (obj is PointD p)
+      {
         return this == p;
-      else
-        return false;
+      }
+
+      return false;
     }
 
     public override string ToString()
@@ -334,7 +338,11 @@ namespace ClipperLib2
       double m1, b1, m2, b2;
       if (ln1b.X == ln1a.X)
       {
-        if (ln2b.X == ln2a.X) return false;
+        if (ln2b.X == ln2a.X)
+        {
+          return false;
+        }
+
         m2 = (double)(ln2b.Y - ln2a.Y) / (ln2b.X - ln2a.X);
         b2 = ln2a.Y - m2 * ln2a.X;
         ip.x = ln1a.X;
@@ -353,9 +361,9 @@ namespace ClipperLib2
         b1 = ln1a.Y - m1 * ln1a.X;
         m2 = (double)(ln2b.Y - ln2a.Y) / (ln2b.X - ln2a.X);
         b2 = ln2a.Y - m2 * ln2a.X;
-        if (m1 != m2)
+        if (Math.Abs(m1 - m2) > 1E-15)
         {
-          ip.x = (double)(b2 - b1) / (m1 - m2);
+          ip.x = (b2 - b1) / (m1 - m2);
           ip.y = m1 * ip.x + b1;
         }
         else
