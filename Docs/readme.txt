@@ -2,7 +2,7 @@
 This is a pre-release beta version of Clipper2. While the code in Clipper1 
 (i.e. versions 1 through to 6.4.2) was functional, in many places it is/was 
 downright ugly. This new version is a significant rewrite that should be 
-**a little** easier to understand, hough unfortunately still very complex. 
+**a little** easier to understand, though unfortunately still very complex. 
 There's also a modest performance improvement, and there's much simpler and
 more efficient handling of spikes and micro-self-intersections with their 
 almost complete removal from clipping solutions.
