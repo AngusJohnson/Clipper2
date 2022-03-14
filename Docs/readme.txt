@@ -65,7 +65,7 @@ PreserveCollinear property:
 
 This property only pertains to **closed paths**. Paths commonly have consecutive segments that are collinear, where the shared vertex can be removed (and paths simplified) without altering the shape of these paths. This simplification is commonly but not always preferred for clipping solutions. However, when consecutive segments are collinear AND ALSO change direction 180 degrees, causing spikes, these are rarely desired. 'Spikes' will always be removed from closed path solutions, irrespective of the PreserveCollinear property.
 
-In Clipper2, very occasionally there are collinear edges that are within the same solution polygons. While these solutions are technically correct in that these paths still indicate correct solutions, I consider this bug and hope to have this addressed before the formal release of Clipper2.
+In Clipper2, very occasionally there are collinear edges that are within the same solution polygons. While these polygons are still technically correct in that their filled regions do represent correct solutions, I consider this bug and hope to have this addressed before the formal release of Clipper2.
 
 Example:
   Path64 badPath = MakePath(new int[] { 270, 230  160, 230  160, 160  270, 160  270, 20  10, 20  10, 70  60, 70  60, 140  10, 140  10, 20  270, 20 })); 
