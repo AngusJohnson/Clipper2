@@ -68,5 +68,5 @@ This property only pertains to **closed paths**. Paths commonly have consecutive
 In Clipper2, very occasionally there are collinear edges that are within the same solution polygons. While these solutions are technically correct in that these paths still indicate correct solutions, I consider this bug and hope to have this addressed before the formal release of Clipper2.
 
 Example:
-  subj.Add(MakePath(new int[] { 10,270, 10,20, 270,20, 270,270, 10,270 })); 
-  clip.Add(MakePath(new int[] { 10,20, 10,70, 60,70, 60,140, 10,140, 10,270, 270,270, 270,230, 160,230, 160,160, 270,160, 270,20 }));
+  Path64 badPath = MakePath(new int[] { 270, 230  160, 230  160, 160  270, 160  270, 20  10, 20  10, 70  60, 70  60, 140  10, 140  10, 20  270, 20 })); 
+
