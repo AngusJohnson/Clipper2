@@ -1,7 +1,7 @@
 ﻿/*******************************************************************************
 * Author    :  Angus Johnson                                                   *
 * Version   :  10.0 (beta) - also known as Clipper2                            *
-* Date      :  12 March 2022                                                    *
+* Date      :  14 March 2022                                                    *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  This is the main polygon clipping module                        *
@@ -156,9 +156,9 @@ namespace ClipperLib2
 		public bool PreserveCollinear { get; set; }
 
 #if USINGZ
-		public delegate void ZCallback(Point64 bot1, Point64 top1,
+		public delegate void ZCallback64(Point64 bot1, Point64 top1,
 				Point64 bot2, Point64 top2, ref Point64 intersectPt);
-    public ZCallback ZFillFunc { get; set; }
+    public ZCallback64 ZFillFunc { get; set; }
 #endif
 
 		public ClipperBase()
@@ -481,18 +481,15 @@ namespace ClipperLib2
 
 		static double Area(OutPt op)
 		{
-			double area = 0.0, d;
+			if (op == null) return 0.0;
+			double area = 0.0;
 			OutPt op2 = op;
-			if (op2 != null)
+			do
 			{
-				do
-				{
-					d = (double)(op2.prev.pt.X + op2.pt.X);
-					area += d * (op2.prev.pt.Y - op2.pt.Y);
-					op2 = op2.next;
-				} while (op2 != op);
-			}
-			return -area * 0.5; //positive areas for clockwise paths
+				area += (double)(op2.prev.pt.Y + op2.pt.Y) * (op2.prev.pt.X - op2.pt.X);
+				op2 = op2.next;
+			} while (op2 != op);
+			return area * 0.5;
 		}
 
 		static void ReverseOutPts(OutPt op)
@@ -1828,7 +1825,8 @@ namespace ClipperLib2
 			if (ae2.prevInAEL == null) _actives = ae2;
 		}
 
-		private bool ResetHorzDirection(Active horz, Active maxPair, out long leftX, out long rightX)
+		private bool ResetHorzDirection(Active horz, Active maxPair, 
+			out long leftX, out long rightX)
 		{
 			if (horz.bot.X == horz.top.X)
 			{
@@ -2479,7 +2477,7 @@ namespace ClipperLib2
 		{
 			Paths64 solClosed64 = new Paths64(), solOpen64 = new Paths64();
 		#if USINGZ
-			ZCallback ZFillSaved = ZFillFunc;
+			ZCallback64 ZFillSaved = ZFillFunc;
 			if (ZFillDFunc != null && ZFillFunc == null)
 				ZFillFunc = ProxyZCallback;
 		#endif
@@ -2517,7 +2515,7 @@ namespace ClipperLib2
 			polytree.Clear();
 			(polytree as PolyPathD).Scale = _scale;
 		#if USINGZ
-			ZCallback ZFillSaved = ZFillFunc;
+			ZCallback64 ZFillSaved = ZFillFunc;
 			if (ZFillDFunc != null && ZFillFunc == null)
 				ZFillFunc = ProxyZCallback;
 		#endif

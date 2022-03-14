@@ -3,7 +3,7 @@
 (*******************************************************************************
 * Author    :  Angus Johnson                                                   *
 * Version   :  10.0 (beta) - aka Clipper2                                      *
-* Date      :  12 March 2022                                                   *
+* Date      :  14 March 2022                                                   *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  Core Clipper Library module                                     *
 *              Contains structures and functions used throughout the library   *
@@ -1155,38 +1155,34 @@ end;
 function Area(const path: TPath64): Double;
 var
   i, j, highI: Integer;
-  d: Double;
 begin
   Result := 0.0;
   highI := High(path);
-  if (highI < 2) then Exit;
   j := highI;
   for i := 0 to highI do
   begin
-    d := (path[j].X + path[i].X);
-    Result := Result + d * (path[j].Y - path[i].Y);
+    Result := Result +
+      double((path[j].Y + path[i].Y)) * (path[j].X - path[i].X);
     j := i;
   end;
-  Result := Result * -0.5;
+  Result := Result * 0.5;
 end;
 //------------------------------------------------------------------------------
 
 function Area(const path: TPathD): Double;
 var
   i, j, highI: Integer;
-  d: Double;
 begin
   Result := 0.0;
   highI := High(path);
-  if (highI < 2) then Exit;
   j := highI;
   for i := 0 to highI do
   begin
-    d := (path[j].X + path[i].X);
-    Result := Result + d * (path[j].Y - path[i].Y);
+    Result := Result +
+      (path[j].Y + path[i].Y) * (path[j].X - path[i].X);
     j := i;
   end;
-  Result := Result * -0.5;
+  Result := Result * 0.5;
 end;
 //------------------------------------------------------------------------------
 

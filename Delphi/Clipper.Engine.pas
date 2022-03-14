@@ -3,7 +3,7 @@ unit Clipper.Engine;
 (*******************************************************************************
 * Author    :  Angus Johnson                                                   *
 * Version   :  10.0 (beta) - aka Clipper2                                      *
-* Date      :  12 March 2022                                                   *
+* Date      :  14 March 2022                                                   *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  This is the main polygon clipping module                        *
@@ -213,7 +213,7 @@ type
       read GetIntersectNode;
     property OutRecList : TList read FOutRecList;
   {$IFDEF USINGZ}
-    property ZFillFunc : TZCallback64 read FZFunc write FZFunc;
+    property OnZFill : TZCallback64 read FZFunc write FZFunc;
   {$ENDIF}
   public
     constructor Create; virtual;
@@ -723,21 +723,23 @@ begin
 end;
 //------------------------------------------------------------------------------
 
+//Area result in a coordinate system where 0,0 is top/left
+//(is opposite to cartesian coordinate system having 0,0 at bottom left).
 function Area(op: POutPt): Double;
 var
   op2: POutPt;
   d: Double;
 begin
-  //positive results are clockwise
   Result := 0;
+  if not Assigned(op) then Exit;
   op2 := op;
-  if Assigned(op2) then
   repeat
-    d := op2.Prev.Pt.X + op2.Pt.X;
-    Result := Result + d * (op2.Prev.Pt.Y - op2.Pt.Y);
+    Result := Result +
+      double(op2.Prev.Pt.Y + op2.Pt.Y) *
+      (op2.Prev.Pt.X - op2.Pt.X);
     op2 := op2.Next;
   until op2 = op;
-  Result := Result * -0.5;
+  Result := Result * 0.5;
 end;
 //------------------------------------------------------------------------------
 

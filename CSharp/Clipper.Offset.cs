@@ -1,7 +1,7 @@
 ﻿/*******************************************************************************
 * Author    :  Angus Johnson                                                   *
 * Version   :  10.0 (beta) - also known as Clipper2                            *
-* Date      :  11 March 2022                                                    *
+* Date      :  14 March 2022                                                    *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  Offsets both open and closed paths (ie polylines & polygons).   *
@@ -21,19 +21,21 @@ namespace ClipperLib2
   public enum JoinType { Square, Round, Miter };
   public enum EndType { Polygon, Joined, Butt, Square, Round };
 
-  internal struct PathGroup
+  internal class PathGroup
   {
     internal PathsD _inPaths;
     internal PathD _outPath;
     internal PathsD _outPaths;
     internal JoinType _joinType;
     internal EndType _endType;
+    internal bool _pathsReversed;
     public PathGroup(PathsD paths, JoinType joinType, EndType endType = EndType.Polygon) {
       _inPaths = paths;
       _joinType = joinType;
       _endType = endType;
       _outPath = new PathD();
       _outPaths = new PathsD();
+      _pathsReversed = false;
     }
   }
 
@@ -53,10 +55,10 @@ namespace ClipperLib2
 
     public ClipperOffset(double miterLimit = 2.0, double arcTolerance = 0.0)
     {
-      this.MiterLimit = miterLimit;
-      this.ArcTolerance = arcTolerance;
-      this.MergeGroups = true;
-      this.MinimumEdgeLength = 0.5;
+      MiterLimit = miterLimit;
+      ArcTolerance = arcTolerance;
+      MergeGroups = true;
+      MinimumEdgeLength = 0.5;
     }
 
     public void Clear()
@@ -101,10 +103,8 @@ namespace ClipperLib2
       if (Math.Abs(delta) < InternalClipperFunc.floatingPointTolerance)
       {
         foreach (PathGroup group in _pathGroups)
-        {
           foreach (PathD path in group._inPaths)
             solution.Add(path);
-        }
         return solution;
       }
 
@@ -114,20 +114,21 @@ namespace ClipperLib2
         InternalClipperFunc.defaultMinimumEdgeLength : MinimumEdgeLength);
 
       foreach (PathGroup group in _pathGroups)
-        DoGroupOffset(group, delta);
-
-      foreach (PathGroup group in _pathGroups)
       {
+        DoGroupOffset(group, delta);
         foreach (PathD path in group._outPaths)
           solution.Add(path);
       }
 
-      if (MergeGroups)
+      if (MergeGroups && _pathGroups.Count > 0)
       {
         //clean up self-intersections ...
         ClipperD c = new ClipperD();
         c.AddSubject(solution);
-        c.Execute(ClipType.Union, FillRule.Positive, solution);
+        if (_pathGroups[0]._pathsReversed)
+          c.Execute(ClipType.Union, FillRule.Negative, solution);
+        else
+          c.Execute(ClipType.Union, FillRule.Positive, solution);
       }
       return solution;
     }
@@ -145,7 +146,7 @@ namespace ClipperLib2
       return new PointD(dy, -dx);
     }
 
-    int GetLowestPolygonIdx(PathsD paths)
+    private int GetLowestPolygonIdx(PathsD paths)
     {
       PointD lp = new PointD(0, -double.MaxValue);
       int result = -1;
@@ -201,9 +202,8 @@ namespace ClipperLib2
       group._outPath.Add(new PointD(pt.x + pt2.x, pt.y + pt2.y));
       if (steps > 0)
       {
-        double stepSin, stepCos;
-        stepSin = Math.Sin(angle / steps);
-        stepCos = Math.Cos(angle / steps);
+        double stepSin = Math.Sin(angle / steps);
+        double stepCos = Math.Cos(angle / steps);
         for (int i = 0; i < steps; i++)
         {
           pt2 = new PointD(pt2.x * stepCos - stepSin * pt2.y,
@@ -363,13 +363,16 @@ namespace ClipperLib2
         int lowestIdx = GetLowestPolygonIdx(group._inPaths);
         if (lowestIdx < 0)  return;
         if (ClipperFunc.Area(group._inPaths[lowestIdx]) < 0)
-          group._inPaths = ClipperFunc.ReversePaths(group._inPaths);
+        {
+          //this is more efficient than literally reversing paths
+          group._pathsReversed = true; 
+          delta = -delta;
+        }
       }
 
       _delta = delta;
-      _joinType = group._joinType;
-
       double absDelta = Math.Abs(_delta);
+      _joinType = group._joinType;
 
       double arcTol = (ArcTolerance > InternalClipperFunc.floatingPointTolerance ? 
         ArcTolerance : 
@@ -383,14 +386,13 @@ namespace ClipperLib2
         _stepsPerRad = steps / TwoPi;
       }
 
-      for (int i = 0; i < group._inPaths.Count; i++)
+      foreach (PathD p in group._inPaths)
       {
-        PathD path = ClipperFunc.StripNearDuplicates(group._inPaths[i], _minEdgeLen, isClosedPaths);
+        PathD path = ClipperFunc.StripNearDuplicates(p, _minEdgeLen, isClosedPaths);
         int cnt = path.Count;
         if (cnt == 0 || (cnt < 3 && !IsFullyOpenEndType(group._endType))) continue;
 
-      group._outPath.Clear();
-
+        group._outPath.Clear();
         if (cnt == 1)
         {
           //single vertex so build a circle or square ...
@@ -424,7 +426,10 @@ namespace ClipperLib2
         //clean up self-intersections ...
         ClipperD c = new ClipperD();
         c.AddSubject(group._outPaths);
-        c.Execute(ClipType.Union, FillRule.Positive, group._outPaths);
+        if (group._pathsReversed)
+          c.Execute(ClipType.Union, FillRule.Negative, group._outPaths);
+        else
+          c.Execute(ClipType.Union, FillRule.Positive, group._outPaths);
       }
     }
   }

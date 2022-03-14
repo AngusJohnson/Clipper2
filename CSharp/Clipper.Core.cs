@@ -1,7 +1,7 @@
 ﻿/*******************************************************************************
 * Author    :  Angus Johnson                                                   *
 * Version   :  10.0 (release candidate 1) - also known as Clipper2             *
-* Date      :  10 March 2022                                                    *
+* Date      :  14 March 2022                                                    *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  Core structures and functions for the Clipper Library           *
@@ -353,7 +353,7 @@ namespace ClipperLib2
         b1 = ln1a.Y - m1 * ln1a.X;
         m2 = (double)(ln2b.Y - ln2a.Y) / (ln2b.X - ln2a.X);
         b2 = ln2a.Y - m2 * ln2a.X;
-        if (m1 != m2)
+        if (Math.Abs(m1 - m2) > floatingPointTolerance)
         {
           ip.x = (double)(b2 - b1) / (m1 - m2);
           ip.y = m1 * ip.x + b1;

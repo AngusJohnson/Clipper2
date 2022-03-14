@@ -98,7 +98,7 @@ namespace ClipperLib2
       else
         co.AddPaths(paths, JoinType.Round, EndType.Polygon);
       PathsD tmp = co.Execute(delta);
-      return Paths(tmp);
+      return Paths64(tmp);
     }
 
     public static PathsD InflatePaths(PathsD paths, double delta, bool isOpen)
@@ -114,15 +114,10 @@ namespace ClipperLib2
     public static double Area(Path64 path)
     {
       double a = 0.0;
-      int cnt = path.Count, j = cnt - 1;
-      if (cnt < 3) return 0.0;
-      for (int i = 0; i < cnt; i++)
-      {
-        double d = (path[j].X + path[i].X);
-        a += d * (path[j].Y - path[i].Y);
-        j = i;
-      }
-      return -a * 0.5;
+      int cnt = path.Count;
+      for (int i = 0, j = cnt - 1; i < cnt; j = i++)
+        a += (double)(path[j].Y + path[i].Y) * (path[j].X - path[i].X);
+      return a * 0.5;
     }
 
     public static double Area(Paths64 paths)
@@ -137,23 +132,17 @@ namespace ClipperLib2
     public static double Area(PathD path)
     {
       double a = 0.0;
-      int cnt = path.Count, j = cnt - 1;
-      if (cnt < 3) return 0.0;
-      for (int i = 0; i < cnt; i++)
-      {
-        double d = (path[j].x + path[i].x);
-        a += d * (path[j].y - path[i].y);
-        j = i;
-      }
-      return -a * 0.5;
+      int cnt = path.Count;
+      for (int i = 0, j = cnt - 1; i < cnt; j = i++)
+        a += (path[j].y + path[i].y) * (path[j].x - path[i].x);
+      return a * 0.5;
     }
 
     public static double Area(PathsD paths)
     {
       double a = 0.0;
-      int cnt = paths.Count;
-      for (int i = 0; i < cnt; i++)
-        a += Area(paths[i]);
+      foreach (PathD path in paths)
+        a += Area(path);
       return a;
     }
 
@@ -169,8 +158,7 @@ namespace ClipperLib2
 
     public static Path64 OffsetPath(Path64 path, long dx, long dy)
     {
-      int cnt = path.Count;
-      Path64 result = new Path64(cnt);
+      Path64 result = new Path64(path.Count);
       foreach (Point64 pt in path)
         result.Add(new Point64(pt.X + dx, pt.Y + dy));
       return result;
@@ -178,8 +166,7 @@ namespace ClipperLib2
 
     public static Paths64 OffsetPaths(Paths64 paths, long dx, long dy)
     {
-      int cnt = paths.Count;
-      Paths64 result = new Paths64(cnt);
+      Paths64 result = new Paths64(paths.Count);
       foreach (Path64 path in paths)
         result.Add(OffsetPath(path, dx, dy));
       return result;
@@ -187,8 +174,7 @@ namespace ClipperLib2
 
     public static PathD OffsetPath(PathD path, long dx, long dy)
     {
-      int cnt = path.Count;
-      PathD result = new PathD(cnt);
+      PathD result = new PathD(path.Count);
       foreach (PointD pt in path)
         result.Add(new PointD(pt.y + dx, pt.y + dy));
       return result;
@@ -196,8 +182,7 @@ namespace ClipperLib2
 
     public static PathsD OffsetPaths(PathsD paths, long dx, long dy)
     {
-      int cnt = paths.Count;
-      PathsD result = new PathsD(cnt);
+      PathsD result = new PathsD(paths.Count);
       foreach (PathD path in paths)
         result.Add(OffsetPath(path, dx, dy));
       return result;
@@ -205,56 +190,50 @@ namespace ClipperLib2
 
     public static Path64 ReversePath(Path64 path)
     {
-      int cntMin1 = path.Count - 1;
-      Path64 result = new Path64(cntMin1 + 1);
-      for (int i = 0; i <= cntMin1; i++)
-        result.Add(path[cntMin1 - i]);
+      Path64 result = new Path64(path.Count);
+      for (int i = path.Count -1; i >= 0; i--)
+        result.Add(path[i]);
       return result;
     }
 
     public static PathD ReversePath(PathD path)
     {
-      int cntMin1 = path.Count - 1;
-      PathD result = new PathD(cntMin1 + 1);
-      for (int i = 0; i <= cntMin1; i++)
-        result.Add(path[cntMin1 - i]);
+      PathD result = new PathD(path.Count);
+      for (int i = path.Count - 1; i >= 0; i--)
+        result.Add(path[i]);
       return result;
     }
 
     public static Paths64 ReversePaths(Paths64 paths)
     {
-      int cnt = paths.Count;
-      Paths64 result = new Paths64(cnt);
-      for (int i = 0; i < cnt; i++)
-        result.Add(ReversePath(paths[i]));
+      Paths64 result = new Paths64(paths.Count);
+      foreach (Path64 path in paths)
+        result.Add(ReversePath(path));
       return result;
     }
 
     public static PathsD ReversePaths(PathsD paths)
     {
-      int cnt = paths.Count;
-      PathsD result = new PathsD(cnt);
-      for (int i = 0; i < cnt; i++)
-        result.Add(ReversePath(paths[i]));
+      PathsD result = new PathsD(paths.Count);
+      foreach (PathD path in paths)
+        result.Add(ReversePath(path));
       return result;
     }
 
-    public static Path64 Path(PathD path)
+    public static Path64 Path64(PathD path)
     {
-      int cnt = path.Count;
-      Path64 res = new Path64(cnt);
-      for (int i = 0; i < cnt; i++)
-        res.Add(new Point64(path[i]));
-      return res;
+      Path64 result = new Path64(path.Count);
+      foreach (PointD pt in path)
+        result.Add(new Point64(pt));
+      return result;
     }
 
-    public static Paths64 Paths(PathsD paths)
+    public static Paths64 Paths64(PathsD paths)
     {
-      int cnt = paths.Count;
-      Paths64 res = new Paths64(cnt);
-      for (int i = 0; i < cnt; i++)
-        res.Add(Path(paths[i]));
-      return res;
+      Paths64 result = new Paths64(paths.Count);
+      foreach (PathD path in paths)
+        result.Add(Path64(path));
+      return result;
     }
 
     public static Rect64 GetBounds(Paths64 paths)
@@ -407,7 +386,8 @@ namespace ClipperLib2
       return Sqr(pt1.x - pt2.x) + Sqr(pt1.y - pt2.y) < distanceSqrd;
     }
 
-    public static PathD StripNearDuplicates(PathD path, double minEdgeLength, bool isClosedPath)
+    public static PathD StripNearDuplicates(PathD path, 
+      double minEdgeLength, bool isClosedPath)
     {
       int cnt = path.Count;
       PathD result = new PathD(cnt);
@@ -421,13 +401,17 @@ namespace ClipperLib2
           lastPt = path[i];
           result.Add(lastPt);
         }
-      if (isClosedPath && PointsNearEqual(lastPt, result[0], minLengthSqrd)) result.RemoveAt(result.Count - 1);
+      if (isClosedPath && PointsNearEqual(lastPt, result[0], minLengthSqrd))
+      {
+        result.RemoveAt(result.Count - 1);
+      }
       return result;
     }
 
     private static void AddPolyNodeToPaths(PolyPath polyPath, Paths64 paths)
     {
-      if (polyPath.Polygon.Count > 0) paths.Add(polyPath.Polygon);
+      if (polyPath.Polygon.Count > 0) 
+        paths.Add(polyPath.Polygon);
       for (int i = 0; i < polyPath.ChildCount; i++)
         AddPolyNodeToPaths((PolyPath)polyPath._childs[i], paths);
     }
@@ -442,7 +426,8 @@ namespace ClipperLib2
 
     public static void AddPolyNodeToPathsD(PolyPathD polyPath, PathsD paths)
     {
-      if (polyPath.Polygon.Count > 0) paths.Add(polyPath.Polygon);
+      if (polyPath.Polygon.Count > 0) 
+        paths.Add(polyPath.Polygon);
       for (int i = 0; i < polyPath.ChildCount; i++)
         AddPolyNodeToPathsD((PolyPathD)polyPath._childs[i], paths);
     }

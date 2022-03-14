@@ -3,7 +3,7 @@ unit Clipper.Offset;
 (*******************************************************************************
 * Author    :  Angus Johnson                                                   *
 * Version   :  10.0 (beta) - aka Clipper2                                      *
-* Date      :  11 March 2022                                                   *
+* Date      :  13 March 2022                                                    *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  Offset paths and clipping solutions                             *
@@ -29,6 +29,7 @@ type
 
   TPathGroup = class
 	  paths     : TPathsD;
+    reversed  : Boolean;
 	  joinType  : TJoinType;
 	  endType   : TEndType;
     constructor Create(jt: TJoinType; et: TEndType);
@@ -245,11 +246,16 @@ begin
     lowestIdx := GetLowestPolygonIdx(pathgroup.paths);
     if lowestIdx < 0 then Exit;
     if Area(pathgroup.paths[lowestIdx]) < 0 then
-      pathgroup.paths := ReversePaths(pathgroup.paths);
+    begin
+      //more efficient than literally reversing paths
+      pathgroup.reversed := true;
+      delta := -delta;
+    end;
   end;
 
   fDelta := delta;
   absDelta := Abs(fDelta);
+  fJoinType := pathGroup.joinType;
 
   if fArcTolerance > 0 then
     arcTol := fArcTolerance else
@@ -324,7 +330,9 @@ begin
     with TClipperD.Create do
     try
       AddSubject(fOutPaths);
-      Execute(ctUnion, frPositive, fOutPaths);
+      if pathgroup.reversed then
+        Execute(ctUnion, frNegative, fOutPaths) else
+        Execute(ctUnion, frPositive, fOutPaths);
     finally
       free;
     end;
@@ -460,17 +468,18 @@ begin
   for i := 0 to fInGroups.Count -1 do
   begin
     group := TPathGroup(fInGroups[i]);
-    fJoinType := group.joinType;
     DoGroupOffset(group, delta);
   end;
 
-  if fMergeGroups then
+  if fMergeGroups and (fInGroups.Count > 0) then
   begin
     //clean up self-intersections ...
     with TClipperD.Create do
     try
       AddSubject(fSolution);
-      Execute(ctUnion, frPositive, fSolution);
+      if TPathGroup(fInGroups[0]).reversed then
+        Execute(ctUnion, frNegative, fSolution) else
+        Execute(ctUnion, frPositive, fSolution);
     finally
       free;
     end;
