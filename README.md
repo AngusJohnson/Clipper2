@@ -12,4 +12,5 @@ Much of the code has been rewritten. Major changes include:
 
 More details can be found in the Docs folder.
 
-![clipper_performance](https://user-images.githubusercontent.com/5280692/158306552-0c506e30-65db-4492-90b4-d962c0322bd7.png)
+![clipper_performance2](https://user-images.githubusercontent.com/5280692/158311940-b00a3992-e253-480a-b905-feddbec2259e.png)
+
