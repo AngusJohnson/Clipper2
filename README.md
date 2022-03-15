@@ -1,9 +1,15 @@
 # Clipper2
 Polygon Clipping and Offsetting library
 
-A new version of Clipper is soon to be released.<br>
-Here's a preview.
+This is a beta version or the long awaited update to my <a href="https://sourceforge.net/projects/polyclipping/">Clipper Library</a><br>
 
-But in the meantime there's also Clipper1 here:<br>
-https://sourceforge.net/projects/polyclipping/
+Much of the code has been rewritten. Major changes include:
+<ul>
+  <li>both integer and floating point coordinates are now supported. The Library still performs all clipping operations using integer coordinates (to preserve numerical robustness), but floating point - integer coversions are now managed internally.
+  <li>there's much simpler and more efficient removal of spikes and micro-self-intersections from clipping solutions.
+  <li>and there's a modest improvement in performance too
+</ul> 
 
+More details can be found in the Docs folder.
+
+![clipper_performance](https://user-images.githubusercontent.com/5280692/158306552-0c506e30-65db-4492-90b4-d962c0322bd7.png)
