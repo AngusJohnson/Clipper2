@@ -5,9 +5,9 @@ This is a beta version or the long awaited update to my <a href="https://sourcef
 
 Much of the code has been rewritten. Major changes include:
 <ul>
-  <li>both integer and floating point coordinates are now supported. The Library still performs all clipping operations using integer coordinates (to preserve numerical robustness), but floating point - integer coversions are now managed internally.
+  <li>both integer and floating point coordinates are now supported. The Library still performs all clipping operations using integer coordinates (to preserve numerical robustness), but floating point - integer conversions are now managed internally.
   <li>there's much simpler and more efficient removal of spikes and micro-self-intersections from clipping solutions.
-  <li>and there's a modest improvement in performance too
+  <li>and there's a modest improvement in performance too (see chart below)
 </ul> 
 
 More details can be found in the Docs folder.
