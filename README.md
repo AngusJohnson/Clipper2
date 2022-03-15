@@ -1,7 +1,7 @@
 # Clipper2
 Polygon Clipping and Offsetting library
 
-This is a beta version or the long awaited update to my <a href="https://sourceforge.net/projects/polyclipping/">Clipper Library</a><br>
+This is a beta version of the long awaited update to my <a href="https://sourceforge.net/projects/polyclipping/">Clipper Library</a><br>
 
 Much of the code has been rewritten. Major changes include:
 <ul>
