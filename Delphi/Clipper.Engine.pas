@@ -728,7 +728,6 @@ end;
 function Area(op: POutPt): Double;
 var
   op2: POutPt;
-  d: Double;
 begin
   Result := 0;
   if not Assigned(op) then Exit;
