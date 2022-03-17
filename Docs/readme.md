@@ -41,31 +41,35 @@ Clipping open paths:
 The Clipper library clips both closed paths (polygons) and open paths (polylines). However, the clipping path (or paths) must be closed. In other words polygons and polylines can't be clipped by polylines. Clipping is performed using a "sweep line" algorithm, progressing from vertices with the largest Y coordinates to those with the least Y coordinates (or top-down in a Cartesian plane).
 
 If an open path segment (open segment) touches a clipping boundary, but does not cross (intersect) it, this is defined as a "touching segment". The presence of a touching segment in the clipping solution will depend on which side of the boundary the path was before touching, evaluated using the sweep line method (bottom-to-top, as noted earlier):
-- During the sweep, if an open segment prior to the touching segment lies outside the clipping region, the touching segment will <i>not</i> be part of the clipping solution.
-- If an open segment prior to the touching segment lies inside the clipping region, the touching segment will be part of the clipping solution.
-- If an open path segment that starts or ends when touching a boundary (terminating segment), its placement with regard to the boundary will depend on the heading of the connected segment (immediately below the adjacent segment in a Cartesian plane):
-- If the adjacent segment heads inside the clipping boundary, the terminating segment will be included in the clipping solution.
-- If an open path consists entirely of one or more touching segments, with no crossing of the clipping boundary, the placement of the segments is undefined.
+<ul>
+<li>During the sweep, if an open segment prior to the touching segment lies outside the clipping region, the touching segment will <i>not</i> be part of the clipping solution</li>
+<li>If an open segment prior to the touching segment lies inside the clipping region, the touching segment will be part of the clipping solution</li>
+<li>If an open path segment that starts or ends when touching a boundary (terminating segment), its placement with regard to the boundary will depend on the heading of the connected segment (immediately below the adjacent segment in a Cartesian plane)</li>
+<li>If the adjacent segment heads inside the clipping boundary, the terminating segment will be included in the clipping solution</li>
+<li>If an open path consists entirely of one or more touching segments, with no crossing of the clipping boundary, the placement of the segments is undefined</li>
+</ul>
 
-Examples:
-subj_open = new Paths64();
-clip = new Paths64();
+Examples:<br>
+subj_open = new Paths64();<br>
+clip = new Paths64();<br>
 
-subj_open.Add(MakePath(new int[] { 20,40, 20,30, 10,30 })); //will not be part of the solution
-clip.Add(MakePath(new int[] { 20,20, 40,20, 40,40, 20,40 }));
+subj_open.Add(MakePath(new int[] { 20,40, 20,30, 10,30 })); //will not be part of the solution<br>
+clip.Add(MakePath(new int[] { 20,20, 40,20, 40,40, 20,40 }));<br><br>
 
-subj_open.Add(MakePath(new int[] { 45,40, 45,30, 55,30 })); //will be part of the solution
-clip.Add(MakePath(new int[] { 45,20, 65,20, 65,40, 45,40 }));
+subj_open.Add(MakePath(new int[] { 45,40, 45,30, 55,30 })); //will be part of the solution<br>
+clip.Add(MakePath(new int[] { 45,20, 65,20, 65,40, 45,40 }));<br><br>
 
-subj_open.Add(MakePath(new int[] { 70,35, 70,25 })); //undefined
-clip.Add(MakePath(new int[] { 70,20, 90,20, 90,40, 70,40 }));
+subj_open.Add(MakePath(new int[] { 70,35, 70,25 })); //undefined<br>
+clip.Add(MakePath(new int[] { 70,20, 90,20, 90,40, 70,40 }));<br><br>
 
-PreserveCollinear property:<br>
+<br>
+PreserveCollinear property:<br><br>
 
-This property only pertains to <b>closed paths</b>. Paths commonly have consecutive segments that are collinear, where the shared vertex can be removed (and paths simplified) without altering the shape of these paths. This simplification is commonly but not always preferred for clipping solutions. However, when consecutive segments are collinear AND ALSO change direction 180 degrees, causing spikes, these are rarely desired. 'Spikes' will always be removed from closed path solutions, irrespective of the PreserveCollinear property.
+This property only pertains to <b>closed paths</b>. Paths commonly have consecutive segments that are collinear, where the shared vertex can be removed (and paths simplified) without altering the shape of these paths. This simplification is commonly but not always preferred for clipping solutions. However, when consecutive segments are collinear AND ALSO change direction 180 degrees, causing spikes, these are rarely desired. 'Spikes' will always be removed from closed path solutions, irrespective of the PreserveCollinear property.<br><br>
 
-In Clipper2, very occasionally there will be collinear edges within the same solution polygons. While these polygons are still technically correct (in that their filled regions correctly represent solutions), I consider this a bug and hope to have this addressed before the formal release of Clipper2.
+In Clipper2, very occasionally there will be collinear edges within the same solution polygons. While these polygons are still technically correct (in that their filled regions correctly represent solutions), I consider this a bug and hope to have this addressed before the formal release of Clipper2.<br><br>
 
-Example:
+Example:<br><br>
+
 Path64 badPath = MakePath(new int[] { 270, 230160, 230160, 160270, 160270, 2010, 2010, 7060, 7060, 14010, 14010, 20270, 20 })); 
 
