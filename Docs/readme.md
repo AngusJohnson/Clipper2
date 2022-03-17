@@ -12,33 +12,34 @@ There are many changes in this new Clipper Library that affect how it's used. Th
 7. Clipper2's Offset behavior for open paths has changed compared to Clipper1. The offset value is now the full width of the resulting offset, rather than the per-side value. To get similar results to the Clipper1 behavior, double the offset value.
 8. Collinear vertices are retained by default, in contrast to the default behavior of Clipper1.
  
-When I originally translated this Library from Delphi (Pascal) to C# and C++, I deliberately kept a strong Delphi naming style as I thought this would help with maintenance. In hindsight this was a mistake, and just made the C# andC++ code look odd. With this new version, I've attempted to adopt a more conventional naming style for each language, while admitting that I still have very limited coding experience in both these languages. 
+When I originally translated this library from Delphi (Pascal) to C# and C++, I deliberately kept a strong Delphi naming style as I thought this would help with maintenance. In hindsight this was a mistake, and just made the C# andC++ code look odd. With this new version, I've attempted to adopt a more conventional naming style for each language, while admitting that I still have very limited coding experience in both these languages. 
 
 
-Additional notes:
+Additional notes:<br><br>
 
 	using Path64 = List<Point64>;
 	using Paths64 = List<List<Point64>>;
 	using PathD = List<PointD>;
 	using PathsD = List<List<PointD>>;
 
-//when using integer coordinates
-Clipper clipper = new Clipper(); 
-clipper.AddSubject(subjects);
-clipper.AddClip(clips);
-clipper.Execute(ClipType.Intersection, FillRule.EvenOdd, closedSolution);
+  //using integer coordinates
+	Clipper clipper = new Clipper(); 
+	clipper.AddSubject(subjects);
+	clipper.AddClip(clips);
+	clipper.Execute(ClipType.Intersection, FillRule.EvenOdd, closedSolution);
 
-//when using floating point (double) coordinates
-ClipperD clipper = new ClipperD(); 
+  //using floating point (double) coordinates
+  ClipperD clipper = new ClipperD(); 
+  
 
-Documentation definition: 
-"Touching" segments are collinear and at least partially overlap one another.
+<b>Documentation definition:</b><br>
+"Touching" segments are collinear and at least partially overlap one another.<br><br>
 
-A clipping solution often won't in its simplest form. For example, solutions may have "touching" polygons.
+A clipping solution often won't in its simplest form. For example, solutions may have "touching" polygons.<br><br>
 
-Clipping open paths:
+<b>Clipping open paths:</b><br><br>
 
-The Clipper library clips both closed paths (polygons) and open paths (polylines). However, the clipping path (or paths) must be closed. In other words polygons and polylines can't be clipped by polylines. Clipping is performed using a "sweep line" algorithm, progressing from vertices with the largest Y coordinates to those with the least Y coordinates (or top-down in a Cartesian plane).
+The Clipper library clips both closed paths (polygons) and open paths (polylines). However, the clipping path (or paths) must be closed. In other words polygons and polylines can't be clipped by polylines. Clipping is performed using a "sweep line" algorithm, progressing from vertices with the largest Y coordinates to those with the least Y coordinates (or top-down in a Cartesian plane).<br><br>
 
 If an open path segment (open segment) touches a clipping boundary, but does not cross (intersect) it, this is defined as a "touching segment". The presence of a touching segment in the clipping solution will depend on which side of the boundary the path was before touching, evaluated using the sweep line method (bottom-to-top, as noted earlier):
 <ul>
@@ -49,27 +50,26 @@ If an open path segment (open segment) touches a clipping boundary, but does not
 <li>If an open path consists entirely of one or more touching segments, with no crossing of the clipping boundary, the placement of the segments is undefined</li>
 </ul>
 
+<br>
 Examples:<br>
-subj_open = new Paths64();<br>
-clip = new Paths64();<br>
+  subj_open = new Paths64();
+  clip = new Paths64();
+  subj_open.Add(MakePath(new int[] { 20,40, 20,30, 10,30 })); //will not be part of the solution
+  clip.Add(MakePath(new int[] { 20,20, 40,20, 40,40, 20,40 }));
 
-subj_open.Add(MakePath(new int[] { 20,40, 20,30, 10,30 })); //will not be part of the solution<br>
-clip.Add(MakePath(new int[] { 20,20, 40,20, 40,40, 20,40 }));<br><br>
+  subj_open.Add(MakePath(new int[] { 45,40, 45,30, 55,30 })); //will be part of the solution
+  clip.Add(MakePath(new int[] { 45,20, 65,20, 65,40, 45,40 }));
 
-subj_open.Add(MakePath(new int[] { 45,40, 45,30, 55,30 })); //will be part of the solution<br>
-clip.Add(MakePath(new int[] { 45,20, 65,20, 65,40, 45,40 }));<br><br>
-
-subj_open.Add(MakePath(new int[] { 70,35, 70,25 })); //undefined<br>
-clip.Add(MakePath(new int[] { 70,20, 90,20, 90,40, 70,40 }));<br><br>
+  subj_open.Add(MakePath(new int[] { 70,35, 70,25 })); //undefined
+  clip.Add(MakePath(new int[] { 70,20, 90,20, 90,40, 70,40 }));
 
 <br>
-PreserveCollinear property:<br><br>
+<b>PreserveCollinear property:</b><br><br>
 
 This property only pertains to <b>closed paths</b>. Paths commonly have consecutive segments that are collinear, where the shared vertex can be removed (and paths simplified) without altering the shape of these paths. This simplification is commonly but not always preferred for clipping solutions. However, when consecutive segments are collinear AND ALSO change direction 180 degrees, causing spikes, these are rarely desired. 'Spikes' will always be removed from closed path solutions, irrespective of the PreserveCollinear property.<br><br>
 
 In Clipper2, very occasionally there will be collinear edges within the same solution polygons. While these polygons are still technically correct (in that their filled regions correctly represent solutions), I consider this a bug and hope to have this addressed before the formal release of Clipper2.<br><br>
 
-Example:<br><br>
-
-Path64 badPath = MakePath(new int[] { 270, 230160, 230160, 160270, 160270, 2010, 2010, 7060, 7060, 14010, 14010, 20270, 20 })); 
+Example:<br>
+  Path64 badPath = MakePath(new int[] { 270, 230160, 230160, 160270, 160270, 2010, 2010, 7060, 7060, 14010, 14010, 20270, 20 })); 
 
