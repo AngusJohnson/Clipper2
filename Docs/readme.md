@@ -1,6 +1,6 @@
-This is a <b>pre-release beta version</b> of Clipper2. While the code my original <a href="https://sourceforge.net/projects/polyclipping/"><b>Clipper</b></a> (i.e. versions 1 through to 6.4.2) was functional, in many places it is/was messy. This new version is a significant rewrite that should be <b>a little</b> easier to understand, though unfortunately still very complex. There's also a modest performance improvement, and better (more efficient and more complete) removal of spikes and micro-self-intersections from clipping solutions.
+# Clipper2
 
-However, because this is a pre-release version ... EXPECT SOME BUGS, even though both the Delphi code and its C# port have been fairly extensively tested. A C++ port is also in the pipeline.<br>
+This is a <b>pre-release beta version</b> of Clipper2. While my original <a href="https://sourceforge.net/projects/polyclipping/"><b>Clipper Library</b></a> (i.e. versions 1 through to 6.4.2) was very functional, in many places it is/was messy. This new version is a significant rewrite so the code should be a little easier to understand, though unfortunately still very complex. However, because this is still a pre-release version, expect some bug, even though both the Delphi code and its C# port have been fairly extensively tested. A C++ port is also in the pipeline.<br>
 
 There are many changes in Clipper2 that affect how it's used. These are the more important ones:
 1. The PolyFillType enumeration has been renamed FillRule.
