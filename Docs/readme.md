@@ -34,11 +34,13 @@ When I originally translated this library from Delphi (Pascal) to C# and C++, I 
 	clipper.AddClip(clips);
 	clipper.Execute(ClipType.Intersection, FillRule.EvenOdd, closedSolution);
   
-<b>Documentation definition:</b><br>
-"Touching" segments are collinear and at least partially overlap one another.<br><br>
+<b>Definitions:</b><br>
+Path "segments" are the lines between path vertices. In closed paths these are commonly referred to as "edges".<br>
+Segments are "touching" when they are collinear and at least partially overlap one another.<br>
+Polygons are touching when they contain touching edges.<br><br>
 
 <b>Clipped Solutions:</b><br>
-A clipped solution often won't be in its simplest form. For example, solutions may have "touching" polygons.<br><br>
+A clipped solution often won't be in its simplest form. For example, solutions may have "touching" edges.<br><br>
 
 <b>Clipping open paths:</b><br>
 
@@ -49,7 +51,7 @@ Open path segments that touch a clipping boundary may or may not be part of the 
 <li>when an open path prior to touching a clipping boundary lies outside the clipping region, the touching segment will <i>not</i> be part of the clipping solution</li>
 <li>when an open path prior to touching a clipping boundary lies inside the clipping region, the touching segment will be part of the clipping solution</li>
 <li>when an open path segment starts or ends while touching a boundary and also has no <i>prior</i> segment, its placement with regard to the boundary will depend on the heading of the following segment (ie immediately below in a Cartesian plane). If the following segment heads inside the clipping boundary, the terminating segment will be included in the clipping solution, otherwise it will be excluded.</li>
-<li>when an open path consists of a single segment that touches a clipping boundary along its entire length, the placement of that segment is undefined</li>
+<li>when an open path touches a clipping boundary along its entire length, whether this path becomes part of the clipping solution or not is undefined</li>
 </ul>
 Examples:
 
@@ -66,9 +68,9 @@ Examples:
 <br>
 <b>PreserveCollinear property:</b><br><br>
 
-This property only pertains to <b>closed paths</b>. Paths commonly have consecutive segments that are collinear, where the shared vertex can be removed (and paths simplified) without altering the shape of these paths. This simplification is commonly but not always preferred for clipping solutions. However, when consecutive segments are collinear AND ALSO change direction 180 degrees, causing spikes, these are rarely desired. 'Spikes' will always be removed from closed path solutions, irrespective of the PreserveCollinear property.<br><br>
+This property only pertains to <b>closed paths</b>. Paths commonly have consecutive edges that are collinear, where the shared vertex can be removed (and paths simplified) without altering the shape of these paths. This simplification is commonly but not always preferred for clipping solutions. However, when consecutive edges are collinear AND ALSO change direction 180 degrees, causing spikes, these are rarely desired. 'Spikes' will always be removed from closed path solutions, irrespective of the PreserveCollinear property.<br>
 
-Very occasionally in clipping solutions there will be collinear edges within the same polygons. While these solutions are technically correct (in that the polygon filled regions represent correct solutions), I consider this a bug and hope to have this addressed before the formal release of Clipper2.<br>
+Very occasionally in clipping solutions there will be touching edges within the same polygons. While these solutions are technically correct (in that the polygon filled regions represent correct solutions), I consider this a bug and hope to have this addressed before the formal release of Clipper2.<br>
 
 Example:
 
