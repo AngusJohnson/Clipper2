@@ -30,12 +30,15 @@ When I originally translated this library from Delphi (Pascal) to C# and C++, I 
 	
 	//using floating point (double) coordinates
 	ClipperD clipper = new ClipperD(); 
+	clipper.AddSubject(subjects);
+	clipper.AddClip(clips);
+	clipper.Execute(ClipType.Intersection, FillRule.EvenOdd, closedSolution);
   
 <b>Documentation definition:</b><br>
 "Touching" segments are collinear and at least partially overlap one another.<br><br>
 
 <b>Clipped Solutions:</b><br>
-A clipping solution often won't in its simplest form. For example, solutions may have "touching" polygons.<br><br>
+A clipped solution often won't be in its simplest form. For example, solutions may have "touching" polygons.<br><br>
 
 <b>Clipping open paths:</b><br>
 
