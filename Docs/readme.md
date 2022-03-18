@@ -42,15 +42,14 @@ A clipped solution often won't be in its simplest form. For example, solutions m
 
 <b>Clipping open paths:</b><br>
 
-The Clipper library clips both polygons (closed paths) and polylines (open paths). However, these <i>subject</i> paths can only be "clipped" with closed paths. In other words polygons and polylines can't be clipped by polylines. Clipping is performed using a "sweep line" algorithm, progressing from vertices with the largest Y coordinates to those with the least Y coordinates (ie top-down in a Cartesian plane).<br><br>
+The Clipper library clips both polygons (closed paths) and polylines (open paths). However, these <i>subject</i> paths can only be "clipped" with closed paths. In other words polygons and polylines can't be clipped by polylines. Clipping is performed using a "sweep line" algorithm, progressing from vertices with the largest Y coordinates to those with the least Y coordinates (ie top-down in a Cartesian plane).<br>
 
-If an open path segment (open segment) touches a clipping boundary, but does not cross (intersect) it, this is defined as a "touching segment". The presence of a touching segment in the clipping solution will depend on which side of the boundary the path was before touching, evaluated using the sweep line method (bottom-to-top, as noted earlier):
+Open path segments that touch a clipping boundary may or may not be part of the clipped solution. This will depend on which side of the clip boundary the path was on <i>prior to touching</i>. However <i>prior</i> in this case isn't necessarily referring to the segment that's closer to the start of the path. Instead <i>prior is relative to the sweep direction</i>. So while sweeping top-down in the Cartesian plane, prior here refer to a segment immediately above. So, a touching open segment is included in a clipping solution:
 <ul>
-<li>During the sweep, if an open segment prior to the touching segment lies outside the clipping region, the touching segment will <i>not</i> be part of the clipping solution</li>
-<li>If an open segment prior to the touching segment lies inside the clipping region, the touching segment will be part of the clipping solution</li>
-<li>If an open path segment that starts or ends when touching a boundary (terminating segment), its placement with regard to the boundary will depend on the heading of the connected segment (immediately below the adjacent segment in a Cartesian plane)</li>
-<li>If the adjacent segment heads inside the clipping boundary, the terminating segment will be included in the clipping solution</li>
-<li>If an open path consists entirely of one or more touching segments, with no crossing of the clipping boundary, the placement of the segments is undefined</li>
+<li>when an open path prior to touching a clipping boundary lies outside the clipping region, the touching segment will <i>not</i> be part of the clipping solution</li>
+<li>when an open path prior to touching a clipping boundary lies inside the clipping region, the touching segment will be part of the clipping solution</li>
+<li>when an open path segment starts or ends while touching a boundary and also has no <i>prior</i> segment, its placement with regard to the boundary will depend on the heading of the following segment (ie immediately below in a Cartesian plane). If the following segment heads inside the clipping boundary, the terminating segment will be included in the clipping solution, otherwise it will be excluded.</li>
+<li>when an open path consists of a single segment that touches a clipping boundary along its entire length, the placement of that segment is undefined</li>
 </ul>
 Examples:
 
