@@ -1,6 +1,6 @@
-This is a <b>pre-release beta version</b> of Clipper2. While the code my original <a href="https://sourceforge.net/projects/polyclipping/"><b>Clipper</b></a> (i.e. versions 1 through to 6.4.2) was functional, in many places it is/was messy. This new version is a significant rewrite that should be <b>a little</b> easier to understand, though unfortunately still very complex. There's also a modest performance improvement, and better (more efficient and more complete) removal of spikes and micro-self-intersections from clipping solutions.
+# Clipper2
 
-However, because this is a pre-release version ... EXPECT SOME BUGS, even though both the Delphi code and its C# port have been fairly extensively tested. A C++ port is also in the pipeline.<br>
+This is a <b>pre-release beta version</b> of Clipper2. While my original <a href="https://sourceforge.net/projects/polyclipping/"><b>Clipper Library</b></a> (i.e. versions 1 through to 6.4.2) was very functional, in many places it is/was messy. This new version is a significant rewrite so the code should be a little easier to understand, though unfortunately still very complex. However, because this is still a pre-release version, expect some bug, even though both the Delphi code and its C# port have been fairly extensively tested. A C++ port is also in the pipeline.<br>
 
 There are many changes in Clipper2 that affect how it's used. These are the more important ones:
 1. The PolyFillType enumeration has been renamed FillRule.
@@ -30,12 +30,15 @@ When I originally translated this library from Delphi (Pascal) to C# and C++, I 
 	
 	//using floating point (double) coordinates
 	ClipperD clipper = new ClipperD(); 
+	clipper.AddSubject(subjects);
+	clipper.AddClip(clips);
+	clipper.Execute(ClipType.Intersection, FillRule.EvenOdd, closedSolution);
   
 <b>Documentation definition:</b><br>
 "Touching" segments are collinear and at least partially overlap one another.<br><br>
 
 <b>Clipped Solutions:</b><br>
-A clipping solution often won't in its simplest form. For example, solutions may have "touching" polygons.<br><br>
+A clipped solution often won't be in its simplest form. For example, solutions may have "touching" polygons.<br><br>
 
 <b>Clipping open paths:</b><br>
 
@@ -66,7 +69,7 @@ Examples:
 
 This property only pertains to <b>closed paths</b>. Paths commonly have consecutive segments that are collinear, where the shared vertex can be removed (and paths simplified) without altering the shape of these paths. This simplification is commonly but not always preferred for clipping solutions. However, when consecutive segments are collinear AND ALSO change direction 180 degrees, causing spikes, these are rarely desired. 'Spikes' will always be removed from closed path solutions, irrespective of the PreserveCollinear property.<br><br>
 
-Very occasionally clipping solutions there will be collinear edges within the same polygons. While these solutions are technically correct (in that polygon filled regions represent correct solutions), I consider this a bug and hope to have this addressed before the formal release of Clipper2.<br><br>
+Very occasionally in clipping solutions there will be collinear edges within the same polygons. While these solutions are technically correct (in that the polygon filled regions represent correct solutions), I consider this a bug and hope to have this addressed before the formal release of Clipper2.<br>
 
 Example:
 

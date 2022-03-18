@@ -3,7 +3,7 @@ unit Clipper.Engine;
 (*******************************************************************************
 * Author    :  Angus Johnson                                                   *
 * Version   :  10.0 (beta) - aka Clipper2                                      *
-* Date      :  14 March 2022                                                   *
+* Date      :  18 March 2022                                                   *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  This is the main polygon clipping module                        *
@@ -300,7 +300,7 @@ type
     procedure AddClip(const pathD: TPathD); overload;
     procedure AddClip(const pathsD: TPathsD); overload;
 
-    constructor Create(scale: double = 0); reintroduce; overload;
+    constructor Create(roundingDecimalPrecision: integer = 2); reintroduce; overload;
     function Execute(clipType: TClipType; fillRule: TFillRule;
       out closedSolutions: TPathsD): Boolean; overload;
     function Execute(clipType: TClipType; fillRule: TFillRule;
@@ -342,6 +342,7 @@ resourcestring
   rsClipper_OpenPathErr = 'Only subject paths can be open.';
   rsClipper_PolyTreeErr = 'The TPolyTree parameter must be assigned.';
   rsClipper_ClippingErr = 'Undefined clipping error';
+  rsClipper_RoundingErr = 'The decimal rounding value is invalid';
 
 const
   DefaultClipperDScale = 100;
@@ -2972,12 +2973,13 @@ end;
 //  TClipperD methods
 //------------------------------------------------------------------------------
 
-constructor TClipperD.Create(scale: double);
+constructor TClipperD.Create(roundingDecimalPrecision: integer = 2);
 begin
   inherited Create;
-  if scale <= floatingPointTolerance then
-    FScale := DefaultClipperDScale else
-    FScale := scale;
+  if (roundingDecimalPrecision < -8) or
+    (roundingDecimalPrecision > 8) then
+      RaiseError(rsClipper_RoundingErr);
+  FScale := Math.Power(10, roundingDecimalPrecision);
   FInvScale := 1/FScale;
 end;
 //------------------------------------------------------------------------------
@@ -3158,9 +3160,11 @@ function TClipperD.Execute(clipType: TClipType; fillRule: TFillRule;
 var
   open_Paths: TPaths64;
 begin
-  if not assigned(solutionsTree) then RaiseError(rsClipper_PolyTreeErr);
+  if not assigned(solutionsTree) then
+    RaiseError(rsClipper_PolyTreeErr);
+
   solutionsTree.Clear;
-  solutionsTree.SetScale(fScale);
+  solutionsTree.SetScale(FScale);
   openSolutions := nil;
   try try
     ExecuteInternal(clipType, fillRule);

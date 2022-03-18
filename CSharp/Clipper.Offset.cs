@@ -1,7 +1,7 @@
 ﻿/*******************************************************************************
 * Author    :  Angus Johnson                                                   *
 * Version   :  10.0 (beta) - also known as Clipper2                            *
-* Date      :  14 March 2022                                                    *
+* Date      :  18 March 2022                                                   *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  Offsets both open and closed paths (ie polylines & polygons).   *
@@ -33,7 +33,6 @@ namespace ClipperLib2
       _inPaths = paths;
       _joinType = joinType;
       _endType = endType;
-      _outPath = new PathD();
       _outPaths = new PathsD();
       _pathsReversed = false;
     }
@@ -43,22 +42,24 @@ namespace ClipperLib2
   {
     private readonly List<PathGroup> _pathGroups = new List<PathGroup>();
     private readonly PathD _normals = new PathD();
-    private double _delta, _minEdgeLen, _tmpLimit, _stepsPerRad;
+    private double _delta, _tmpLimit, _stepsPerRad;
     private JoinType _joinType;
+    private double _minLenSqrd;
     public double ArcTolerance { get; set; }
     public bool MergeGroups { get; set; }
     public double MiterLimit { get; set; }
-    public double MinimumEdgeLength { get; set; }
+    public int RoundingDecimalPrecision { get; set; }
 
     private const double TwoPi = Math.PI * 2;
     private const double DefaultArcTolerance = 0.25;
 
-    public ClipperOffset(double miterLimit = 2.0, double arcTolerance = 0.0)
+    public ClipperOffset(double miterLimit = 2.0, 
+      double arcTolerance = 0.0, int roundingDecimalPrecision = 2)
     {
       MiterLimit = miterLimit;
       ArcTolerance = arcTolerance;
       MergeGroups = true;
-      MinimumEdgeLength = 0.5;
+      RoundingDecimalPrecision = roundingDecimalPrecision;
     }
 
     public void Clear()
@@ -98,9 +99,11 @@ namespace ClipperLib2
 
     public PathsD Execute(double delta)
     {
-      PathsD solution = new PathsD();
+      double scale = Math.Pow(10, RoundingDecimalPrecision);
+      _minLenSqrd = 1/(scale * scale);
 
-      if (Math.Abs(delta) < InternalClipperFunc.floatingPointTolerance)
+      PathsD solution = new PathsD();
+      if (Math.Abs(delta) < _minLenSqrd)
       {
         foreach (PathGroup group in _pathGroups)
           foreach (PathD path in group._inPaths)
@@ -109,9 +112,6 @@ namespace ClipperLib2
       }
 
       _tmpLimit = (MiterLimit <= 1 ? 2.0 : 2.0 / ClipperFunc.Sqr(MiterLimit));
-
-      _minEdgeLen = (MinimumEdgeLength < InternalClipperFunc.floatingPointTolerance ?
-        InternalClipperFunc.defaultMinimumEdgeLength : MinimumEdgeLength);
 
       foreach (PathGroup group in _pathGroups)
       {
@@ -123,7 +123,7 @@ namespace ClipperLib2
       if (MergeGroups && _pathGroups.Count > 0)
       {
         //clean up self-intersections ...
-        ClipperD c = new ClipperD();
+        ClipperD c = new ClipperD(RoundingDecimalPrecision);
         c.AddSubject(solution);
         if (_pathGroups[0]._pathsReversed)
           c.Execute(ClipType.Union, FillRule.Negative, solution);
@@ -246,7 +246,7 @@ namespace ClipperLib2
           path[j].x + _normals[j].x * _delta,
           path[j].y + _normals[j].y * _delta);
         group._outPath.Add(p1);
-        if (!ClipperFunc.PointsNearEqual(p1, p2, ClipperFunc.Sqr(_minEdgeLen)))
+        if (!ClipperFunc.PointsNearEqual(p1, p2, _minLenSqrd))
         {
           group._outPath.Add(path[j]); //this aids with clipping removal later
           group._outPath.Add(p2);
@@ -292,6 +292,7 @@ namespace ClipperLib2
 
     private void OffsetOpenPath(PathGroup group, PathD path, EndType endType)
     {
+      group._outPath = new PathD();
       int cnt = path.Count -1, k = 0;
       for (int i = 1; i < cnt; i++)
         OffsetPoint(group, path, i, ref k);
@@ -344,6 +345,7 @@ namespace ClipperLib2
           DoSquare(group, path, 0, 1);
           break;
       }
+      group._outPaths.Add(group._outPath);
     }
 
     private bool IsFullyOpenEndType(EndType et) 
@@ -388,13 +390,13 @@ namespace ClipperLib2
 
       foreach (PathD p in group._inPaths)
       {
-        PathD path = ClipperFunc.StripNearDuplicates(p, _minEdgeLen, isClosedPaths);
+        PathD path = ClipperFunc.StripNearDuplicates(p, _minLenSqrd, isClosedPaths);
         int cnt = path.Count;
         if (cnt == 0 || (cnt < 3 && !IsFullyOpenEndType(group._endType))) continue;
 
-        group._outPath.Clear();
         if (cnt == 1)
         {
+          group._outPath = new PathD();
           //single vertex so build a circle or square ...
           if (group._endType == EndType.Round)
           {
@@ -408,6 +410,7 @@ namespace ClipperLib2
             group._outPath.Add(new PointD(path[0].x + _delta, path[0].y + _delta));
             group._outPath.Add(new PointD(path[0].x - _delta, path[0].y + _delta));
           }
+          group._outPaths.Add(group._outPath);
         }
         else
         {
@@ -417,14 +420,12 @@ namespace ClipperLib2
           else OffsetOpenPath(group, path, group._endType);
         }
 
-        if (group._outPath.Count > 0)
-          group._outPaths.Add(group._outPath);
       }
 
       if (!MergeGroups)
       {
         //clean up self-intersections ...
-        ClipperD c = new ClipperD();
+        ClipperD c = new ClipperD(RoundingDecimalPrecision);
         c.AddSubject(group._outPaths);
         if (group._pathsReversed)
           c.Execute(ClipType.Union, FillRule.Negative, group._outPaths);

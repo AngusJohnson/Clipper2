@@ -186,7 +186,7 @@ function PathsD(const paths: TPaths64): TPathsD;
 
 function StripDuplicates(const path: TPath64; isClosedPath: Boolean = false): TPath64;
 function StripNearDuplicates(const path: TPathD;
-  minLength: double; isClosedPath: Boolean): TPathD;
+  minLenSqrd: double; isClosedPath: Boolean): TPathD;
 
 function ReversePath(const path: TPath64): TPath64; overload;
 function ReversePath(const path: TPathD): TPathD; overload;
@@ -296,7 +296,7 @@ end;
 //------------------------------------------------------------------------------
 
 function StripNearDuplicates(const path: TPathD;
-  minLength: double; isClosedPath: Boolean): TPathD;
+  minLenSqrd: double; isClosedPath: Boolean): TPathD;
 var
   i,j, len: integer;
   minLengthSqrd: double;
@@ -307,16 +307,15 @@ begin
 
   Result[0] := path[0];
   j := 0;
-  minLengthSqrd := minLength * minLength;
   for i := 1 to len -1 do
-    if not PointsNearEqual(Result[j], path[i], minLengthSqrd) then
+    if not PointsNearEqual(Result[j], path[i], minLenSqrd) then
     begin
       inc(j);
       Result[j] := path[i];
     end;
 
   if isClosedPath and
-    PointsNearEqual(Result[j], Result[0], minLengthSqrd) then dec(j);
+    PointsNearEqual(Result[j], Result[0], minLenSqrd) then dec(j);
   SetLength(Result, j +1);
 end;
 //------------------------------------------------------------------------------

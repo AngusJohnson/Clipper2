@@ -3,7 +3,7 @@ unit Clipper;
 (*******************************************************************************
 * Author    :  Angus Johnson                                                   *
 * Version   :  10.0 (beta) - aka Clipper2                                      *
-* Date      :  12 March 2022                                                   *
+* Date      :  18 March 2022                                                   *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  This module provides a simple interface to the Clipper Library  *
@@ -128,11 +128,8 @@ end;
 
 function BooleanOp(clipType: TClipType; fillRule: TFillRule;
   const subjects, clips: TPathsD; decimalPrec: integer = 2): TPathsD;
-var
-  scale: Double;
 begin
-  scale := Power(10, decimalPrec);
-  with TClipperD.Create(scale) do
+  with TClipperD.Create(decimalPrec) do
   try
     AddSubject(subjects);
     AddClip(clips);

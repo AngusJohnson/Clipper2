@@ -3,7 +3,7 @@ unit Clipper.Offset;
 (*******************************************************************************
 * Author    :  Angus Johnson                                                   *
 * Version   :  10.0 (beta) - aka Clipper2                                      *
-* Date      :  13 March 2022                                                    *
+* Date      :  18 March 2022                                                   *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  Offset paths and clipping solutions                             *
@@ -38,12 +38,12 @@ type
   TClipperOffset = class
   private
     fDelta       : Double;
+    fPrecision   : integer;
+    fMinLenSqrd  : double;
     fJoinType    : TJoinType;
     fTmpLimit    : Double;
     fMiterLimit  : Double;
     fArcTolerance: Double;
-    FMinEdgeLen  : Double;
-    FMinLenSqrd  : Double;
     fStepsPerRad : Double;
     fNorms       : TPathD;
     fInGroups    : TList;
@@ -67,7 +67,8 @@ type
     procedure OffsetOpenJoined;
     procedure OffsetOpenPath(endType: TEndType);
   public
-    constructor Create(MiterLimit: double = 2.0; ArcTolerance: double = 0.0);
+    constructor Create(miterLimit: double = 2.0;
+      arcTolerance: double = 0.0; roundingDecimalPrecision: integer = 2);
     destructor Destroy; override;
     procedure AddPath(const path: TPathD;
       joinType: TJoinType; endType: TEndType);
@@ -80,16 +81,13 @@ type
     property MiterLimit: Double read fMiterLimit write fMiterLimit;
     //ArcTolerance: needed for rounded offsets (See offset_triginometry2.svg)
     property ArcTolerance: Double read fArcTolerance write fArcTolerance;
-    //MinEdgeLength: Very small edges are often at unexpected angles and these
-    //can become visible artefacts with offsetting. Consequently it's
-    //best to remove tiny edges before processing. (Default min length = 0.5)
-    property MinEdgeLength: Double read FMinEdgeLen write FMinEdgeLen;
     //MergeGroups: A path group is one or more paths added via the AddPath or
     //AddPaths methods. By default these path groups will be offset
     //independently of other groups and this may cause overlaps (intersections).
     //However, when MergeGroups is enabled, any overlapping offsets will be
     //merged (via a clipping union operation) to remove overlaps.
     property MergeGroups: Boolean read fMergeGroups write fMergeGroups;
+    property RoundingDecimalPrecision: integer read fPrecision write fPrecision;
   end;
 
 implementation
@@ -179,11 +177,13 @@ end;
 // TClipperOffset methods
 //------------------------------------------------------------------------------
 
-constructor TClipperOffset.Create(MiterLimit: double; ArcTolerance: double);
+constructor TClipperOffset.Create(miterLimit: double;
+  arcTolerance: double; roundingDecimalPrecision: integer);
 begin
   fMiterLimit   := MiterLimit;
   fArcTolerance := ArcTolerance;
   fInGroups     := TList.Create;
+  fPrecision    := roundingDecimalPrecision;
 end;
 //------------------------------------------------------------------------------
 
@@ -273,7 +273,7 @@ begin
   fOutPaths := nil;
   for i := 0 to High(pathgroup.paths) do
   begin
-    fInPath := StripNearDuplicates(pathgroup.paths[i], FMinEdgeLen, IsClosedPaths);
+    fInPath := StripNearDuplicates(pathgroup.paths[i], fMinLenSqrd, IsClosedPaths);
     len := Length(fInPath);
     if (fInPath = nil) or
       ((pathGroup.endType in [etPolygon, etJoined]) and (len < 3)) then Continue;
@@ -327,7 +327,7 @@ begin
   if not fMergeGroups then
   begin
     //clean up self-intersections ...
-    with TClipperD.Create do
+    with TClipperD.Create(fPrecision) do
     try
       AddSubject(fOutPaths);
       if pathgroup.reversed then
@@ -439,11 +439,15 @@ end;
 function TClipperOffset.Execute(delta: Double): TPathsD;
 var
   i: integer;
+  scale: double;
   group: TPathGroup;
 begin
   fSolution := nil;
   Result := nil;
   if fInGroups.Count = 0 then Exit;
+
+  scale := Math.Power(10, fPrecision);
+  fMinLenSqrd := 1/Sqr(scale);
 
   if abs(delta) < Tolerance then
   begin
@@ -460,10 +464,6 @@ begin
     fTmpLimit := 2 / Sqr(fMiterLimit) else
     fTmpLimit := 2.0;
 
-  if FMinEdgeLen < floatingPointTolerance then
-    FMinEdgeLen := defaultMinimumEdgeLength;
-  FMinLenSqrd := FMinEdgeLen * FMinEdgeLen;
-
   //nb: delta will depend on whether paths are polygons or open
   for i := 0 to fInGroups.Count -1 do
   begin
@@ -474,7 +474,7 @@ begin
   if fMergeGroups and (fInGroups.Count > 0) then
   begin
     //clean up self-intersections ...
-    with TClipperD.Create do
+    with TClipperD.Create(fPrecision) do
     try
       AddSubject(fSolution);
       if TPathGroup(fInGroups[0]).reversed then
@@ -498,7 +498,7 @@ begin
   if fOutPathLen = length(fOutPath) then
     SetLength(fOutPath, fOutPathLen + BuffLength);
   if (fOutPathLen > 0) and
-    PointsNearEqual(fOutPath[fOutPathLen-1], pt, 0.01) then Exit;
+    PointsNearEqual(fOutPath[fOutPathLen-1], pt, fMinLenSqrd) then Exit;
   fOutPath[fOutPathLen] := pt;
   Inc(fOutPathLen);
 end;
@@ -511,7 +511,7 @@ begin
   if fOutPathLen = length(fOutPath) then
     SetLength(fOutPath, fOutPathLen + BuffLength);
   if (fOutPathLen > 0) and
-    PointsNearEqual(fOutPath[fOutPathLen-1], pt, 0.01) then Exit;
+    PointsNearEqual(fOutPath[fOutPathLen-1], pt, fMinLenSqrd) then Exit;
   fOutPath[fOutPathLen] := pt;
   Inc(fOutPathLen);
 end;

@@ -1,7 +1,7 @@
 ﻿/*******************************************************************************
 * Author    :  Angus Johnson                                                   *
 * Version   :  10.0 (release candidate 1) - also known as Clipper2             *
-* Date      :  10 March 2022                                                    *
+* Date      :  18 March 2022                                                    *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  This module contains simple functions that will likely cover    *
@@ -80,10 +80,11 @@ namespace ClipperLib2
       return solution;
     }
 
-    public static PathsD BooleanOp(ClipType clipType, FillRule fillRule, PathsD subject, PathsD clip)
+    public static PathsD BooleanOp(ClipType clipType, FillRule fillRule, 
+      PathsD subject, PathsD clip, int roundingDecimalPrecision = 2)
     {
       PathsD solution = new PathsD();
-      ClipperD c = new ClipperD();
+      ClipperD c = new ClipperD(roundingDecimalPrecision);
       c.AddSubject(subject);
       c.AddClip(clip);
       c.Execute(clipType, fillRule, solution);
@@ -387,21 +388,20 @@ namespace ClipperLib2
     }
 
     public static PathD StripNearDuplicates(PathD path, 
-      double minEdgeLength, bool isClosedPath)
+      double minEdgeLenSqrd, bool isClosedPath)
     {
       int cnt = path.Count;
       PathD result = new PathD(cnt);
       if (cnt == 0) return result;
       PointD lastPt = path[0];
       result.Add(lastPt);
-      double minLengthSqrd = minEdgeLength * minEdgeLength;
       for (int i = 1; i < cnt; i++)
-        if (!PointsNearEqual(lastPt, path[i], minLengthSqrd))
+        if (!PointsNearEqual(lastPt, path[i], minEdgeLenSqrd))
         {
           lastPt = path[i];
           result.Add(lastPt);
         }
-      if (isClosedPath && PointsNearEqual(lastPt, result[0], minLengthSqrd))
+      if (isClosedPath && PointsNearEqual(lastPt, result[0], minEdgeLenSqrd))
       {
         result.RemoveAt(result.Count - 1);
       }
