@@ -380,6 +380,24 @@ namespace ClipperLib2
         pathsOut.Add(PathD(paths[i]));
     }
 
+    public static Path64 MakePath(int[] arr)
+    {
+      int len = arr.Length / 2;
+      Path64 p = new Path64(len);
+      for (int i = 0; i < len; i++)
+        p.Add(new Point64(arr[i * 2], arr[i * 2 + 1]));
+      return p;
+    }
+
+    public static PathD MakePath(double[] arr)
+    {
+      int len = arr.Length / 2;
+      PathD p = new PathD(len);
+      for (int i = 0; i < len; i++)
+        p.Add(new PointD(arr[i * 2], arr[i * 2 + 1]));
+      return p;
+    }
+
     public static double Sqr(double value) { return value * value; }
 
     public static bool PointsNearEqual(PointD pt1, PointD pt2, double distanceSqrd)

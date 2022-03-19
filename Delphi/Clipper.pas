@@ -65,7 +65,41 @@ function InflatePaths(const paths: TPathsD; delta: Double;
 function PolyTreeToPaths(PolyTree: TPolyTree): TPaths64;
 function PolyTreeDToPathsD(PolyTree: TPolyTreeD): TPathsD;
 
+function MakePath(const ints: TArrayOfInteger): TPath64; overload;
+function MakePath(const dbls: TArrayOfDouble): TPathD; overload;
+
 implementation
+
+//------------------------------------------------------------------------------
+//------------------------------------------------------------------------------
+
+function MakePath(const ints: TArrayOfInteger): TPath64;
+var
+  i, len: integer;
+begin
+  len := length(ints) div 2;
+  SetLength(Result, len);
+  for i := 0 to len -1 do
+  begin
+    Result[i].X := ints[i*2];
+    Result[i].Y := ints[i*2 +1];
+  end;
+end;
+//------------------------------------------------------------------------------
+
+function MakePath(const dbls: TArrayOfDouble): TPathD; overload;
+var
+  i, len: integer;
+begin
+  len := length(dbls) div 2;
+  SetLength(Result, len);
+  for i := 0 to len -1 do
+  begin
+    Result[i].X := dbls[i*2];
+    Result[i].Y := dbls[i*2 +1];
+  end;
+end;
+//------------------------------------------------------------------------------
 
 procedure AddPolyNodeToPaths(Poly: TPolyPath; var Paths: TPaths64);
 var

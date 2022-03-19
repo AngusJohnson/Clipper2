@@ -85,19 +85,6 @@ Example:
     
     uses Clipper;
 
-    function MakePath(const ints: TArrayOfInteger): TPath64;
-    var
-      i, len: integer;
-    begin
-      len := length(ints) div 2;
-      SetLength(Result, len);
-      for i := 0 to len -1 do
-      begin
-        Result[i].X := ints[i*2];
-        Result[i].Y := ints[i*2 +1];
-      end;
-    end;
-
     //code main entry 
     var
       subject, clip: TPaths64;      
@@ -108,8 +95,8 @@ Example:
       clip[0] := MakePath([80, 50, 69, 73, 43, 79, 23, 63, 23, 37, 43, 21, 69, 27]);
       var solution1 := Union(sub, nil, frEvenOdd);            
       var solution2 := Union(sub, nil, frNonZero);      
-      var solution3 := Union(sub, clp, Clipper.TFillRule.frNonZero);      
-      var solution4 := Intersect(sub, clp, Clipper.TFillRule.frNonZero);
+      var solution3 := Union(sub, clp, frNonZero);      
+      var solution4 := Intersect(sub, clp, frNonZero);
     end;
       
 ![test](https://user-images.githubusercontent.com/5280692/159098614-bf8dfd82-5c5b-42a4-ae93-d9a5a1b7dd14.png)
