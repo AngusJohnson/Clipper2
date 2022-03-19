@@ -17,23 +17,6 @@ When I originally translated this library from Delphi (Pascal) to C# and C++, I 
 
 ## Additional notes:
 
-	using Path64 = List<Point64>;
-	using Paths64 = List<List<Point64>>;
-	using PathD = List<PointD>;
-	using PathsD = List<List<PointD>>;
-	
-	//using integer coordinates
-	Clipper clipper = new Clipper(); 
-	clipper.AddSubject(subjects);
-	clipper.AddClip(clips);
-	clipper.Execute(ClipType.Intersection, FillRule.EvenOdd, closedSolution);
-	
-	//using floating point (double) coordinates
-	ClipperD clipper = new ClipperD(); 
-	clipper.AddSubject(subjects);
-	clipper.AddClip(clips);
-	clipper.Execute(ClipType.Intersection, FillRule.EvenOdd, closedSolution);
-
 
 ### Definitions:
 
@@ -120,7 +103,7 @@ Example:
 
 <b>C#:</b><br>
           
-    using ClipperLib2;
+    using Clipper2Lib;
     using Path64 = List<Point64>;
     using Paths64 = List<List<Point64>>;
     
