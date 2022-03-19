@@ -93,11 +93,17 @@ Example:
       subject[0] := MakePath([100, 50, 10, 79, 65, 2, 65, 98, 10, 21]);
       setLength(clip, 1);
       clip[0] := MakePath([80, 50, 69, 73, 43, 79, 23, 63, 23, 37, 43, 21, 69, 27]);
-      var solution1 := Union(sub, nil, frEvenOdd);            
-      var solution2 := Union(sub, nil, frNonZero);      
-      var solution3 := Union(sub, clp, frNonZero);      
-      var solution4 := Intersect(sub, clp, frNonZero);
-      var solution5 := Intersect(sub, clp, frEvenOdd);
+      var solution1 := Union(subject, nil, frEvenOdd);            
+      var solution2 := Union(subject, nil, frNonZero);      
+      var solution3 := Union(subject, clip, frNonZero);      
+      var solution4 := Intersect(subject, clip, frNonZero);
+      var solution5 := Intersect(subject, clip, frEvenOdd);
+      
+      sub[0] := MakePath([93,50 77,84 40,92 11,69 11,31 40,8 77,16]);
+      var solution6 := InflatePaths(subject, 5, jtMiter, etPolygon);
+      var solution7 := InflatePaths(subject, -5, jtMiter, etPolygon);
+      var solution8 := InflatePaths(subject, 10, jtMiter, etSquare);
+      var solution9 := InflatePaths(subject, 10, jtMiter, etJoined);
     end;
 
 ![test](https://user-images.githubusercontent.com/5280692/159103161-4c4e0c51-98f3-4ff4-9364-4c2cc57af774.png)
@@ -105,6 +111,12 @@ Example:
 ![test](https://user-images.githubusercontent.com/5280692/159098431-378a4a85-be83-4412-a6f0-09e88234928f.png)
 ![test](https://user-images.githubusercontent.com/5280692/159098290-85c67eec-04a2-4ea7-9b5c-b2120d3cf5bd.png)
 ![test](https://user-images.githubusercontent.com/5280692/159103132-153c6428-4962-4240-b7a3-799fc639553c.png)
+<br>
+![inflate_polygon](https://user-images.githubusercontent.com/5280692/159106061-1d1e14c7-bdff-478d-b5b6-7340478edc5d.png)
+![deflate_polygon](https://user-images.githubusercontent.com/5280692/159106069-e01ad782-fd6e-4480-972c-e96db51948f8.png)
+![inflate_line](https://user-images.githubusercontent.com/5280692/159106083-f16f5508-7daa-4b0c-a7b3-8a5381a4db51.png)
+![inflate_line2](https://user-images.githubusercontent.com/5280692/159106093-ba17fb6a-0adb-4622-b16c-835ac061e3d8.png)
+
 
 <b>C#:</b><br>
           
