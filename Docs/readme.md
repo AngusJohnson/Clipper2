@@ -34,19 +34,19 @@ When I originally translated this library from Delphi (Pascal) to C# and C++, I 
 	clipper.AddClip(clips);
 	clipper.Execute(ClipType.Intersection, FillRule.EvenOdd, closedSolution);
   
+<br>  
 <b>Definitions:</b><br>
-Path "segments" are the lines between path vertices. In closed paths these are commonly referred to as "edges".<br>
-Segments are "touching" when they are collinear and at least partially overlap one another.<br>
-Polygons are touching when they contain touching edges.<br><br>
+Path <b>segments</b> are the lines between path vertices. In closed paths these are commonly referred to as <b>edges</b>.<br>
+Segments are <b>touching</b> when they are collinear and at least partially overlap one another.<br>
+Polygons are touching when they contain touching edges.<br>
+<b>Clipping</b> initially referred to the process of excluding parts of an image from a rectangular <i>clipping</i> window. However, this process has now been generalized to include <i>clipping</i> with non-rectangular windows, and to include union, difference and XOR boolean operations too. In this library, <i>images</i> are defined as one or more series of <b>subject</b> vector paths, where these paths may be open or closed. <b>Clip</b> paths, as opposed to subject paths, must be closed. (The library does not support clipping with open paths.)<br><br>
+
 
 <b>Clipped Solutions:</b><br>
 A clipped solution often won't be in its simplest form. For example, solutions may have "touching" edges.<br><br>
 
 <b>Clipping open paths:</b><br>
-
-The Clipper library clips both polygons (closed paths) and polylines (open paths). However, these <i>subject</i> paths can only be "clipped" with closed paths. In other words polygons and polylines can't be clipped by polylines. Clipping is performed using a "sweep line" algorithm, progressing from vertices with the largest Y coordinates to those with the least Y coordinates (ie top-down in a Cartesian plane).<br>
-
-Open path segments that touch a clipping boundary may or may not be part of the clipped solution. This will depend on which side of the clip boundary the path was on <i>prior to touching</i>. However <i>prior</i> in this case isn't necessarily referring to the segment that's closer to the start of the path. Instead <i>prior is relative to the sweep direction</i>. So while sweeping top-down in the Cartesian plane, prior here refer to a segment immediately above. So, a touching open segment is included in a clipping solution:
+The Clipper library clips <b>subject</b> paths which may be closed (polygons) or open (polylines). To fully understand the library's open path clipping, it's important to note that clipping is performed using a <i>sweep line</i> algorithm that progressing top-down in a Cartesian plane (ie from vertices with the largest Y coordinates to those with the least Y coordinates). Open path segments that touch a clipping boundary may or may not be part of the clipped solution. This will depend on which side of the clip boundary the path was on <i>prior to touching</i>. However <i>prior</i> in this case isn't referring to the segment that's closer to the start of the path. Instead prior is <i>relative to the sweep direction</i>. So while sweeping top-down in the Cartesian plane, prior refers to the segment immediately above. So a touching open segment is included in a clipping solution:
 <ul>
 <li>when an open path prior to touching a clipping boundary lies outside the clipping region, the touching segment will <i>not</i> be part of the clipping solution</li>
 <li>when an open path prior to touching a clipping boundary lies inside the clipping region, the touching segment will be part of the clipping solution</li>
@@ -66,17 +66,14 @@ Examples:
 	clip.Add(MakePath(new int[] { 70,20, 90,20, 90,40, 70,40 }));
 
 <br>
-<b>PreserveCollinear property:</b><br><br>
-
-This property only pertains to <b>closed paths</b>. Paths commonly have consecutive edges that are collinear, where the shared vertex can be removed (and paths simplified) without altering the shape of these paths. This simplification is commonly but not always preferred for clipping solutions. However, when consecutive edges are collinear AND ALSO change direction 180 degrees, causing spikes, these are rarely desired. 'Spikes' will always be removed from closed path solutions, irrespective of the PreserveCollinear property.<br>
-
-Very occasionally in clipping solutions there will be touching edges within the same polygons. While these solutions are technically correct (in that the polygon filled regions represent correct solutions), I consider this a bug and hope to have this addressed before the formal release of Clipper2.<br>
+<b>PreserveCollinear property:</b><br>
+This property only pertains to <b>closed paths</b>. Paths commonly have consecutive edges that are collinear, where the shared vertex can be removed (and paths simplified) without altering the shape of these paths. This simplification is commonly but not always preferred for clipping solutions. However, when consecutive edges are collinear AND ALSO change direction 180 degrees, causing spikes, these are rarely desired. 'Spikes' will always be removed from closed path solutions, irrespective of the PreserveCollinear property. Very occasionally in clipping solutions there will be touching edges within the same polygons. While these solutions are technically correct (in that the polygon filled regions represent correct solutions), I consider this a bug and hope to have this addressed before the formal release of Clipper2.<br>
 
 Example:
 
 	Path64 badPath = MakePath(new int[] { 270, 230160, 230160, 160270, 160270, 2010, 2010, 7060, 7060, 14010, 14010, 20270, 20 })); 
 
-<br><br>
+<br>
 <b>Examples of using library functions:</b>
 <br><br>
 <b>Delphi:</b><br>
