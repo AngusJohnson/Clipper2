@@ -103,38 +103,22 @@ Example:
       SetLength(subject, 1);
       subject[0] := MakePath([100, 50, 10, 79, 65, 2, 65, 98, 10, 21]);
       solution := Union(sub, nil, frEvenOdd);      
-      //solution=(
-      //  ((65,98),(44,68),(65,61)),
-      //  ((44,68),(10,79),(31,50)),
-      //  ((100,50),(65,61),(65,39)),
-      //  ((44,32),(31,50),(10,21)),
-      //  ((65,39),(44,32),(65,2))
-      //)
       
 ![test](https://user-images.githubusercontent.com/5280692/159098614-bf8dfd82-5c5b-42a4-ae93-d9a5a1b7dd14.png)
       
       solution := Union(sub, nil, frNonZero);      
-      //solution=(
-      //  ((65,39),(100,50),(65,61),(65,98),(44,68),(10,79),(31,50),(10,21),(44,32),(65,2))
-      //)
       
 ![test](https://user-images.githubusercontent.com/5280692/159098650-9923ffe9-a5fb-49a4-9d34-9ef1e5aae8e4.png)
 
+      SetLength(subject, 1);
+      subject[0] := MakePath([100, 50, 10, 79, 65, 2, 65, 98, 10, 21]);
       setLength(clip, 1);
       clip[0] := MakePath([80, 50, 69, 73, 43, 79, 23, 63, 23, 37, 43, 21, 69, 27]);
       solution := Union(sub, clp, Clipper.TFillRule.frNonZero);
-      //solution=(
-      //  ((65,26),(69,27),(76,42),(100,50),(76,58),(69,73),(65,74),(65,98),(50,77),
-      //    (43,79),(34,71),(10,79),(23,61),(23,39),(10,21),(34,29),(43,21),(50,23),(65,2))
-      //)
       
 ![test](https://user-images.githubusercontent.com/5280692/159098431-378a4a85-be83-4412-a6f0-09e88234928f.png)
       
       solution := Intersect(sub, clp, Clipper.TFillRule.frNonZero);
-      //solution=(
-      //  ((65,26),(65,39),(76,42),(80,50),(76,58),(65,61),(65,74),(50,77),(44,68),
-      //    (34,71),(23,63),(23,61),(31,50),(23,39),(23,37),(34,29),(44,32),(50,23))
-      //)      
       
 ![test](https://user-images.githubusercontent.com/5280692/159098290-85c67eec-04a2-4ea7-9b5c-b2120d3cf5bd.png)
       
