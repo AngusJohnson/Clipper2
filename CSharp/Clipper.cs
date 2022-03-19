@@ -1,7 +1,7 @@
 ﻿/*******************************************************************************
 * Author    :  Angus Johnson                                                   *
 * Version   :  10.0 (release candidate 1) - also known as Clipper2             *
-* Date      :  18 March 2022                                                    *
+* Date      :  19 March 2022                                                   *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  This module contains simple functions that will likely cover    *
@@ -16,7 +16,7 @@
 
 using System.Collections.Generic;
 
-namespace ClipperLib2
+namespace Clipper2Lib
 {
 	using Path64 = List<Point64>;
 	using Paths64 = List<List<Point64>>;
@@ -91,24 +91,18 @@ namespace ClipperLib2
       return solution;
     }
 
-    public static Paths64 InflatePaths(Paths64 paths, double delta, bool isOpen)
+    public static Paths64 InflatePaths(Paths64 paths, double delta, JoinType joinType, EndType endType)
     {
       ClipperOffset co = new ClipperOffset();
-      if (isOpen)
-        co.AddPaths(paths, JoinType.Round, EndType.Round);
-      else
-        co.AddPaths(paths, JoinType.Round, EndType.Polygon);
+      co.AddPaths(paths, joinType, endType);
       PathsD tmp = co.Execute(delta);
       return Paths64(tmp);
     }
 
-    public static PathsD InflatePaths(PathsD paths, double delta, bool isOpen)
+    public static PathsD InflatePaths(PathsD paths, double delta, JoinType joinType, EndType endType)
     {
       ClipperOffset co = new ClipperOffset();
-      if (isOpen)
-        co.AddPaths(paths, JoinType.Round, EndType.Round);
-      else
-        co.AddPaths(paths, JoinType.Round, EndType.Polygon);
+      co.AddPaths(paths, joinType, endType);
       return co.Execute(delta);
     }
 

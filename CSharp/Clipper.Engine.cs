@@ -1,7 +1,7 @@
 ﻿/*******************************************************************************
 * Author    :  Angus Johnson                                                   *
 * Version   :  10.0 (beta) - also known as Clipper2                            *
-* Date      :  18 March 2022                                                    *
+* Date      :  19 March 2022                                                   *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  This is the main polygon clipping module                        *
@@ -17,7 +17,7 @@ using System.Diagnostics;
 #endif
 using System.Collections.Generic;
 
-namespace ClipperLib2
+namespace Clipper2Lib
 {
 
 	using Path64 = List<Point64>;

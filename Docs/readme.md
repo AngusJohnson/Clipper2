@@ -99,23 +99,23 @@ Example:
       var solution4 := Intersect(subject, clip, frNonZero);
       var solution5 := Intersect(subject, clip, frEvenOdd);
       
-      sub[0] := MakePath([93,50 77,84 40,92 11,69 11,31 40,8 77,16]);
+      subject[0] := MakePath([93,50,77,84,40,92,11,69,11,31,40,8,77,16]);
       var solution6 := InflatePaths(subject, 5, jtMiter, etPolygon);
       var solution7 := InflatePaths(subject, -5, jtMiter, etPolygon);
       var solution8 := InflatePaths(subject, 10, jtMiter, etSquare);
       var solution9 := InflatePaths(subject, 10, jtMiter, etJoined);
     end;
 
-![test](https://user-images.githubusercontent.com/5280692/159103161-4c4e0c51-98f3-4ff4-9364-4c2cc57af774.png)
-![test](https://user-images.githubusercontent.com/5280692/159098650-9923ffe9-a5fb-49a4-9d34-9ef1e5aae8e4.png)
-![test](https://user-images.githubusercontent.com/5280692/159098431-378a4a85-be83-4412-a6f0-09e88234928f.png)
-![test](https://user-images.githubusercontent.com/5280692/159098290-85c67eec-04a2-4ea7-9b5c-b2120d3cf5bd.png)
-![test](https://user-images.githubusercontent.com/5280692/159103132-153c6428-4962-4240-b7a3-799fc639553c.png)
+![union_evenodd](https://user-images.githubusercontent.com/5280692/159103161-4c4e0c51-98f3-4ff4-9364-4c2cc57af774.png)
+![union_nonzero](https://user-images.githubusercontent.com/5280692/159098650-9923ffe9-a5fb-49a4-9d34-9ef1e5aae8e4.png)
+![union2_nonzero](https://user-images.githubusercontent.com/5280692/159098431-378a4a85-be83-4412-a6f0-09e88234928f.png)
+![intersect_nonzero](https://user-images.githubusercontent.com/5280692/159098290-85c67eec-04a2-4ea7-9b5c-b2120d3cf5bd.png)
+![intersect_evenodd](https://user-images.githubusercontent.com/5280692/159103132-153c6428-4962-4240-b7a3-799fc639553c.png)
 <br>
 ![inflate_polygon](https://user-images.githubusercontent.com/5280692/159106061-1d1e14c7-bdff-478d-b5b6-7340478edc5d.png)
 ![deflate_polygon](https://user-images.githubusercontent.com/5280692/159106069-e01ad782-fd6e-4480-972c-e96db51948f8.png)
-![inflate_line](https://user-images.githubusercontent.com/5280692/159106083-f16f5508-7daa-4b0c-a7b3-8a5381a4db51.png)
-![inflate_line2](https://user-images.githubusercontent.com/5280692/159106093-ba17fb6a-0adb-4622-b16c-835ac061e3d8.png)
+![inflate_square](https://user-images.githubusercontent.com/5280692/159106083-f16f5508-7daa-4b0c-a7b3-8a5381a4db51.png)
+![inflate_joined](https://user-images.githubusercontent.com/5280692/159106093-ba17fb6a-0adb-4622-b16c-835ac061e3d8.png)
 
 
 <b>C#:</b><br>
@@ -135,3 +135,9 @@ Example:
     Paths64 solution4 = ClipperFunc.Intersect(subj, clip, FillRule.NonZero);
     Paths64 solution5 = ClipperFunc.Intersect(subj, clip, FillRule.EvenOdd);
 
+    subj.Clear();
+    subj.Add(ClipperFunc.MakePath(new int[] { 93, 50, 77, 84, 40, 92, 11, 69, 11, 31, 40, 8, 77, 16 }));
+    Paths64 solution6 = ClipperFunc.InflatePaths(subj, 5.0, JoinType.Miter, EndType.Polygon);
+    Paths64 solution7 = ClipperFunc.InflatePaths(subj, -5.0, JoinType.Miter, EndType.Polygon);
+    Paths64 solution8 = ClipperFunc.InflatePaths(subj, 10.0, JoinType.Miter, EndType.Square);
+    Paths64 solution9 = ClipperFunc.InflatePaths(subj, 10.0, JoinType.Miter, EndType.Joined);

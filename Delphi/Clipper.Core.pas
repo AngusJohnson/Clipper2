@@ -3,7 +3,7 @@
 (*******************************************************************************
 * Author    :  Angus Johnson                                                   *
 * Version   :  10.0 (beta) - aka Clipper2                                      *
-* Date      :  14 March 2022                                                   *
+* Date      :  19 March 2022                                                   *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  Core Clipper Library module                                     *
 *              Contains structures and functions used throughout the library   *
@@ -54,6 +54,9 @@ type
   TPathD = array of TPointD;
   TPathsD = array of TPathD;
   TArrayOfPathsD = array of TPathsD;
+
+  TArrayOfInteger = array of Integer;
+  TArrayOfDouble = array of double;
 
   TRect64 = {$IFDEF RECORD_METHODS}record{$ELSE}object{$ENDIF}
   private
