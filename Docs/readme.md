@@ -100,28 +100,20 @@ Example:
 
     //code main entry 
     var
-      subject, clip, solution: TPaths64;      
+      subject, clip: TPaths64;      
     begin
-      SetLength(subject, 1);
-      subject[0] := MakePath([100, 50, 10, 79, 65, 2, 65, 98, 10, 21]);
-      solution := Union(sub, nil, frEvenOdd);      
-      
-![test](https://user-images.githubusercontent.com/5280692/159098614-bf8dfd82-5c5b-42a4-ae93-d9a5a1b7dd14.png)
-      
-      solution := Union(sub, nil, frNonZero);      
-      
-![test](https://user-images.githubusercontent.com/5280692/159098650-9923ffe9-a5fb-49a4-9d34-9ef1e5aae8e4.png)
-
       SetLength(subject, 1);
       subject[0] := MakePath([100, 50, 10, 79, 65, 2, 65, 98, 10, 21]);
       setLength(clip, 1);
       clip[0] := MakePath([80, 50, 69, 73, 43, 79, 23, 63, 23, 37, 43, 21, 69, 27]);
-      solution := Union(sub, clp, Clipper.TFillRule.frNonZero);
+      var solution1 := Union(sub, nil, frEvenOdd);            
+      var solution2 := Union(sub, nil, frNonZero);      
+      var solution3 := Union(sub, clp, Clipper.TFillRule.frNonZero);      
+      var solution4 := Intersect(sub, clp, Clipper.TFillRule.frNonZero);
+    end;
       
+![test](https://user-images.githubusercontent.com/5280692/159098614-bf8dfd82-5c5b-42a4-ae93-d9a5a1b7dd14.png)
+![test](https://user-images.githubusercontent.com/5280692/159098650-9923ffe9-a5fb-49a4-9d34-9ef1e5aae8e4.png)
 ![test](https://user-images.githubusercontent.com/5280692/159098431-378a4a85-be83-4412-a6f0-09e88234928f.png)
-      
-      solution := Intersect(sub, clp, Clipper.TFillRule.frNonZero);
-      
 ![test](https://user-images.githubusercontent.com/5280692/159098290-85c67eec-04a2-4ea7-9b5c-b2120d3cf5bd.png)
       
-    end;
