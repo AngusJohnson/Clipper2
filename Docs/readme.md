@@ -23,7 +23,7 @@ When I originally translated this library from Delphi (Pascal) to C# and C++, I 
 Path <b>segments</b> are the lines between path vertices. In closed paths (polygons), these are commonly referred to as <b>edges</b>.<br>
 Segments are <b>touching</b> when they are collinear and at least partially overlap one another.<br>
 Polygons are touching when they contain touching edges.<br>
-<b>Clipping</b> initially referred to the process of excluding from an image anything outside a rectangular <i>clipping</i> window. However, this process has now been generalized to include <i>clipping</i> with non-rectangular windows, and to include union, difference and XOR boolean operations too. In this library, <i>images</i> are defined as one or more series of <b>subject</b> vector paths, where these paths may be open or closed. <b>Clip</b> paths, as opposed to subject paths, must be closed. (The library does not support clipping with open paths.)<br><br>
+<b>Clipping</b> initially referred to the process of removing or "cutting away" everything in an image that was outside a rectangular <i>clipping</i> window. However, this process has now been generalized to include <i>clipping</i> with non-rectangular windows, and to include union, difference and XOR boolean operations too. In this library, <i>images</i> are defined by one or more <b>subject</b> vector paths, where these paths may be open or closed. <b>Clip</b> paths, as opposed to subject paths, must be closed. (The library does not support clipping with open paths.)<br><br>
 
 
 ### Clipped Solutions:
@@ -55,7 +55,7 @@ Examples:
 
 ### PreserveCollinear property:
 
-This property only pertains to <b>closed paths</b>. Paths commonly have consecutive edges that are collinear, where the shared vertex can be removed (and paths simplified) without altering the shape of these paths. This simplification is commonly but not always preferred for clipping solutions. However, when consecutive edges are collinear AND ALSO change direction 180 degrees, causing spikes, these are rarely desired. 'Spikes' will always be removed from closed path solutions, irrespective of the PreserveCollinear property. Very occasionally in clipping solutions there will be touching edges within the same polygons. While these solutions are technically correct (in that the polygon filled regions represent correct solutions), I consider this a bug and hope to have this addressed before the formal release of Clipper2.<br>
+This property only pertains to <b>closed paths</b>. Paths commonly have consecutive edges that are collinear, where the shared vertex can be removed, and paths simplified without altering the shapes of these paths. This simplification is frequently though not always preferred in clipping solutions. However, when consecutive edges are collinear AND ALSO change direction 180 degrees, causing linear spikes, these are rarely desired. These 'spikes' will always be removed from closed path solutions, irrespective of the PreserveCollinear property. Very occasionally in clipping solutions there will be touching edges within the same polygons. While these solutions are technically correct (in that the polygon filled regions represent correct solutions), I consider this a bug and hope to have this addressed before the formal release of Clipper2.<br>
 
 Example:
 
