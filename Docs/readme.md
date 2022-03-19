@@ -97,10 +97,29 @@ Example:
       var solution2 := Union(sub, nil, frNonZero);      
       var solution3 := Union(sub, clp, frNonZero);      
       var solution4 := Intersect(sub, clp, frNonZero);
+      var solution5 := Intersect(sub, clp, frEvenOdd);
     end;
-      
-![test](https://user-images.githubusercontent.com/5280692/159098614-bf8dfd82-5c5b-42a4-ae93-d9a5a1b7dd14.png)
+
+![test](https://user-images.githubusercontent.com/5280692/159103161-4c4e0c51-98f3-4ff4-9364-4c2cc57af774.png)
 ![test](https://user-images.githubusercontent.com/5280692/159098650-9923ffe9-a5fb-49a4-9d34-9ef1e5aae8e4.png)
 ![test](https://user-images.githubusercontent.com/5280692/159098431-378a4a85-be83-4412-a6f0-09e88234928f.png)
 ![test](https://user-images.githubusercontent.com/5280692/159098290-85c67eec-04a2-4ea7-9b5c-b2120d3cf5bd.png)
-      
+![test](https://user-images.githubusercontent.com/5280692/159103132-153c6428-4962-4240-b7a3-799fc639553c.png)
+
+<b>C#:</b><br>
+          
+    using ClipperLib2;
+    using Path64 = List<Point64>;
+    using Paths64 = List<List<Point64>>;
+    
+    //code main entry 
+    Paths64 subj = new Paths64();
+    subj.Add(ClipperFunc.MakePath(new int[] { 100, 50, 10, 79, 65, 2, 65, 98, 10, 21 }));
+    Paths64 clip = new Paths64();
+    clip.Add(ClipperFunc.MakePath(new int[] { 80, 50, 69, 73, 43, 79, 23, 63, 23, 37, 43, 21, 69, 27 }));
+    Paths64 solution1 = ClipperFunc.Union(subj, null, FillRule.EvenOdd);
+    Paths64 solution2 = ClipperFunc.Union(subj, null, FillRule.NonZero);
+    Paths64 solution3 = ClipperFunc.Union(subj, clip, FillRule.NonZero);
+    Paths64 solution4 = ClipperFunc.Intersect(subj, clip, FillRule.NonZero);
+    Paths64 solution5 = ClipperFunc.Intersect(subj, clip, FillRule.EvenOdd);
+
