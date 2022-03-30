@@ -3,7 +3,7 @@
 (*******************************************************************************
 * Author    :  Angus Johnson                                                   *
 * Version   :  10.0 (beta) - aka Clipper2                                      *
-* Date      :  19 March 2022                                                   *
+* Date      :  31 March 2022                                                   *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  Core Clipper Library module                                     *
 *              Contains structures and functions used throughout the library   *
@@ -191,6 +191,9 @@ function StripDuplicates(const path: TPath64; isClosedPath: Boolean = false): TP
 function StripNearDuplicates(const path: TPathD;
   minLenSqrd: double; isClosedPath: Boolean): TPathD;
 
+function PointBetween(pt, pt1, pt2: TPoint64): Boolean;
+function SegmentsOverlap(const  seg1a, seg1b, seg2a, seg2b: TPoint64): Boolean;
+
 function ReversePath(const path: TPath64): TPath64; overload;
 function ReversePath(const path: TPathD): TPathD; overload;
 function ReversePaths(const paths: TPaths64): TPaths64; overload;
@@ -302,7 +305,6 @@ function StripNearDuplicates(const path: TPathD;
   minLenSqrd: double; isClosedPath: Boolean): TPathD;
 var
   i,j, len: integer;
-  minLengthSqrd: double;
 begin
   len := length(path);
   SetLength(Result, len);
@@ -320,6 +322,20 @@ begin
   if isClosedPath and
     PointsNearEqual(Result[j], Result[0], minLenSqrd) then dec(j);
   SetLength(Result, j +1);
+end;
+//------------------------------------------------------------------------------
+
+function PointBetween(pt, pt1, pt2: TPoint64): Boolean;
+begin
+  Result := ((pt.X > pt1.X) = (pt.X < pt2.X)) and
+    ((pt.Y > pt1.Y) = (pt.Y < pt2.Y));
+end;
+//------------------------------------------------------------------------------
+
+function SegmentsOverlap(const  seg1a, seg1b, seg2a, seg2b: TPoint64): Boolean;
+begin
+  Result := PointBetween(seg1a, seg2a, seg2b) or
+    PointBetween(seg1b, seg2a, seg2b);
 end;
 //------------------------------------------------------------------------------
 
@@ -1157,14 +1173,15 @@ end;
 function Area(const path: TPath64): Double;
 var
   i, j, highI: Integer;
+  d: double;
 begin
   Result := 0.0;
   highI := High(path);
   j := highI;
   for i := 0 to highI do
   begin
-    Result := Result +
-      double((path[j].Y + path[i].Y)) * (path[j].X - path[i].X);
+    d := (path[j].Y + path[i].Y); //needed for Delphi7
+    Result := Result + d * (path[j].X - path[i].X);
     j := i;
   end;
   Result := Result * 0.5;
@@ -1205,7 +1222,7 @@ function PointInPolygon(const pt: TPoint64;
 var
   i, val, cnt: Integer;
   d, d2, d3: Double; //using doubles to avoid possible integer overflow
-  ip, ipNext: TPoint64;
+  ptCurr, ptPrev: TPoint64;
 begin
   cnt := Length(path);
   if cnt < 3 then
@@ -1213,46 +1230,44 @@ begin
     result := pipOutside;
     Exit;
   end;
-  ip := path[0];
   Result := pipOn;
   val := 0;
-  for i := 1 to cnt do
+  ptPrev := path[cnt -1];
+  for i := 0 to cnt -1 do
   begin
-    if i < cnt then ipNext := path[i]
-    else ipNext := path[0];
-
-    if (ipNext.Y = pt.Y) then
+    ptCurr := path[i];
+    if (ptPrev.Y = pt.Y) then
     begin
-      if (ipNext.X = pt.X) or ((ip.Y = pt.Y) and
-        ((ipNext.X > pt.X) = (ip.X < pt.X))) then Exit;
+      if (ptPrev.X = pt.X) or ((ptCurr.Y = pt.Y) and
+        ((ptPrev.X > pt.X) = (ptCurr.X < pt.X))) then Exit;
     end;
 
-    if ((ip.Y < pt.Y) <> (ipNext.Y < pt.Y)) then
+    if ((ptCurr.Y < pt.Y) <> (ptPrev.Y < pt.Y)) then
     begin
-      if (ip.X >= pt.X) then
+      if (ptCurr.X >= pt.X) then
       begin
-        if (ipNext.X > pt.X) then val := 1 - val
+        if (ptPrev.X > pt.X) then val := 1 - val
         else
         begin
-          d2 := (ip.X - pt.X);
-          d3 := (ipNext.X - pt.X);
-          d := d2 * (ipNext.Y - pt.Y) - d3 * (ip.Y - pt.Y);
+          //d := CrossProduct(ptCurr, pt, ptPrev);
+          d2 := (ptCurr.X - pt.X); d3 := (ptPrev.X - pt.X);
+          d := d2 * (ptPrev.Y - pt.Y) - d3 * (ptCurr.Y - pt.Y);
           if (d = 0) then Exit;
-          if ((d > 0) = (ipNext.Y > ip.Y)) then val := 1 - val;
+          if ((d > 0) = (ptPrev.Y > ptCurr.Y)) then val := 1 - val;
         end;
       end else
       begin
-        if (ipNext.X > pt.X) then
+        if (ptPrev.X > pt.X) then
         begin
-          d2 := (ip.X - pt.X);
-          d3 := (ipNext.X - pt.X);
-          d := d2 * (ipNext.Y - pt.Y) - d3 * (ip.Y - pt.Y);
+          //d := CrossProduct(ptCurr, pt, ptPrev);
+          d2 := (ptCurr.X - pt.X); d3 := (ptPrev.X - pt.X);
+          d := d2 * (ptPrev.Y - pt.Y) - d3 * (ptCurr.Y - pt.Y);
           if (d = 0) then Exit;
-          if ((d > 0) = (ipNext.Y > ip.Y)) then val := 1 - val;
+          if ((d > 0) = (ptPrev.Y > ptCurr.Y)) then val := 1 - val;
         end;
       end;
     end;
-    ip := ipNext;
+    ptPrev := ptCurr;
   end;
 
   case val of

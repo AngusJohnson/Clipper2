@@ -1,16 +1,23 @@
 # Clipper2
 
-This is a **pre-release beta version** of Clipper2. While my original <a href="https://sourceforge.net/projects/polyclipping/">**Clipper Library**</a> (i.e. versions 1 through to 6.4.2) was very functional, in many places it is/was messy. This new version is a significant rewrite so the code should be a little easier to understand, though still very complicated. However, because this is a pre-release version, expect some bug. Nevertheless, the Delphi code and the C# translation have both been fairly extensively tested now and a C++ translation is in the pipeline.<br>
+This is a **pre-release beta version** of Clipper2. While my original <a href="https://sourceforge.net/projects/polyclipping/">**Clipper Library**</a> (i.e. versions 1 through to 6.4.2) was very functional, in many places it is/was messy. Clipper2 is a major rewrite. New features include:
+<ul>
+  <li>Support for floating point coordinates. While the library still performs all clipping operations using integer coordinates that preserve numerical robustness, floating point conversions are now managed internally.
+  <li>Much better (more efficient and more complete) removal of spikes and micro-self-intersections from clipping solutions together with *almost* complete merging of touching polygons. (Polygon merging has just been added to Delphi code).
+  <li>There's also a modest improvement in performance (see the chart below).
+</ul> 
+<br>
 
-There are many changes in Clipper2 that will affect how it's used. These are the more important ones:
-1. The PolyFillType enumeration has been renamed FillRule.
-2. The cInt type used for path coordinates has been replaced with native 64bit integer types (long, Int64 or int64_t).
-3. The IntPoint and IntRect types have also been renamed Point64 and Rect64 respectively. There is new support for floating point coordinates, with the new PointD and RectD classes indicating double float values.
+These changes also affect how the library is used, including:
+1. The cInt type used for path coordinates has been replaced with native 64bit integer types (long, Int64 or int64_t).
+2. The IntPoint and IntRect types have also been renamed Point64 and Rect64 respectively. There is new support for floating point coordinates, with the new PointD and RectD classes indicating double float values.
+3. The PolyFillType enumeration has been renamed FillRule.
 4. The Clipper class no longer has AddPath and AddPaths methods. These have been replaced with AddSubject, AddOpenSubject and AddClip methods.
 5. The Clipper class's Execute parameters have changed with the removal of the second FillRule parameter, and addition of an optional OpenSolutions parameter. (The second FillRule parameter was almost never needed and probably confusing).
-6. The Polytree class now only contains closed paths (ie polygons) since open paths can't contain polygons and open paths in solutions are now returned via Execute's OpenSolutions parameter.
-7. Clipper2's Offset behavior for open paths has changed compared to Clipper1. The offset value is now the full width of the resulting offset, rather than the per-side value. To get similar results to the Clipper1 behavior, double the offset value.
-8. Collinear vertices are retained by default, in contrast to the default behavior of Clipper1.
+6. While the Clipper class remains integral to all clipping routines, most clipping can now be performed using simple functions that hide Clipper class construction and use.
+7. The Polytree class now only contains closed paths (ie polygons) since open paths can't contain polygons and open paths in solutions are now returned via Execute's OpenSolutions parameter.
+8. Offset behavior for open paths has changed. The offset delta now represents the *total* width offset (both sides of the paths) rather than the single side offset in Clipper1. This change is so offset deltas for open paths will be equivalent to line widths.
+9. Collinear vertices are retained by default, in contrast to the default behavior of Clipper1.
  
 
 ## Additional notes:
@@ -26,7 +33,7 @@ Polygons are touching when they contain touching edges.<br>
 
 ### Clipped Solutions:
 
-A clipped solution often won't be in its simplest form. For example, solutions may have "touching" edges. Very occasionally solutions will also have touching edges within the same polygons. While these solutions will be technically correct, some path simplification is still needed (and being worked on).<br><br>
+Clipping solutions are not guaranteed to be in their simplest forms. For example, solutions may on occasions have "touching" edges, possibly even within the same polygons.<br><br>
 
 
 ### Clipping open paths:
@@ -53,7 +60,7 @@ Examples:
 
 ### PreserveCollinear property:
 
-This property only pertains to **closed paths**. Paths commonly have consecutive edges that are collinear, where the shared vertex can be removed and paths simplified without altering the shapes of these paths. This simplification is frequently though not always preferred when clipping. However, when consecutive edges are collinear and reverse back 180 degrees causing linear spikes, these are almost never desired. Linear spikes will always be removed from closed path solutions irrespective of the ``PreserveCollinear`` property.<br>
+This property only pertains to **closed paths**. Paths will sometimes have consecutive edges that are collinear, where the shared vertex can be removed and paths simplified without altering the shapes of these paths. This simplification is frequently though not always preferred when clipping. However, when consecutive edges are collinear and reverse back 180 degrees causing linear spikes, these are almost never desired. Linear spikes will always be removed from closed path solutions irrespective of the ``PreserveCollinear`` property.<br>
 
 Example:
 
