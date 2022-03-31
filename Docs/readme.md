@@ -3,21 +3,21 @@
 This is a **pre-release beta version** of Clipper2. While my original <a href="https://sourceforge.net/projects/polyclipping/">**Clipper Library**</a> (i.e. versions 1 through to 6.4.2) was very functional, in many places it is/was messy. Clipper2 is a major rewrite. New features include:
 <ul>
   <li>Support for floating point coordinates. While the library still performs all clipping operations using integer coordinates that preserve numerical robustness, floating point conversions are now managed internally.
-  <li>Much better (more efficient and more complete) removal of spikes and micro-self-intersections from clipping solutions together with <i>almost</i> complete merging of touching polygons. (Polygon merging has just been added to the Delphi code).
-  <li>There's also a modest improvement in performance (see the chart below).
+  <li>There's more complete and more efficient removal of spikes and micro-self-intersections, and better merging of touching polygons from clipping solutions. (The latter has just been added to the Delphi code).
+  <li>And it's even a bit faster.
 </ul> 
 <br>
 
 These changes also affect how the library is used, including:
-1. The cInt type used for path coordinates has been replaced with native 64bit integer types (long, Int64 or int64_t).
-2. The IntPoint and IntRect types have also been renamed Point64 and Rect64 respectively. There is new support for floating point coordinates, with the new PointD and RectD classes indicating double float values.
-3. The PolyFillType enumeration has been renamed FillRule.
-4. The Clipper class no longer has AddPath and AddPaths methods. These have been replaced with AddSubject, AddOpenSubject and AddClip methods.
-5. The Clipper class's Execute parameters have changed with the removal of the second FillRule parameter, and addition of an optional OpenSolutions parameter. (The second FillRule parameter was almost never needed and probably confusing).
-6. While the Clipper class remains integral to all clipping routines, most clipping can now be performed using simple functions that hide Clipper class construction and use.
-7. The Polytree class now only contains closed paths (ie polygons) since open paths can't contain polygons and open paths in solutions are now returned via Execute's OpenSolutions parameter.
-8. Offset behavior for open paths has changed. The offset delta now represents the *total* width offset (both sides of the paths) rather than the single side offset in Clipper1. This change is so offset deltas for open paths will be equivalent to line widths.
-9. Collinear vertices are retained by default, in contrast to the default behavior of Clipper1.
+1. The <code>cInt</code> type used for path coordinates has been replaced with native 64bit integer types (<code>long</code>, <code>Int64</code> or <code>int64_t</code>).
+2. The <code>IntPoint</code> and <code>IntRect</code> types have also been renamed <code>Point64</code> and <code>Rect64</code> respectively. There is new support for floating point coordinates, with the new PointD and RectD classes indicating double float values.
+3. The <code>PolyFillType</code> enumeration has been renamed <code>FillRule</code>.
+4. The Clipper class no longer has <code>AddPath</code> and <code>AddPaths</code> methods. These have been replaced with <code>AddSubject</code>, <code>AddOpenSubject</code> and <code>AddClip</code> methods.
+5. The <code>Clipper</code> class's <code>Execute</code> parameters have changed with the removal of the second FillRule parameter, and addition of an optional OpenSolutions parameter. (The second FillRule parameter was almost never needed and probably confusing).
+6. Collinear vertices are retained by default, in contrast to the default behavior of Clipper1.
+7. While the Clipper class remains integral to all clipping routines, most clipping can now be performed using simple functions that hide Clipper class construction and use.
+8. The <code>Polytree</code> class now only contains closed paths (ie polygons) since open paths can't contain polygons and open paths in solutions are now returned via Execute's OpenSolutions parameter.
+9. When offestting open paths, the meaning of the offset <code>delta</code> has changed. This value now represents the <i>total</i> offset width and makes it equivalent to <code>line width</code>.
  
 
 ## Additional notes:
@@ -33,16 +33,16 @@ Polygons are touching when they contain touching edges.<br>
 
 ### Clipped Solutions:
 
-Clipping solutions are not guaranteed to be in their simplest forms. For example, solutions may on occasions have "touching" edges, possibly even within the same polygons.<br><br>
+Clipped solutions are not guaranteed to be in their simplest forms. For example, solutions may on occasions have "touching" edges, possibly within the same polygon.<br><br>
 
 
 ### Clipping open paths:
 
 The Clipper library clips **subject** paths which may be closed (polygons) or open (polylines). To fully understand the library's open path clipping, it's important to note that clipping is performed using a *sweep line* algorithm that progressing top-down in a Cartesian plane (ie from vertices with the largest Y coordinates to those with the least Y coordinates). Open path segments that touch a clipping boundary may or may not be part of the clipped solution. This will depend on which side of the clip boundary the path was on *prior to touching*. However *prior* in this case isn't referring to the segment that's closer to the start of the path. Instead prior is *relative to the sweep's direction*. While sweeping top-down in the Cartesian plane, *prior* refers to the segment immediately above. So:
 <ul>
-<li>when an open path prior to touching a clipping boundary lies outside the clipping region, the touching segment will *not* be part of the clipping solution</li>
+<li>when an open path prior to touching a clipping boundary lies outside the clipping region, the touching segment will <i>not</i> be part of the clipping solution</li>
 <li>when an open path prior to touching a clipping boundary lies inside the clipping region, the touching segment will be part of the clipping solution</li>
-<li>when an open path segment starts or ends while touching a boundary and also has no *prior* segment, its placement with regard to the boundary will depend on the heading of the following segment (ie immediately below in a Cartesian plane). If the following segment heads inside the clipping boundary, the terminating segment will be included in the clipping solution, otherwise it will be excluded.</li>
+<li>when an open path segment starts or ends while touching a boundary and also has no <i>prior</i> segment, its placement with regard to the boundary will depend on the heading of the following segment (ie immediately below in a Cartesian plane). If the following segment heads inside the clipping boundary, the terminating segment will be included in the clipping solution, otherwise it will be excluded.</li>
 <li>when an open path touches a clipping boundary along its entire length, whether this path becomes part of the clipping solution or not is undefined</li>
 </ul>
 Examples:
@@ -60,7 +60,7 @@ Examples:
 
 ### PreserveCollinear property:
 
-This property only pertains to **closed paths**. Paths will sometimes have consecutive edges that are collinear, where the shared vertex can be removed and paths simplified without altering the shapes of these paths. This simplification is frequently though not always preferred when clipping. However, when consecutive edges are collinear and reverse back 180 degrees causing linear spikes, these are almost never desired. Linear spikes will always be removed from closed path solutions irrespective of the ``PreserveCollinear`` property.<br>
+This property only pertains to **closed paths**. Paths will sometimes have consecutive segments that make a single straight edge, and where shared vertices can be removed without altering path shape. This removal simplifies path definitions and is usually the preferred option, though not always. However whenever solutions contain **spikes** from to consecutive edges reversing back on each other, these spikes will always be removed irrespective of whether ``PreserveCollinear`` is enabled or disabled.<br>
 
 Example:
 
