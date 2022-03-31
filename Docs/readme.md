@@ -3,7 +3,7 @@
 This is a **pre-release beta version** of Clipper2. While my original <a href="https://sourceforge.net/projects/polyclipping/">**Clipper Library**</a> (i.e. versions 1 through to 6.4.2) was very functional, in many places it is/was messy. Clipper2 is a major rewrite. New features include:
 <ul>
   <li>Support for floating point coordinates. While the library still performs all clipping operations using integer coordinates that preserve numerical robustness, floating point conversions are now managed internally.
-  <li>Much better (more efficient and more complete) removal of spikes and micro-self-intersections from clipping solutions together with *almost* complete merging of touching polygons. (Polygon merging has just been added to Delphi code).
+  <li>Much better (more efficient and more complete) removal of spikes and micro-self-intersections from clipping solutions together with <i>almost</i> complete merging of touching polygons. (Polygon merging has just been added to the Delphi code).
   <li>There's also a modest improvement in performance (see the chart below).
 </ul> 
 <br>

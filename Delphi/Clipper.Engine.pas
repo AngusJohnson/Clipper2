@@ -21,7 +21,7 @@ type
   TVertexFlag = (vfOpenStart, vfOpenEnd, vfLocMax, vfLocMin);
   TVertexFlags = set of TVertexFlag;
 
-  //TVertex: a pre-clipping data structure. It is used to separate polygons
+  //Vertex: a pre-clipping data structure. It is used to separate polygons
   //into ascending and descending 'bounds' (or sides) that start at local
   //minima and ascend (on the left with clockwise oriented paths) to a local
   //maxima, before descending to either the same or another local minima.
@@ -217,7 +217,7 @@ type
     procedure DisposeJoin(op: POutPt); overload;
     procedure DisposeJoin(joiner: PJoiner); overload;
     procedure ProcessJoinList;
-    procedure ProcessJoin(joiner: PJoiner);
+    function ProcessJoin(joiner: PJoiner): POutRec;
     function  ValidateClosedPath(var op: POutPt): Boolean;
     procedure CompleteSplit(op1, op2: POutPt; OutRec: POutRec);
     function  SafeDisposeOutPt(op: POutPt): POutPt;
@@ -2093,14 +2093,10 @@ begin
   joiner.idx := FJoinerList.Add(joiner);
   joiner.op1 := op1;
   joiner.op2 := op2;
-//  if op1.Joiner = DummyPointer then
-//    RemoveDummyJoiner(op1);
   if Assigned(op1.Joiner) and
     (op1.Joiner <> DummyPointer) then
       joiner.next1 := op1.Joiner else
     joiner.next1 := nil;
-//  if op2.Joiner = DummyPointer then
-//    RemoveDummyJoiner(op2);
   if Assigned(op2.Joiner) and
     (op2.Joiner <> DummyPointer) then
     joiner.next2 := op2.Joiner else
@@ -2197,13 +2193,15 @@ procedure TClipperBase.ProcessJoinList;
 var
   i: integer;
   joiner: PJoiner;
+  outRec: POutRec;
 begin
   for i := 0 to FJoinerList.Count -1 do
   begin
     if Assigned(FJoinerList[i]) then
     begin
       joiner := FJoinerList[i];
-      ProcessJoin(joiner);
+      outrec := ProcessJoin(joiner);
+      TidyOutRec(outRec);
     end;
   end;
   FJoinerList.Clear;
@@ -2291,7 +2289,7 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-procedure TClipperBase.ProcessJoin(joiner: PJoiner);
+function TClipperBase.ProcessJoin(joiner: PJoiner): POutRec;
 var
   op1, op2: POutPt;
   opA, opB: POutPt;
@@ -2325,28 +2323,17 @@ begin
   op2.OutRec := or2;
   DisposeJoin(joiner);
 
-  if not IsValidClosedPath(op1) or not IsValidClosedPath(op2) or
-    not Assigned(or1.Pts) or not Assigned(or2.Pts) then Exit;
-
-  if (or1 = or2) then
+  Result := or1;
+  if not IsValidClosedPath(op2) or not Assigned(or2.Pts) then Exit;
+  if not Assigned(or1.Pts) or not IsValidClosedPath(op1) then
   begin
-    if (op1 = op2) or (op1.Next = op2) or (op1.Prev = op2) then
-    begin
-      TidyOutRec(or1);
-      Exit;
-    end;
-  end else
-  begin
-    //check for valid ownership when joining separate paths
-    //todo - check why there are attempts to join across paths
-    if ((or1.Owner <> or2) and (or2.Owner <> or1) and
-      (or1.Owner <> or2.Owner)) then
-    begin
-      TidyOutRec(or1);
-      TidyOutRec(or2);
-      Exit;
-    end;
+    Result := or2; //ie tidy or2 in calling function;
+    Exit;
   end;
+
+  if (or1 = or2) and
+   ((op1 = op2) or (op1.Next = op2) or (op1.Prev = op2)) then
+      Exit;
 
   //strip duplicates (if no other joiners)
   if PointsEqual(op1.Prev.Pt, op1.Pt) then
@@ -2530,7 +2517,6 @@ begin
       Break;
     end;
   end; //end while
-  TidyOutRec(or1);
 end;
 //------------------------------------------------------------------------------
 
@@ -3211,11 +3197,14 @@ begin
     else if (op.Next.Pt.Y <> Y) then Exit;
   end;
 
+  //make sure 'op' isn't already in the trial join list
   if Assigned(op.NextHorz) or
     Assigned(op.next.NextHorz) or (op.next = FHorzLast) then Exit;
+  //add a dummy joiner (if necessary) to block or make safe possible cleanup
   if not Assigned(op.Joiner) then op.Joiner := DummyPointer;
   if not Assigned(op.Next.Joiner) then op.Next.Joiner := DummyPointer;
 
+  //add 'op' to the front of FHorzFirst (single linked list)
   op.NextHorz := op.Next;
   if not Assigned(FHorzFirst) then
     FHorzLast := op.NextHorz else
@@ -3229,6 +3218,7 @@ var
   op2, op3: POutPt;
 begin
   if not Assigned(op) or not Assigned(FHorzFirst) then Exit;
+  //trial joins are added in pairs so make sure the correct pair is deleted.
   if (op = FHorzFirst) or (op = FHorzFirst.NextHorz) then
   begin
     op2 := FHorzFirst;
@@ -3251,7 +3241,8 @@ begin
         op2 := op3;
         op3 := op3.NextHorz.NextHorz;
       end;
-    Assert(Assigned(op3), 'huh?');
+      if not Assigned(op3) then
+        RaiseError(rsClipper_ClippingErr);
   end;
   op3 := op2.NextHorz;
   if op2.Joiner = DummyPointer then op2.Joiner := nil;
@@ -3265,11 +3256,14 @@ procedure TClipperBase.ConvertHorzTrialsToJoins;
 var
   op1a, op1b, op2a, op2b: POutPt;
 begin
+  //get the first trial pair (= start and end of horz edge)
+  //and loop through following segments until an overlap is found
+  //Repeat this until all trial pairs have been processed
   while Assigned(FHorzFirst) do
   begin
     op1a := FHorzFirst;
     FHorzFirst := FHorzFirst.NextHorz.NextHorz;
-    
+
     op1b := op1a.NextHorz;
     if op1a.Joiner = DummyPointer then op1a.Joiner := nil;
     if op1b.Joiner = DummyPointer then op1b.Joiner := nil;
@@ -3279,8 +3273,9 @@ begin
     begin
       op2b := op2a.NextHorz;
       if HorzEdgesOverlap(op1a.Pt.X, op1b.Pt.X,
-        op2a.Pt.X, op2b.Pt.X) then 
+        op2a.Pt.X, op2b.Pt.X) then
       begin
+        //overlap found so promote to a 'real' join
         if PointBetween(op1a.Pt, op2a.Pt, op2b.Pt) then
           AddJoin(op1a, InsertOp(op1a.Pt, op2a)) else
           AddJoin(op1b, InsertOp(op1b.Pt, op2a));
