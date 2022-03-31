@@ -214,6 +214,11 @@ const
   MaxInt64 = 9223372036854775807;
   NullRect64: TRect64 = (left: 0; top: 0; right: 0; Bottom: 0);
   NullRectD: TRectD = (left: 0; top: 0; right: 0; Bottom: 0);
+{$IFDEF INVERTEDYAXIS}
+  InvertedY = -1;
+{$ELSE}
+  InvertedY = 1;
+{$ENDIF}
 
 implementation
 
@@ -1180,11 +1185,11 @@ begin
   j := highI;
   for i := 0 to highI do
   begin
-    d := (path[j].Y + path[i].Y); //needed for Delphi7
-    Result := Result + d * (path[j].X - path[i].X);
+    d := (path[j].Y - path[i].Y); //needed for Delphi7
+    Result := Result + d * (path[j].X + path[i].X);
     j := i;
   end;
-  Result := Result * 0.5;
+  Result := Result * 0.5 * InvertedY;
 end;
 //------------------------------------------------------------------------------
 
@@ -1198,10 +1203,10 @@ begin
   for i := 0 to highI do
   begin
     Result := Result +
-      (path[j].Y + path[i].Y) * (path[j].X - path[i].X);
+      (path[j].X + path[i].X) * (path[j].Y - path[i].Y);
     j := i;
   end;
-  Result := Result * 0.5;
+  Result := Result * 0.5 * InvertedY;
 end;
 //------------------------------------------------------------------------------
 

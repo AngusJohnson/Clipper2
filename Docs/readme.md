@@ -38,7 +38,7 @@ Clipped solutions are not guaranteed to be in their simplest forms. For example,
 
 ### Clipping open paths:
 
-The Clipper library clips **subject** paths which may be closed (polygons) or open (polylines). To fully understand the library's open path clipping, it's important to note that clipping is performed using a *sweep line* algorithm that progressing top-down in a Cartesian plane (ie from vertices with the largest Y coordinates to those with the least Y coordinates). Open path segments that touch a clipping boundary may or may not be part of the clipped solution. This will depend on which side of the clip boundary the path was on *prior to touching*. However *prior* in this case isn't referring to the segment that's closer to the start of the path. Instead prior is *relative to the sweep's direction*. While sweeping top-down in the Cartesian plane, *prior* refers to the segment immediately above. So:
+The Clipper library clips **subject** paths which may be closed (polygons) or open (polylines). To fully understand the library's open path clipping, it's important to note that clipping is performed using a *sweep line* algorithm that progressing top-down in a Cartesian plane (ie from vertices with the largest Y coordinates to those with the least Y coordinates). Open path segments that touch a clipping boundary may or may not be part of clipping solutions. This will depend on which side of the clip boundary the path was on *prior to touching*. However *prior* in this case isn't referring to the segment that's closer to the path's origin. Instead prior is *relative to the sweep's direction*. While sweeping top-down in the Cartesian plane, *prior* refers to the segment immediately above. So:
 <ul>
 <li>when an open path prior to touching a clipping boundary lies outside the clipping region, the touching segment will <i>not</i> be part of the clipping solution</li>
 <li>when an open path prior to touching a clipping boundary lies inside the clipping region, the touching segment will be part of the clipping solution</li>
@@ -60,7 +60,7 @@ Examples:
 
 ### PreserveCollinear property:
 
-This property only pertains to **closed paths**. Paths will sometimes have consecutive segments that make a single straight edge, and where shared vertices can be removed without altering path shape. This removal simplifies path definitions and is usually the preferred option, though not always. However whenever solutions contain **spikes** from to consecutive edges reversing back on each other, these spikes will always be removed irrespective of whether ``PreserveCollinear`` is enabled or disabled.<br>
+This property only pertains to **closed paths** in clipping solutions. Paths will sometimes have consecutive segments that make a single straight edge, and where shared vertices can be removed without altering path shape. This removal simplifies path definitions and is usually the preferred option, though not always. However whenever solutions contain **spikes** from consecutive edges reversing back on each other, these spikes will always be removed irrespective of whether ``PreserveCollinear`` is enabled or disabled.<br>
 
 Example:
 

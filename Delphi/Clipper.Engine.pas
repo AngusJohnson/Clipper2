@@ -372,7 +372,6 @@ resourcestring
 const
   DefaultClipperDScale = 100;
   DummyPointer = Pointer(-1);
-
 //------------------------------------------------------------------------------
 // Miscellaneous Functions ...
 //------------------------------------------------------------------------------
@@ -589,7 +588,7 @@ end;
 function NextVertex(e: PActive): PVertex;
   {$IFDEF INLINING} inline; {$ENDIF}
 begin
-  if e.WindDx > 0 then
+  if e.WindDx < 0 then
     Result := e.vertTop.Next else
     Result := e.vertTop.Prev;
 end;
@@ -600,7 +599,7 @@ end;
 function PrevPrevVertex(e: PActive): PVertex;
   {$IFDEF INLINING} inline; {$ENDIF}
 begin
-  if e.WindDx > 0 then
+  if e.WindDx < 0 then
     Result := e.vertTop.Prev.Prev else
     Result := e.vertTop.Next.Next;
 end;
@@ -683,8 +682,12 @@ begin
   end;
 
   setLength(path, cnt);
-  path[0] := op.Pt;
+    path[0] := op.Pt;
+{$IFDEF INVERTEDYAXIS}
   op := op.Next;
+{$ELSE}
+  op := op.Prev;
+{$ENDIF}
   j := 0;
   for i := 0 to cnt -2 do
   begin
@@ -693,7 +696,11 @@ begin
       inc(j);
       path[j] := op.Pt;
     end;
-    op := op.Next;
+{$IFDEF INVERTEDYAXIS}
+  op := op.Next;
+{$ELSE}
+  op := op.Prev;
+{$ENDIF}
   end;
 
   setLength(path, j+1);
@@ -817,11 +824,11 @@ begin
   if not Assigned(op) then Exit;
   op2 := op;
   repeat
-    d := (op2.Prev.Pt.Y + op2.Pt.Y);
-    Result := Result + d * (op2.Prev.Pt.X - op2.Pt.X);
+    d := (op2.Prev.Pt.Y - op2.Pt.Y);
+    Result := Result + d * (op2.Prev.Pt.X + op2.Pt.X);
     op2 := op2.Next;
   until op2 = op;
-  Result := Result * 0.5;
+  Result := Result * 0.5 * InvertedY;
 end;
 //------------------------------------------------------------------------------
 
@@ -952,7 +959,7 @@ end;
 function TestJoinWithPrev1(e: PActive): Boolean;
 begin
   //this is marginally quicker than TestJoinWithPrev2
-  //because e.PrevInAEL.currX is accurate
+  //but can only be used when e.PrevInAEL.currX is accurate
   Result := IsHotEdge(e) and not IsOpen(e) and
     Assigned(e.PrevInAEL) and (e.PrevInAEL.CurrX = e.CurrX) and
     IsHotEdge(e.PrevInAEL) and not IsOpen(e.PrevInAEL) and
@@ -974,6 +981,8 @@ end;
 
 function TestJoinWithNext1(e: PActive): Boolean;
 begin
+  //this is marginally quicker than TestJoinWithNext2
+  //but can only be used when e.NextInAEL.currX is accurate
   Result := IsHotEdge(e) and Assigned(e.NextInAEL) and
     IsHotEdge(e.NextInAEL) and not IsOpen(e) and
     not IsOpen(e.NextInAEL) and
@@ -1347,35 +1356,35 @@ begin
   Result := false;
   case FFillRule of
     frNonZero: if abs(e.WindCnt) <> 1 then Exit;
-    frPositive: if (e.WindCnt <> 1) then Exit;
-    frNegative: if (e.WindCnt <> -1) then Exit;
+    frPositive: if (e.WindCnt <> InvertedY) then Exit;
+    frNegative: if (e.WindCnt <> -InvertedY) then Exit;
   end;
 
   case FClipType of
     ctIntersection:
       case FFillRule of
         frEvenOdd, frNonZero: Result := (e.WindCnt2 <> 0);
-        frPositive: Result := (e.WindCnt2 > 0);
-        frNegative: Result := (e.WindCnt2 < 0);
+        frPositive: Result := (e.WindCnt2*InvertedY > 0);
+        frNegative: Result := (e.WindCnt2*InvertedY < 0);
       end;
     ctUnion:
       case FFillRule of
         frEvenOdd, frNonZero: Result := (e.WindCnt2 = 0);
-        frPositive: Result := (e.WindCnt2 <= 0);
-        frNegative: Result := (e.WindCnt2 >= 0);
+        frPositive: Result := (e.WindCnt2*InvertedY <= 0);
+        frNegative: Result := (e.WindCnt2*InvertedY >= 0);
       end;
     ctDifference:
       if GetPolyType(e) = ptSubject then
         case FFillRule of
           frEvenOdd, frNonZero: Result := (e.WindCnt2 = 0);
-          frPositive: Result := (e.WindCnt2 <= 0);
-          frNegative: Result := (e.WindCnt2 >= 0);
+          frPositive: Result := (e.WindCnt2*InvertedY <= 0);
+          frNegative: Result := (e.WindCnt2*InvertedY >= 0);
         end
       else
         case FFillRule of
           frEvenOdd, frNonZero: Result := (e.WindCnt2 <> 0);
-          frPositive: Result := (e.WindCnt2 > 0);
-          frNegative: Result := (e.WindCnt2 < 0);
+          frPositive: Result := (e.WindCnt2*InvertedY > 0);
+          frNegative: Result := (e.WindCnt2*InvertedY < 0);
         end;
     ctXor:
         Result := true;
@@ -1557,10 +1566,9 @@ begin
       Result := a2IsLeftBound
     else
       //compare turning direction of right bounds
-      Result := (CrossProduct(PrevPrevVertex(a1).Pt,
-        a1.Bot, a1.Top) = 0) or
+      Result := (CrossProduct(PrevPrevVertex(a1).Pt, a1.Bot, a1.Top) = 0) or
         (CrossProduct(PrevPrevVertex(a1).Pt,
-          a2.Bot, PrevPrevVertex(a2).Pt) > 0) = a2IsLeftBound;
+        a2.Bot, PrevPrevVertex(a2).Pt) > 0) = a2IsLeftBound;
   end
   else
     Result := a2IsLeftBound;
@@ -1630,7 +1638,7 @@ begin
       leftB.vertTop := locMin.Vertex.Prev; //ie descending
       leftB.Top := leftB.vertTop.Pt;
       leftB.CurrX := leftB.Bot.X;
-      leftB.WindDx := -1;
+      leftB.WindDx := 1;
       SetDx(leftB);
     end;
 
@@ -1647,7 +1655,7 @@ begin
       rightB.vertTop := locMin.Vertex.Next; //ie ascending
       rightB.Top := rightB.vertTop.Pt;
       rightB.CurrX := rightB.Bot.X;
-      rightB.WindDx := 1;
+      rightB.WindDx := -1;
       rightB.Jump := nil;
       SetDx(rightB);
     end;
@@ -1857,8 +1865,8 @@ end;
 
 function AreaTriangle(const pt1, pt2, pt3: TPoint64): double;
 begin
-  Result := 0.5 * (pt1.X * (pt2.Y - pt3.Y) +
-    pt2.X * (pt3.Y - pt1.Y) + pt3.X * (pt1.Y - pt2.Y));
+  Result := 0.5 * InvertedY * (pt1.X * (pt3.Y - pt2.Y)
+    + pt2.X * (pt1.Y - pt3.Y) + pt3.X * (pt2.Y - pt1.Y) );
 end;
 //------------------------------------------------------------------------------
 
@@ -1905,8 +1913,9 @@ procedure TClipperBase.FixSelfIntersects(var op: POutPt);
     while Assigned(splitOp.Joiner) do
       DisposeJoin(splitOp);
 
-    if ((Abs(area2) > (Abs(area1))) or
-      ((area2 > 0) = (area1 > 0))) then
+    if (area2 <> 0) and
+      (((Abs(area2) > (Abs(area1))) or
+      ((area2 > 0) = (area1 > 0)))) then
     begin
       new(newOutRec);
       FillChar(newOutRec^, SizeOf(TOutRec), 0);
@@ -2106,7 +2115,7 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-function FindJoiner(joiner: PJoiner; match: PJoiner): PJoiner;
+function FindJoin(joiner: PJoiner; match: PJoiner): PJoiner;
 begin
   if (joiner.next1 = match) or (joiner.next2 = match) then
   begin
@@ -2114,10 +2123,10 @@ begin
   end else
   begin
     if Assigned(joiner.next1) then
-      Result := FindJoiner(joiner.next1, match) else
+      Result := FindJoin(joiner.next1, match) else
       Result := nil;
     if not Assigned(Result) and Assigned(joiner.next2) then
-      Result := FindJoiner(joiner.next2, match);
+      Result := FindJoin(joiner.next2, match);
   end;
 end;
 //------------------------------------------------------------------------------
@@ -2130,7 +2139,7 @@ begin
   op1 := joiner.op1;
   if op1.Joiner <> joiner then
   begin
-    j := FindJoiner(op1.Joiner, joiner);
+    j := FindJoin(op1.Joiner, joiner);
     if j.next1 = joiner then
       j.next1 := joiner.next1 else
       j.next2 := joiner.next1;
@@ -2140,7 +2149,7 @@ begin
   op2 := joiner.op2;
   if op2.Joiner <> joiner then
   begin
-    j := FindJoiner(op2.Joiner, joiner);
+    j := FindJoin(op2.Joiner, joiner);
     if j.next1 = joiner then
       j.next1 := joiner.next2 else
       j.next2 := joiner.next2;
@@ -2640,13 +2649,13 @@ begin
   case FFillRule of
     frPositive:
       begin
-        e1WindCnt := e1.WindCnt;
-        e2WindCnt := e2.WindCnt;
+        e1WindCnt := e1.WindCnt*InvertedY;
+        e2WindCnt := e2.WindCnt*InvertedY;
       end;
     frNegative:
       begin
-        e1WindCnt := -e1.WindCnt;
-        e2WindCnt := -e2.WindCnt;
+        e1WindCnt := -e1.WindCnt*InvertedY;
+        e2WindCnt := -e2.WindCnt*InvertedY;
       end;
     else
       begin
@@ -2716,13 +2725,13 @@ begin
     case FFillRule of
       frPositive:
       begin
-        e1WindCnt2 := e1.WindCnt2;
-        e2WindCnt2 := e2.WindCnt2;
+        e1WindCnt2 := e1.WindCnt2*InvertedY;
+        e2WindCnt2 := e2.WindCnt2*InvertedY;
       end;
       frNegative:
       begin
-        e1WindCnt2 := -e1.WindCnt2;
-        e2WindCnt2 := -e2.WindCnt2;
+        e1WindCnt2 := -e1.WindCnt2*InvertedY;
+        e2WindCnt2 := -e2.WindCnt2*InvertedY;
       end
       else
       begin
@@ -3256,7 +3265,7 @@ procedure TClipperBase.ConvertHorzTrialsToJoins;
 var
   op1a, op1b, op2a, op2b: POutPt;
 begin
-  //get the first trial pair (= start and end of horz edge)
+  //get the first trial pair (ie. start and end of horz segment)
   //and loop through following segments until an overlap is found
   //Repeat this until all trial pairs have been processed
   while Assigned(FHorzFirst) do

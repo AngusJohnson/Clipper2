@@ -6,6 +6,18 @@
 //For user defined Z-coordinates, defined in Clipper's 'SetZ' callback event
 {.$DEFINE USINGZ}
 
+//Winding direction is based on the Cartesian Plane where the display origin 
+//is in the bottom-left corner. For displays with inverted Y-axes, the winding 
+//direction will be reversed such that clockwise becomes anti-clockwise and 
+//positive winding will become negative. This is important when calculating 
+//polygon areas, since polygons with vertices progressing in a clockwise 
+//direction are usually considered to have positive areas, and polygons with 
+//vertices progressing in a counter-clockwise direction are usually considered 
+//to have negative areas. winding direction will usually only be of particular 
+//concern to the library user if either FillRule.Positive or FillRule.Negative 
+//is used, but their use is uncommon.
+{$DEFINE INVERTEDYAXIS}
+
 ///////////////////////////////////////////////////////////////////////////////
 //COMPILER DIFINED PREPROCESSOR DIRECTIVES (ie. do not touch ;))
 ///////////////////////////////////////////////////////////////////////////////
