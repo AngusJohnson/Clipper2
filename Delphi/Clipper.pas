@@ -3,7 +3,7 @@ unit Clipper;
 (*******************************************************************************
 * Author    :  Angus Johnson                                                   *
 * Version   :  10.0 (beta) - aka Clipper2                                      *
-* Date      :  18 March 2022                                                   *
+* Date      :  2 April 2022                                                    *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  This module provides a simple interface to the Clipper Library  *
@@ -42,12 +42,16 @@ function Intersect(const subjects, clips: TPaths64;
   fillRule: TFillRule): TPaths64; overload;
 function Union(const subjects, clips: TPaths64;
   fillRule: TFillRule): TPaths64; overload;
+function Union(const subjects: TPaths64;
+  fillRule: TFillRule): TPaths64; overload;
 function Difference(const subjects, clips: TPaths64;
   fillRule: TFillRule): TPaths64; overload;
 function XOR_(const subjects, clips: TPaths64;
   fillRule: TFillRule): TPaths64; overload;
 
 function Intersect(const subjects, clips: TPathsD;
+  fillRule: TFillRule; decimalPrec: integer = 2): TPathsD; overload;
+function Union(const subjects: TPathsD;
   fillRule: TFillRule; decimalPrec: integer = 2): TPathsD; overload;
 function Union(const subjects, clips: TPathsD;
   fillRule: TFillRule; decimalPrec: integer = 2): TPathsD; overload;
@@ -186,6 +190,12 @@ begin
 end;
 //------------------------------------------------------------------------------
 
+function Union(const subjects: TPaths64; fillRule: TFillRule): TPaths64;
+begin
+  Result := BooleanOp(ctUnion, fillRule, subjects, nil);
+end;
+//------------------------------------------------------------------------------
+
 function Difference(const subjects, clips: TPaths64; fillRule: TFillRule): TPaths64;
 begin
   Result := BooleanOp(ctDifference, fillRule, subjects, clips);
@@ -209,6 +219,13 @@ function Union(const subjects, clips: TPathsD;
   fillRule: TFillRule; decimalPrec: integer = 2): TPathsD;
 begin
   Result := BooleanOp(ctUnion, fillRule, subjects, clips, decimalPrec);
+end;
+//------------------------------------------------------------------------------
+
+function Union(const subjects: TPathsD;
+  fillRule: TFillRule; decimalPrec: integer = 2): TPathsD;
+begin
+  Result := BooleanOp(ctUnion, fillRule, subjects, nil, decimalPrec);
 end;
 //------------------------------------------------------------------------------
 

@@ -3,7 +3,7 @@
 (*******************************************************************************
 * Author    :  Angus Johnson                                                   *
 * Version   :  10.0 (beta) - aka Clipper2                                      *
-* Date      :  31 March 2022                                                   *
+* Date      :  2 April 2022                                                    *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  Core Clipper Library module                                     *
 *              Contains structures and functions used throughout the library   *
@@ -16,12 +16,6 @@ interface
 
 uses
   Classes, SysUtils, Math;
-
-const
-  sqrtTwo = 1.4142135623731;
-  oneDegreeAsRadian = 0.01745329252;
-  floatingPointTolerance = 1E-15;
-  defaultMinimumEdgeLength = 0.1;
 
 type
   PPoint64  = ^TPoint64;
@@ -40,13 +34,13 @@ type
 {$ENDIF}
   end;
 
-  //TPath: a simple data structure to represent a series of vertices, whether
-  //open (poly-line) or closed (polygon). A path may be simple or complex (self
-  //intersecting). For simple polygons, path orientation (whether clockwise or
-  //counter-clockwise) is generally used to differentiate outer paths from inner
-  //paths (holes). For complex polygons (and also for overlapping polygons),
-  //explicit 'filling rules' (see below) are used to indicate regions that are
-  //inside (filled) and regions that are outside (unfilled) a specific polygon.
+  //Path: a simple data structure representing a series of vertices, whether
+  //open (poly-line) or closed (polygon). Paths may be simple or complex (self
+  //intersecting). For simple polygons, consisting of a single non-intersecting
+  //path, path orientation is unimportant. However, for complex polygons and
+  //for overlapping polygons, various 'filling rules' define which regions will
+  //be inside (filled) and which will be outside (unfilled).
+
   TPath64  = array of TPoint64;
   TPaths64 = array of TPath64;
   TArrayOfPaths = array of TPaths64;
@@ -54,6 +48,11 @@ type
   TPathD = array of TPointD;
   TPathsD = array of TPathD;
   TArrayOfPathsD = array of TPathsD;
+
+  //The most commonly used filling rules for polygons are EvenOdd and NonZero.
+  //https://en.wikipedia.org/wiki/Even-odd_rule
+  //https://en.wikipedia.org/wiki/Nonzero-rule
+  TFillRule = (frEvenOdd, frNonZero, frPositive, frNegative);
 
   TArrayOfInteger = array of Integer;
   TArrayOfDouble = array of double;
@@ -89,15 +88,11 @@ type
   end;
 
   TClipType = (ctNone, ctIntersection, ctUnion, ctDifference, ctXor);
-  //By far the most widely used filling rules for polygons are EvenOdd
-  //and NonZero, sometimes called Alternate and Winding respectively.
-  //https://en.wikipedia.org/wiki/Nonzero-rule
-  TFillRule = (frEvenOdd, frNonZero, frPositive, frNegative);
+
   TPointInPolygonResult = (pipInside, pipOutside, pipOn);
 
   EClipperLibException = class(Exception);
 
-//Area: returns type double to avoid potential integer overflows
 function Area(const path: TPath64): Double; overload;
 function Area(const path: TPathD): Double; overload;
 function IsClockwise(const path: TPath64): Boolean; overload;
@@ -117,9 +112,6 @@ function DistanceFromLineSqrd(const pt, linePt1, linePt2: TPoint64): double; ove
 function DistanceFromLineSqrd(const pt, linePt1, linePt2: TPointD): double; overload;
 
 function SegmentsIntersect(const seg1a, seg1b, seg2a, seg2b: TPoint64): boolean;
-//SelfIntersectIdx: returns the index of first of 4 consecutive points
-//defining intersecting edges, otherwise returns -1;
-function SelfIntersectIdx(const path: TPath64): integer;
 
 function PointsEqual(const pt1, pt2: TPoint64): Boolean; overload;
   {$IFDEF INLINING} inline; {$ENDIF}
@@ -1175,6 +1167,9 @@ begin
 end;
 //------------------------------------------------------------------------------
 
+//Areas will be positive when path orientation is clockwise, otherwise they
+//will be negative. (This assumes the INVERTEDYAXIS preprocessor define
+//corresponds with the display's orientation.)
 function Area(const path: TPath64): Double;
 var
   i, j, highI: Integer;
@@ -1434,23 +1429,6 @@ begin
       Result.Y := (ln1a.Y + ln1b.Y)/2;
     end;
   end;
-end;
-//------------------------------------------------------------------------------
-
-function SelfIntersectIdx(const path: TPath64): integer;
-var
-  i, len: integer;
-begin
-  len := Length(path);
-  if len > 3 then
-    for i := 0 to len -1 do
-      if SegmentsIntersect(path[i], path[(i+1) mod len],
-        path[(i+2) mod len], path[(i+3) mod len]) then
-      begin
-        Result := i;
-        Exit;
-      end;
-  Result := -1;
 end;
 //------------------------------------------------------------------------------
 

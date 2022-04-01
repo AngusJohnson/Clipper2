@@ -3,7 +3,7 @@ unit Clipper.Engine;
 (*******************************************************************************
 * Author    :  Angus Johnson                                                   *
 * Version   :  10.0 (beta) - aka Clipper2                                      *
-* Date      :  1 April 2022                                                    *
+* Date      :  2 April 2022                                                    *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  This is the main polygon clipping module                        *
@@ -18,26 +18,6 @@ uses
   Classes, SysUtils, Math, Clipper.Core;
 
 type
-  TVertexFlag = (vfOpenStart, vfOpenEnd, vfLocMax, vfLocMin);
-  TVertexFlags = set of TVertexFlag;
-
-  //Vertex: a pre-clipping data structure. It is used to separate polygons
-  //into ascending and descending 'bounds' (or sides) that start at local
-  //minima and ascend (on the left with clockwise oriented paths) to a local
-  //maxima, before descending to either the same or another local minima.
-  PVertex = ^TVertex;
-  TVertex = record
-    Pt    : TPoint64;
-    Next  : PVertex;
-    Prev  : PVertex;
-    Flags : TVertexFlags;
-  end;
-
-  //Every closed path (or polygon) is made up of a series of vertices forming
-  //edges that alternate between going up (relative to the Y-axis) and going
-  //down. Edges consecutively going up or consecutively going down are called
-  //'bounds' (or sides if they're simple polygons). 'Local Minima' refer to
-  //vertices where descending bounds become ascending ones.
 
   //PathType:
   //  1. only subject paths may be open
@@ -45,6 +25,21 @@ type
   //     Difference are commutative. (In other words, subjects and clips
   //     could be swapped and the same solution will be returned.)
   TPathType = (ptSubject, ptClip);
+
+  //Vertex: a pre-clipping data structure. It is used to separate polygons
+  //into ascending and descending 'bounds' (or sides) that start at local
+  //minima and ascend to a local maxima, before descending again.
+
+  TVertexFlag = (vfOpenStart, vfOpenEnd, vfLocMax, vfLocMin);
+  TVertexFlags = set of TVertexFlag;
+
+  PVertex = ^TVertex;
+  TVertex = record
+    Pt    : TPoint64;
+    Next  : PVertex;
+    Prev  : PVertex;
+    Flags : TVertexFlags;
+  end;
 
   PLocalMinima = ^TLocalMinima;
   TLocalMinima = record
@@ -257,7 +252,6 @@ type
     procedure AddOpenSubject(const subjects: TPaths64); overload;
     procedure AddClip(const clip: TPath64); overload;
     procedure AddClip(const clips: TPaths64); overload;
-    //EXECUTE METHODS ...
     function Execute(clipType: TClipType; fillRule: TFillRule;
       out closedSolutions: TPaths64): Boolean; overload; virtual;
     function Execute(clipType: TClipType; fillRule: TFillRule;
@@ -324,7 +318,6 @@ type
     procedure AddOpenSubject(const pathsD: TPathsD); overload;
     procedure AddClip(const pathD: TPathD); overload;
     procedure AddClip(const pathsD: TPathsD); overload;
-
     constructor Create(roundingDecimalPrecision: integer = 2); reintroduce; overload;
     function Execute(clipType: TClipType; fillRule: TFillRule;
       out closedSolutions: TPathsD): Boolean; overload;
@@ -1907,7 +1900,7 @@ procedure TClipperBase.FixSelfIntersects(var op: POutPt);
     SafeDeleteOutPtJoiners(splitOp.Next);
     SafeDeleteOutPtJoiners(splitOp);
 
-    if (area2 <> 0) and
+    if (Abs(area2) >= 1) and
       (((Abs(area2) > (Abs(area1))) or
       ((area2 > 0) = (area1 > 0)))) then
     begin
