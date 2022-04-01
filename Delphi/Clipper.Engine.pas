@@ -3,7 +3,7 @@ unit Clipper.Engine;
 (*******************************************************************************
 * Author    :  Angus Johnson                                                   *
 * Version   :  10.0 (beta) - aka Clipper2                                      *
-* Date      :  31 March 2022                                                   *
+* Date      :  1 April 2022                                                    *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  This is the main polygon clipping module                        *
@@ -84,7 +84,6 @@ type
     Pts      : POutPt;
     PolyPath : TPolyPathBase;
     State    : TOutRecState;
-    HorzNext : POutRec;
   end;
 
   //TJoiner: structure used in merging "touching" solution polygons
@@ -1766,7 +1765,6 @@ begin
   newOr.Pts := nil;
   newOr.PolyPath := nil;
   newOr.State := osUndefined;
-  newOr.HorzNext := nil;
 
   e1.OutRec := newOr;
   SetOwnerAndInnerOuterState(e1);
@@ -2091,12 +2089,12 @@ procedure TClipperBase.AddJoin(op1, op2: POutPt);
 var
   joiner: PJoiner;
 begin
-  if (op1 = op2) then Exit;
-
-  if (op1.OutRec.Pts = op2.OutRec.Pts) and not
+  if (op1 = op2) or
+    ((op1.OutRec.Pts = op2.OutRec.Pts) and not
     ((op1 = op1.OutRec.Pts) and (op1.Next = op2)) and not
     ((op2 = op1.OutRec.Pts) and (op2.Next = op1)) and
-    ((op1.Prev = op2) or (op2.Prev = op1)) then Exit;
+    ((op1.Prev = op2) or (op2.Prev = op1))) then
+      Exit;
   
   new(joiner);
   joiner.idx := FJoinerList.Add(joiner);
@@ -2163,7 +2161,7 @@ end;
 
 procedure TClipperBase.DisposeJoin(op: POutPt);
 var
-  op1,op2: POutPt;
+  currOp, prevOp, nextOp, jnrOp1,jnrOp2: POutPt;
   joiner: PJoiner;
 begin
   joiner := op.Joiner;
@@ -2177,22 +2175,29 @@ begin
 
   if Assigned(FHorzFirst) then
   begin
-    if op = joiner.op1 then    
-      op2 := joiner.op2 else
-      op2 := joiner.op1;
-    op1 := FHorzFirst;
-    while assigned(op1) do
-      if (op1 = op) or (op1.NextHorz = op) then
+    jnrOp1 := joiner.op1;
+    jnrOp2 := joiner.op2;
+
+    prevOp := nil;
+    currOp := FHorzFirst;
+    while assigned(currOp) do
+    begin
+      if not Assigned(jnrOp1.NextHorz) and (jnrOp1 <> FHorzLast) and
+        not Assigned(jnrOp2.NextHorz) and (jnrOp2 <> FHorzLast) then
+          Break;
+
+      if (currOp = jnrOp1) or (currOp.NextHorz = jnrOp1) or
+        (currOp = jnrOp2) or (currOp.NextHorz = jnrOp2) then
       begin
-        DeleteTrialHorzJoin(op1);
-        break;
-      end 
-      else if (op1 = op2) or (op1.NextHorz = op2) then
-      begin
-        DeleteTrialHorzJoin(op2);
-        break;
+        nextOp := currOp.NextHorz.NextHorz;
+        DeleteTrialHorzJoin(currOp);
+        currOp := nextOp;
       end else
-        op1 := op1.NextHorz.NextHorz;
+      begin
+        prevOp := currOp;
+        currOp := currOp.NextHorz.NextHorz;
+      end;
+    end;
   end;
   DisposeJoin(joiner);
 end;
@@ -2271,7 +2276,6 @@ begin
     newOr.Idx := FOutRecList.Add(newOr);
     newOr.NewOutR := nil;
     newOr.PolyPath := nil;
-    newOr.HorzNext := nil;
     if Abs(area1) >= Abs(area2) then
     begin
       OutRec.Pts := op1;
@@ -2294,6 +2298,7 @@ begin
         newOr.State := osOuter;
     end;
     UpdateOutrecOwner(newOr);
+    TidyOutRec(newOr);
   end;
 end;
 //------------------------------------------------------------------------------
@@ -2540,7 +2545,6 @@ begin
   newOr.State := osOpen;
   newOr.Pts := nil;
   newOr.PolyPath := nil;
-  newOr.HorzNext := nil;
   newOr.FrontE := nil;
   newOr.BackE := nil;
   e.OutRec := newOr;
@@ -3207,7 +3211,7 @@ begin
   end;
 
   //make sure 'op' isn't already in the trial join list
-  if Assigned(op.NextHorz) or
+  if Assigned(op.NextHorz) or (op = FHorzLast) or
     Assigned(op.next.NextHorz) or (op.next = FHorzLast) then Exit;
   //add a dummy joiner (if necessary) to block or make safe possible cleanup
   if not Assigned(op.Joiner) then op.Joiner := DummyPointer;
