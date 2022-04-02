@@ -111,6 +111,7 @@ type
     //     top of scanbeams, but also (re)used to process horizontals.
     PrevInSEL: PActive;
     NextInSEL: PActive;
+    LeftB    : Boolean;
     Jump     : PActive;       //fast merge sorting (see BuildIntersectList())
     VertTop  : PVertex;
     LocMin   : PLocalMinima;  //the bottom of an edge 'bound' (also Vatti)
@@ -215,7 +216,7 @@ type
     procedure DeleteJoin(joiner: PJoiner);
     procedure ProcessJoinList;
     function ProcessJoin(joiner: PJoiner): POutRec;
-    function  ValidateClosedPath(var op: POutPt): Boolean;
+    function  ValidateOrDisposeClosedPath(var op: POutPt): Boolean;
     procedure CompleteSplit(op1, op2: POutPt; OutRec: POutRec);
     function  SafeDisposeOutPt(op: POutPt): POutPt;
     procedure SafeDisposeOutPts(op: POutPt);
@@ -227,7 +228,7 @@ type
       pathType: TPathType; isOpen: Boolean);
     procedure AddPaths(const paths: TPaths64;
       pathType: TPathType; isOpen: Boolean);
-    procedure CleanUp; //unlike Clear, CleanUp preserves added paths
+    procedure ClearSolution; //unlike Clear, CleanUp preserves added paths
     procedure ExecuteInternal(clipType: TClipType; fillRule: TFillRule);
     function BuildPaths(out closedPaths, openPaths: TPaths64): Boolean;
     procedure BuildTree(polytree: TPolyPathBase; out openPaths: TPaths64);
@@ -365,6 +366,7 @@ resourcestring
 const
   DefaultClipperDScale = 100;
   DummyPointer = Pointer(-1);
+
 //------------------------------------------------------------------------------
 // Miscellaneous Functions ...
 //------------------------------------------------------------------------------
@@ -572,16 +574,18 @@ end;
 
 function IsLeftBound(e: PActive): Boolean; {$IFDEF INLINING} inline; {$ENDIF}
 begin
-  //nb: the Jump field is reused here. It's only safe to
-  //do this during *initial* postioning of edges in the AET.
-  Result := Assigned(e.Jump);
+  Result := e.LeftB;
 end;
 //------------------------------------------------------------------------------
 
 function NextVertex(e: PActive): PVertex;
   {$IFDEF INLINING} inline; {$ENDIF}
 begin
+{$IFDEF REVERSE_ORIENTATION}
+  if e.WindDx > 0 then
+{$ELSE}
   if e.WindDx < 0 then
+{$ENDIF}
     Result := e.vertTop.Next else
     Result := e.vertTop.Prev;
 end;
@@ -592,7 +596,11 @@ end;
 function PrevPrevVertex(e: PActive): PVertex;
   {$IFDEF INLINING} inline; {$ENDIF}
 begin
+{$IFDEF REVERSE_ORIENTATION}
+  if e.WindDx > 0 then
+{$ELSE}
   if e.WindDx < 0 then
+{$ENDIF}
     Result := e.vertTop.Prev.Prev else
     Result := e.vertTop.Next.Next;
 end;
@@ -676,7 +684,7 @@ begin
 
   setLength(path, cnt);
     path[0] := op.Pt;
-{$IFDEF INVERTEDYAXIS}
+{$IFDEF REVERSE_ORIENTATION}
   op := op.Next;
 {$ELSE}
   op := op.Prev;
@@ -689,10 +697,10 @@ begin
       inc(j);
       path[j] := op.Pt;
     end;
-{$IFDEF INVERTEDYAXIS}
-  op := op.Next;
+{$IFDEF REVERSE_ORIENTATION}
+    op := op.Next;
 {$ELSE}
-  op := op.Prev;
+    op := op.Prev;
 {$ENDIF}
   end;
 
@@ -805,7 +813,7 @@ end;
 //------------------------------------------------------------------------------
 
 //Areas with clockwise orientation will be positive, assuming
-//the INVERTEDYAXIS preprocessor switch has been set correctly.
+//the REVERSE_ORIENTATION preprocessor switch has been set correctly.
 function Area(op: POutPt): Double;
 var
   op2: POutPt;
@@ -815,11 +823,11 @@ begin
   if not Assigned(op) then Exit;
   op2 := op;
   repeat
-    d := (op2.Prev.Pt.Y - op2.Pt.Y);
+    d := (op2.Pt.Y - op2.Prev.Pt.Y);
     Result := Result + d * (op2.Prev.Pt.X + op2.Pt.X);
     op2 := op2.Next;
   until op2 = op;
-  Result := Result * 0.5 * InvertedY;
+  Result := Result * 0.5;
 end;
 //------------------------------------------------------------------------------
 
@@ -1020,7 +1028,7 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-procedure TClipperBase.CleanUp;
+procedure TClipperBase.ClearSolution;
 var
   dummy: Int64;
 begin
@@ -1041,7 +1049,7 @@ end;
 
 procedure TClipperBase.Clear;
 begin
-  CleanUp;
+  ClearSolution;
   DisposeVerticesAndLocalMinima;
   FCurrentLocMinIdx := 0;
   FLocMinListSorted := false;
@@ -1214,11 +1222,11 @@ procedure SetVertex(v, prevV: PVertex; const point: TPoint64);
   {$IFDEF INLINING} inline; {$ENDIF}
 begin
   v.pt := point;
+  v.Flags := [];
   if assigned(prevV) then
     prevV.Next := v;
   v.Next := nil;
   v.Prev := prevV;
-  v.Flags := [];
 end;
 //------------------------------------------------------------------------------
 
@@ -1304,7 +1312,6 @@ begin
 
   vaCurr.Next := va0;
   va0.Prev := vaCurr;
-
   if isOpen then
   begin
     Include(vaCurr.Flags, vfOpenEnd);
@@ -1347,35 +1354,35 @@ begin
   Result := false;
   case FFillRule of
     frNonZero: if abs(e.WindCnt) <> 1 then Exit;
-    frPositive: if (e.WindCnt <> InvertedY) then Exit;
-    frNegative: if (e.WindCnt <> -InvertedY) then Exit;
+    frPositive: if (e.WindCnt <> 1) then Exit;
+    frNegative: if (e.WindCnt <> -1) then Exit;
   end;
 
   case FClipType of
     ctIntersection:
       case FFillRule of
         frEvenOdd, frNonZero: Result := (e.WindCnt2 <> 0);
-        frPositive: Result := (e.WindCnt2*InvertedY > 0);
-        frNegative: Result := (e.WindCnt2*InvertedY < 0);
+        frPositive: Result := (e.WindCnt2 > 0);
+        frNegative: Result := (e.WindCnt2 < 0);
       end;
     ctUnion:
       case FFillRule of
         frEvenOdd, frNonZero: Result := (e.WindCnt2 = 0);
-        frPositive: Result := (e.WindCnt2*InvertedY <= 0);
-        frNegative: Result := (e.WindCnt2*InvertedY >= 0);
+        frPositive: Result := (e.WindCnt2 <= 0);
+        frNegative: Result := (e.WindCnt2 >= 0);
       end;
     ctDifference:
       if GetPolyType(e) = ptSubject then
         case FFillRule of
           frEvenOdd, frNonZero: Result := (e.WindCnt2 = 0);
-          frPositive: Result := (e.WindCnt2*InvertedY <= 0);
-          frNegative: Result := (e.WindCnt2*InvertedY >= 0);
+          frPositive: Result := (e.WindCnt2 <= 0);
+          frNegative: Result := (e.WindCnt2 >= 0);
         end
       else
         case FFillRule of
           frEvenOdd, frNonZero: Result := (e.WindCnt2 <> 0);
-          frPositive: Result := (e.WindCnt2*InvertedY > 0);
-          frNegative: Result := (e.WindCnt2*InvertedY < 0);
+          frPositive: Result := (e.WindCnt2 > 0);
+          frNegative: Result := (e.WindCnt2 < 0);
         end;
     ctXor:
         Result := true;
@@ -1550,16 +1557,17 @@ begin
 
   a2BotY := a2.Bot.Y;
   a2IsLeftBound := IsLeftBound(a2);
-  if (a1.Bot.Y = a2BotY) and (a1.LocMin.Vertex.Pt.Y = a2BotY) then
+  if  not IsOpen(a1) and
+    (a1.Bot.Y = a2BotY) and (a1.LocMin.Vertex.Pt.Y = a2BotY) then
   begin
     //a1 must also be new
     if IsLeftBound(a1) <> a2IsLeftBound then
       Result := a2IsLeftBound
     else
       //compare turning direction of right bounds
-      Result := (CrossProduct(PrevPrevVertex(a1).Pt, a1.Bot, a1.Top) = 0) or
-        (CrossProduct(PrevPrevVertex(a1).Pt,
-        a2.Bot, PrevPrevVertex(a2).Pt) > 0) = a2IsLeftBound;
+      Result := (CrossProduct(PrevPrevVertex(a1).Pt, a1.Bot, a1.Top) = 0)
+        or ((CrossProduct(PrevPrevVertex(a1).Pt,
+        a2.Bot, PrevPrevVertex(a2).Pt) > 0) = a2IsLeftBound);
   end
   else
     Result := a2IsLeftBound;
@@ -1626,10 +1634,14 @@ begin
       leftB.LocMin := locMin;
       leftB.OutRec := nil;
       leftB.Bot := locMin.Vertex.Pt;
-      leftB.vertTop := locMin.Vertex.Prev; //ie descending
+{$IFDEF REVERSE_ORIENTATION}
+      leftB.WindDx := -1;
+{$ELSE}
+      leftB.WindDx := 1;
+{$ENDIF}
+      leftB.vertTop := locMin.Vertex.Prev;
       leftB.Top := leftB.vertTop.Pt;
       leftB.CurrX := leftB.Bot.X;
-      leftB.WindDx := 1;
       SetDx(leftB);
     end;
 
@@ -1643,11 +1655,14 @@ begin
       rightB.LocMin := locMin;
       rightB.OutRec := nil;
       rightB.Bot := locMin.Vertex.Pt;
-      rightB.vertTop := locMin.Vertex.Next; //ie ascending
+{$IFDEF REVERSE_ORIENTATION}
+      rightB.WindDx := 1;
+{$ELSE}
+      rightB.WindDx := -1;
+{$ENDIF}
+      rightB.vertTop := locMin.Vertex.Next;
       rightB.Top := rightB.vertTop.Pt;
       rightB.CurrX := rightB.Bot.X;
-      rightB.WindDx := -1;
-      rightB.Jump := nil;
       SetDx(rightB);
     end;
     //Currently LeftB is just the descending bound and RightB is the ascending.
@@ -1670,8 +1685,9 @@ begin
       rightB := nil;
     end;
 
-    leftB.Jump := DummyPointer;   //temporary left-edge flag
-    InsertLeftEdge(leftB);
+    LeftB.LeftB := true;
+    InsertLeftEdge(leftB);                   ////////////////
+
     if IsOpen(leftB) then
     begin
       SetWindCountForOpenPathEdge(leftB);
@@ -1686,7 +1702,7 @@ begin
     begin
       rightB.WindCnt := leftB.WindCnt;
       rightB.WindCnt2 := leftB.WindCnt2;
-      InsertRightEdge(leftB, rightB);        ///////
+      InsertRightEdge(leftB, rightB);        ////////////////
 
       if contributing then
       begin
@@ -1794,7 +1810,7 @@ procedure TClipperBase.CleanCollinear(var op: POutPt;
 var
   op2, startOp: POutPt;
 begin
-  if not ValidateClosedPath(op) then Exit;
+  if not ValidateOrDisposeClosedPath(op) then Exit;
   startOp := op;
   op2 := op;
   while true do
@@ -1837,7 +1853,7 @@ begin
 
       if op2 = op then op := op.Prev;
       op2 := SafeDisposeOutPt(op2);
-      if not ValidateClosedPath(op2) then
+      if not ValidateOrDisposeClosedPath(op2) then
       begin
         op := nil;
         Exit;
@@ -1854,8 +1870,8 @@ end;
 
 function AreaTriangle(const pt1, pt2, pt3: TPoint64): double;
 begin
-  Result := 0.5 * InvertedY * (pt1.X * (pt3.Y - pt2.Y)
-    + pt2.X * (pt1.Y - pt3.Y) + pt3.X * (pt2.Y - pt1.Y) );
+  Result := 0.5 * (pt1.X * (pt2.Y - pt3.Y)
+    + pt2.X * (pt3.Y - pt1.Y) + pt3.X * (pt1.Y - pt2.Y) );
 end;
 //------------------------------------------------------------------------------
 
@@ -1873,9 +1889,10 @@ procedure TClipperBase.FixSelfIntersects(var op: POutPt);
     Result := prevOp;
     ip := Point64(Clipper.Core.GetIntersectPoint(
       prevOp.Pt, splitOp.Pt, splitOp.Next.Pt, nextNextOp.Pt));
-    {$IFDEF USINGZ}
-      //???
-    {$ENDIF}
+  {$IFDEF USINGZ}
+    if Assigned(FZFunc) then
+      FZFunc(prevOp.Pt, splitOp.Pt, splitOp.Next.Pt, nextNextOp.Pt, ip.Pt);
+  {$ENDIF}
     area1 := Area(op);
     area2 := AreaTriangle(ip, splitOp.Pt, splitOp.Next.Pt);
 
@@ -2222,12 +2239,12 @@ var
 begin
   area1 := Area(op1);
   area2 := Area(op2);
-  if (area1 = 0) then
+  if Abs(area1) < 1 then
   begin
     SafeDisposeOutPts(op1);
     op1 := nil;
   end
-  else if area2 = 0 then
+  else if Abs(area2) < 1 then
   begin
     SafeDisposeOutPts(op2);
     op2 := nil;
@@ -2620,13 +2637,13 @@ begin
   case FFillRule of
     frPositive:
       begin
-        e1WindCnt := e1.WindCnt*InvertedY;
-        e2WindCnt := e2.WindCnt*InvertedY;
+        e1WindCnt := e1.WindCnt;
+        e2WindCnt := e2.WindCnt;
       end;
     frNegative:
       begin
-        e1WindCnt := -e1.WindCnt*InvertedY;
-        e2WindCnt := -e2.WindCnt*InvertedY;
+        e1WindCnt := -e1.WindCnt;
+        e2WindCnt := -e2.WindCnt;
       end;
     else
       begin
@@ -2663,7 +2680,8 @@ begin
           AddJoin(Result, op2);
     end else
     begin
-      //not safe to treat as maxima & minima, so ...
+      //right & left bounds touching and
+      //not safe to treat as maxima & minima
       Result := AddOutPt(e1, pt);
       op2 := AddOutPt(e2, pt);
       {$IFDEF USINGZ}
@@ -2696,13 +2714,13 @@ begin
     case FFillRule of
       frPositive:
       begin
-        e1WindCnt2 := e1.WindCnt2*InvertedY;
-        e2WindCnt2 := e2.WindCnt2*InvertedY;
+        e1WindCnt2 := e1.WindCnt2;
+        e2WindCnt2 := e2.WindCnt2;
       end;
       frNegative:
       begin
-        e1WindCnt2 := -e1.WindCnt2*InvertedY;
-        e2WindCnt2 := -e2.WindCnt2*InvertedY;
+        e1WindCnt2 := -e1.WindCnt2;
+        e2WindCnt2 := -e2.WindCnt2;
       end
       else
       begin
@@ -2748,9 +2766,9 @@ end;
 {$HINTS ON}
 {$ENDIF}
 
-function TClipperBase.ValidateClosedPath(var op: POutPt): Boolean;
+function TClipperBase.ValidateOrDisposeClosedPath(var op: POutPt): Boolean;
 begin
-  Result := Assigned(op) and (op.Next <> op) and (op.Next <> op.Prev);
+  Result := IsValidClosedPath(op);
   if Result then Exit;
   SafeDisposeOutPts(op);
   op := nil;
@@ -2759,7 +2777,7 @@ end;
 
 function TClipperBase.FixSides(e: PActive): Boolean;
 begin
-  if ValidateClosedPath(e.OutRec.Pts) then
+  if ValidateOrDisposeClosedPath(e.OutRec.Pts) then
   begin
     CheckFixInnerOuter(e);
     Result := (IsOuter(e.OutRec) <> IsFront(e));
@@ -3716,7 +3734,7 @@ begin
     Result := false;
   end;
   finally
-    CleanUp;
+    ClearSolution;
   end;
 end;
 //------------------------------------------------------------------------------
@@ -3734,7 +3752,7 @@ begin
     Result := false;
   end;
   finally
-    CleanUp;
+    ClearSolution;
   end;
 end;
 //------------------------------------------------------------------------------
@@ -3753,7 +3771,7 @@ begin
     Result := false;
   end;
   finally
-    CleanUp;
+    ClearSolution;
   end;
 end;
 
@@ -4006,7 +4024,7 @@ begin
     Result := false;
   end;
   finally
-    CleanUp;
+    ClearSolution;
   end;
 end;
 //------------------------------------------------------------------------------
@@ -4031,7 +4049,7 @@ begin
     Result := false;
   end;
   finally
-    CleanUp;
+    ClearSolution;
   end;
 end;
 {$ENDIF}

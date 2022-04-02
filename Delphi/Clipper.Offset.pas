@@ -252,7 +252,13 @@ begin
       delta := -delta;
     end;
   end;
-  fDelta := -InvertedY * delta;
+
+{$IFDEF REVERSE_ORIENTATION}
+  fDelta := delta;
+{$ELSE}
+  fDelta := -delta;
+{$ENDIF}
+
   absDelta := Abs(fDelta);
   fJoinType := pathGroup.joinType;
 

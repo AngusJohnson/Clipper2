@@ -9,14 +9,13 @@
 //Winding direction is based on the Cartesian Plane where the display origin 
 //is in the bottom-left corner. For displays with inverted Y-axes, the winding 
 //direction will be reversed such that clockwise becomes anti-clockwise and 
-//positive winding will become negative. This is important when calculating 
-//polygon areas, since polygons with vertices progressing in a clockwise 
-//direction are usually considered to have positive areas, and polygons with 
-//vertices progressing in a counter-clockwise direction are usually considered 
-//to have negative areas. winding direction will usually only be of particular 
-//concern to the library user if either FillRule.Positive or FillRule.Negative 
-//is used, but their use is uncommon.
-{$DEFINE INVERTEDYAXIS}
+//positive winding will become negative. This is important when using either
+//FillRule.Positive or FillRule.Negative, and also when calculating areas
+//(which may be positive or negative depending on orientation). When 
+//developing graphics related software using displays with inverted Y-axes,
+//coordinate orientation is reversed which may cause confusion. This can be
+//addressed by reversing the normal orientation.
+{.$DEFINE REVERSE_ORIENTATION}
 
 ///////////////////////////////////////////////////////////////////////////////
 //COMPILER DIFINED PREPROCESSOR DIRECTIVES (ie. do not touch ;))

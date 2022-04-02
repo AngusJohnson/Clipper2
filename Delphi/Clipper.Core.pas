@@ -206,11 +206,6 @@ const
   MaxInt64 = 9223372036854775807;
   NullRect64: TRect64 = (left: 0; top: 0; right: 0; Bottom: 0);
   NullRectD: TRectD = (left: 0; top: 0; right: 0; Bottom: 0);
-{$IFDEF INVERTEDYAXIS}
-  InvertedY = -1;
-{$ELSE}
-  InvertedY = 1;
-{$ENDIF}
 
 implementation
 
@@ -1168,8 +1163,8 @@ end;
 //------------------------------------------------------------------------------
 
 //Areas will be positive when path orientation is clockwise, otherwise they
-//will be negative. (This assumes the INVERTEDYAXIS preprocessor define
-//corresponds with the display's orientation.)
+//will be negative (assuming the REVERSE_ORIENTATION preprocessor define
+//corresponds with the display's orientation).
 function Area(const path: TPath64): Double;
 var
   i, j, highI: Integer;
@@ -1184,7 +1179,11 @@ begin
     Result := Result + d * (path[j].X + path[i].X);
     j := i;
   end;
-  Result := Result * 0.5 * InvertedY;
+{$IFDEF REVERSE_ORIENTATION}
+  Result := Result * -0.5;
+{$ELSE}
+  Result := Result * 0.5;
+{$ENDIF}
 end;
 //------------------------------------------------------------------------------
 
@@ -1201,7 +1200,11 @@ begin
       (path[j].X + path[i].X) * (path[j].Y - path[i].Y);
     j := i;
   end;
-  Result := Result * 0.5 * InvertedY;
+{$IFDEF REVERSE_ORIENTATION}
+  Result := Result * -0.5;
+{$ELSE}
+  Result := Result * 0.5;
+{$ENDIF}
 end;
 //------------------------------------------------------------------------------
 
