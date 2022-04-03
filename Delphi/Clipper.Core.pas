@@ -3,7 +3,7 @@
 (*******************************************************************************
 * Author    :  Angus Johnson                                                   *
 * Version   :  10.0 (beta) - aka Clipper2                                      *
-* Date      :  2 April 2022                                                    *
+* Date      :  3 April 2022                                                    *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  Core Clipper Library module                                     *
 *              Contains structures and functions used throughout the library   *
@@ -183,7 +183,7 @@ function StripDuplicates(const path: TPath64; isClosedPath: Boolean = false): TP
 function StripNearDuplicates(const path: TPathD;
   minLenSqrd: double; isClosedPath: Boolean): TPathD;
 
-function PointBetween(pt, pt1, pt2: TPoint64): Boolean;
+function PointBetween(pt, seg1, seg2: TPoint64): Boolean;
 function SegmentsOverlap(const  seg1a, seg1b, seg2a, seg2b: TPoint64): Boolean;
 
 function ReversePath(const path: TPath64): TPath64; overload;
@@ -317,10 +317,11 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-function PointBetween(pt, pt1, pt2: TPoint64): Boolean;
+function PointBetween(pt, seg1, seg2: TPoint64): Boolean;
 begin
-  Result := ((pt.X > pt1.X) = (pt.X < pt2.X)) and
-    ((pt.Y > pt1.Y) = (pt.Y < pt2.Y));
+  Result :=
+    ((pt.X > seg1.X) = (pt.X < seg2.X)) and
+    ((pt.Y > seg1.Y) = (pt.Y < seg2.Y));
 end;
 //------------------------------------------------------------------------------
 
@@ -359,31 +360,45 @@ end;
 
 function ScalePath(const path: TPathD; sx, sy: double): TPath64;
 var
-  i,len: integer;
+  i,j, len: integer;
 begin
   if sx = 0 then sx := 1;
   if sy = 0 then sy := 1;
   len := length(path);
   setlength(result, len);
-  for i := 0 to len -1 do
+  if len = 0 then Exit;
+  j := 1;
+  result[0].X := Round(path[0].X * sx);
+  result[0].Y := Round(path[0].Y * sy);
+  for i := 1 to len -1 do
   begin
-    result[i].X := Round(path[i].X * sx);
-    result[i].Y := Round(path[i].Y * sy);
+    result[j].X := Round(path[i].X * sx);
+    result[j].Y := Round(path[i].Y * sy);
+    if (result[j].X <> result[j-1].X) or
+      (result[j].Y <> result[j-1].Y) then inc(j);
   end;
+  setlength(result, j);
 end;
 //------------------------------------------------------------------------------
 
 function ScalePath(const path: TPath64; scale: double): TPath64;
 var
-  i,len: integer;
+  i,j, len: integer;
 begin
   len := length(path);
   setlength(result, len);
-  for i := 0 to len -1 do
+  if len = 0 then Exit;
+  j := 1;
+  result[0].X := Round(path[0].X * scale);
+  result[0].Y := Round(path[0].Y * scale);
+  for i := 1 to len -1 do
   begin
-    result[i].X := Round(path[i].X * scale);
-    result[i].Y := Round(path[i].Y * scale);
+    result[j].X := Round(path[i].X * scale);
+    result[j].Y := Round(path[i].Y * scale);
+    if (result[j].X <> result[j-1].X) or
+      (result[j].Y <> result[j-1].Y) then inc(j);
   end;
+  setlength(result, j);
 end;
 //------------------------------------------------------------------------------
 
@@ -416,7 +431,7 @@ end;
 
 function ScalePaths(const paths: TPathsD; sx, sy: double): TPaths64;
 var
-  i,len: integer;
+  i,j,len: integer;
 begin
   if sx = 0 then sx := 1;
   if sy = 0 then sy := 1;
@@ -1422,7 +1437,7 @@ begin
     b1 := ln1A.Y - m1 * ln1A.X;
     m2 := (ln2B.Y - ln2A.Y)/(ln2B.X - ln2A.X);
     b2 := ln2A.Y - m2 * ln2A.X;
-    if m1 <> m2 then
+    if Abs(m1 - m2) > 1.0E-15 then
     begin
       Result.X := (b2 - b1)/(m1 - m2);
       Result.Y := m1 * Result.X + b1;

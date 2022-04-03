@@ -3,7 +3,7 @@ unit Clipper.Offset;
 (*******************************************************************************
 * Author    :  Angus Johnson                                                   *
 * Version   :  10.0 (beta) - aka Clipper2                                      *
-* Date      :  2 April 2022                                                    *
+* Date      :  3 April 2022                                                    *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  Offset paths and clipping solutions                             *
@@ -271,7 +271,6 @@ begin
   begin
     //get steps per 180 degrees (see offset_triginometry2.svg)
     steps := PI / ArcCos(1 - arcTol / absDelta);
-    //steps := Min(steps, fDelta * Pi); //avoid excessive precision
     fStepsPerRad := steps / Two_Pi;
   end;
 

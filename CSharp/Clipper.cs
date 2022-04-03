@@ -1,7 +1,7 @@
 ﻿/*******************************************************************************
 * Author    :  Angus Johnson                                                   *
 * Version   :  10.0 (release candidate 1) - also known as Clipper2             *
-* Date      :  19 March 2022                                                   *
+* Date      :  3 April 2022                                                    *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  This module contains simple functions that will likely cover    *
@@ -111,8 +111,12 @@ namespace Clipper2Lib
       double a = 0.0;
       int cnt = path.Count;
       for (int i = 0, j = cnt - 1; i < cnt; j = i++)
-        a += (double)(path[j].Y + path[i].Y) * (path[j].X - path[i].X);
+        a += (double)(path[j].Y - path[i].Y) * (path[j].X + path[i].X);
+#if REVERSE_ORIENTATION
+      return a * -0.5;
+#else
       return a * 0.5;
+#endif
     }
 
     public static double Area(Paths64 paths)
@@ -129,8 +133,12 @@ namespace Clipper2Lib
       double a = 0.0;
       int cnt = path.Count;
       for (int i = 0, j = cnt - 1; i < cnt; j = i++)
-        a += (path[j].y + path[i].y) * (path[j].x - path[i].x);
+        a += (path[j].y - path[i].y) * (path[j].x + path[i].x);
+#if REVERSE_ORIENTATION
+      return a * -0.5;
+#else
       return a * 0.5;
+#endif
     }
 
     public static double Area(PathsD paths)
