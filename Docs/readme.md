@@ -1,23 +1,25 @@
 # Clipper2
 
-This is a **pre-release beta version** of Clipper2. While my original <a href="https://sourceforge.net/projects/polyclipping/">**Clipper Library**</a> (i.e. versions 1 through to 6.4.2) was very functional, in many places it is/was messy. Clipper2 is a major rewrite. New features include:
+This is a **pre-release beta version** of Clipper2. While my original <a href="https://sourceforge.net/projects/polyclipping/">**Clipper Library**</a> (i.e. versions 1 through to 6.4.2) was quite functional, the code was messy as it addressed numerous edge cases (pun intended). **Clipper2** is a major rewrite, and while the code is cleaner, it's still very complicated.<br>
+
+New features include:
 <ul>
-  <li>Support for floating point coordinates. While the library still performs all clipping operations using integer coordinates that preserve numerical robustness, floating point conversions are now managed internally.
-  <li>There's more complete and more efficient removal of spikes and micro-self-intersections, and better merging of touching polygons from clipping solutions. (The latter has just been added to the Delphi code).
+  <li>Support for floating point coordinates. While the library still performs all clipping operations using integer coordinates (to preserve numerical robustness), floating point conversions can now managed by the library.
+  <li>There's more complete and more efficient removal of spikes and micro-self-intersections, and better merging of touching polygons from clipping solutions.
   <li>And it's even a bit faster.
 </ul> 
 <br>
 
-These changes also affect how the library is used, including:
+There are also changes in how the library is used, including:
 1. The <code>cInt</code> type used for path coordinates has been replaced with native 64bit integer types (<code>long</code>, <code>Int64</code> or <code>int64_t</code>).
-2. The <code>IntPoint</code> and <code>IntRect</code> types have also been renamed <code>Point64</code> and <code>Rect64</code> respectively. There is new support for floating point coordinates, with the new PointD and RectD classes indicating double float values.
+2. The <code>IntPoint</code> and <code>IntRect</code> types have also been renamed <code>Point64</code> and <code>Rect64</code> respectively. There's support for floating point coordinates, with the new PointD and RectD classes indicating *double* float values.
 3. The <code>PolyFillType</code> enumeration has been renamed <code>FillRule</code>.
 4. The Clipper class no longer has <code>AddPath</code> and <code>AddPaths</code> methods. These have been replaced with <code>AddSubject</code>, <code>AddOpenSubject</code> and <code>AddClip</code> methods.
 5. The <code>Clipper</code> class's <code>Execute</code> parameters have changed with the removal of the second FillRule parameter, and addition of an optional OpenSolutions parameter. (The second FillRule parameter was almost never needed and probably confusing).
 6. Collinear vertices are retained by default, in contrast to the default behavior of Clipper1.
 7. While the Clipper class remains integral to all clipping routines, most clipping can now be performed using simple functions that hide Clipper class construction and use.
 8. The <code>Polytree</code> class now only contains closed paths (ie polygons) since open paths can't contain polygons and open paths in solutions are now returned via Execute's OpenSolutions parameter.
-9. When offestting open paths, the meaning of the offset <code>delta</code> has changed. This value now represents the <i>total</i> offset width and makes it equivalent to <code>line width</code>.
+9. The scale of the <code>delta</code> parameter has changed when offestting *open* paths. This value now represents the <i>total</i> offset width so it's now equivalent to <code>line width</code>.
  
 
 ## Additional notes:
@@ -26,9 +28,9 @@ These changes also affect how the library is used, including:
 ### Definitions:
 
 Path **segments** are the lines between path vertices. In closed paths (polygons), these are commonly referred to as **edges**.<br>
-Segments are **touching** when they are collinear and at least partially overlap one another.<br>
+Segments are considered **touching** when they are collinear and at least partially overlap one another.<br>
 Polygons are touching when they contain touching edges.<br>
-**Clipping** initially referred to the process of removing or "cutting away" everything in an image that was outside a rectangular *clipping* window. However, this process has now been generalized to include *clipping* with non-rectangular windows, and to include union, difference and XOR boolean operations too. In this library, *images* are defined by one or more **subject** vector paths, where these paths may be open or closed. **Clip** paths, as opposed to subject paths, must be closed. (The library doesn't support clipping with open paths.)<br><br>
+**Clipping** initially referred to the process of removing or "cutting away" those parts of an image that were outside a rectangular *clipping* window. However, this process has been generalized to include *clipping* with non-rectangular windows, and also to include union, difference and XOR boolean operations. In this library, *images* are defined by one or more **subject** vector paths, where these paths may be open or closed. **Clip** paths, as opposed to subject paths, must be closed as the library doesn't support clipping with open paths.<br><br>
 
 
 ### Clipped Solutions:
@@ -38,7 +40,7 @@ Clipped solutions are not guaranteed to be in their simplest forms. For example,
 
 ### Clipping open paths:
 
-The Clipper library clips **subject** paths which may be closed (polygons) or open (polylines). To fully understand the library's open path clipping, it's important to note that clipping is performed using a *sweep line* algorithm that progressing top-down in a Cartesian plane (ie from vertices with the largest Y coordinates to those with the least Y coordinates). Open path segments that touch a clipping boundary may or may not be part of clipping solutions. This will depend on which side of the clip boundary the path was on *prior to touching*. However *prior* in this case isn't referring to the segment that's closer to the path's origin. Instead prior is *relative to the sweep's direction*. While sweeping top-down in the Cartesian plane, *prior* refers to the segment immediately above. So:
+The Clipper library clips **subject** paths which may be closed (polygons) or open (polylines). To fully understand the library's open path clipping, it's important to note that clipping is performed using a *sweep line* algorithm that progresses top-down in a Cartesian plane (ie from vertices with the largest Y coordinates to those with the least Y coordinates). And open path segments that touch a clipping boundary may or may not be part of clipping solutions. This will depend on which side of the clip boundary the open path was on *prior to touching*, where prior is relative to the sweep's direction, not relative to the path's origin. So with that preamble:
 <ul>
 <li>when an open path prior to touching a clipping boundary lies outside the clipping region, the touching segment will <i>not</i> be part of the clipping solution</li>
 <li>when an open path prior to touching a clipping boundary lies inside the clipping region, the touching segment will be part of the clipping solution</li>
@@ -60,11 +62,12 @@ Examples:
 
 ### PreserveCollinear property:
 
-This property only pertains to **closed paths** in clipping solutions. Paths will sometimes have consecutive segments that make a single straight edge, and where shared vertices can be removed without altering path shape. This removal simplifies path definitions and is usually the preferred option, though not always. However whenever solutions contain **spikes** from consecutive edges reversing back on each other, these spikes will always be removed irrespective of whether ``PreserveCollinear`` is enabled or disabled.<br>
+This property only pertains to **closed paths** in clipping solutions. Paths will sometimes have consecutive segments that make a single straight edge, and where shared vertices can be removed without altering path shape. This removal simplifies path definitions and is often preferred in clipping solutions. However whenever raw clipping produces **spikes** from consecutive edges reversing back on each other, these will always be removed from final solutions (even when ``PreserveCollinear`` is enabled).<br>
 
 Example:
 
-	Path64 badPath = MakePath(new int[] { 270, 230160, 230160, 160270, 160270, 2010, 2010, 7060, 7060, 14010, 14010, 20270, 20 })); 
+	Path64 okPath = MakePath(new int[] { 10,10, 50,10, 100,10, 100,100, 10,100 })); 
+	Path64 spikePath = MakePath(new int[] { 10,10, 110,10, 100,10, 100,100, 10,100 })); 
 
 
 ### Examples of using library functions:
