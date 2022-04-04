@@ -1,7 +1,7 @@
 ﻿/*******************************************************************************
 * Author    :  Angus Johnson                                                   *
 * Version   :  10.0 (beta) - also known as Clipper2                            *
-* Date      :  3 April 2022                                                    *
+* Date      :  4 April 2022                                                    *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  This is the main polygon clipping module                        *
@@ -1359,8 +1359,9 @@ namespace Clipper2Lib
 				OutRec outrec = ae1.outrec;
 				outrec.pts = result;
 				UncoupleOutRec(ae1);
-				if (IsOpen(ae1)) 
+				if (!IsOpen(ae1)) 
 					TidyOutRec(outrec);
+				result = outrec.pts;
 			}
 			//and to preserve the winding orientation of outrec ...
 			else if (ae1.outrec.idx < ae2.outrec.idx)
@@ -1395,18 +1396,11 @@ namespace Clipper2Lib
 				p2Start.next = p1End;
 				p1End.prev = p2Start;
 				ae1.outrec.pts = p2Start;
-				if (IsOpen(ae1))
-				{
-					ae1.outrec.pts = p2Start;
-				}
-				else
+				if (!IsOpen(ae1))
 				{
 					ae1.outrec.frontEdge = ae2.outrec.frontEdge;
 					ae1.outrec.frontEdge.outrec = ae1.outrec;
 				}
-				//strip duplicates ...
-				if ((p2End != p2Start) && (p2End.pt == p2End.prev.pt))
-					DeleteOp(p2End);
 			}
 			else
 			{
@@ -1414,22 +1408,12 @@ namespace Clipper2Lib
 				p2Start.next = p1End;
 				p1Start.next = p2End;
 				p2End.prev = p1Start;
-				if (IsOpen(ae1))
-				{
-					ae1.outrec.pts = p1Start;
-				}
-				else
+				if (!IsOpen(ae1))
 				{
 					ae1.outrec.backEdge = ae2.outrec.backEdge;
 					ae1.outrec.backEdge.outrec = ae1.outrec;
 				}
-				//strip duplicates ...
-				if ((p1End != p1Start) && (p1End.pt == p1End.prev.pt))
-					DeleteOp(p1End);
 			}
-
-			if ((ae1.outrec.pts.pt == ae1.outrec.pts.prev.pt) && !IsInvalidPath(ae1.outrec.pts))
-				DeleteOp(ae1.outrec.pts.prev);
 
 			//after joining, the ae2.OutRec must contains no vertices ...
 			ae2.outrec.frontEdge = null;
@@ -1758,7 +1742,7 @@ namespace Clipper2Lib
 			}
 		}
 
-		protected void ExecuteInternal(ClipType ct, FillRule fillRule)
+    protected void ExecuteInternal(ClipType ct, FillRule fillRule)
 		{
 			if (ct == ClipType.None) return;
 			_fillrule = fillRule;
@@ -2305,12 +2289,12 @@ namespace Clipper2Lib
 
 		private static bool IsValidPath(OutPt op)
 		{
-			return op != null && op.next != op;
+			return (op != null) && (op.next != op);
 		}
 
 		private static bool IsValidClosedPath(OutPt op)
 		{
-			return op != null && op.next != op && op.next != op.prev;
+			return (op != null) && (op.next != op) && (op.next != op.prev);
 		}
 
 		private static bool PointBetween(Point64 pt, Point64 seg1, Point64 seg2)
@@ -2646,7 +2630,13 @@ namespace Clipper2Lib
 			return (c * c) / (a * a + b * b);
 		}
 
-		private OutRec ProcessJoin(Joiner j)
+		private static double DistanceSqr(Point64 pt1, Point64 pt2)
+		{
+			return (pt1.X - pt2.X) * (pt1.X - pt2.X) + 
+				(pt1.Y - pt2.Y) * (pt1.Y - pt2.Y);
+		}
+
+	private OutRec ProcessJoin(Joiner j)
 		{
 			OutPt op1 = j.op1, op2 = j.op2;
 			OutRec or1 = op1.outrec;
@@ -2771,21 +2761,47 @@ namespace Clipper2Lib
 					DistanceFromLineSqrd(op1.next.pt, op2.pt, op2.prev.pt) < 2.01)
 				{
 					InsertOp(op1.next.pt, op2.prev);
+					continue;
 				}
 				else if (PointBetween(op2.next.pt, op1.pt, op1.prev.pt) &&
 					DistanceFromLineSqrd(op2.next.pt, op1.pt, op1.prev.pt) < 2.01)
 				{
 					InsertOp(op2.next.pt, op1.prev);
+					continue;
 				}
 				else if (PointBetween(op1.prev.pt, op2.pt, op2.next.pt) &&
 					DistanceFromLineSqrd(op1.prev.pt, op2.pt, op2.next.pt) < 2.01)
 				{
 					InsertOp(op1.prev.pt, op2);
+					continue;
 				}
 				else if (PointBetween(op2.prev.pt, op1.pt, op1.next.pt) &&
 					DistanceFromLineSqrd(op2.prev.pt, op1.pt, op1.next.pt) < 2.01)
 				{
 					InsertOp(op2.prev.pt, op1);
+					continue;
+				}
+
+				//something odd needs tidying up
+				if (DistanceSqr(op1.prev.pt, op1.pt) < 2.01 &&
+					CheckDisposePrevOp(op1, or1)) continue;
+				else if (DistanceSqr(op1.next.pt, op1.pt) < 2.01 &&
+					CheckDisposeNextOp(op1, or1)) continue;
+				else if (DistanceSqr(op2.prev.pt, op2.pt) < 2.01 &&
+					CheckDisposePrevOp(op2, or2)) continue;
+				else if (DistanceSqr(op2.next.pt, op2.pt) < 2.01 &&
+					CheckDisposeNextOp(op2, or2)) continue;
+				else if (op1.prev.pt != op2.next.pt &&
+					(DistanceSqr(op1.prev.pt, op2.next.pt) < 2.01))
+				{
+					op1.prev.pt = op2.next.pt;
+					continue;
+				}
+				else if (op1.next.pt != op2.prev.pt &&
+					(DistanceSqr(op1.next.pt, op2.prev.pt) < 2.01))
+				{
+					op2.prev.pt = op1.next.pt;
+					continue;
 				}
 				else
 				{
@@ -2883,7 +2899,7 @@ namespace Clipper2Lib
 				//nb: if preserveCollinear == true, then only remove 180 deg.spikes
 				if (InternalClipperFunc.CrossProduct(op2.prev.pt, op2.pt, op2.next.pt) == 0) 
 				{
-					if (op.joiner != null)
+					if (op2.joiner != null)
           {
 						if (op2.pt == op2.prev.pt && (op2.prev.joiner == null))
 							op2 = op2.prev;

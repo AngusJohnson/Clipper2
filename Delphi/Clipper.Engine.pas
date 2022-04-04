@@ -3,7 +3,7 @@ unit Clipper.Engine;
 (*******************************************************************************
 * Author    :  Angus Johnson                                                   *
 * Version   :  10.0 (beta) - aka Clipper2                                      *
-* Date      :  3 April 2022                                                    *
+* Date      :  4 April 2022                                                    *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  This is the main polygon clipping module                        *
@@ -2470,31 +2470,25 @@ begin
     end;
 
     //something odd needs tidying up
-    if (DistanceSqr(op1.Prev.Pt, op1.Pt) < 2.01) then
-    begin
-      if not CheckDisposePrevOp(op1, or1) then Break;
-    end
-    else if (DistanceSqr(op1.Next.Pt, op1.Pt) < 2.01) then
-    begin
-      if not CheckDisposeNextOp(op1, or1) then Break;
-    end
-    else if (DistanceSqr(op2.Prev.Pt, op2.Pt) < 2.01) then
-    begin
-      if not CheckDisposePrevOp(op2, or2) then Break;
-    end
-    else if (DistanceSqr(op2.Next.Pt, op2.Pt) < 2.01) then
-    begin
-      if not CheckDisposeNextOp(op2, or2) then Break;
-    end
+    if (DistanceSqr(op1.Prev.Pt, op1.Pt) < 2.01) and
+      CheckDisposePrevOp(op1, or1) then Continue
+    else if (DistanceSqr(op1.Next.Pt, op1.Pt) < 2.01) and
+      CheckDisposeNextOp(op1, or1) then Continue
+    else if (DistanceSqr(op2.Prev.Pt, op2.Pt) < 2.01) and
+      CheckDisposePrevOp(op2, or2) then Continue
+    else if (DistanceSqr(op2.Next.Pt, op2.Pt) < 2.01) and
+      CheckDisposeNextOp(op2, or2) then Continue
     else if not PointsEqual(op1.Prev.Pt, op2.Next.Pt) and
       (DistanceSqr(op1.Prev.Pt, op2.Next.Pt) < 2.01) then
     begin
       op1.Prev.Pt := op2.Next.Pt;
+      Continue;
     end
     else if not PointsEqual(op1.Next.Pt, op2.Prev.Pt) and
       (DistanceSqr(op1.Next.Pt, op2.Prev.Pt) < 2.01) then
     begin
       op2.Prev.Pt := op1.Next.Pt;
+      Continue;
     end
     else
     begin
