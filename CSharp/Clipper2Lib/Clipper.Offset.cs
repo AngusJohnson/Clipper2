@@ -10,6 +10,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 
 namespace Clipper2Lib
 {
@@ -133,6 +134,7 @@ namespace Clipper2Lib
       return solution;
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static PointD GetUnitNormal(PointD pt1, PointD pt2)
     {
       double dx = (pt2.x - pt1.x);
@@ -164,6 +166,7 @@ namespace Clipper2Lib
       return result;
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private void DoSquare(PathGroup group, PathD path, int j, int k)
     {
       if (_delta > 0) 
@@ -185,6 +188,7 @@ namespace Clipper2Lib
       }
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private void DoMiter(PathGroup group, PathD path, int j, int k, double cosA)
     { 
       double q = _delta / (cosA +1);

@@ -13,6 +13,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 
 namespace Clipper2Lib
 {
@@ -220,24 +221,28 @@ namespace Clipper2Lib
 		}
 #endif
 
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		static bool IsOdd(int val)
 		{
 			return ((val & 1) != 0);
 		}
 
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		private static bool IsHotEdge(Active ae)
 		{
 			return ae.outrec != null;
 		}
 
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		private static bool IsOpen(Active ae)
 		{
 			return ae.localMin.isOpen;
 		}
 
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		private static bool IsOpenEnd(Active ae)
 		{
-			return ae.localMin.isOpen && 
+			return ae.localMin.isOpen &&
 				(ae.vertexTop.flags & (VertexFlags.OpenStart | VertexFlags.OpenEnd)) != VertexFlags.None;
 		}
 
@@ -249,26 +254,31 @@ namespace Clipper2Lib
 			return prev;
 		}
 
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		static bool IsOuter(OutRec outrec)
 		{
 			return (outrec.state == OutRecState.Outer);
 		}
 
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		static void SetAsOuter(OutRec outrec)
 		{
 			outrec.state = OutRecState.Outer;
 		}
 
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		static bool IsInner(OutRec outrec)
 		{
 			return (outrec.state == OutRecState.Inner);
 		}
 
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		static void SetAsInner(OutRec outrec)
 		{
 			outrec.state = OutRecState.Inner;
 		}
 
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		static bool IsFront(Active ae)
 		{
 			//the front edge will be the LEFT edge when it's an OUTER polygon
@@ -279,6 +289,7 @@ namespace Clipper2Lib
 				return (ae == ae.outrec.frontEdge);
 		}
 
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		static bool IsInvalidPath(OutPt op)
 		{
 			return (op == null || op.next == op);
@@ -290,6 +301,7 @@ namespace Clipper2Lib
 		*               +inf (180deg) <--- o --. -inf (0deg)                          *
 		*******************************************************************************/
 
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		static double GetDx(Point64 pt1, Point64 pt2)
 		{
 			double dy = pt2.Y - pt1.Y;
@@ -301,6 +313,7 @@ namespace Clipper2Lib
 				return double.PositiveInfinity;
 		}
 
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		static long TopX(Active ae, long currentY)
 		{
 			if ((currentY == ae.top.Y) || (ae.top.X == ae.bot.X)) return ae.top.X;
@@ -308,21 +321,25 @@ namespace Clipper2Lib
 			else return ae.bot.X + (long)Math.Round(ae.dx * (currentY - ae.bot.Y));
 		}
 
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		static bool IsHorizontal(Active ae)
 		{
 			return (ae.top.Y == ae.bot.Y);
 		}
 
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		static bool IsHeadingRightHorz(Active ae)
 		{
 			return (ae.dx == double.NegativeInfinity);
 		}
 
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		static bool IsHeadingLeftHorz(Active ae)
 		{
 			return (ae.dx == double.PositiveInfinity);
 		}
 
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		static void SwapActives(ref Active ae1, ref Active ae2)
 		{
 			Active ae = ae1;
@@ -330,11 +347,13 @@ namespace Clipper2Lib
 			ae2 = ae;
 		}
 
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		static PathType GetPolyType(Active ae)
 		{
 			return ae.localMin.polytype;
 		}
 
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		static bool IsSamePolyType(Active ae1, Active ae2)
 		{
 			return ae1.localMin.polytype == ae2.localMin.polytype;
@@ -368,16 +387,19 @@ namespace Clipper2Lib
 			}
 		}
 
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		static void SetDx(Active ae)
 		{
 			ae.dx = GetDx(ae.bot, ae.top);
 		}
 
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		static bool IsLeftBound(Active ae)
 		{
 			return ae.leftBound;
 		}
 
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		static Vertex NextVertex(Active ae)
 		{
 #if REVERSE_ORIENTATION
@@ -466,6 +488,7 @@ namespace Clipper2Lib
 			}
 		}
 
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		static void SetSides(OutRec outrec, Active startEdge, Active endEdge)
 		{
 			outrec.frontEdge = startEdge;
@@ -571,6 +594,7 @@ namespace Clipper2Lib
 				ReverseOutPts(ae.outrec.pts);
 		}
 
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		private static void UncoupleOutRec(Active ae)
     {
 			OutRec outrec = ae.outrec;
@@ -581,6 +605,7 @@ namespace Clipper2Lib
 			outrec.backEdge = null;
 		}
 
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		private static void SwapSides(OutRec outrec)
 		{
 			Active ae2 = outrec.frontEdge;
@@ -646,6 +671,7 @@ namespace Clipper2Lib
 				outrec.state = OutRecState.Inner;
 		}
 
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		private static bool EdgesAdjacentInAEL(IntersectNode inode)
 		{
 			return (inode.edge1.nextInAEL == inode.edge2) || (inode.edge1.prevInAEL == inode.edge2);
@@ -689,6 +715,7 @@ namespace Clipper2Lib
 			_sel = null;
 		}
 
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		private void InsertScanline(long y)
 		{
 			var index = _scanlineList.BinarySearch(y);
@@ -697,6 +724,7 @@ namespace Clipper2Lib
 			_scanlineList.Insert(index, y);
 		}
 
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		private bool PopScanline(out long y)
 		{
 			int cnt = _scanlineList.Count - 1;
@@ -708,15 +736,19 @@ namespace Clipper2Lib
 			return true;
 		}
 
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		private bool HasLocMinAtY(long y)
 		{
 			return (_currentLocMin < _minimaList.Count && _minimaList[_currentLocMin].vertex.pt.Y == y);
 		}
+
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		LocalMinima PopLocalMinima()
 		{
 			return _minimaList[_currentLocMin++];
 		}
 
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		private void AddLocMin(Vertex vert, PathType polytype, bool isOpen)
 		{
 			//make sure the vertex is added only once ...
@@ -1261,12 +1293,14 @@ namespace Clipper2Lib
 			}  //while (HasLocMinAtY())
 		}
 
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		private void PushHorz(Active ae)
 		{
 			ae.nextInSEL = _sel;
 			_sel = ae;
 		}
 
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		private bool PopHorz(out Active ae)
 		{
 			ae = _sel;
@@ -1275,6 +1309,7 @@ namespace Clipper2Lib
 			return true;
 		}
 
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		private bool TestJoinWithPrev1(Active e)
 		{
 			//this is marginally quicker than TestJoinWithPrev2
@@ -1286,6 +1321,7 @@ namespace Clipper2Lib
 			(InternalClipperFunc.CrossProduct(e.prevInAEL.top, e.bot, e.top) == 0);
 		}
 
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		private bool TestJoinWithPrev2(Active e, Point64 currPt)
 		{
 			return IsHotEdge(e) && !IsOpen(e) &&
@@ -1295,6 +1331,7 @@ namespace Clipper2Lib
 			(InternalClipperFunc.CrossProduct(e.prevInAEL.top, currPt, e.top) == 0);
 		}
 
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		private bool TestJoinWithNext1(Active e)
 		{
 			//this is marginally quicker than TestJoinWithNext2
@@ -1432,6 +1469,7 @@ namespace Clipper2Lib
 			ae2.outrec = null;
 		}
 
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		private OutPt AddOutPt(Active ae, Point64 pt)
 		{
 			OutPt newOp;
@@ -1714,6 +1752,7 @@ namespace Clipper2Lib
 			return resultOp;
 		}
 
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		private void DeleteFromAEL(Active ae)
 		{
 			Active prev = ae.prevInAEL;
@@ -1727,6 +1766,7 @@ namespace Clipper2Lib
 			//delete &ae;
 		}
 
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		private void AdjustCurrXAndCopyToSEL(long topY)
 		{
 			Active ae = _actives;
@@ -1779,6 +1819,7 @@ namespace Clipper2Lib
 			_intersectList.Clear();
 		}
 
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		private void AddNewIntersectNode(Active ae1, Active ae2, long topY)
 		{
 			Point64 pt = GetIntersectPoint(ae1, ae2);
@@ -2271,6 +2312,7 @@ namespace Clipper2Lib
 			return (prevE != null ? prevE.nextInAEL : _actives);
 		}
 
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		private static OutPt DeleteOp(OutPt op)
     {
 			OutPt result = (op.next == op ? null : op.next);
@@ -2279,16 +2321,19 @@ namespace Clipper2Lib
 			return result;
 		}
 
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		private static bool IsValidPath(OutPt op)
 		{
 			return (op != null) && (op.next != op);
 		}
 
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		private static bool IsValidClosedPath(OutPt op)
 		{
 			return (op != null) && (op.next != op) && (op.next != op.prev);
 		}
 
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		private static bool PointBetween(Point64 pt, Point64 seg1, Point64 seg2)
 		{
 			return 
@@ -2300,7 +2345,8 @@ namespace Clipper2Lib
     {
 			return PointBetween(seg1a, seg2a, seg2b) || PointBetween(seg1b, seg2a, seg2b);
 		}
-	
+
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		private static bool HorzEdgesOverlap(long x1a, long x1b, long x2a, long x2b)
 		{
 			if (x1a < x1b)
@@ -2322,7 +2368,8 @@ namespace Clipper2Lib
 						(x1b != x2a) && (x1a != x2b);
 			}
 		}
-		
+
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		private bool OutPtInTrialHorzList(OutPt op)
     {
 			return op.nextHorz != null || op == _horzLast;
@@ -2336,6 +2383,7 @@ namespace Clipper2Lib
 			return false; 
 		}
 
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		private static OutPt InsertOp(Point64 pt, OutPt insertAfter)
     {
 			OutPt result = new OutPt(pt, insertAfter.outrec);
@@ -2350,6 +2398,7 @@ namespace Clipper2Lib
 			return result;
 		}
 
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		private OutPt SafeDisposeOutPt(OutPt op)
 		{
 			OutPt result = (op.next == op ? null : op.next);
@@ -2595,6 +2644,7 @@ namespace Clipper2Lib
 			_joinerList.Clear();
 		}
 
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		private bool CheckDisposePrevOp(OutPt op, OutRec outrec)
 		{
 			if (op.prev.joiner != null) return false;
@@ -2603,6 +2653,7 @@ namespace Clipper2Lib
 			return true;
 		}
 
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		private bool CheckDisposeNextOp(OutPt op, OutRec outrec)
 		{
 			if (op.next.joiner != null) return false;
@@ -2611,6 +2662,7 @@ namespace Clipper2Lib
 			return true;
 		}
 
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		private static double DistanceFromLineSqrd(Point64 pt, Point64 linePt1, Point64 linePt2)
 		{
 			//perpendicular distance of point (x³,y³) = (Ax³ + By³ + C)/Sqrt(A² + B²)
@@ -2622,6 +2674,7 @@ namespace Clipper2Lib
 			return (c * c) / (a * a + b * b);
 		}
 
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		private static double DistanceSqr(Point64 pt1, Point64 pt2)
 		{
 			return (pt1.X - pt2.X) * (pt1.X - pt2.X) + 
@@ -2875,6 +2928,7 @@ namespace Clipper2Lib
 			}
 		}
 
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		private void TidyOutRec(OutRec outrec)
     {
 			if (outrec == null) return;
@@ -2934,6 +2988,7 @@ namespace Clipper2Lib
 			}
 		}
 
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		private static double AreaTriangle(Point64 pt1, Point64 pt2, Point64 pt3)
     {
 			return 0.5 * (pt1.X * (pt2.Y - pt3.Y) +
