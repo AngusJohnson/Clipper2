@@ -2195,16 +2195,7 @@ namespace Clipper2Lib
 				//nb: 'ae' will never be horizontal here
 				if (ae.top.Y == y)
 				{
-					//the following helps to avoid micro self-intersections
-					//with negligible impact on performance ...
 					ae.curX = ae.top.X;
-					if (ae.prevInAEL != null && (ae.prevInAEL.curX == ae.curX) &&
-							(ae.prevInAEL.bot.Y != y) && IsHotEdge(ae.prevInAEL))
-						AddOutPt(ae.prevInAEL, ae.top);
-					if (ae.nextInAEL != null && (ae.nextInAEL.curX == ae.curX) &&
-							(ae.nextInAEL.top.Y != y) && IsHotEdge(ae.nextInAEL))
-						AddOutPt(ae.nextInAEL, ae.top);
-
 					if (IsMaxima(ae))
 					{
 						ae = DoMaxima(ae);  //TOP OF BOUND (MAXIMA)
@@ -2213,7 +2204,8 @@ namespace Clipper2Lib
 					else
 					{
 						//INTERMEDIATE VERTEX ...
-						if (IsHotEdge(ae)) AddOutPt(ae, ae.top);
+						if (IsHotEdge(ae)) 
+							AddOutPt(ae, ae.top);
 						UpdateEdgeIntoAEL(ae);
 						if (IsHorizontal(ae))
 							PushHorz(ae);  //horizontals are processed later
