@@ -247,19 +247,19 @@ namespace Clipper2Lib
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        static bool IsHotEdge(Active ae)
+        private static bool IsHotEdge(Active ae)
         {
             return ae.outrec != null;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        static bool IsOpen(Active ae)
+        private static bool IsOpen(Active ae)
         {
             return ae.localMin.isOpen;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        static bool IsOpenEnd(Active ae)
+        private static bool IsOpenEnd(Active ae)
         {
             return ae.localMin.isOpen &&
                    (ae.vertexTop.flags & (VertexFlags.OpenStart | VertexFlags.OpenEnd)) != VertexFlags.None;
@@ -448,7 +448,7 @@ namespace Clipper2Lib
             return ((ae.vertexTop.flags & VertexFlags.LocalMax) != VertexFlags.None);
         }
 
-        Active GetMaximaPair(Active ae)
+        private Active GetMaximaPair(Active ae)
         {
             Active ae2;
             if (IsHorizontal(ae))
