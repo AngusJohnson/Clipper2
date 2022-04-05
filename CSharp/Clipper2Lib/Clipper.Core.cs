@@ -13,15 +13,15 @@ using System;
 namespace Clipper2Lib
 {
 
-  public struct Point64
+  public readonly struct Point64
   {
-    public long X;
-    public long Y;
+    public long X { get; }
+    public long Y { get; }
 
 #if USINGZ
-    public long Z;
+    public long Z { get; }
 
-  public Point64(Point64 pt)
+    public Point64(Point64 pt)
     {
       X = pt.X;
       Y = pt.Y;
@@ -60,7 +60,6 @@ namespace Clipper2Lib
     }
 
 #else
-
     public Point64(Point64 pt)
     {
       this.X = pt.X;

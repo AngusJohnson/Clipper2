@@ -48,11 +48,11 @@ namespace Clipper2Lib
 		}
 	};
 
-	internal struct LocalMinima
+	internal readonly struct LocalMinima
 	{
-		public Vertex vertex;
-		public PathType polytype;
-		public bool isOpen;
+		public Vertex vertex { get; }
+		public PathType polytype { get; }
+		public bool isOpen { get; }
 		public LocalMinima(Vertex vertex, PathType polytype, bool isOpen = false)
 		{
 			this.vertex = vertex;
@@ -64,11 +64,11 @@ namespace Clipper2Lib
 	//IntersectNode: a structure representing 2 intersecting edges.
 	//Intersections must be sorted so they are processed from the largest
 	//Y coordinates to the smallest while keeping edges adjacent.
-	internal struct IntersectNode
+	internal readonly struct IntersectNode
 	{
-		public Point64 pt;
-		public Active edge1;
-		public Active edge2;
+		public Point64 pt { get; }
+		public Active edge1 { get; }
+		public Active edge2 { get; }
 		public IntersectNode(Point64 pt, Active edge1, Active edge2)
 		{
 			this.pt = pt;
@@ -202,23 +202,30 @@ namespace Clipper2Lib
 			
 			//prioritize subject vertices over clip vertices
 			//and pass the subject vertices before clip vertices in the callback
-			Active e3, e4;
 			if (GetPolyType(e1) == PathType.Subject) 
 			{
-				e3 = e1;
-				e4 = e2;
+				if (XYCoordsEqual(intersectPt, e1.bot))
+					intersectPt = new Point64(intersectPt.X, intersectPt.Y, e1.bot.Z);
+				else if (XYCoordsEqual(intersectPt, e1.top))
+					intersectPt = new Point64(intersectPt.X, intersectPt.Y, e1.top.Z);
+				else if (XYCoordsEqual(intersectPt, e2.bot)) 
+					intersectPt = new Point64(intersectPt.X, intersectPt.Y, e2.bot.Z);
+				else if (XYCoordsEqual(intersectPt, e2.top))
+					intersectPt = new Point64(intersectPt.X, intersectPt.Y, e2.top.Z);
+				ZFillFunc(e1.bot, e1.top, e2.bot, e2.top, ref intersectPt);
 			}
-      else 
-			{ 
-				e3 = e2;
-				e4 = e1;
+			else 
+			{
+				if (XYCoordsEqual(intersectPt, e2.bot))
+					intersectPt = new Point64(intersectPt.X, intersectPt.Y, e2.bot.Z);
+				else if (XYCoordsEqual(intersectPt, e2.top))
+					intersectPt = new Point64(intersectPt.X, intersectPt.Y, e2.top.Z);
+				else if (XYCoordsEqual(intersectPt, e1.bot))
+					intersectPt = new Point64(intersectPt.X, intersectPt.Y, e1.bot.Z);
+				else if (XYCoordsEqual(intersectPt, e1.top))
+					intersectPt = new Point64(intersectPt.X, intersectPt.Y, e1.top.Z);
+				ZFillFunc(e2.bot, e2.top, e1.bot, e1.top, ref intersectPt);
 			}
-			if (XYCoordsEqual(intersectPt, e3.bot)) intersectPt.Z = e3.bot.Z;
-			else if (XYCoordsEqual(intersectPt, e3.top)) intersectPt.Z = e3.top.Z;
-			else if (XYCoordsEqual(intersectPt, e4.bot)) intersectPt.Z = e4.bot.Z;
-			else if (XYCoordsEqual(intersectPt, e4.top)) intersectPt.Z = e4.top.Z;
-			ZFillFunc(e3.bot, e3.top, e4.bot, e4.top, ref intersectPt);
-		}
 #endif
 
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -1829,25 +1836,23 @@ namespace Clipper2Lib
 			if (pt.Y > _currentBotY)
 			{
 				//ae.curr.y is still the bottom of scanbeam
-				pt.Y = _currentBotY;
 				//use the more vertical of the 2 edges to derive pt.x ...
 				if (Math.Abs(ae1.dx) < Math.Abs(ae2.dx))
-					pt.X = TopX(ae1, _currentBotY);
+					pt = new Point64(TopX(ae1, _currentBotY), _currentBotY);
 				else
-					pt.X = TopX(ae2, _currentBotY);
+					pt = new Point64(TopX(ae2, _currentBotY), _currentBotY);
 			}
 			else if (pt.Y < topY)
 			{
 				//topY is at the top of the scanbeam
-				pt.Y = topY;
 				if (ae1.top.Y == topY)
-					pt.X = ae1.top.X;
+					pt = new Point64(ae1.top.X, topY);
 				else if (ae2.top.Y == topY)
-					pt.X = ae2.top.X;
+					pt = new Point64(ae2.top.X, topY);
 				else if (Math.Abs(ae1.dx) < Math.Abs(ae2.dx))
-					pt.X = ae1.curX;
+					pt = new Point64(ae1.curX, topY);
 				else
-					pt.X = ae2.curX;
+					pt = new Point64(ae2.curX, topY);
 			}
 
 			IntersectNode node = new IntersectNode(pt, ae1, ae2);
@@ -2943,35 +2948,13 @@ namespace Clipper2Lib
 			for (; ; )
 			{
 				//nb: if preserveCollinear == true, then only remove 180 deg.spikes
-				if (InternalClipperFunc.CrossProduct(op2.prev.pt, op2.pt, op2.next.pt) == 0) 
+				if ((InternalClipperFunc.CrossProduct(op2.prev.pt, op2.pt, op2.next.pt) == 0) &&
+					(op2.joiner == null) && ((op2.pt == op2.prev.pt) || (op2.pt == op2.next.pt) ||
+					 !PreserveCollinear ||
+					 (InternalClipperFunc.DotProduct(op2.prev.pt, op2.pt, op2.next.pt) > 0)))
 				{
-					if (op2.joiner != null)
-          {
-						if (op2.pt == op2.prev.pt && (op2.prev.joiner == null))
-							op2 = op2.prev;
-						else if (op2.pt == op2.next.pt && op2.next.joiner == null)
-							op2 = op2.next;
-						else if (op2.pt != op2.prev.pt && op2.pt != op2.next.pt &&
-							InternalClipperFunc.DotProduct(op2.prev.pt, op2.pt, op2.next.pt) < 0)
-							SafeDeleteOutPtJoiners(op2);
-						else
-            {
-							op2	= op2.next;
-							if (op2 == startOp) break;
-							else continue;
-						}
-					}
-					else if (op2.prev.pt != op2.pt && op2.pt != op2.next.pt &&
-					 PreserveCollinear && InternalClipperFunc.DotProduct(op2.prev.pt, 
-						op2.pt, op2.next.pt) > 0)
-          {
-						//only ignore preserveCollinear when there are 180 degree spikes
-						op2 = op2.next;
-						if (op2 == startOp) break;
-						else continue;
-					}
-					
-					if (op2 == op) op = op.prev;
+					if (op2 == op) 
+						op = op.prev;
 					op2 = SafeDisposeOutPt(op2);
 					if (!ValidateOrDeleteClosedPath(ref op2))
 					{
@@ -3308,7 +3291,8 @@ namespace Clipper2Lib
 					ClipperFunc.ScalePoint(bot2, _invScale),
 					ClipperFunc.ScalePoint(top2, _invScale), ref tmp);
 			//re-scale
-			intersectPt.Z = (long)Math.Round(tmp.z * _scale);
+			intersectPt = new Point64(intersectPt.X, 
+				intersectPt.Y, (long)Math.Round(tmp.z * _scale));
 		}
 #endif
 

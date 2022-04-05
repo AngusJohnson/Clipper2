@@ -4,7 +4,7 @@ This is a **pre-release beta version** of Clipper2. While my original <a href="h
 
 New features include:
 <ul>
-  <li>Support for floating point coordinates. While the library still performs all clipping operations using integer coordinates (to preserve numerical robustness), floating point conversions can now managed by the library.
+  <li>Support for floating point coordinates. While the library still performs all clipping operations using integer coordinates (to preserve numerical robustness), floating point conversions can now be managed by the library.
   <li>There's more complete and more efficient removal of spikes and micro-self-intersections, and better merging of touching polygons from clipping solutions.
   <li>And it's even a bit faster.
 </ul> 
