@@ -15,8 +15,8 @@ using System.Runtime.CompilerServices;
 namespace Clipper2Lib
 {
     using Path64 = List<Point64>;
-    using Paths64 = List<List<Point64>>;
     using PathD = List<PointD>;
+    using Paths64 = List<List<Point64>>;
     using PathsD = List<List<PointD>>;
 
     public enum JoinType
@@ -89,7 +89,7 @@ namespace Clipper2Lib
         {
             int cnt = path.Count;
             if (cnt == 0) return;
-            PathsD pp = new PathsD(1) { ClipperFunc.PathD(path)};
+            PathsD pp = new PathsD(1) { ClipperFunc.PathD(path) };
             AddPaths(pp, joinType, endType);
         }
 
@@ -122,8 +122,8 @@ namespace Clipper2Lib
             if (Math.Abs(delta) < _minLenSqrd)
             {
                 foreach (PathGroup group in _pathGroups)
-                  foreach (PathD path in group._inPaths)
-                      solution.Add(path);
+                    foreach (PathD path in group._inPaths)
+                        solution.Add(path);
                 return solution;
             }
 

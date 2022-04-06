@@ -19,8 +19,8 @@ using System.Collections.Generic;
 namespace Clipper2Lib
 {
     using Path64 = List<Point64>;
-    using Paths64 = List<List<Point64>>;
     using PathD = List<PointD>;
+    using Paths64 = List<List<Point64>>;
     using PathsD = List<List<PointD>>;
 
     //PRE-COMPILER CONDITIONAL ...
@@ -68,7 +68,7 @@ namespace Clipper2Lib
             return BooleanOp(ClipType.Xor, fillRule, subject, clip);
         }
 
-        public static Paths64 BooleanOp(ClipType clipType, FillRule fillRule, Paths64 subject, Paths64 clip)
+        public static Paths64? BooleanOp(ClipType clipType, FillRule fillRule, Paths64 subject, Paths64 clip)
         {
             if (subject == null) return null;
             Paths64 solution = new Paths64();
