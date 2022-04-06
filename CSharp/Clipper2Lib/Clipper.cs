@@ -348,12 +348,13 @@ namespace Clipper2Lib
                 pathOut.Add(ScalePath(paths[i], scale));
         }
 
-        public static PathD PathD(Path64 path)
+        public static PathD PathD(Path64 path, double scale = 1.0)
         {
             int cnt = path.Count;
+            if (scale <= 1.0e-8) scale = 1.0;
             PathD res = new PathD(cnt);
             for (int i = 0; i < cnt; i++)
-                res.Add(new PointD(path[i].X, path[i].Y));
+                res.Add(new PointD(path[i].X * scale, path[i].Y * scale));
             return res;
         }
 
@@ -366,12 +367,13 @@ namespace Clipper2Lib
                 pathOut.Add(new PointD(path[i].X, path[i].Y));
         }
 
-        public static PathsD PathsD(Paths64 paths)
+        public static PathsD PathsD(Paths64 paths, double scale = 1.0)
         {
             int cnt = paths.Count;
+            if (scale <= 1.0e-8) scale = 1.0;
             PathsD res = new PathsD(cnt);
             for (int i = 0; i < cnt; i++)
-                res.Add(PathD(paths[i]));
+                res.Add(PathD(paths[i], scale));
             return res;
         }
 

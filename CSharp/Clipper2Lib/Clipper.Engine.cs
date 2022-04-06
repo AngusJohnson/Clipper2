@@ -37,7 +37,7 @@ namespace Clipper2Lib
 
     internal class Vertex
     {
-        public Point64 pt;
+        public readonly Point64 pt;
         public Vertex next;
         public Vertex prev;
         public VertexFlags flags;
@@ -51,11 +51,11 @@ namespace Clipper2Lib
         }
     };
 
-    internal readonly struct LocalMinima
+    internal struct LocalMinima
     {
-        public Vertex vertex { get; }
-        public PathType polytype { get; }
-        public bool isOpen { get; }
+        public readonly Vertex vertex;
+        public readonly PathType polytype;
+        public readonly bool isOpen;
 
         public LocalMinima(Vertex vertex, PathType polytype, bool isOpen = false)
         {
@@ -68,11 +68,11 @@ namespace Clipper2Lib
     //IntersectNode: a structure representing 2 intersecting edges.
     //Intersections must be sorted so they are processed from the largest
     //Y coordinates to the smallest while keeping edges adjacent.
-    internal readonly struct IntersectNode
+    internal struct IntersectNode
     {
-        public Point64 pt { get; }
-        public Active edge1 { get; }
-        public Active edge2 { get; }
+      public readonly Point64 pt;
+      public readonly Active edge1;
+      public readonly Active edge2;
 
         public IntersectNode(Point64 pt, Active edge1, Active edge2)
         {

@@ -59,12 +59,13 @@ namespace Clipper2Lib
         private readonly List<PathGroup> _pathGroups = new List<PathGroup>();
         private readonly PathD _normals = new PathD();
         private double _delta, _tmpLimit, _stepsPerRad;
+        private double _scale;
         private JoinType _joinType;
         private double _minLenSqrd;
         public double ArcTolerance { get; set; }
         public bool MergeGroups { get; set; }
         public double MiterLimit { get; set; }
-        public int RoundingDecimalPrecision { get; set; }
+        public readonly int RoundingDecimalPrecision;
 
         private const double TwoPi = Math.PI * 2;
         private const double DefaultArcTolerance = 0.25;
@@ -76,6 +77,7 @@ namespace Clipper2Lib
             ArcTolerance = arcTolerance;
             MergeGroups = true;
             RoundingDecimalPrecision = roundingDecimalPrecision;
+            _scale = Math.Pow(10, roundingDecimalPrecision);
         }
 
         public void Clear()
@@ -87,7 +89,7 @@ namespace Clipper2Lib
         {
             int cnt = path.Count;
             if (cnt == 0) return;
-            PathsD pp = new PathsD() {ClipperFunc.PathD(path)};
+            PathsD pp = new PathsD(1) { ClipperFunc.PathD(path)};
             AddPaths(pp, joinType, endType);
         }
 
@@ -102,7 +104,7 @@ namespace Clipper2Lib
         {
             int cnt = path.Count;
             if (cnt == 0) return;
-            PathsD pp = new PathsD(1) {path};
+            PathsD pp = new PathsD(1) { path };
             AddPaths(pp, joinType, endType);
         }
 
@@ -115,15 +117,13 @@ namespace Clipper2Lib
 
         public PathsD Execute(double delta)
         {
-            double scale = Math.Pow(10, RoundingDecimalPrecision);
-            _minLenSqrd = 1 / (scale * scale);
-
+            _minLenSqrd = 1 / (_scale * _scale);
             PathsD solution = new PathsD();
             if (Math.Abs(delta) < _minLenSqrd)
             {
                 foreach (PathGroup group in _pathGroups)
-                foreach (PathD path in group._inPaths)
-                    solution.Add(path);
+                  foreach (PathD path in group._inPaths)
+                      solution.Add(path);
                 return solution;
             }
 
@@ -414,8 +414,7 @@ namespace Clipper2Lib
             if (group._joinType == JoinType.Round || group._endType == EndType.Round)
             {
                 //get steps per 180 degrees (see offset_triginometry2.svg)
-                double steps = Math.PI / Math.Acos(1 - arcTol / absDelta);
-                _stepsPerRad = steps / TwoPi;
+                _stepsPerRad = Math.PI / Math.Acos(1 - arcTol / absDelta) / TwoPi;
             }
 
             foreach (PathD p in group._inPaths)

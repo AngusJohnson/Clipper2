@@ -1,7 +1,7 @@
 ﻿/*******************************************************************************
 * Author    :  Angus Johnson                                                   *
 * Version   :  10.0 (release candidate 1) - also known as Clipper2             *
-* Date      :  3 April 2022                                                    *
+* Date      :  6 April 2022                                                    *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  Core structures and functions for the Clipper Library           *
@@ -12,13 +12,13 @@ using System;
 
 namespace Clipper2Lib
 {
-    public readonly struct Point64
+    public struct Point64
     {
-        public long X { get; }
-        public long Y { get; }
+        public long X;
+        public long Y;
 
 #if USINGZ
-        public long Z { get; }
+        public long Z;
 
         public Point64(Point64 pt)
         {
