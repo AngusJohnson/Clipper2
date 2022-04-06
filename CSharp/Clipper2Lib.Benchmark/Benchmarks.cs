@@ -13,79 +13,75 @@ namespace Clipper2Lib.Benchmark
     {
         private Paths64 _subj;
         private Paths64 _clip;
-        private Paths64 _pathInflate;
+        private Paths64 _solution;
+        private const int DisplayWidth = 800;
+        private const int DisplayHeight = 600;
+
+        [Params(1000, 2000, 3000, 4000)]
+        public int EdgeCount { get; set; }
+
 
         [GlobalSetup]
         public void GlobalSetup()
         {
-            //code main entry 
-            _subj = new Paths64
-            {
-                ClipperFunc.MakePath(new int[] { 100, 50, 10, 79, 65, 2, 65, 98, 10, 21 })
-            };
-            _clip = new Paths64
-            {
-                ClipperFunc.MakePath(new int[] { 80, 50, 69, 73, 43, 79, 23, 63, 23, 37, 43, 21, 69, 27 })
-            };
-            _pathInflate = new Paths64
-            {
-                ClipperFunc.MakePath(new int[] { 93, 50, 77, 84, 40, 92, 11, 69, 11, 31, 40, 8, 77, 16 })
-            };
+            Random rand = new Random();
+
+            _subj = new Paths64();
+            _clip = new Paths64();
+            _solution = new Paths64();
+
+            _subj.Add(MakeRandomPath(DisplayWidth, DisplayHeight, EdgeCount, rand));
+            _clip.Add(MakeRandomPath(DisplayWidth, DisplayHeight, EdgeCount, rand));
         }
 
         [Benchmark]
-        public void Union_Null_Clip_EvenOdd()
+        public void Intersection_N()
         {
-            Paths64 solution1 = ClipperFunc.Union(_subj, null, FillRule.EvenOdd);
+            Clipper c = new Clipper();
+            c.AddSubject(_subj);
+            c.AddClip(_clip);
+            c.Execute(ClipType.Intersection, FillRule.NonZero, _solution);
         }
 
         [Benchmark]
-        public void Union_Null_Clip_NonZero()
+        public void Union_N()
         {
-            Paths64 solution2 = ClipperFunc.Union(_subj, null, FillRule.NonZero);
+            Clipper c = new Clipper();
+            c.AddSubject(_subj);
+            c.AddClip(_clip);
+            c.Execute(ClipType.Union, FillRule.NonZero, _solution);
         }
 
         [Benchmark]
-        public void Union_Clip_NonZero()
+        public void Difference_N()
         {
-            Paths64 solution3 = ClipperFunc.Union(_subj, _clip, FillRule.NonZero);
+            Clipper c = new Clipper();
+            c.AddSubject(_subj);
+            c.AddClip(_clip);
+            c.Execute(ClipType.Difference, FillRule.NonZero, _solution);
         }
 
         [Benchmark]
-        public void Intersect_Clip_NonZero()
+        public void Xor_N()
         {
-            Paths64 solution4 = ClipperFunc.Intersect(_subj, _clip, FillRule.NonZero);
+            Clipper c = new Clipper();
+            c.AddSubject(_subj);
+            c.AddClip(_clip);
+            c.Execute(ClipType.Xor, FillRule.NonZero, _solution);
+        }
+        private static Point64 MakeRandomPt(int maxWidth, int maxHeight, Random rand)
+        {
+            long x = rand.Next(maxWidth);
+            var y = rand.Next(maxHeight);
+            return new Point64(x, y);
         }
 
-        [Benchmark]
-        public void Intersect_Clip_EvenOdd()
+        public static Path64 MakeRandomPath(int width, int height, int count, Random rand)
         {
-            Paths64 solution5 = ClipperFunc.Intersect(_subj, _clip, FillRule.EvenOdd);
-        }
-
-        [Benchmark]
-        public void InflatePaths_Delta5()
-        {
-            Paths64 solution6 = ClipperFunc.InflatePaths(_pathInflate, 5.0, JoinType.Miter, EndType.Polygon);
-        }
-
-
-        [Benchmark]
-        public void InflatePaths_DeltaMinus5()
-        {
-            Paths64 solution7 = ClipperFunc.InflatePaths(_pathInflate, -5.0, JoinType.Miter, EndType.Polygon);
-        }
-
-        [Benchmark]
-        public void InflatePaths_Delta10()
-        {
-            Paths64 solution8 = ClipperFunc.InflatePaths(_pathInflate, 10.0, JoinType.Miter, EndType.Square);
-        }
-
-        [Benchmark]
-        public void InflatePaths_DeltaMinus10()
-        {
-            Paths64 solution9 = ClipperFunc.InflatePaths(_pathInflate, 10.0, JoinType.Miter, EndType.Joined);
+            Path64 result = new Path64(count);
+            for (int i = 0; i < count; ++i)
+                result.Add(MakeRandomPt(width, height, rand));
+            return result;
         }
     }
 }
