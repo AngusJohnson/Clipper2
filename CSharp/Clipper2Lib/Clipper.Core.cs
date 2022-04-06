@@ -59,39 +59,39 @@ namespace Clipper2Lib
         }
 
 #else
-    public Point64(Point64 pt)
-    {
-      this.X = pt.X;
-      this.Y = pt.Y;
-    }
+        public Point64(Point64 pt)
+        {
+            this.X = pt.X;
+            this.Y = pt.Y;
+        }
 
-    public Point64(long x, long y)
-    {
-      this.X = x;
-      this.Y = y;
-    }
+        public Point64(long x, long y)
+        {
+            this.X = x;
+            this.Y = y;
+        }
 
-    public Point64(double x, double y)
-    {
-      this.X = (long)Math.Round(x);
-      this.Y = (long)Math.Round(y);
-    }
+        public Point64(double x, double y)
+        {
+            this.X = (long) Math.Round(x);
+            this.Y = (long) Math.Round(y);
+        }
 
-    public Point64(PointD pt)
-    {
-      this.X = (long)Math.Round(pt.x);
-      this.Y = (long)Math.Round(pt.y);
-    }
+        public Point64(PointD pt)
+        {
+            this.X = (long) Math.Round(pt.x);
+            this.Y = (long) Math.Round(pt.y);
+        }
 
-    public static bool operator ==(Point64 lhs, Point64 rhs)
-    {
-      return lhs.X == rhs.X && lhs.Y == rhs.Y;
-    }
+        public static bool operator ==(Point64 lhs, Point64 rhs)
+        {
+            return lhs.X == rhs.X && lhs.Y == rhs.Y;
+        }
 
-    public static bool operator !=(Point64 lhs, Point64 rhs)
-    {
-      return lhs.X != rhs.X || lhs.Y != rhs.Y;
-    }
+        public static bool operator !=(Point64 lhs, Point64 rhs)
+        {
+            return lhs.X != rhs.X || lhs.Y != rhs.Y;
+        }
 
 #endif
         public override bool Equals(object obj)
@@ -147,29 +147,29 @@ namespace Clipper2Lib
         }
 
 #else
-    public PointD(PointD pt)
-    {
-      this.x = pt.x;
-      this.y = pt.y;
-    }
+        public PointD(PointD pt)
+        {
+            this.x = pt.x;
+            this.y = pt.y;
+        }
 
-    public PointD(Point64 pt)
-    {
-      this.x = pt.X;
-      this.y = pt.Y;
-    }
+        public PointD(Point64 pt)
+        {
+            this.x = pt.X;
+            this.y = pt.Y;
+        }
 
-    public PointD(long x, long y)
-    {
-      this.x = x;
-      this.y = y;
-    }
+        public PointD(long x, long y)
+        {
+            this.x = x;
+            this.y = y;
+        }
 
-    public PointD(double x, double y)
-    {
-      this.x = x;
-      this.y = y;
-    }
+        public PointD(double x, double y)
+        {
+            this.x = x;
+            this.y = y;
+        }
 
 #endif
 

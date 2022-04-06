@@ -1,4 +1,6 @@
 ﻿using System.Diagnostics;
+using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 using Clipper2Lib;
 using Path64 = System.Collections.Generic.List<Clipper2Lib.Point64>;
 using Paths64 = System.Collections.Generic.List<System.Collections.Generic.List<Clipper2Lib.Point64>>;
