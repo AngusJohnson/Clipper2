@@ -1,5 +1,5 @@
-﻿using Clipper2Lib;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
+using Clipper2Lib;
 
 namespace Clipper2LibExample
 {
@@ -27,13 +27,13 @@ namespace Clipper2LibExample
     static void Main(string[] args)
     {
       Paths64 subj = new Paths64
-            {
-                ClipperFunc.MakePath(new int[] { 100, 50, 10, 79, 65, 2, 65, 98, 10, 21 })
-            };
+      {
+        ClipperFunc.MakePath(new int[] { 100, 50, 10, 79, 65, 2, 65, 98, 10, 21 })
+      };
       Paths64 clip = new Paths64
-            {
-                ClipperFunc.MakePath(new int[] { 80, 50, 69, 73, 43, 79, 23, 63, 23, 37, 43, 21, 69, 27 })
-            };
+      {
+        ClipperFunc.MakePath(new int[] { 80, 50, 69, 73, 43, 79, 23, 63, 23, 37, 43, 21, 69, 27 })
+      };
 
       SimpleClipperSvgWriter svg = new SimpleClipperSvgWriter(FillRule.EvenOdd);
 
