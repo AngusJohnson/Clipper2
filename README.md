@@ -6,7 +6,7 @@
 <li>The code is cleaner and faster.</li>
 <li>Clipper2 is easier to use with simple functions that handle all common uses.</li> 
 <li>Floating point coordinates no longer need to be converted to integers before passing them into the library.</li>
-<li>And micro self-intersections (integer rounding artifacts) and polygons with touching edges are now rare seen in solutions.</li>
+<li>And micro self-intersections (integer rounding artifacts) and polygons with touching edges are now rarely seen in solutions.</li>
 </ul>
 </p>
 <p class="Body"> 
