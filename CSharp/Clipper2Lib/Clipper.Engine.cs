@@ -1,7 +1,7 @@
 ﻿/*******************************************************************************
 * Author    :  Angus Johnson                                                   *
 * Version   :  10.0 (beta) - also known as Clipper2                            *
-* Date      :  4 April 2022                                                    *
+* Date      :  8 April 2022                                                    *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  This is the main polygon clipping module                        *
@@ -2319,6 +2319,7 @@ namespace Clipper2Lib
       Active nextE, prevE, maxPair;
       prevE = ae.prevInAEL;
       nextE = ae.nextInAEL;
+
       if (IsOpenEnd(ae))
       {
         if (IsHotEdge(ae))
@@ -2328,7 +2329,6 @@ namespace Clipper2Lib
           if (IsHotEdge(ae)) ae.outrec = null;
           DeleteFromAEL(ae);
         }
-
         return nextE;
       }
       else
@@ -2349,14 +2349,8 @@ namespace Clipper2Lib
       if (IsOpen(ae))
       {
         if (IsHotEdge(ae))
-        {
-          if (maxPair != null)
             AddLocalMaxPoly(ae, maxPair, ae.top);
-          else
-            AddOutPt(ae, ae.top);
-        }
-
-        if (maxPair != null) DeleteFromAEL(maxPair);
+        DeleteFromAEL(maxPair);
         DeleteFromAEL(ae);
         return (prevE != null ? prevE.nextInAEL : _actives);
       }
@@ -2368,15 +2362,6 @@ namespace Clipper2Lib
       DeleteFromAEL(ae);
       DeleteFromAEL(maxPair);
       return (prevE != null ? prevE.nextInAEL : _actives);
-    }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static OutPt DeleteOp(OutPt op)
-    {
-      OutPt result = (op.next == op ? null : op.next);
-      op.prev.next = op.next;
-      op.next.prev = op.prev;
-      return result;
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -3017,10 +3002,11 @@ namespace Clipper2Lib
       {
         //nb: if preserveCollinear == true, then only remove 180 deg.spikes
         if ((InternalClipperFunc.CrossProduct(op2.prev.pt, op2.pt, op2.next.pt) == 0) &&
-            (op2.joiner == null) && ((op2.pt == op2.prev.pt) || (op2.pt == op2.next.pt) ||
-                                     !PreserveCollinear ||
-                                     (InternalClipperFunc.DotProduct(op2.prev.pt, op2.pt, op2.next.pt) >
-                                      0)))
+            (op2.joiner == null) && 
+            ((op2.pt == op2.prev.pt) || 
+            (op2.pt == op2.next.pt) ||
+            !PreserveCollinear ||
+            (InternalClipperFunc.DotProduct(op2.prev.pt, op2.pt, op2.next.pt) <  0)))
         {
           if (op2 == op)
             op = op.prev;

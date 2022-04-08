@@ -1,15 +1,14 @@
 ﻿/*******************************************************************************
 * Author    :  Angus Johnson                                                   *
 * Version   :  10.0 (release candidate 1) - also known as Clipper2             *
-* Date      :  3 April 2022                                                    *
+* Date      :  8 April 2022                                                    *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  This module contains simple functions that will likely cover    *
 *              most polygon boolean and offsetting needs, while also avoiding  *
 *              the inherent complexities of the other modules.                 *
-* Thanks    :  Special thanks to Thong Nguyen (https://nguyen.mn/) and to      *
-*              Guus Kuiper (https://www.guuskuiper.nl/) for their invaluable   *
-*              assistance in this C# Clipper port.                             *
+* Thanks    :  Special thanks to Thong Nguyen, Guus Kuiper, Phil Stopford,     *
+*           :  and Daniel Gosnell for their invaluable assistance with C#.     *
 * License   :  http://www.boost.org/LICENSE_1_0.txt                            *
 *******************************************************************************/
 
@@ -68,10 +67,10 @@ namespace Clipper2Lib
       return BooleanOp(ClipType.Xor, fillRule, subject, clip);
     }
 
-    public static Paths64? BooleanOp(ClipType clipType, FillRule fillRule, Paths64 subject, Paths64 clip)
+    public static Paths64 BooleanOp(ClipType clipType, FillRule fillRule, Paths64 subject, Paths64 clip)
     {
-      if (subject == null) return null;
       Paths64 solution = new Paths64();
+      if (subject == null) return solution;
       Clipper c = new Clipper();
       c.AddPaths(subject, PathType.Subject);
       if (clip != null)

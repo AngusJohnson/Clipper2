@@ -3,7 +3,7 @@ unit Clipper.Engine;
 (*******************************************************************************
 * Author    :  Angus Johnson                                                   *
 * Version   :  10.0 (beta) - aka Clipper2                                      *
-* Date      :  4 April 2022                                                    *
+* Date      :  8 April 2022                                                    *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  This is the main polygon clipping module                        *
@@ -113,7 +113,7 @@ type
     Jump     : PActive;       //fast merge sorting (see BuildIntersectList())
     VertTop  : PVertex;
     LocMin   : PLocalMinima;  //the bottom of an edge 'bound' (also Vatti)
-    LeftBounnd : Boolean;
+    LeftBound : Boolean;
   end;
 
   //IntersectNode: a structure representing 2 intersecting edges.
@@ -121,17 +121,17 @@ type
   //Y coordinates to the smallest while keeping edges adjacent.
   PIntersectNode = ^TIntersectNode;
   TIntersectNode = record
-    Edge1  : PActive;
-    Edge2  : PActive;
-    Pt     : TPoint64;
+      Edge1  : PActive;
+      Edge2  : PActive;
+      Pt     : TPoint64;
   end;
 
   //Scanline: a virtual line representing current position
   //while processing edges using a "sweep line" algorithm.
   PScanLine = ^TScanLine;
   TScanLine = record
-    Y        : Int64;
-    Next     : PScanLine;
+    Y     : Int64;
+    Next  : PScanLine;
   end;
 
   {$IFDEF USINGZ}
@@ -573,7 +573,7 @@ end;
 
 function IsLeftBound(e: PActive): Boolean; {$IFDEF INLINING} inline; {$ENDIF}
 begin
-  Result := e.LeftBounnd;
+  Result := e.LeftBound;
 end;
 //------------------------------------------------------------------------------
 
@@ -1082,8 +1082,6 @@ end;
 //------------------------------------------------------------------------------
 
 procedure TClipperBase.SetZ(e1, e2: PActive; var intersectPt: TPoint64);
-var
-  e3, e4: PActive;
 begin
   if not Assigned(FZFunc) then Exit;
 
@@ -1091,17 +1089,19 @@ begin
   //and pass the subject vertices before clip vertices in the callback
   if (GetPolyType(e1) = ptSubject) then
   begin
-    e3 := e1; e4 := e2;
+    if (XYCoordsEqual(intersectPt, e1.bot)) then intersectPt.Z := e1.bot.Z
+    else if (XYCoordsEqual(intersectPt, e1.top)) then intersectPt.Z := e1.top.Z
+    else if (XYCoordsEqual(intersectPt, e2.bot)) then intersectPt.Z := e2.bot.Z
+    else if (XYCoordsEqual(intersectPt, e2.top)) then intersectPt.Z := e2.top.Z;
+    FZFunc(e1.bot, e1.top, e2.bot, e2.top, intersectPt);
   end else
   begin
-    e3 := e2; e4 := e1;
+    if (XYCoordsEqual(intersectPt, e2.bot)) then intersectPt.Z := e2.bot.Z
+    else if (XYCoordsEqual(intersectPt, e2.top)) then intersectPt.Z := e2.top.Z
+    else if (XYCoordsEqual(intersectPt, e1.bot)) then intersectPt.Z := e1.bot.Z
+    else if (XYCoordsEqual(intersectPt, e1.top)) then intersectPt.Z := e1.top.Z;
+    FZFunc(e2.bot, e2.top, e1.bot, e1.top, intersectPt);
   end;
-
-  if (XYCoordsEqual(intersectPt, e3.bot)) then intersectPt.Z := e3.bot.Z
-  else if (XYCoordsEqual(intersectPt, e4.bot)) then intersectPt.Z := e4.bot.Z
-  else if (XYCoordsEqual(intersectPt, e3.top)) then intersectPt.Z := e3.top.Z
-  else if (XYCoordsEqual(intersectPt, e4.top)) then intersectPt.Z := e4.top.Z;
-  FZFunc(e3.bot, e3.top, e4.bot, e4.top, intersectPt);
 end;
 //------------------------------------------------------------------------------
 {$ENDIF}
@@ -1665,8 +1665,8 @@ begin
       rightB.CurrX := rightB.Bot.X;
       SetDx(rightB);
     end;
-    //Currently LeftB is just the descending bound and RightB is the ascending.
-    //Now if the LeftB isn't on the left of RightB then we need swap them.
+    //Currently LeftB is just descending and RightB is ascending,
+    //so now we swap them if LeftB isn't actually on the left.
     if assigned(leftB) and assigned(rightB) then
     begin
       if IsHorizontal(leftB) then
@@ -1684,8 +1684,8 @@ begin
       leftB := rightB;
       rightB := nil;
     end;
+    LeftB.LeftBound := true; //nb: we can't use winddx instead
 
-    LeftB.LeftBounnd := true;
     InsertLeftEdge(leftB);                   ////////////////
 
     if IsOpen(leftB) then
@@ -1814,41 +1814,13 @@ begin
   op2 := op;
   while true do
   begin
-    if (CrossProduct(op2.Prev.Pt, op2.Pt, op2.Next.Pt) = 0) then
+    if (CrossProduct(op2.Prev.Pt, op2.Pt, op2.Next.Pt) = 0) and
+      not Assigned(op2.Joiner) and
+      (PointsEqual(op2.Pt,op2.Prev.Pt) or
+      PointsEqual(op2.Pt,op2.Next.Pt) or
+      not preserveCollinear or
+      (DotProduct(op2.Prev.Pt, op2.Pt, op2.Next.Pt) < 0)) then
     begin
-
-      if Assigned(op2.Joiner) then
-      begin
-        if PointsEqual(op2.Pt,op2.Prev.Pt) and
-          not Assigned(op2.Prev.Joiner) then
-            op2 := op2.Prev
-        else if PointsEqual(op2.Pt,op2.Next.Pt) and
-          not Assigned(op2.Next.Joiner) then
-            op2 := op2.Next
-        else if not PointsEqual(op2.Pt,op2.Prev.Pt) and
-          not PointsEqual(op2.Pt,op2.Next.Pt) and
-            (DotProduct(op2.Prev.Pt, op2.Pt, op2.Next.Pt) < 0) then
-        begin
-          SafeDeleteOutPtJoiners(op2);
-        end
-        else
-        begin
-          op2 := op2.Next;
-          if op2 = startOp then Break
-          else Continue;
-        end;
-      end
-      else if not PointsEqual(op2.Pt,op2.Prev.Pt) and
-        not PointsEqual(op2.Pt,op2.Next.Pt) and
-        preserveCollinear and
-          (DotProduct(op2.Prev.Pt, op2.Pt, op2.Next.Pt) > 0) then
-      begin
-        //only ignore preserveCollinear when there are 180 degree spikes
-        op2 := op2.Next;
-        if op2 = startOp then Break
-        else Continue;
-      end;
-
       if op2 = op then op := op.Prev;
       op2 := SafeDisposeOutPt(op2);
       if not ValidateOrDisposeClosedPath(op2) then
@@ -2834,68 +2806,6 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-procedure TClipperBase.BuildTree(polytree: TPolyPathBase; out openPaths: TPaths64);
-var
-  i,j         : Integer;
-  cntOpen     : Integer;
-  outRec      : POutRec;
-  path        : TPath64;
-  isOpenPath  : Boolean;
-  ownerPP     : TPolyPathBase;
-begin
-  try
-    polytree.Clear;
-    if FHasOpenPaths then
-      setLength(openPaths, FOutRecList.Count);
-    cntOpen := 0;
-    for i := 0 to FOutRecList.Count -1 do
-      if Assigned(FOutRecList[i]) then
-      begin
-        outRec := FOutRecList[i];
-
-        //make sure outer/owner paths preceed their inner paths ...
-        if assigned(outRec.Owner) and (outRec.Owner.Idx > outRec.Idx) then
-        begin
-          j := outRec.Owner.Idx;
-          outRec.idx := j;
-          FOutRecList[i] := FOutRecList[j];
-          FOutRecList[j] := outRec;
-          outRec := FOutRecList[i];
-          outRec.Idx := i;
-        end;
-
-        if not assigned(outRec.Pts) then Continue;
-        isOpenPath := IsOpen(outRec);
-        if not BuildPath(outRec.Pts.Next, isOpenPath, path) then
-          Continue;
-
-        if isOpenPath then
-        begin
-          openPaths[cntOpen] := path;
-          inc(cntOpen);
-          Continue;
-        end;
-        //update ownership ...
-        while assigned(outRec.Owner) and not assigned(outRec.Owner.Pts) do
-          outRec.Owner := outRec.Owner.Owner;
-        if assigned(outRec.Owner) and (outRec.Owner.State = outRec.State) then
-        begin
-          if IsOuter(outRec) then outRec.Owner := nil
-          else outRec.Owner := outRec.Owner.Owner;
-        end;
-
-        if assigned(outRec.Owner) and assigned(outRec.Owner.PolyPath) then
-          ownerPP := outRec.Owner.PolyPath else
-          ownerPP := polytree;
-
-        outRec.PolyPath := ownerPP.AddChild(path);
-      end;
-    setLength(openPaths, cntOpen);
-  except
-  end;
-end;
-//------------------------------------------------------------------------------
-
 procedure TClipperBase.DoIntersections(const topY: Int64);
 begin
   if BuildIntersectList(topY) then
@@ -3589,31 +3499,27 @@ begin
 
   if IsOpen(e) then
   begin
+    //must be in the middle of an open path
     if IsHotEdge(e) then
-    begin
-      if assigned(eMaxPair) then
-        AddLocalMaxPoly(e, eMaxPair, e.Top) else
-        AddOutPt(e, e.Top);
-    end;
-    if assigned(eMaxPair) then
-      DeleteFromAEL(eMaxPair);
+      AddLocalMaxPoly(e, eMaxPair, e.Top);
+    DeleteFromAEL(eMaxPair);
     DeleteFromAEL(e);
 
     if assigned(ePrev) then
       Result := ePrev.NextInAEL else
       Result := FActives;
-    Exit;
+  end else
+  begin
+    //here E.NextInAEL == ENext == EMaxPair ...
+    if IsHotEdge(e) then
+      AddLocalMaxPoly(e, eMaxPair, e.Top);
+
+    DeleteFromAEL(e);
+    DeleteFromAEL(eMaxPair);
+    if assigned(ePrev) then
+      Result := ePrev.NextInAEL else
+      Result := FActives;
   end;
-
-  //here E.NextInAEL == ENext == EMaxPair ...
-  if IsHotEdge(e) then
-    AddLocalMaxPoly(e, eMaxPair, e.Top);
-
-  DeleteFromAEL(e);
-  DeleteFromAEL(eMaxPair);
-  if assigned(ePrev) then
-    Result := ePrev.NextInAEL else
-    Result := FActives;
 end;
 //------------------------------------------------------------------------------
 
@@ -3649,6 +3555,68 @@ begin
     result := true;
   except
     result := false;
+  end;
+end;
+//------------------------------------------------------------------------------
+
+procedure TClipperBase.BuildTree(polytree: TPolyPathBase; out openPaths: TPaths64);
+var
+  i,j         : Integer;
+  cntOpen     : Integer;
+  outRec      : POutRec;
+  path        : TPath64;
+  isOpenPath  : Boolean;
+  ownerPP     : TPolyPathBase;
+begin
+  try
+    polytree.Clear;
+    if FHasOpenPaths then
+      setLength(openPaths, FOutRecList.Count);
+    cntOpen := 0;
+    for i := 0 to FOutRecList.Count -1 do
+      if Assigned(FOutRecList[i]) then
+      begin
+        outRec := FOutRecList[i];
+
+        //make sure outer/owner paths preceed their inner paths ...
+        if assigned(outRec.Owner) and (outRec.Owner.Idx > outRec.Idx) then
+        begin
+          j := outRec.Owner.Idx;
+          outRec.idx := j;
+          FOutRecList[i] := FOutRecList[j];
+          FOutRecList[j] := outRec;
+          outRec := FOutRecList[i];
+          outRec.Idx := i;
+        end;
+
+        if not assigned(outRec.Pts) then Continue;
+        isOpenPath := IsOpen(outRec);
+        if not BuildPath(outRec.Pts.Next, isOpenPath, path) then
+          Continue;
+
+        if isOpenPath then
+        begin
+          openPaths[cntOpen] := path;
+          inc(cntOpen);
+          Continue;
+        end;
+        //update ownership ...
+        while assigned(outRec.Owner) and not assigned(outRec.Owner.Pts) do
+          outRec.Owner := outRec.Owner.Owner;
+        if assigned(outRec.Owner) and (outRec.Owner.State = outRec.State) then
+        begin
+          if IsOuter(outRec) then outRec.Owner := nil
+          else outRec.Owner := outRec.Owner.Owner;
+        end;
+
+        if assigned(outRec.Owner) and assigned(outRec.Owner.PolyPath) then
+          ownerPP := outRec.Owner.PolyPath else
+          ownerPP := polytree;
+
+        outRec.PolyPath := ownerPP.AddChild(path);
+      end;
+    setLength(openPaths, cntOpen);
+  except
   end;
 end;
 //------------------------------------------------------------------------------
