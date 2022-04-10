@@ -3,7 +3,7 @@ unit Clipper.Engine;
 (*******************************************************************************
 * Author    :  Angus Johnson                                                   *
 * Version   :  10.0 (beta) - aka Clipper2                                      *
-* Date      :  8 April 2022                                                    *
+* Date      :  10 April 2022                                                   *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  This is the main polygon clipping module                        *
@@ -2057,7 +2057,6 @@ procedure TClipperBase.AddJoin(op1, op2: POutPt);
 var
   joiner: PJoiner;
 begin
-  //todo - recheck this!!!
   if (op1 = op2) or
     ((op1.OutRec.Pts = op2.OutRec.Pts) and not
     ((op1 = op1.OutRec.Pts) and (op1.Next = op2)) and not
@@ -2082,17 +2081,20 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-function FindJoinParent(parent: PJoiner; joiner: PJoiner): PJoiner;
+function FindJoinParent(joiner: PJoiner; op: POutPt): PJoiner;
 begin
-  if not Assigned(parent) then
-    Result := nil
-  else if (parent.next1 = joiner) or (parent.next2 = joiner) then
-    Result := parent
-  else
+  Result := op.joiner;
+  while true do
   begin
-    Result := FindJoinParent(parent.next1, joiner);
-    if not Assigned(Result) then
-      Result := FindJoinParent(parent.next2, joiner);
+    if (op = Result.op1) then
+    begin
+      if Result.next1 = joiner then Exit
+      else Result := Result.next1;
+    end else
+    begin
+      if Result.next2 = joiner then Exit
+      else Result := Result.next2;
+    end;
   end;
 end;
 //------------------------------------------------------------------------------
@@ -2113,8 +2115,8 @@ begin
 
   if op1.Joiner <> joiner then
   begin
-    parentJnr := FindJoinParent(op1.Joiner, joiner);
-    if parentJnr.next1 = joiner then
+    parentJnr := FindJoinParent(joiner, op1);
+    if parentJnr.op1 = op1 then
       parentJnr.next1 := joiner.next1 else
       parentJnr.next2 := joiner.next1;
   end else
@@ -2122,8 +2124,8 @@ begin
 
   if op2.Joiner <> joiner then
   begin
-    parentJnr := FindJoinParent(op2.Joiner, joiner);
-    if parentJnr.next1 = joiner then
+    parentJnr := FindJoinParent(joiner, op2);
+    if parentJnr.op1 = op2 then
       parentJnr.next1 := joiner.next2 else
       parentJnr.next2 := joiner.next2;
   end else
@@ -2152,6 +2154,7 @@ begin
       DeleteTrialHorzJoin(joiner.op1);
     if OutPtInTrialHorzList(joiner.op2) then
       DeleteTrialHorzJoin(joiner.op2);
+
     DeleteJoin(joiner);
     joiner := op.joiner;
   end;
@@ -2257,6 +2260,69 @@ begin
 end;
 //------------------------------------------------------------------------------
 
+function CollinearSegsOverlap(const  seg1a, seg1b,
+  seg2a, seg2b: TPoint64): Boolean;
+begin
+  //precondition: seg1 and seg2 are collinear
+  Result := false;
+  if (seg1a.X < seg1b.X) then
+  begin
+    if (seg2a.X < seg2b.X) then
+    begin
+      if (seg2a.X > seg1b.X) or
+        (seg2b.X < seg1a.X) then Exit;
+    end else
+    begin
+      if (seg2b.X > seg1b.X) or
+        (seg2a.X < seg1a.X) then Exit;
+    end;
+  end else
+  begin
+    if (seg2a.X < seg2b.X) then
+    begin
+      if (seg2a.X > seg1a.X) or
+        (seg2b.X <seg1b.X) then Exit;
+    end else
+    begin
+      if (seg2b.X > seg1a.X) or
+        (seg2a.X < seg1b.X) then Exit;
+    end;
+  end;
+  if (seg1a.Y < seg1b.Y) then
+  begin
+    if (seg2a.Y < seg2b.Y) then
+    begin
+      if (seg2a.Y > seg1b.Y) or
+        (seg2b.Y < seg1a.Y) then Exit;
+    end else
+    begin
+      if (seg2b.Y > seg1b.Y) or
+        (seg2a.Y < seg1a.Y) then Exit;
+    end;
+  end else
+  begin
+    if (seg2a.Y < seg2b.Y) then
+    begin
+      if (seg2a.Y > seg1a.Y) or
+        (seg2b.Y < seg1b.Y) then Exit;
+    end else
+    begin
+      if (seg2b.Y > seg1a.Y) or
+        (seg2a.Y < seg1b.Y) then Exit;
+    end;
+  end;
+  Result := true;
+end;
+//------------------------------------------------------------------------------
+
+function PointBetween(const pt, corner1, corner2: TPoint64): Boolean;
+begin
+  //nb: points may not be collinear
+  Result := ValueEqualOrBetween(pt.X, corner1.X, corner1.X) and
+    ValueEqualOrBetween(pt.Y, corner1.Y, corner1.Y);
+end;
+//------------------------------------------------------------------------------
+
 function TClipperBase.ProcessJoin(joiner: PJoiner): POutRec;
 var
   op1, op2: POutPt;
@@ -2294,16 +2360,24 @@ begin
   DeleteJoin(joiner);
 
   Result := or1;
-  if not IsValidClosedPath(op2) or not Assigned(or2.Pts) then Exit;
-  if not Assigned(or1.Pts) or not IsValidClosedPath(op1) then
+  if not Assigned(or2.Pts) then
+    Exit
+  else if not IsValidClosedPath(op2) then
   begin
+    TidyOutRec(or2);
+    Exit;
+  end
+  else if not Assigned(or1.Pts) or not IsValidClosedPath(op1) then
+  begin
+    TidyOutRec(or1);
     Result := or2; //ie tidy or2 in calling function;
     Exit;
-  end;
-
-  if (or1 = or2) and
+  end
+  else if (or1 = or2) and
    ((op1 = op2) or (op1.Next = op2) or (op1.Prev = op2)) then
-      Exit;
+  begin
+    Exit;
+  end;
 
   //strip duplicates (if no other joiners)
   if PointsEqual(op1.Prev.Pt, op1.Pt) then
@@ -2327,6 +2401,9 @@ begin
     if op2.Next = op1 then Exit;
   end;
 
+//  if not IsValidPath(op1)
+//  while PointsEqual(op1.Pt, op1.Next.Pt) do
+
   while True do
   begin
     if not IsValidPath(op1) or not IsValidPath(op2) then Exit;
@@ -2334,7 +2411,7 @@ begin
 
     if PointsEqual(op1.Prev.Pt, op2.Next.Pt) or
     ((CrossProduct(op1.Prev.Pt, op1.Pt, op2.Next.Pt) = 0) and
-      SegmentsOverlap(op1.Prev.Pt, op1.Pt, op2.Pt, op2.Next.Pt)) then
+      CollinearSegsOverlap(op1.Prev.Pt, op1.Pt, op2.Pt, op2.Next.Pt)) then
     begin
       if or1 = or2 then //SPLIT REQUIRED
       begin
@@ -2342,6 +2419,7 @@ begin
         if (op1 = op2.Next) or (op2 = op1.Prev) then Exit;
 
         //make sure op1.prev and op2.next match positions
+        //by inserting an extra vertex if needed
         if not PointsEqual(op1.Prev.Pt, op2.Next.Pt) then
         begin
           if PointBetween(op1.Prev.Pt, op2.Pt, op2.Next.Pt) then
@@ -2376,7 +2454,7 @@ begin
     end
     else if PointsEqual(op1.Next.Pt, op2.Prev.Pt) or
       ((CrossProduct(op1.Next.Pt, op2.Pt, op2.Prev.Pt) = 0) and
-      SegmentsOverlap(op1.Next.Pt, op1.Pt, op2.Pt, op2.Prev.Pt)) then
+       CollinearSegsOverlap(op1.Next.Pt, op1.Pt, op2.Pt, op2.Prev.Pt)) then
     begin
       if or1 = or2 then //SPLIT REQUIRED
       begin
@@ -2384,9 +2462,10 @@ begin
         if (op2 = op1.Next) or (op1 = op2.Prev) then Exit;
 
         //make sure op2.prev and op1.next match positions
+        //by inserting an extra vertex if needed
         if not PointsEqual(op1.Next.Pt, op2.Prev.Pt) then
         begin
-          if PointBetween(op2.Prev.Pt, op2.Pt, op1.Next.Pt) then
+          if PointBetween(op2.Prev.Pt, op1.Pt, op1.Next.Pt) then
             op1.Next := InsertOp(op2.Prev.Pt, op1) else
             op2.Prev := InsertOp(op1.Next.Pt, op2.Prev);
         end;
@@ -3180,9 +3259,17 @@ begin
         op2a.Pt.X, op2b.Pt.X) then
       begin
         //overlap found so promote to a 'real' join
-        if PointBetween(op1a.Pt, op2a.Pt, op2b.Pt) then
-          AddJoin(op1a, InsertOp(op1a.Pt, op2a)) else
-          AddJoin(op1b, InsertOp(op1b.Pt, op2a));
+        if ValueBetween(op1a.Pt.X, op2a.Pt.X, op2b.Pt.X) then
+        begin
+          if PointsEqual(op1a.Pt, op2b.Pt) then
+            AddJoin(op1a, op2b) else
+            AddJoin(op1a, InsertOp(op1a.Pt, op2a))
+        end else
+        begin
+          if PointsEqual(op1b.Pt, op2b.Pt) then
+            AddJoin(op1b, op2b) else
+            AddJoin(op1b, InsertOp(op1b.Pt, op2a));
+        end;
         Break;
       end;
       op2a := op2b.NextHorz;

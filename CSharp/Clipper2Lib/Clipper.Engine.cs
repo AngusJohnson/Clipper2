@@ -1,13 +1,12 @@
 ﻿/*******************************************************************************
 * Author    :  Angus Johnson                                                   *
 * Version   :  10.0 (beta) - also known as Clipper2                            *
-* Date      :  8 April 2022                                                    *
+* Date      :  10 April 2022                                                   *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  This is the main polygon clipping module                        *
-* Thanks    :  Special thanks to Thong Nguyen (https://nguyen.mn/) and to      *
-*              Guus Kuiper (https://www.guuskuiper.nl/) for their invaluable   *
-*              assistance in this C# Clipper port.                             *
+* Thanks    :  Special thanks to Thong Nguyen, Guus Kuiper, Phil Stopford,     *
+*           :  and Daniel Gosnell for their invaluable assistance with C#.     *
 * License   :  http://www.boost.org/LICENSE_1_0.txt                            *
 *******************************************************************************/
 
@@ -2349,7 +2348,7 @@ namespace Clipper2Lib
       if (IsOpen(ae))
       {
         if (IsHotEdge(ae))
-            AddLocalMaxPoly(ae, maxPair, ae.top);
+          AddLocalMaxPoly(ae, maxPair, ae.top);
         DeleteFromAEL(maxPair);
         DeleteFromAEL(ae);
         return (prevE != null ? prevE.nextInAEL : _actives);
@@ -2377,16 +2376,78 @@ namespace Clipper2Lib
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static bool PointBetween(Point64 pt, Point64 seg1, Point64 seg2)
+    private static bool ValueBetween(long val, long end1, long end2)
     {
-      return
-          ((pt.X > seg1.X) == (pt.X < seg2.X)) &&
-          ((pt.Y > seg1.Y) == (pt.Y < seg2.Y));
+      //nb: accommodates axis aligned between where end1 == end2
+      return ((val != end1) == (val != end2)) &&
+        ((val > end1) == (val < end2));
     }
 
-    private static bool SegmentsOverlap(Point64 seg1a, Point64 seg1b, Point64 seg2a, Point64 seg2b)
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static bool ValueEqualOrBetween(long val, long end1, long end2)
     {
-      return PointBetween(seg1a, seg2a, seg2b) || PointBetween(seg1b, seg2a, seg2b);
+      return (val == end1) || (val == end2) || ((val > end1) == (val < end2));
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static bool PointBetween(Point64 pt, Point64 corner1, Point64 corner2)
+    {
+      //nb: points may not be collinear
+      return
+        ValueEqualOrBetween(pt.X, corner1.X, corner1.X) &&
+        ValueEqualOrBetween(pt.Y, corner1.Y, corner1.Y);
+    }
+
+    private static bool CollinearSegsOverlap(Point64 seg1a, Point64 seg1b,
+      Point64 seg2a, Point64 seg2b)
+    {
+      //precondition: seg1 and seg2 are collinear      
+      if (seg1a.X < seg1b.X)
+      {
+        if (seg2a.X < seg2b.X)
+        {
+          if (seg2a.X > seg1b.X || seg2b.X < seg1a.X) return false;
+        } 
+        else
+        {
+          if (seg2b.X > seg1b.X || seg2a.X < seg1a.X) return false;
+        }
+      }
+      else
+      {
+        if (seg2a.X < seg2b.X)
+        {
+          if (seg2a.X > seg1a.X || seg2b.X < seg1b.X) return false;
+        }
+        else
+        {
+          if (seg2b.X > seg1a.X || seg2a.X < seg1b.X) return false;
+        }
+      }
+
+      if (seg1a.Y < seg1b.Y)
+      {
+        if (seg2a.Y < seg2b.Y)
+        {
+          if (seg2a.Y > seg1b.Y || seg2b.Y < seg1a.Y) return false;
+        }
+        else
+        {
+          if (seg2b.Y > seg1b.Y || seg2a.Y < seg1a.Y) return false;
+        }
+      }
+      else
+      {
+        if (seg2a.Y < seg2b.Y)
+        {
+          if (seg2a.Y > seg1a.Y || seg2b.Y < seg1b.Y) return false;
+        }
+        else
+        {
+          if (seg2b.Y > seg1a.Y || seg2a.Y < seg1b.Y) return false;
+        }
+      }
+      return true;
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -2595,10 +2656,20 @@ namespace Clipper2Lib
           if (HorzEdgesOverlap(op1a.pt.X, op1b.pt.X, op2a.pt.X, op2b.pt.X))
           {
             //overlap found so promote to a 'real' join
-            if (PointBetween(op1a.pt, op2a.pt, op2b.pt))
-              AddJoin(op1a, InsertOp(op1a.pt, op2a));
+            if (ValueBetween(op1a.pt.X, op2a.pt.X, op2b.pt.X))
+            {
+              if (op1a.pt == op2b.pt)
+                AddJoin(op1a, op2b);
+              else
+                AddJoin(op1a, InsertOp(op1a.pt, op2a));
+            }
             else
-              AddJoin(op1b, InsertOp(op1b.pt, op2a));
+            {
+              if (op1b.pt == op2b.pt)
+                AddJoin(op1b, op2b);
+              else
+                AddJoin(op1b, InsertOp(op1b.pt, op2a));
+            }
             break;
           }
 
@@ -2616,7 +2687,7 @@ namespace Clipper2Lib
     private void AddJoin(OutPt op1, OutPt op2)
     {
       if ((op1 == op2) ||
-          ((op1.outrec.pts == op2.outrec.pts) &&
+         ((op1.outrec.pts == op2.outrec.pts) &&
            (!((op1 == op1.outrec.pts) && (op1.next == op2)) &&
             (!((op2 == op1.outrec.pts) && (op2.next == op1)) &&
              ((op1.prev == op2) || (op2.prev == op1)))))) return;
@@ -2638,13 +2709,22 @@ namespace Clipper2Lib
       op2.joiner = j;
     }
 
-    private static Joiner? FindJoinParent(Joiner parent, Joiner joiner)
+    private static Joiner FindJoinParent(Joiner joiner, OutPt op)
     {
-      if (parent == null) return null;
-      if (parent.next1 == joiner || parent.next2 == joiner) return parent;
-      Joiner result = FindJoinParent(parent.next1, joiner);
-      if (result == null) result = FindJoinParent(parent.next2, joiner);
-      return result;
+      Joiner result = op.joiner;
+      for (; ; )
+      {
+        if (op == result.op1) 
+        {
+          if (result.next1 == joiner) return result;
+          else result = result.next1; 
+        }
+        else
+        {
+          if (result.next2 == joiner) return result;
+          else result = result.next2;
+        }
+      }
     }
 
     private void DeleteJoin(Joiner joiner)
@@ -2656,8 +2736,8 @@ namespace Clipper2Lib
       Joiner parentJnr;
       if (op1.joiner != joiner)
       {
-        parentJnr = FindJoinParent(op1.joiner, joiner);
-        if (parentJnr.next1 == joiner)
+        parentJnr = FindJoinParent(joiner, op1);
+        if (parentJnr.op1 == op1)
           parentJnr.next1 = joiner.next1;
         else
           parentJnr.next2 = joiner.next1;
@@ -2667,8 +2747,8 @@ namespace Clipper2Lib
 
       if (op2.joiner != joiner)
       {
-        parentJnr = FindJoinParent(op2.joiner, joiner);
-        if (parentJnr.next1 == joiner)
+        parentJnr = FindJoinParent(joiner, op2);
+        if (parentJnr.op1 == op2)
           parentJnr.next1 = joiner.next2;
         else
           parentJnr.next2 = joiner.next2;
@@ -2738,9 +2818,18 @@ namespace Clipper2Lib
       while (or2.pts == null && or2.owner != null) or2 = or2.owner;
       DeleteJoin(j);
 
-      if (!IsValidClosedPath(op2) || or2.pts == null) return or1;
-      if (!IsValidClosedPath(op1) || or1.pts == null) return or2;
-      if (or1 == or2 &&
+      if (or2.pts == null) return or1;
+      else if (!IsValidClosedPath(op2))
+      {
+        TidyOutRec(or2);
+        return or1;
+      }
+      else if ((or1.pts == null) || !IsValidClosedPath(op1))
+      {
+        TidyOutRec(or1);
+        return or2;
+      }
+      else if (or1 == or2 &&
           ((op1 == op2) || (op1.next == op2) || (op1.prev == op2))) return or1;
 
       //strip duplicates (if no other joiners)
@@ -2775,13 +2864,14 @@ namespace Clipper2Lib
 
         if (op1.prev.pt == op2.next.pt ||
             ((InternalClipperFunc.CrossProduct(op1.prev.pt, op1.pt, op2.next.pt) == 0) &&
-             SegmentsOverlap(op1.prev.pt, op1.pt, op2.pt, op2.next.pt)))
+             CollinearSegsOverlap(op1.prev.pt, op1.pt, op2.pt, op2.next.pt)))
         {
           if (or1 == or2) //SPLIT REQUIRED
           {
-            //first check it's safe to split
+            //first check if it's safe to split
             if (op1 == op2.next || op2 == op1.prev) return or1;
             //make sure op1.prev and op2.next match positions
+            //by inserting an extra vertex if needed
             if (op1.prev.pt != op2.next.pt)
             {
               if (PointBetween(op1.prev.pt, op2.pt, op2.next.pt))
@@ -2817,13 +2907,14 @@ namespace Clipper2Lib
         }
         else if (op1.next.pt == op2.prev.pt ||
                  ((InternalClipperFunc.CrossProduct(op1.next.pt, op2.pt, op2.prev.pt) == 0) &&
-                  SegmentsOverlap(op1.next.pt, op1.pt, op2.pt, op2.prev.pt)))
+                  CollinearSegsOverlap(op1.next.pt, op1.pt, op2.pt, op2.prev.pt)))
         {
           if (or1 == or2) //SPLIT REQUIRED
           {
-            //first check it's safe to split
+            //first check if it's safe to split
             if (op2 == op1.next || op1 == op2.prev) return or1;
             //make sure op2.prev and op1.next match positions
+            //by inserting an extra vertex if needed
             if (op2.prev.pt != op1.next.pt)
             {
               if (PointBetween(op2.prev.pt, op1.pt, op1.next.pt))

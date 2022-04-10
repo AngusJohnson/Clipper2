@@ -6,7 +6,7 @@
 <li>The code is cleaner and faster.</li>
 <li>Clipper2 is easier to use with simple functions that handle all common uses.</li> 
 <li>Floating point coordinates no longer need to be converted to integers before passing them into the library.</li>
-<li>And micro self-intersections (integer rounding artifacts) and polygons with touching edges are now rare seen in solutions.</li>
+<li>And micro self-intersections (integer rounding artifacts) and polygons with touching edges are now rarely seen in solutions.</li>
 </ul>
 </p>
 <p class="Body"> 
@@ -21,4 +21,4 @@ And Clipper2 has just about all the features of Clipper1 that sets Clipper apart
 
 There's more detail in the Docs folder above, but proper documentation is still a little way off.
 
-![clipper_performance](https://user-images.githubusercontent.com/5280692/162399024-70b80618-7e08-4784-9cd3-15842ae60f14.png)
+![clipper_performance](https://user-images.githubusercontent.com/5280692/162539497-316f719f-1c75-4638-bbec-02de5bfd87a5.png)

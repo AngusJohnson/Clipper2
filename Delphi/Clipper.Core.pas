@@ -3,7 +3,7 @@
 (*******************************************************************************
 * Author    :  Angus Johnson                                                   *
 * Version   :  10.0 (beta) - aka Clipper2                                      *
-* Date      :  3 April 2022                                                    *
+* Date      :  10 April 2022                                                   *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  Core Clipper Library module                                     *
 *              Contains structures and functions used throughout the library   *
@@ -183,8 +183,8 @@ function StripDuplicates(const path: TPath64; isClosedPath: Boolean = false): TP
 function StripNearDuplicates(const path: TPathD;
   minLenSqrd: double; isClosedPath: Boolean): TPathD;
 
-function PointBetween(pt, seg1, seg2: TPoint64): Boolean;
-function SegmentsOverlap(const  seg1a, seg1b, seg2a, seg2b: TPoint64): Boolean;
+function ValueBetween(val, end1, end2: Int64): Boolean;
+function ValueEqualOrBetween(val, end1, end2: Int64): Boolean;
 
 function ReversePath(const path: TPath64): TPath64; overload;
 function ReversePath(const path: TPathD): TPathD; overload;
@@ -317,18 +317,18 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-function PointBetween(pt, seg1, seg2: TPoint64): Boolean;
+function ValueBetween(val, end1, end2: Int64): Boolean;
 begin
-  Result :=
-    ((pt.X > seg1.X) = (pt.X < seg2.X)) and
-    ((pt.Y > seg1.Y) = (pt.Y < seg2.Y));
+  //nb: accommodates axis aligned between where end1 == end2
+  Result := (val <> end1) = (val <> end2) and
+    (val > end1) = (val < end2);
 end;
 //------------------------------------------------------------------------------
 
-function SegmentsOverlap(const  seg1a, seg1b, seg2a, seg2b: TPoint64): Boolean;
+function ValueEqualOrBetween(val, end1, end2: Int64): Boolean;
 begin
-  Result := PointBetween(seg1a, seg2a, seg2b) or
-    PointBetween(seg1b, seg2a, seg2b);
+  Result := (val = end1) or (val = end2) or
+    (val > end1) = (val < end2);
 end;
 //------------------------------------------------------------------------------
 
@@ -431,7 +431,7 @@ end;
 
 function ScalePaths(const paths: TPathsD; sx, sy: double): TPaths64;
 var
-  i,j,len: integer;
+  i,len: integer;
 begin
   if sx = 0 then sx := 1;
   if sy = 0 then sy := 1;
