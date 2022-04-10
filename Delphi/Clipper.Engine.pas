@@ -2265,50 +2265,51 @@ function CollinearSegsOverlap(const  seg1a, seg1b,
 begin
   //precondition: seg1 and seg2 are collinear
   Result := false;
-  if (seg1a.X < seg1b.X) then
+  if (seg1a.X = seg1b.X) then
+  begin
+    if (seg2a.X <> seg1a.X) or (seg2a.X <> seg2b.X) then Exit;
+  end
+  else if (seg1a.X < seg1b.X) then
   begin
     if (seg2a.X < seg2b.X) then
     begin
-      if (seg2a.X > seg1b.X) or
-        (seg2b.X < seg1a.X) then Exit;
+      if (seg2a.X >= seg1b.X) or (seg2b.X <= seg1a.X) then Exit;
     end else
     begin
-      if (seg2b.X > seg1b.X) or
-        (seg2a.X < seg1a.X) then Exit;
+      if (seg2b.X >= seg1b.X) or (seg2a.X <= seg1a.X) then Exit;
     end;
   end else
   begin
     if (seg2a.X < seg2b.X) then
     begin
-      if (seg2a.X > seg1a.X) or
-        (seg2b.X <seg1b.X) then Exit;
+      if (seg2a.X >= seg1a.X) or (seg2b.X <= seg1b.X) then Exit;
     end else
     begin
-      if (seg2b.X > seg1a.X) or
-        (seg2a.X < seg1b.X) then Exit;
+      if (seg2b.X >= seg1a.X) or (seg2a.X <= seg1b.X) then Exit;
     end;
   end;
-  if (seg1a.Y < seg1b.Y) then
+
+  if (seg1a.Y = seg1b.Y) then
+  begin
+    if (seg2a.Y <> seg1a.Y) or (seg2a.Y <> seg2b.Y) then Exit;
+  end
+  else if (seg1a.Y < seg1b.Y) then
   begin
     if (seg2a.Y < seg2b.Y) then
     begin
-      if (seg2a.Y > seg1b.Y) or
-        (seg2b.Y < seg1a.Y) then Exit;
+      if (seg2a.Y >= seg1b.Y) or (seg2b.Y <= seg1a.Y) then Exit;
     end else
     begin
-      if (seg2b.Y > seg1b.Y) or
-        (seg2a.Y < seg1a.Y) then Exit;
+      if (seg2b.Y >= seg1b.Y) or (seg2a.Y <= seg1a.Y) then Exit;
     end;
   end else
   begin
     if (seg2a.Y < seg2b.Y) then
     begin
-      if (seg2a.Y > seg1a.Y) or
-        (seg2b.Y < seg1b.Y) then Exit;
+      if (seg2a.Y >= seg1a.Y) or (seg2b.Y <= seg1b.Y) then Exit;
     end else
     begin
-      if (seg2b.Y > seg1a.Y) or
-        (seg2a.Y < seg1b.Y) then Exit;
+      if (seg2b.Y >= seg1a.Y) or (seg2a.Y <= seg1b.Y) then Exit;
     end;
   end;
   Result := true;

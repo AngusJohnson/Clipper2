@@ -2402,49 +2402,56 @@ namespace Clipper2Lib
       Point64 seg2a, Point64 seg2b)
     {
       //precondition: seg1 and seg2 are collinear      
-      if (seg1a.X < seg1b.X)
+      if (seg1a.X == seg1b.X) {
+        if (seg2a.X != seg1a.X || seg2a.X != seg2b.X) return false;
+      }
+      else if (seg1a.X < seg1b.X)
       {
         if (seg2a.X < seg2b.X)
         {
-          if (seg2a.X > seg1b.X || seg2b.X < seg1a.X) return false;
+          if (seg2a.X >= seg1b.X || seg2b.X <= seg1a.X) return false;
         } 
         else
         {
-          if (seg2b.X > seg1b.X || seg2a.X < seg1a.X) return false;
+          if (seg2b.X >= seg1b.X || seg2a.X <= seg1a.X) return false;
         }
       }
       else
       {
         if (seg2a.X < seg2b.X)
         {
-          if (seg2a.X > seg1a.X || seg2b.X < seg1b.X) return false;
+          if (seg2a.X >= seg1a.X || seg2b.X <= seg1b.X) return false;
         }
         else
         {
-          if (seg2b.X > seg1a.X || seg2a.X < seg1b.X) return false;
+          if (seg2b.X >= seg1a.X || seg2a.X <= seg1b.X) return false;
         }
       }
 
-      if (seg1a.Y < seg1b.Y)
+      if (seg1a.Y == seg1b.Y)
+      {
+        if (seg2a.Y != seg1a.Y || seg2a.Y != seg2b.Y) return false;
+      }
+      else if (seg1a.Y < seg1b.Y)
       {
         if (seg2a.Y < seg2b.Y)
         {
-          if (seg2a.Y > seg1b.Y || seg2b.Y < seg1a.Y) return false;
+          if (seg2a.Y >= seg1b.Y || seg2b.Y <= seg1a.Y) return false;
         }
         else
         {
-          if (seg2b.Y > seg1b.Y || seg2a.Y < seg1a.Y) return false;
+          if (seg2b.Y >= seg1b.Y || seg2a.Y <= seg1a.Y) return false;
         }
       }
       else
       {
         if (seg2a.Y < seg2b.Y)
         {
-          if (seg2a.Y > seg1a.Y || seg2b.Y < seg1b.Y) return false;
+          if (seg2a.Y >= seg1a.Y || seg2b.Y <= seg1b.Y) return false;
         }
         else
         {
-          if (seg2b.Y > seg1a.Y || seg2a.Y < seg1b.Y) return false;
+          if (seg2b.Y >= seg1a.Y || seg2a.Y <= seg1b.Y) return false;
         }
       }
       return true;
