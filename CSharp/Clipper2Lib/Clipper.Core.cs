@@ -1,7 +1,7 @@
 ﻿/*******************************************************************************
 * Author    :  Angus Johnson                                                   *
 * Version   :  10.0 (release candidate 1) - also known as Clipper2             *
-* Date      :  10 April 2022                                                   *
+* Date      :  11 April 2022                                                   *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  Core structures and functions for the Clipper Library           *
@@ -48,6 +48,13 @@ namespace Clipper2Lib
       Z = (long) Math.Round(pt.z);
     }
 
+    public Point64(PointD pt, double scale)
+    {
+      X = (long) Math.Round(pt.x * scale);
+      Y = (long) Math.Round(pt.y * scale);
+      Z = (long) Math.Round(pt.z * scale);
+    }
+
     public static bool operator ==(Point64 lhs, Point64 rhs)
     {
       return lhs.X == rhs.X && lhs.Y == rhs.Y;
@@ -56,6 +63,16 @@ namespace Clipper2Lib
     public static bool operator !=(Point64 lhs, Point64 rhs)
     {
       return lhs.X != rhs.X || lhs.Y != rhs.Y;
+    }
+
+    public static Point64 operator +(Point64 lhs, Point64 rhs)
+    {
+      return new Point64(lhs.X + rhs.X, lhs.Y + rhs.Y, lhs.Z + rhs.Z);
+    }
+
+    public static Point64 operator -(Point64 lhs, Point64 rhs)
+    {
+      return new Point64(lhs.X - rhs.X, lhs.Y - rhs.Y, lhs.Z - rhs.Z);
     }
 
 #else
@@ -83,6 +100,12 @@ namespace Clipper2Lib
       this.Y = (long) Math.Round(pt.y);
     }
 
+    public Point64(PointD pt, double scale)
+    {
+      this.X = (long) Math.Round(pt.x * scale);
+      this.Y = (long) Math.Round(pt.y * scale);
+    }
+
     public static bool operator ==(Point64 lhs, Point64 rhs)
     {
       return lhs.X == rhs.X && lhs.Y == rhs.Y;
@@ -93,6 +116,15 @@ namespace Clipper2Lib
       return lhs.X != rhs.X || lhs.Y != rhs.Y;
     }
 
+    public static Point64 operator +(Point64 lhs, Point64 rhs)
+    {
+      return new Point64(lhs.X + rhs.X, lhs.Y + rhs.Y);
+    }
+
+    public static Point64 operator -(Point64 lhs, Point64 rhs)
+    {
+      return new Point64(lhs.X - rhs.X, lhs.Y - rhs.Y);
+    }
 #endif
     public override bool Equals(object obj)
     {
@@ -132,6 +164,13 @@ namespace Clipper2Lib
       z = pt.Z;
     }
 
+    public PointD(Point64 pt, double scale)
+    {
+      x = pt.X * scale;
+      y = pt.Y * scale;
+      z = pt.Z * scale;
+    }
+
     public PointD(long x, long y, long z = 0)
     {
       this.x = x;
@@ -149,14 +188,20 @@ namespace Clipper2Lib
 #else
     public PointD(PointD pt)
     {
-      this.x = pt.x;
-      this.y = pt.y;
+      x = pt.x;
+      y = pt.y;
     }
 
     public PointD(Point64 pt)
     {
-      this.x = pt.X;
-      this.y = pt.Y;
+      x = pt.X;
+      y = pt.Y;
+    }
+
+    public PointD(Point64 pt, double scale)
+    {
+      x = pt.X * scale;
+      y = pt.Y * scale;
     }
 
     public PointD(long x, long y)

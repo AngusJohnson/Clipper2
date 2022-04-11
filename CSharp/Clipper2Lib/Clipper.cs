@@ -1,7 +1,7 @@
 ﻿/*******************************************************************************
 * Author    :  Angus Johnson                                                   *
 * Version   :  10.0 (release candidate 1) - also known as Clipper2             *
-* Date      :  8 April 2022                                                    *
+* Date      :  11 April 2022                                                   *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  This module contains simple functions that will likely cover    *
@@ -227,6 +227,14 @@ namespace Clipper2Lib
       Path64 result = new Path64(path.Count);
       foreach (PointD pt in path)
         result.Add(new Point64(pt));
+      return result;
+    }
+
+    public static Path64 Path64(PathD path, double scale)
+    {
+      Path64 result = new Path64(path.Count);
+      foreach (PointD pt in path)
+        result.Add(new Point64(pt, scale));
       return result;
     }
 

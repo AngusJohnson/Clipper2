@@ -1,7 +1,7 @@
 ﻿/*******************************************************************************
 * Author    :  Angus Johnson                                                   *
 * Version   :  10.0 (beta) - also known as Clipper2                            *
-* Date      :  10 April 2022                                                   *
+* Date      :  11 April 2022                                                   *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  This is the main polygon clipping module                        *
@@ -617,7 +617,7 @@ namespace Clipper2Lib
 
       if ((Area(ae.outrec.pts) < 0.0) == isOuter)
         ReverseOutPts(ae.outrec.pts);
-      return result;
+      return true;
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]

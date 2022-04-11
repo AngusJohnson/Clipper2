@@ -3,7 +3,7 @@ unit Clipper.Engine;
 (*******************************************************************************
 * Author    :  Angus Johnson                                                   *
 * Version   :  10.0 (beta) - aka Clipper2                                      *
-* Date      :  10 April 2022                                                   *
+* Date      :  11 April 2022                                                   *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  This is the main polygon clipping module                        *
@@ -855,8 +855,8 @@ begin
   e2 := e.PrevInAEL;
   while assigned(e2) do
   begin
-   if IsHotEdge(e2) and not IsOpen(e2) then isOuter := not isOuter;
-   e2 := e2.PrevInAEL;
+    if IsHotEdge(e2) and not IsOpen(e2) then isOuter := not isOuter;
+    e2 := e2.PrevInAEL;
   end;
 
   Result := isOuter <> wasOuter;

@@ -6,6 +6,19 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <None Remove="solution1.svg" />
+    <None Remove="solution10.svg" />
+    <None Remove="solution2.svg" />
+    <None Remove="solution3.svg" />
+    <None Remove="solution4.svg" />
+    <None Remove="solution5.svg" />
+    <None Remove="solution6.svg" />
+    <None Remove="solution7.svg" />
+    <None Remove="solution8.svg" />
+    <None Remove="solution9.svg" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\Clipper2Lib\Clipper2Lib.csproj" />
   </ItemGroup>
 

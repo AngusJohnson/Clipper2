@@ -1,15 +1,36 @@
-﻿using System.Collections.Generic;
+﻿using System;
 using Clipper2Lib;
+using System.Collections.Generic;
 
 namespace Clipper2LibExample
 {
+  using Path64 = List<Point64>;
+  using PathD = List<PointD>;
   using Paths64 = List<List<Point64>>;
   internal class Program
   {
 
+    internal static PathD Ellipse(RectD rec)
+    {
+      PointD midpoint = new PointD((rec.left + rec.right) / 2, (rec.top + rec.bottom) / 2);
+      PointD radii = new PointD(Math.Abs(rec.right - rec.left) / 2, Math.Abs(rec.bottom - rec.top) / 2);
+      int steps = (int) Math.Round(Math.PI * Math.Sqrt(radii.x + radii.y));
+      double sinA = Math.Sin(2 * Math.PI / steps);
+      double cosA = Math.Cos(2 * Math.PI / steps);
+      PointD delta = new PointD(cosA, sinA);
+      PathD result = new PathD(steps);
+      result.Add(new PointD(midpoint.x + radii.x, midpoint.y));
+      for (int i = 1; i < steps; i++)
+      {
+        result.Add(new PointD(midpoint.x + radii.x * delta.x, midpoint.y + radii.y * delta.y));
+        delta = new PointD(delta.x * cosA - delta.y * sinA, delta.y * cosA + delta.x * sinA);
+      }
+      return result;
+    }
+
     internal static void MakeSvg(string caption, string filename,
       Paths64 subj, Paths64 openSubj, Paths64 clip,
-      Paths64 solution, FillRule fill)
+      Paths64 solution, FillRule fill, bool hideSolutionCoords = false)
     {
       SimpleClipperSvgWriter svg = new SimpleClipperSvgWriter(fill);
       svg.AddText(caption, 0, 25, 14);
@@ -20,7 +41,7 @@ namespace Clipper2LibExample
       if (clip != null)
         svg.AddPaths(clip, false, 0x11996600, 0x55993300, 0.8);
       if (solution != null)
-        svg.AddPaths(solution, false, 0x4000FF00, 0x80000000, 1.2, true);
+        svg.AddPaths(solution, false, 0x4000FF00, 0x80000000, 1.2, !hideSolutionCoords);
       svg.SaveToFile(filename, 800, 600);
     }
 
@@ -76,6 +97,13 @@ namespace Clipper2LibExample
       MakeSvg("Sample 9 - inflate:10; end:joined", "../../../solution9.svg",
         null, subj, null, solution9, FillRule.EvenOdd);
 
+      //PathD pattern = ClipperFunc.MakePath(new double[] { -7,0, 0,-10, 7,0, 0,10 }); //diamond
+      //PathD pattern = ClipperFunc.MakePath(new double[] { -10,-5, 10,-5, 10,5, -10,5 }); //rectangle
+      PathD pattern = Ellipse(new RectD(-10, -10, 10, 10)); //circle
+      PathD path = ClipperFunc.MakePath(new double[] { 0, 0, 100, 200, 200, 0 });
+      Paths64 solution10 = ClipperFunc.Paths64(Minkowski.Sum(pattern, path, true));
+      MakeSvg("Sample 10 - Minkowski.Sum", "../../../solution10.svg",
+        null, null, null, solution10, FillRule.NonZero, true);
     }
   }
 }
