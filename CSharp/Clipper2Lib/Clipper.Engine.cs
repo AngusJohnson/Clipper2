@@ -578,10 +578,9 @@ namespace Clipper2Lib
       } while (op1 != op);
     }
 
-    private void CheckFixInnerOuter(Active ae)
+    private bool CheckFixInnerOuter(Active ae)
     {
-      bool wasOuter = IsOuter(ae.outrec);
-      bool isOuter = true;
+      bool wasOuter = IsOuter(ae.outrec), isOuter = true, result;
 
       Active ae2 = ae.prevInAEL;
       while (ae2 != null)
@@ -590,14 +589,14 @@ namespace Clipper2Lib
         ae2 = ae2.prevInAEL;
       }
 
-      if (isOuter != wasOuter)
-      {
-        if (isOuter)
-          SetAsOuter(ae.outrec);
-        else
-          SetAsInner(ae.outrec);
-      }
+      if (isOuter == wasOuter) return false;
 
+      if (isOuter)
+        SetAsOuter(ae.outrec);
+      else
+        SetAsInner(ae.outrec);
+
+      //now check and fix ownership
       ae2 = GetPrevHotEdge(ae);
       if (isOuter)
       {
@@ -618,6 +617,7 @@ namespace Clipper2Lib
 
       if ((Area(ae.outrec.pts) < 0.0) == isOuter)
         ReverseOutPts(ae.outrec.pts);
+      return result;
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -640,19 +640,32 @@ namespace Clipper2Lib
       outrec.pts = outrec.pts.next;
     }
 
-    private bool FixSides(Active ae)
+    private bool FixSides(Active ae1, Active ae2)
     {
-      if (ValidateOrDeleteClosedPath(ref ae.outrec.pts))
+      if (ValidateClosedPathEx(ref ae1.outrec.pts) &&
+        ValidateClosedPathEx(ref ae2.outrec.pts))
       {
-        CheckFixInnerOuter(ae);
-        if (IsOuter(ae.outrec) == IsFront(ae))
-          return false; // ie not swapping sides
-        SwapSides(ae.outrec);
+        if (CheckFixInnerOuter(ae1) &&
+          IsOuter(ae1.outrec) == IsFront(ae1))
+          SwapSides(ae1.outrec);
+        else if (CheckFixInnerOuter(ae2) &&
+          IsOuter(ae2.outrec) == IsFront(ae2))
+          SwapSides(ae2.outrec);
+        else
+          throw new ClipperLibException("Error in Clipper.AddLocalMaxPoly");
+        return true;
       }
-      else
-        UncoupleOutRec(ae);
-
-      return true;
+      else if (ae1.outrec.pts == null)
+      {
+        if (ae2.outrec.pts != null && ValidateClosedPathEx(ref ae2.outrec.pts))
+          throw new ClipperLibException("Error in Clipper.AddLocalMaxPoly");
+        UncoupleOutRec(ae1);
+        UncoupleOutRec(ae2);
+        //fixed, but there's nothing to terminate in AddLocalMaxPoly
+        return false;
+      }
+      else 
+        throw new ClipperLibException("Error in Clipper.AddLocalMaxPoly");
     }
 
     private void SetOwnerAndInnerOuterState(Active ae)
@@ -1429,9 +1442,11 @@ namespace Clipper2Lib
     {
       if (IsFront(ae1) == IsFront(ae2))
       {
-        if (IsOpen(ae1)) SwapSides(ae2.outrec);
-        else if (!FixSides(ae1) && !FixSides(ae2))
-          throw new ClipperLibException("Error in Clipper.AddLocalMaxPoly()");
+        //we should practically never get here but in case something is wrong
+        if (IsOpen(ae1))
+          SwapSides(ae2.outrec);
+        else if (!FixSides(ae1, ae2)) 
+          return null;
       }
 
       OutPt result = AddOutPt(ae1, pt);
@@ -1455,16 +1470,6 @@ namespace Clipper2Lib
 
     private void JoinOutrecPaths(Active ae1, Active ae2)
     {
-      if (IsFront(ae1) == IsFront(ae2))
-      {
-        //one or other 'side' must be wrong ...
-        if (IsOpen(ae1))
-          SwapSides(ae2.outrec);
-        else if (!FixSides(ae1) && !FixSides(ae2))
-          throw new ClipperLibException("Error in JoinOutrecPaths()");
-        if (ae1.outrec.owner == ae2.outrec) ae1.outrec.owner = ae2.outrec.owner;
-      }
-
       //join ae2 outrec path onto ae1 outrec path and then delete ae2 outrec path
       //pointers. (nb: Only very rarely do the joining ends share the same coords.)
       OutPt p1Start = ae1.outrec.pts;
@@ -2486,7 +2491,7 @@ namespace Clipper2Lib
       return op.nextHorz != null || op == _horzLast;
     }
 
-    private bool ValidateOrDeleteClosedPath(ref OutPt? op)
+    private bool ValidateClosedPathEx(ref OutPt? op)
     {
       if (IsValidClosedPath(op)) return true;
       SafeDisposeOutPts(op);
@@ -3094,7 +3099,7 @@ namespace Clipper2Lib
 
     private void CleanCollinear(ref OutPt? op)
     {
-      if (!ValidateOrDeleteClosedPath(ref op)) return;
+      if (!ValidateClosedPathEx(ref op)) return;
       OutPt startOp = op, op2 = op;
       for (; ; )
       {
@@ -3109,7 +3114,7 @@ namespace Clipper2Lib
           if (op2 == op)
             op = op.prev;
           op2 = SafeDisposeOutPt(op2);
-          if (!ValidateOrDeleteClosedPath(ref op2))
+          if (!ValidateClosedPathEx(ref op2))
           {
             op = null;
             return;

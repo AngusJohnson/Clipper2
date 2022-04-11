@@ -188,7 +188,7 @@ type
     function  StartOpenPath(e: PActive; const pt: TPoint64): POutPt;
     procedure UpdateEdgeIntoAEL(var e: PActive);
     function  IntersectEdges(e1, e2: PActive; pt: TPoint64): POutPt;
-    function  FixSides(e: PActive): Boolean;
+    function  FixSides(e1, e2: PActive): Boolean;
     procedure DeleteFromAEL(e: PActive);
     procedure AdjustCurrXAndCopyToSEL(topY: Int64);
     procedure DoIntersections(const topY: Int64);
@@ -215,7 +215,7 @@ type
     procedure DeleteJoin(joiner: PJoiner);
     procedure ProcessJoinList;
     function  ProcessJoin(joiner: PJoiner): POutRec;
-    function  ValidateOrDisposeClosedPath(var op: POutPt): Boolean;
+    function  ValidateClosedPathEx(var op: POutPt): Boolean;
     procedure CompleteSplit(op1, op2: POutPt; OutRec: POutRec);
     function  SafeDisposeOutPt(op: POutPt): POutPt;
     procedure SafeDisposeOutPts(op: POutPt);
@@ -845,7 +845,7 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-procedure CheckFixInnerOuter(e: PActive);
+function CheckFixInnerOuter(e: PActive): Boolean;
 var
   wasOuter, isOuter: Boolean;
   e2: PActive;
@@ -859,12 +859,13 @@ begin
    e2 := e2.PrevInAEL;
   end;
 
-  if isOuter <> wasOuter then
-  begin
-    if isOuter then SetAsOuter(e.outrec)
-    else SetAsInner(e.outrec);
-  end;
+  Result := isOuter <> wasOuter;
+  if not Result then Exit;
 
+  if isOuter then SetAsOuter(e.outrec)
+  else SetAsInner(e.outrec);
+
+  //now check and fix ownership
   e2 := GetPrevHotEdge(e);
   if isOuter then
   begin
@@ -882,10 +883,11 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-procedure SwapSides(outRec: POutRec); {$IFDEF INLINING} inline; {$ENDIF}
+procedure SwapFrontBackSides(outRec: POutRec); {$IFDEF INLINING} inline; {$ENDIF}
 var
   e2: PActive;
 begin
+  //this proc. is almost never needed
   e2 := outRec.FrontE;
   outRec.FrontE := outRec.BackE;
   outRec.BackE := e2;
@@ -949,6 +951,8 @@ var
   i2: PIntersectNode absolute node2;
 begin
   result := i2.Pt.Y - i1.Pt.Y;
+  //Sort by X too. While not essential, this significantly speed up the
+  //secondary sort in ProcessIntersectList (which ensures edge adjacency).
   if (result = 0) and (i1 <> i2) then
     result := i1.Pt.X - i2.Pt.X;
 end;
@@ -1809,7 +1813,7 @@ procedure TClipperBase.CleanCollinear(var op: POutPt;
 var
   op2, startOp: POutPt;
 begin
-  if not ValidateOrDisposeClosedPath(op) then Exit;
+  if not ValidateClosedPathEx(op) then Exit;
   startOp := op;
   op2 := op;
   while true do
@@ -1823,7 +1827,7 @@ begin
     begin
       if op2 = op then op := op.Prev;
       op2 := SafeDisposeOutPt(op2);
-      if not ValidateOrDisposeClosedPath(op2) then
+      if not ValidateClosedPathEx(op2) then
       begin
         op := nil;
         Exit;
@@ -1946,9 +1950,18 @@ var
 begin
   if (IsFront(e1) = IsFront(e2)) then
   begin
-    if IsOpen(e1) then SwapSides(e2.OutRec)
-    else if not FixSides(e1) and not FixSides(e2) then
-      RaiseError(rsClipper_ClippingErr);
+    //something is wrong so fix it!
+    if not IsOpen(e1) then
+    begin
+      //we should practically never get here
+      if not FixSides(e1, e2) then
+      begin
+        Result := nil;
+        Exit;
+      end;
+    end
+    else
+      SwapFrontBackSides(e2.OutRec);
   end;
 
   Result := AddOutPt(e1, pt);
@@ -2804,7 +2817,7 @@ end;
 {$HINTS ON}
 {$ENDIF}
 
-function TClipperBase.ValidateOrDisposeClosedPath(var op: POutPt): Boolean;
+function TClipperBase.ValidateClosedPathEx(var op: POutPt): Boolean;
 begin
   Result := IsValidClosedPath(op);
   if Result then Exit;
@@ -2813,18 +2826,32 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-function TClipperBase.FixSides(e: PActive): Boolean;
+function TClipperBase.FixSides(e1, e2: PActive): Boolean;
 begin
-  if ValidateOrDisposeClosedPath(e.OutRec.Pts) then
+  Result := true;
+  if ValidateClosedPathEx(e1.OutRec.Pts) and
+    ValidateClosedPathEx(e2.OutRec.Pts) then
   begin
-    CheckFixInnerOuter(e);
-    Result := (IsOuter(e.OutRec) <> IsFront(e));
-    if Result then SwapSides(e.OutRec);
-  end else
+    if CheckFixInnerOuter(e1) and
+      (IsOuter(e1.OutRec) <> IsFront(e1)) then
+      SwapFrontBackSides(e1.OutRec)
+    else if CheckFixInnerOuter(e2) and
+      (IsOuter(e2.OutRec) <> IsFront(e2)) then
+      SwapFrontBackSides(e2.OutRec)
+    else
+      RaiseError(rsClipper_ClippingErr);
+  end
+  else if not Assigned(e1.OutRec.Pts) then
   begin
-    UncoupleOutRec(e);
-    Result := true;
-  end;
+    if Assigned(e2.OutRec.Pts) and
+      ValidateClosedPathEx(e2.OutRec.Pts) then
+        RaiseError(rsClipper_ClippingErr); //e2 can't join onto nothing!
+    UncoupleOutRec(e1);
+    UncoupleOutRec(e2);
+    Result := false;
+  end
+  else
+    RaiseError(rsClipper_ClippingErr); //e1 can't join onto nothing!
 end;
 //------------------------------------------------------------------------------
 
