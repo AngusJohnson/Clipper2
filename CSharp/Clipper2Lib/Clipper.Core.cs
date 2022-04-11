@@ -130,8 +130,7 @@ namespace Clipper2Lib
     {
       if (obj is Point64 p)
         return this == p;
-      else
-        return false;
+      return false;
     }
 
     public override string ToString()
@@ -237,8 +236,7 @@ namespace Clipper2Lib
     {
       if (obj is PointD p)
         return this == p;
-      else
-        return false;
+      return false;
     }
 
     public override string ToString()
@@ -404,7 +402,8 @@ namespace Clipper2Lib
       double m1, b1, m2, b2;
       if (ln1b.X == ln1a.X)
       {
-        if (ln2b.X == ln2a.X) return false;
+        if (ln2b.X == ln2a.X)
+          return false;
         m2 = (double) (ln2b.Y - ln2a.Y) / (ln2b.X - ln2a.X);
         b2 = ln2a.Y - m2 * ln2a.X;
         ip.x = ln1a.X;

@@ -249,8 +249,10 @@ namespace Clipper2Lib
     public static Rect64 GetBounds(Paths64 paths)
     {
       int i = 0, cnt = paths.Count;
-      while (i < cnt && paths[i].Count == 0) i++;
-      if (i == cnt) return new Rect64(0, 0, 0, 0);
+      while (i < cnt && paths[i].Count == 0)
+        i++;
+      if (i == cnt)
+        return new Rect64(0, 0, 0, 0);
       Rect64 result = new Rect64(
           paths[i][0].X, paths[i][0].Y,
           paths[i][0].X, paths[i][0].Y);
@@ -259,10 +261,14 @@ namespace Clipper2Lib
       {
         for (int j = 0; j < paths[i].Count; j++)
         {
-          if (paths[i][j].X < result.left) result.left = paths[i][j].X;
-          else if (paths[i][j].X > result.right) result.right = paths[i][j].X;
-          if (paths[i][j].Y < result.top) result.top = paths[i][j].Y;
-          else if (paths[i][j].Y > result.bottom) result.bottom = paths[i][j].Y;
+          if (paths[i][j].X < result.left)
+            result.left = paths[i][j].X;
+          else if (paths[i][j].X > result.right) 
+            result.right = paths[i][j].X;
+          if (paths[i][j].Y < result.top) 
+            result.top = paths[i][j].Y;
+          else if (paths[i][j].Y > result.bottom) 
+            result.bottom = paths[i][j].Y;
         }
       }
 
@@ -272,8 +278,10 @@ namespace Clipper2Lib
     public static RectD GetBounds(PathsD paths)
     {
       int i = 0, cnt = paths.Count;
-      while (i < cnt && paths[i].Count == 0) i++;
-      if (i == cnt) return new RectD(0, 0, 0, 0);
+      while (i < cnt && paths[i].Count == 0)
+        i++;
+      if (i == cnt)
+        return new RectD(0, 0, 0, 0);
       RectD result = new RectD(
           paths[i][0].x, paths[i][0].y,
           paths[i][0].x, paths[i][0].y);
@@ -282,10 +290,14 @@ namespace Clipper2Lib
       {
         for (int j = 0; j < paths[i].Count; j++)
         {
-          if (paths[i][j].x < result.left) result.left = paths[i][j].x;
-          else if (paths[i][j].x > result.right) result.right = paths[i][j].x;
-          if (paths[i][j].y < result.top) result.top = paths[i][j].y;
-          else if (paths[i][j].y > result.bottom) result.bottom = paths[i][j].y;
+          if (paths[i][j].x < result.left) 
+            result.left = paths[i][j].x;
+          else if (paths[i][j].x > result.right) 
+            result.right = paths[i][j].x;
+          if (paths[i][j].y < result.top) 
+            result.top = paths[i][j].y;
+          else if (paths[i][j].y > result.bottom) 
+            result.bottom = paths[i][j].y;
         }
       }
 
@@ -307,7 +319,8 @@ namespace Clipper2Lib
 
     public static Path64 ScalePath(PathD path, double scale)
     {
-      if (scale == 0) scale = 1;
+      if (scale == 0) 
+        scale = 1;
       int cnt = path.Count;
       Path64 res = new Path64(cnt);
       for (int i = 0; i < cnt; i++)
@@ -317,7 +330,8 @@ namespace Clipper2Lib
 
     public static Paths64 ScalePaths(PathsD paths, double scale)
     {
-      if (scale == 0) scale = 1;
+      if (scale == 0) 
+        scale = 1;
       int cnt = paths.Count;
       Paths64 res = new Paths64(cnt);
       for (int i = 0; i < cnt; i++)
@@ -327,7 +341,8 @@ namespace Clipper2Lib
 
     public static PathD ScalePath(Path64 path, double scale)
     {
-      if (scale == 0) scale = 1;
+      if (scale == 0) 
+        scale = 1;
       int cnt = path.Count;
       PathD res = new PathD(cnt);
       for (int i = 0; i < cnt; i++)
@@ -337,7 +352,8 @@ namespace Clipper2Lib
 
     public static PathsD ScalePaths(Paths64 paths, double scale)
     {
-      if (scale == 0) scale = 1;
+      if (scale == 0) 
+        scale = 1;
       int cnt = paths.Count;
       PathsD res = new PathsD(cnt);
       for (int i = 0; i < cnt; i++)
@@ -347,7 +363,8 @@ namespace Clipper2Lib
 
     public static void ScalePaths(Paths64 paths, double scale, ref PathsD pathOut)
     {
-      if (scale == 0) scale = 1;
+      if (scale == 0) 
+        scale = 1;
       int cnt = paths.Count;
       pathOut.Clear();
       pathOut.Capacity = cnt;
@@ -358,7 +375,8 @@ namespace Clipper2Lib
     public static PathD PathD(Path64 path, double scale = 1.0)
     {
       int cnt = path.Count;
-      if (scale <= 1.0e-8) scale = 1.0;
+      if (scale <= 1.0e-8) 
+        scale = 1.0;
       PathD res = new PathD(cnt);
       for (int i = 0; i < cnt; i++)
         res.Add(new PointD(path[i].X * scale, path[i].Y * scale));
@@ -377,7 +395,8 @@ namespace Clipper2Lib
     public static PathsD PathsD(Paths64 paths, double scale = 1.0)
     {
       int cnt = paths.Count;
-      if (scale <= 1.0e-8) scale = 1.0;
+      if (scale <= 1.0e-8) 
+        scale = 1.0;
       PathsD res = new PathsD(cnt);
       for (int i = 0; i < cnt; i++)
         res.Add(PathD(paths[i], scale));
@@ -426,7 +445,8 @@ namespace Clipper2Lib
     {
       int cnt = path.Count;
       PathD result = new PathD(cnt);
-      if (cnt == 0) return result;
+      if (cnt == 0) 
+        return result;
       PointD lastPt = path[0];
       result.Add(lastPt);
       for (int i = 1; i < cnt; i++)

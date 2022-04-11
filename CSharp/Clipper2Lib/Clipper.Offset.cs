@@ -88,7 +88,8 @@ namespace Clipper2Lib
     public void AddPath(Path64 path, JoinType joinType, EndType endType)
     {
       int cnt = path.Count;
-      if (cnt == 0) return;
+      if (cnt == 0)
+        return;
       PathsD pp = new PathsD(1) { ClipperFunc.PathD(path) };
       AddPaths(pp, joinType, endType);
     }
@@ -96,14 +97,16 @@ namespace Clipper2Lib
     public void AddPaths(Paths64 paths, JoinType joinType, EndType endType)
     {
       int cnt = paths.Count;
-      if (cnt == 0) return;
+      if (cnt == 0)
+        return;
       _pathGroups.Add(new PathGroup(ClipperFunc.PathsD(paths), joinType, endType));
     }
 
     public void AddPath(PathD path, JoinType joinType, EndType endType)
     {
       int cnt = path.Count;
-      if (cnt == 0) return;
+      if (cnt == 0)
+        return;
       PathsD pp = new PathsD(1) { path };
       AddPaths(pp, joinType, endType);
     }
@@ -111,7 +114,8 @@ namespace Clipper2Lib
     public void AddPaths(PathsD paths, JoinType joinType, EndType endType)
     {
       int cnt = paths.Count;
-      if (cnt == 0) return;
+      if (cnt == 0)
+        return;
       _pathGroups.Add(new PathGroup(paths, joinType, endType));
     }
 
@@ -155,7 +159,8 @@ namespace Clipper2Lib
     {
       double dx = (pt2.x - pt1.x);
       double dy = (pt2.y - pt1.y);
-      if ((dx == 0) && (dy == 0)) return new PointD();
+      if ((dx == 0) && (dy == 0))
+        return new PointD();
 
       double f = 1.0 / Math.Sqrt(dx * dx + dy * dy);
       dx *= f;
@@ -172,7 +177,8 @@ namespace Clipper2Lib
       {
         PathD p = paths[i];
         for (int j = 0; j < p.Count; j++)
-          if (p[j].y < lp.y) continue;
+          if (p[j].y < lp.y)
+            continue;
           else if (p[j].y > lp.y || p[j].x < lp.x)
           {
             result = i;
@@ -258,8 +264,10 @@ namespace Clipper2Lib
       //sin(A) < 0: convex on left.
       //cos(A) > 0: angles on both left and right sides > 90 degrees
       double sinA = _normals[k].x * _normals[j].y - _normals[j].x * _normals[k].y;
-      if (sinA > 1.0) sinA = 1.0;
-      else if (sinA < -1.0) sinA = -1.0;
+      if (sinA > 1.0)
+        sinA = 1.0;
+      else if (sinA < -1.0)
+        sinA = -1.0;
 
       if (sinA * _delta < 0) // a concave offset
       {
@@ -282,12 +290,16 @@ namespace Clipper2Lib
         switch (_joinType)
         {
           case JoinType.Miter:
-            if (1 + cosA < _tmpLimit) DoSquare(group, path, j, k);
-            else DoMiter(group, path, j, k, cosA);
+            if (1 + cosA < _tmpLimit)
+              DoSquare(group, path, j, k);
+            else
+              DoMiter(group, path, j, k, cosA);
             break;
           case JoinType.Square:
-            if (cosA >= 0) DoMiter(group, path, j, k, cosA);
-            else DoSquare(group, path, j, k);
+            if (cosA >= 0)
+              DoMiter(group, path, j, k, cosA);
+            else
+              DoSquare(group, path, j, k);
             break;
           default:
             DoRound(group, path[j], _normals[j], _normals[k], Math.Atan2(sinA, cosA));
@@ -389,7 +401,8 @@ namespace Clipper2Lib
         //th  e lowermost polygon must be an outer polygon. So we can use that as the
         //designated orientation for outer polygons (needed for tidy-up clipping)
         int lowestIdx = GetLowestPolygonIdx(group._inPaths);
-        if (lowestIdx < 0) return;
+        if (lowestIdx < 0)
+          return;
         if (ClipperFunc.Area(group._inPaths[lowestIdx]) < 0)
         {
           //this is more efficient than literally reversing paths
@@ -421,7 +434,8 @@ namespace Clipper2Lib
       {
         PathD path = ClipperFunc.StripNearDuplicates(p, _minLenSqrd, isClosedPaths);
         int cnt = path.Count;
-        if (cnt == 0 || (cnt < 3 && !IsFullyOpenEndType(group._endType))) continue;
+        if (cnt == 0 || (cnt < 3 && !IsFullyOpenEndType(group._endType)))
+          continue;
 
         if (cnt == 1)
         {
@@ -445,9 +459,12 @@ namespace Clipper2Lib
         else
         {
           BuildNormals(path);
-          if (group._endType == EndType.Polygon) OffsetPolygon(group, path);
-          else if (group._endType == EndType.Joined) OffsetOpenJoined(group, path);
-          else OffsetOpenPath(group, path, group._endType);
+          if (group._endType == EndType.Polygon)
+            OffsetPolygon(group, path);
+          else if (group._endType == EndType.Joined)
+            OffsetOpenJoined(group, path);
+          else
+            OffsetOpenPath(group, path, group._endType);
         }
       }
 
