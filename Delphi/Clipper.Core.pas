@@ -320,8 +320,8 @@ end;
 function ValueBetween(val, end1, end2: Int64): Boolean;
 begin
   //nb: accommodates axis aligned between where end1 == end2
-  Result := (val <> end1) = (val <> end2) and
-    (val > end1) = (val < end2);
+  Result := ((val <> end1) = (val <> end2)) and
+    ((val > end1) = (val < end2));
 end;
 //------------------------------------------------------------------------------
 

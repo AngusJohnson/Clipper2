@@ -1,7 +1,7 @@
 ﻿/*******************************************************************************
 * Author    :  Angus Johnson                                                   *
 * Version   :  10.0 (beta) - also known as Clipper2                            *
-* Date      :  11 April 2022                                                   *
+* Date      :  16 April 2022                                                   *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  Offsets both open and closed paths (ie polylines & polygons).   *
@@ -49,6 +49,7 @@ namespace Clipper2Lib
       _inPaths = paths;
       _joinType = joinType;
       _endType = endType;
+      _outPath = new PathD();
       _outPaths = new PathsD();
       _pathsReversed = false;
     }
@@ -58,8 +59,8 @@ namespace Clipper2Lib
   {
     private readonly List<PathGroup> _pathGroups = new List<PathGroup>();
     private readonly PathD _normals = new PathD();
+    private readonly double _scale;
     private double _delta, _tmpLimit, _stepsPerRad;
-    private double _scale;
     private JoinType _joinType;
     private double _minLenSqrd;
     public double ArcTolerance { get; set; }

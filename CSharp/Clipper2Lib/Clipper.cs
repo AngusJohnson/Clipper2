@@ -1,7 +1,7 @@
 ﻿/*******************************************************************************
 * Author    :  Angus Johnson                                                   *
 * Version   :  10.0 (release candidate 1) - also known as Clipper2             *
-* Date      :  11 April 2022                                                   *
+* Date      :  16 April 2022                                                   *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  This module contains simple functions that will likely cover    *
@@ -37,6 +37,11 @@ namespace Clipper2Lib
       return BooleanOp(ClipType.Intersection, fillRule, subject, clip);
     }
 
+    public static Paths64 Union(Paths64 subject, FillRule fillRule)
+    {
+      return BooleanOp(ClipType.Union, fillRule, subject, null);
+    }
+
     public static Paths64 Union(Paths64 subject, Paths64 clip, FillRule fillRule)
     {
       return BooleanOp(ClipType.Union, fillRule, subject, clip);
@@ -67,7 +72,7 @@ namespace Clipper2Lib
       return BooleanOp(ClipType.Xor, fillRule, subject, clip);
     }
 
-    public static Paths64 BooleanOp(ClipType clipType, FillRule fillRule, Paths64 subject, Paths64 clip)
+    public static Paths64 BooleanOp(ClipType clipType, FillRule fillRule, Paths64 subject, Paths64? clip)
     {
       Paths64 solution = new Paths64();
       if (subject == null) return solution;
@@ -446,7 +451,7 @@ namespace Clipper2Lib
 
     private static void AddPolyNodeToPaths(PolyPath polyPath, Paths64 paths)
     {
-      if (polyPath.Polygon.Count > 0)
+      if (polyPath.Polygon!.Count > 0)
         paths.Add(polyPath.Polygon);
       for (int i = 0; i < polyPath.ChildCount; i++)
         AddPolyNodeToPaths((PolyPath) polyPath._childs[i], paths);
@@ -462,7 +467,7 @@ namespace Clipper2Lib
 
     public static void AddPolyNodeToPathsD(PolyPathD polyPath, PathsD paths)
     {
-      if (polyPath.Polygon.Count > 0)
+      if (polyPath.Polygon!.Count > 0)
         paths.Add(polyPath.Polygon);
       for (int i = 0; i < polyPath.ChildCount; i++)
         AddPolyNodeToPathsD((PolyPathD) polyPath._childs[i], paths);

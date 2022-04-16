@@ -1,16 +1,15 @@
 ﻿/*******************************************************************************
 * Author    :  Angus Johnson                                                   *
 * Version   :  10.0 (release candidate 1) - also known as Clipper2             *
-* Date      :  11 April 2022                                                   *
+* Date      :  16 April 2022                                                   *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
-* Purpose   :  Minkowski Addition and Difference                               *
+* Purpose   :  Core structures and functions for the Clipper Library           *
 * License   :  http://www.boost.org/LICENSE_1_0.txt                            *
 *******************************************************************************/
 
 using System;
 using System.Collections.Generic;
-using System.Runtime.CompilerServices;
 
 namespace Clipper2Lib
 {
@@ -25,6 +24,7 @@ namespace Clipper2Lib
       int delta = isClosed ? 0 : -1;
       int patLen = pattern.Count, pathLen = path.Count;
       Paths64 tmp = new Paths64(pathLen);
+
       foreach (Point64 pathPt in path)
       {
         Path64 path2 = new Path64(patLen);
@@ -37,20 +37,19 @@ namespace Clipper2Lib
         }
         tmp.Add(path2);
       }
+
       Paths64 result = new Paths64((pathLen + delta) * patLen);
       int g = isClosed ? pathLen - 1 : 0;
 
       int h = patLen - 1;
       for (int i = -delta; i < pathLen; i++)
       {
-        int k = (i + delta) * patLen;
-        for (int j = 0; j < patLen; j++) 
+        for (int j = 0; j < patLen; j++)
         {
-          Path64 quad = new Path64(4);
-          quad.Add(tmp[g][h]);
-          quad.Add(tmp[i][h]);
-          quad.Add(tmp[i][j]);
-          quad.Add(tmp[g][j]);
+          Path64 quad = new Path64(4)
+          {
+            tmp[g][h], tmp[i][h], tmp[i][j], tmp[g][j]
+          };
           if (!ClipperFunc.IsClockwise(quad))
             result.Add(ClipperFunc.ReversePath(quad));
           else
@@ -59,32 +58,32 @@ namespace Clipper2Lib
         }
         g = i;
       }
-      return result;    
+      return result;
     }
 
     public static Paths64 Sum(Path64 pattern, Path64 path, bool isClosed)
     {
-      return ClipperFunc.Union(MinkowskiInternal(pattern, path, true, isClosed), null, FillRule.NonZero);
+      return ClipperFunc.Union(MinkowskiInternal(pattern, path, true, isClosed), FillRule.NonZero);
     }
 
     public static PathsD Sum(PathD pattern, PathD path, bool isClosed, int decimalPlaces = 2)
     {
       double scale = Math.Pow(10, decimalPlaces);
       Paths64 tmp = ClipperFunc.Union(MinkowskiInternal(ClipperFunc.Path64(pattern, scale),
-        ClipperFunc.Path64(path, scale), true, isClosed), null, FillRule.NonZero);
+        ClipperFunc.Path64(path, scale), true, isClosed), FillRule.NonZero);
       return ClipperFunc.PathsD(tmp, 1 / scale);
     }
 
     public static Paths64 Diff(Path64 pattern, Path64 path, bool isClosed)
     {
-      return ClipperFunc.Union(MinkowskiInternal(pattern, path, false, isClosed), null, FillRule.NonZero);
+      return ClipperFunc.Union(MinkowskiInternal(pattern, path, false, isClosed), FillRule.NonZero);
     }
 
     public static PathsD Diff(PathD pattern, PathD path, bool isClosed, int decimalPlaces = 2)
     {
       double scale = Math.Pow(10, decimalPlaces);
       Paths64 tmp = ClipperFunc.Union(MinkowskiInternal(ClipperFunc.Path64(pattern, scale),
-        ClipperFunc.Path64(path, scale), false, isClosed), null, FillRule.NonZero);
+        ClipperFunc.Path64(path, scale), false, isClosed), FillRule.NonZero);
       return ClipperFunc.PathsD(tmp, 1 / scale);
     }
 
