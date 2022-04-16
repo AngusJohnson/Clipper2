@@ -2825,7 +2825,7 @@ namespace Clipper2Lib
       while (op.prev != op)
       {
         if (op.pt == op.prev.pt && op != guard &&
-          op.prev.joiner != null && op.joiner != null)
+          op.prev.joiner != null && op.joiner == null)
         {
           if (op == outRec.pts) outRec.pts = op.prev;
           op = DisposeOutPt(op)!;
@@ -2845,7 +2845,7 @@ namespace Clipper2Lib
       while (op.next != op)
       {
         if (op.pt == op.next!.pt && op != guard &&
-        op.next.joiner != null && op.joiner != null)
+        op.next.joiner != null && op.joiner == null)
         {
           if (op == outRec.pts) outRec.pts = op.prev;
           op = DisposeOutPt(op)!;
@@ -3052,13 +3052,13 @@ namespace Clipper2Lib
         if (CheckDisposeAdjacent(ref op1, op2, or1)) continue;
         else if (CheckDisposeAdjacent(ref op2, op1, or1)) continue;
         else if (op1.prev!.pt != op2.next!.pt &&
-                 (DistanceSqr(op1.prev.pt, op2.next.pt) < 2.01))
+          (DistanceSqr(op1.prev.pt, op2.next.pt) < 2.01))
         {
           op1.prev.pt = op2.next.pt;
           continue;
         }
         else if (op1.next!.pt != op2.prev.pt &&
-                 (DistanceSqr(op1.next.pt, op2.prev.pt) < 2.01))
+          (DistanceSqr(op1.next.pt, op2.prev.pt) < 2.01))
         {
           op2.prev.pt = op1.next.pt;
           continue;
@@ -3090,19 +3090,19 @@ namespace Clipper2Lib
       }
     }
 
-    private void CompleteSplit(OutPt op1, OutPt op2, OutRec outrec)
+    private void CompleteSplit(OutPt? op1, OutPt? op2, OutRec outrec)
     {
-      double area1 = Area(op1);
-      double area2 = Area(op2);
+      double area1 = Area(op1!);
+      double area2 = Area(op2!);
       if (Math.Abs(area1) < 1)
       {
-        SafeDisposeOutPts(op1);
-        //op1 = null;
+        SafeDisposeOutPts(op1!);
+        op1 = null;
       }
       else if (Math.Abs(area2) < 1)
       {
-        SafeDisposeOutPts(op2);
-        //op2 = null;
+        SafeDisposeOutPts(op2!);
+        op2 = null;
       }
 
       if (op1 == null)
