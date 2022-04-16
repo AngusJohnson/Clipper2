@@ -94,7 +94,9 @@ type
   EClipperLibException = class(Exception);
 
 function Area(const path: TPath64): Double; overload;
+function Area(const paths: TPaths64): Double; overload;
 function Area(const path: TPathD): Double; overload;
+function Area(const paths: TPathsD): Double; overload;
 function IsClockwise(const path: TPath64): Boolean; overload;
 function IsClockwise(const path: TPathD): Boolean; overload;
 function PointInPolygon(const pt: TPoint64;
@@ -1202,6 +1204,16 @@ begin
 end;
 //------------------------------------------------------------------------------
 
+function Area(const paths: TPaths64): Double;
+var
+  i: integer;
+begin
+  Result := 0;
+  for i := 0 to High(paths) do
+    Result := Result + Area(paths[i]);
+end;
+//------------------------------------------------------------------------------
+
 function Area(const path: TPathD): Double;
 var
   i, j, highI: Integer;
@@ -1220,6 +1232,16 @@ begin
 {$ELSE}
   Result := Result * 0.5;
 {$ENDIF}
+end;
+//------------------------------------------------------------------------------
+
+function Area(const paths: TPathsD): Double;
+var
+  i: integer;
+begin
+  Result := 0;
+  for i := 0 to High(paths) do
+    Result := Result + Area(paths[i]);
 end;
 //------------------------------------------------------------------------------
 

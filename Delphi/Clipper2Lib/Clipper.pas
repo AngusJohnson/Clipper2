@@ -20,8 +20,8 @@ uses
 type
   TPoint64    = Clipper.Core.TPoint64;
   TRect64     = Clipper.Core.TRect64;
-  TPath64       = Clipper.Core.TPath64;
-  TPaths64      = Clipper.Core.TPaths64;
+  TPath64     = Clipper.Core.TPath64;
+  TPaths64    = Clipper.Core.TPaths64;
 
   TPointD     = Clipper.Core.TPointD;
   TRectD      = Clipper.Core.TRectD;
@@ -31,7 +31,13 @@ type
   TPolyTree   = Clipper.Engine.TPolyTree;
   TPolyTreeD  = Clipper.Engine.TPolyTreeD;
 
-  TFillRule = Clipper.Core.TFillRule;
+  TFillRule   = Clipper.Core.TFillRule;
+
+const
+  frEvenOdd   = Clipper.Core.frEvenOdd;
+  frNonZero   = Clipper.Core.frNonZero;
+  frPositive  = Clipper.Core.frPositive;
+  frNegative  = Clipper.Core.frNegative;
 
 function BooleanOp(clipType: TClipType; fillRule: TFillRule;
   const subjects, clips: TPaths64): TPaths64; overload;
