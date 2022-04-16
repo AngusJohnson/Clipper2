@@ -1,7 +1,7 @@
 ﻿/*******************************************************************************
 * Author    :  Angus Johnson                                                   *
 * Version   :  10.0 (beta) - also known as Clipper2                            *
-* Date      :  11 April 2022                                                   *
+* Date      :  16 April 2022                                                   *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  This is the main polygon clipping module                        *
@@ -2131,12 +2131,8 @@ namespace Clipper2Lib
       bool isLeftToRight =
         ResetHorzDirection(horz, maxPair, out long leftX, out long rightX);
 
-      OutRec? hotOutRec = null;
       if (IsHotEdge(horz))
-      {
         AddOutPt(horz, new Point64(horz.curX, Y));
-        hotOutRec = horz.outrec;
-      }
 
       OutPt? op;
       for (; ; )
@@ -2156,7 +2152,8 @@ namespace Clipper2Lib
                 op = AddLocalMaxPoly(horz, ae, horz.top);
               else
                 op = AddLocalMaxPoly(ae, horz, horz.top);
-              if (op != null && op.pt == horz.top)
+
+              if (op != null && !IsOpen(horz) && op.pt == horz.top)
                 AddTrialHorzJoin(op);
             }
 
@@ -2190,16 +2187,9 @@ namespace Clipper2Lib
             op = IntersectEdges(horz, ae, pt);
             SwapPositionsInAEL(horz, ae);
 
-            if (hotOutRec == null)
-            {
-              if (IsHotEdge(horz)) hotOutRec = horz.outrec;
-            }
-            else if (hotOutRec != horz.outrec)
-            {
-              if (op != null && horz.curX != pt.X && op.pt == pt)
+            if (IsHotEdge(horz) && op != null && 
+              !IsOpen(horz) && op.pt == pt) 
                 AddTrialHorzJoin(op);
-              hotOutRec = horz.outrec;
-            }
 
             if (!IsHorizontal(ae) && TestJoinWithPrev1(ae, Y))
             {
@@ -2216,16 +2206,9 @@ namespace Clipper2Lib
             op = IntersectEdges(ae, horz, pt);
             SwapPositionsInAEL(ae, horz);
 
-            if (hotOutRec == null)
-            {
-              if (IsHotEdge(horz)) hotOutRec = horz.outrec;
-            }
-            else if (hotOutRec != horz.outrec)
-            {
-              if (op != null && horz.curX != pt.X && op.pt == pt)
-                AddTrialHorzJoin(op);
-              hotOutRec = horz.outrec;
-            }
+            if (IsHotEdge(horz) && op != null &&
+              !IsOpen(horz) && op.pt == pt)
+              AddTrialHorzJoin(op);
 
             if (!IsHorizontal(ae) && TestJoinWithNext1(ae, Y))
             {
@@ -2259,7 +2242,7 @@ namespace Clipper2Lib
       if (IsHotEdge(horz))
       {
         op = AddOutPt(horz, horz.top);
-        if (hotOutRec != null && !IsOpen(horz))
+        if (!IsOpen(horz))
           AddTrialHorzJoin(op);
       }
       else
@@ -2839,15 +2822,16 @@ namespace Clipper2Lib
     private static bool CheckDisposeAdjacent(ref OutPt op, OutPt guard, OutRec outRec)
     {
       bool result = false;
-      while (op.prev != op && op.prev != guard)
+      while (op.prev != op)
       {
-        if (op.pt == op.prev.pt && op.prev.joiner != null && op.joiner != null)
+        if (op.pt == op.prev.pt && op != guard &&
+          op.prev.joiner != null && op.joiner != null)
         {
           if (op == outRec.pts) outRec.pts = op.prev;
           op = DisposeOutPt(op)!;
           op = op.prev;
         }
-        else if (op.prev.joiner == null &&
+        else if (op.prev.joiner == null && op.prev != guard &&
           (DistanceSqr(op.pt, op.prev.pt) < 2.1))
         {
           if (op.prev == outRec.pts) outRec.pts = op;
@@ -2858,17 +2842,16 @@ namespace Clipper2Lib
           break;
       }
 
-      while (op.next != op && op.next != guard)
+      while (op.next != op)
       {
-        if (op.pt == op.next!.pt &&
-        op.next.joiner != null &&
-        op.joiner != null)
+        if (op.pt == op.next!.pt && op != guard &&
+        op.next.joiner != null && op.joiner != null)
         {
           if (op == outRec.pts) outRec.pts = op.prev;
           op = DisposeOutPt(op)!;
           op = op.prev;
         }
-        else if (op.next.joiner == null &&
+        else if (op.next.joiner == null && op.next != guard &&
           (DistanceSqr(op.pt, op.next.pt) < 2.1))
         {
           if (op.next == outRec.pts) outRec.pts = op;

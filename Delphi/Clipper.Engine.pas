@@ -2325,10 +2325,10 @@ end;
 function CheckDisposeAdjacent(var op: POutPt; guard: POutPt; outRec: POutRec): Boolean;
 begin
   Result := false;
-  while (op.Prev <> op) and (op.Prev <> guard) do
+  while (op.Prev <> op) do
   begin
     if PointsEqual(op.Pt, op.Prev.Pt) and
-      Assigned(op.Prev.Joiner) and
+      (op <> guard) and Assigned(op.Prev.Joiner) and
       not Assigned(op.Joiner) then
     begin
       if op = outRec.Pts then outRec.Pts := op.Prev;
@@ -2336,6 +2336,7 @@ begin
       op := op.Prev;
     end
     else if not Assigned(op.Prev.Joiner) and
+    (op.Prev <> guard) and
     (DistanceSqr(op.Pt, op.Prev.Pt) < 2.1) then
     begin
       if op.Prev = outRec.Pts then outRec.Pts := op;
@@ -2344,10 +2345,10 @@ begin
     end else
       break;
   end;
-  while (op.Next <> op) and (op.Next <> guard) do
+  while (op.Next <> op) do
   begin
     if PointsEqual(op.Pt, op.Next.Pt) and
-      Assigned(op.Next.Joiner) and
+      (op <> guard) and Assigned(op.Next.Joiner) and
       not Assigned(op.Joiner) then
     begin
       if op = outRec.Pts then outRec.Pts := op.Prev;
@@ -2355,7 +2356,8 @@ begin
       op := op.Prev;
     end
     else if not Assigned(op.Next.Joiner) and
-    (DistanceSqr(op.Pt, op.Next.Pt) < 2.1) then
+      (op.Next <> guard) and
+      (DistanceSqr(op.Pt, op.Next.Pt) < 2.1) then
     begin
       if op.Next = outRec.Pts then outRec.Pts := op;
       DisposeOutPt(op.Next);
@@ -2596,6 +2598,7 @@ begin
   Result.Joiner := nil;
   Result.Prev := Result;
   Result.Next := Result;
+  Result.OutRec := newOr;
 end;
 //------------------------------------------------------------------------------
 
@@ -3462,12 +3465,9 @@ begin
 
   isLeftToRight := ResetHorzDirection;
   //nb: TrimHorz above hence not using Bot.X here
+
   if IsHotEdge(horzEdge) then
-  begin
     AddOutPt(horzEdge, Point64(horzEdge.CurrX, Y));
-    hotOutRec := horzEdge.OutRec;
-  end else
-    hotOutRec := nil;
 
   while true do //loop through consec. horizontal edges
   begin
@@ -3484,8 +3484,10 @@ begin
           if isLeftToRight then
             op := AddLocalMaxPoly(horzEdge, e, horzEdge.Top) else
             op := AddLocalMaxPoly(e, horzEdge, horzEdge.Top);
-          if Assigned(op) and PointsEqual(op.Pt, horzEdge.Top) then
-            AddTrialHorzJoin(op);
+
+          if Assigned(op) and not IsOpen(horzEdge) and
+            PointsEqual(op.Pt, horzEdge.Top) then
+              AddTrialHorzJoin(op);
         end;
         //remove horzEdge's maxPair from AEL
         DeleteFromAEL(e);
@@ -3519,18 +3521,9 @@ begin
         op := IntersectEdges(horzEdge, e, pt);
         SwapPositionsInAEL(horzEdge, e);
 
-        if not Assigned(hotOutRec) then
-        begin
-          if IsHotEdge(horzEdge) then
-            hotOutRec := horzEdge.OutRec;
-        end
-        else if (hotOutRec <> horzEdge.OutRec) then
-        begin
-          if Assigned(op) and (horzEdge.CurrX <> pt.X) and
-            PointsEqual(op.Pt, pt) then
-              AddTrialHorzJoin(op);
-          hotOutRec := horzEdge.OutRec;
-        end;
+        if IsHotEdge(horzEdge) and Assigned(op) and
+          not IsOpen(horzEdge) and PointsEqual(op.Pt, pt) then
+            AddTrialHorzJoin(op);
 
         if not IsHorizontal(e) and
           TestJoinWithPrev1(e, Y) then
@@ -3546,18 +3539,10 @@ begin
         op := IntersectEdges(e, horzEdge, pt);
         SwapPositionsInAEL(e, horzEdge);
 
-        if not Assigned(hotOutRec) then
-        begin
-          if IsHotEdge(horzEdge) then
-            hotOutRec := horzEdge.OutRec;
-        end
-        else if (hotOutRec <> horzEdge.OutRec) then
-        begin
-          if Assigned(op) and (horzEdge.CurrX <> pt.X) and
-            PointsEqual(op.Pt, pt) then
-              AddTrialHorzJoin(op);
-          hotOutRec := horzEdge.OutRec;
-        end;
+        if IsHotEdge(horzEdge) and Assigned(op) and
+          not IsOpen(horzEdge) and
+          PointsEqual(op.Pt, pt) then
+            AddTrialHorzJoin(op);
 
         if not IsHorizontal(e) and
           TestJoinWithNext1(e, Y) then
@@ -3591,7 +3576,7 @@ begin
   if IsHotEdge(horzEdge) then
   begin
     op := AddOutPt(horzEdge, horzEdge.Top);
-    if Assigned(hotOutRec) and not IsOpen(horzEdge) then
+    if not IsOpen(horzEdge) then
       AddTrialHorzJoin(op);
   end else
     op := nil;
