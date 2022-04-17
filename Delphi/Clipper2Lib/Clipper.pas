@@ -17,9 +17,9 @@ interface
 uses
   Math, Clipper.Core, Clipper.Engine, Clipper.Offset;
 
-//Redeclare a number of Clipper.Core records and
-//consts here so Clipper.Core won't be needed
-//in 'uses' just to use the following functions.
+//Redeclare a number of Clipper.Core and Clipper.Engine
+//structures here so they won't also be needed in 'uses'
+//when simply using the following functions.
 type
   TPoint64    = Clipper.Core.TPoint64;
   TRect64     = Clipper.Core.TRect64;
@@ -30,11 +30,23 @@ type
   TPathD      = Clipper.Core.TPathD;
   TPathsD     = Clipper.Core.TPathsD;
   TFillRule   = Clipper.Core.TFillRule;
+  TPolyTree   = Clipper.Engine.TPolyTree;
+  TPolyTreeD  = Clipper.Engine.TPolyTreeD;
+  TJoinType   = Clipper.Offset.TJoinType;
+  TEndType    = Clipper.Offset.TEndType;
 const
   frEvenOdd   = Clipper.Core.frEvenOdd;
   frNonZero   = Clipper.Core.frNonZero;
   frPositive  = Clipper.Core.frPositive;
   frNegative  = Clipper.Core.frNegative;
+  jtSquare    = Clipper.Offset.jtSquare;
+  jtRound     = Clipper.Offset.jtRound;
+  jtMiter     = Clipper.Offset.jtMiter;
+  etPolygon   = Clipper.Offset.etPolygon;
+  etJoined    = Clipper.Offset.etJoined;
+  etButt      = Clipper.Offset.etButt;
+  etSquare    = Clipper.Offset.etSquare;
+  etRound     = Clipper.Offset.etRound;
 
 function BooleanOp(clipType: TClipType; fillRule: TFillRule;
   const subjects, clips: TPaths64): TPaths64; overload;

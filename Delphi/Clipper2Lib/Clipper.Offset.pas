@@ -415,7 +415,11 @@ begin
  //cap the end first ...
   case endType of
     etButt: DoButtEnd(highI);
+{$IFDEF REVERSE_ORIENTATION}
     etRound: DoRound(highI, k, PI);
+{$ELSE}
+    etRound: DoRound(highI, k, -PI);
+{$ENDIF}
     else DoSquare(highI, k);
   end;
 
@@ -434,7 +438,11 @@ begin
   //now cap the start ...
   case endType of
     etButt: DoButtStart;
+{$IFDEF REVERSE_ORIENTATION}
     etRound: DoRound(0, 1, PI);
+{$ELSE}
+    etRound: DoRound(0, 1, -PI);
+{$ENDIF}
     else doSquare(0, 1);
   end;
 end;

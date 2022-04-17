@@ -10,8 +10,8 @@ uses
   Classes,
   Math,
   Diagnostics,
-  Clipper in '..\Clipper.pas',
-  Clipper.SVG in '..\Clipper.SVG.pas';
+  Clipper in '..\Clipper2Lib\Clipper.pas',
+  Clipper.SVG in '..\Examples\Clipper.SVG.pas';
 
 //------------------------------------------------------------------------------
 //------------------------------------------------------------------------------

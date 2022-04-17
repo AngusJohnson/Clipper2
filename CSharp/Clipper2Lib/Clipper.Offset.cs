@@ -1,7 +1,7 @@
 ﻿/*******************************************************************************
 * Author    :  Angus Johnson                                                   *
 * Version   :  10.0 (beta) - also known as Clipper2                            *
-* Date      :  16 April 2022                                                   *
+* Date      :  17 April 2022                                                   *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  Offsets both open and closed paths (ie polylines & polygons).   *
@@ -337,7 +337,11 @@ namespace Clipper2Lib
               path[cnt - 1].y - _normals[cnt - 2].y * _delta));
           break;
         case EndType.Round:
+#if REVERSE_ORIENTATION
           DoRound(group, path[cnt - 1], _normals[cnt - 1], _normals[cnt - 2], Math.PI);
+#else
+          DoRound(group, path[cnt - 1], _normals[cnt - 1], _normals[cnt - 2], -Math.PI);
+#endif
           break;
         default:
           DoSquare(group, path, cnt - 1, cnt - 2);
@@ -365,7 +369,11 @@ namespace Clipper2Lib
               path[0].y - _normals[1].y * _delta));
           break;
         case EndType.Round:
+#if REVERSE_ORIENTATION
           DoRound(group, path[0], _normals[0], _normals[1], Math.PI);
+#else
+          DoRound(group, path[0], _normals[0], _normals[1], -Math.PI);
+#endif
           break;
         default:
           DoSquare(group, path, 0, 1);

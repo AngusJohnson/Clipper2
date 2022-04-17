@@ -3,7 +3,7 @@ unit Clipper.SVG;
 (*******************************************************************************
 * Author    :  Angus Johnson                                                   *
 * Version   :  10.0 (beta) - aka Clipper2                                      *
-* Date      :  3 April 2022                                                    *
+* Date      :  17 April 2022                                                   *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  This module provides a very simple SVG Writer for Clipper2      *
@@ -18,17 +18,17 @@ uses
   Classes, SysUtils, Math, Clipper.Core, Clipper;
 
 const
-  black = $FF000000;
-  white = $FFFFFFFF;
-  maroon = $FF800000;
-  navy = $FF000080;
-  blue = $FF0000FF;
-  red = $FFFF0000;
-  green = $FF008000;
-  yellow = $FFFFFF00;
-  lime = $FF00FF00;
-  fuscia = $FFFF00FF;
-  aqua = $FF00FFFF;
+  black   = $FF000000;
+  white   = $FFFFFFFF;
+  maroon  = $FF800000;
+  navy    = $FF000080;
+  blue    = $FF0000FF;
+  red     = $FFFF0000;
+  green   = $FF008000;
+  yellow  = $FFFFFF00;
+  lime    = $FF00FF00;
+  fuscia  = $FFFF00FF;
+  aqua    = $FF00FFFF;
 
 type
 
@@ -103,8 +103,8 @@ const
       'version="1.1" xmlns="http://www.w3.org/2000/svg">'#10#10;
   svg_path_format: string = '" style="fill:%s;' +
         ' fill-opacity:%1.2f; fill-rule:%s; stroke:%s;' +
-        ' stroke-opacity:%1.2f; stroke-width:%1.2f;\"/>'#10#10;
-  svg_path_format2: string = '" style="fill:none; stroke:%d;' +
+        ' stroke-opacity:%1.2f; stroke-width:%1.2f;"/>'#10#10;
+  svg_path_format2: string = '" style="fill:none; stroke:%s; ' +
         'stroke-opacity:%1.2f; stroke-width:%1.2f;"/>'#10#10;
 
 function ColorToHtml(color: Cardinal): string;
