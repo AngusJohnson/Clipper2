@@ -16,17 +16,17 @@ uses
 //------------------------------------------------------------------------------
 //------------------------------------------------------------------------------
 
-function MakeRandomPath(maxWidth, maxHeight, count: Integer;
-  RoundTo: Integer = 10; margin: Integer = 10): TPath64;
+function MakeRandomPath(maxWidth, maxHeight, count: Integer): TPath64;
 var
   i: Integer;
 begin
   setlength(Result, count);
-  for i := 0 to count -1 do with Result[i] do
-  begin
-    X := ((Random(maxWidth - 2 * margin) + margin) div RoundTo) * RoundTo;
-    Y := ((Random(maxHeight - 2 * margin) + margin) div RoundTo) * RoundTo;
-  end;
+  for i := 0 to count -1 do
+    with Result[i] do
+    begin
+      X := Random(maxWidth);
+      Y := Random(maxHeight);
+    end;
 end;
 //------------------------------------------------------------------------------
 
@@ -61,9 +61,9 @@ begin
 
       //make 2 random self-intersecting paths of 'edgeCount' length
       setLength(subj, 1);
-      subj[0] := MakeRandomPath(maxWidth, maxHeight, edgeCount, 1, 0);
+      subj[0] := MakeRandomPath(maxWidth, maxHeight, edgeCount);
       setLength(clip, 1);
-      clip[0] := MakeRandomPath(maxWidth, maxHeight, edgeCount, 1, 0);
+      clip[0] := MakeRandomPath(maxWidth, maxHeight, edgeCount);
 
       //time their intersection
       with TStopWatch.StartNew do

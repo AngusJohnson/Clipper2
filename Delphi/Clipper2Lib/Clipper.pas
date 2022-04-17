@@ -17,22 +17,19 @@ interface
 uses
   Math, Clipper.Core, Clipper.Engine, Clipper.Offset;
 
+//Redeclare a number of Clipper.Core records and
+//consts here so Clipper.Core won't be needed
+//in 'uses' just to use the following functions.
 type
   TPoint64    = Clipper.Core.TPoint64;
   TRect64     = Clipper.Core.TRect64;
   TPath64     = Clipper.Core.TPath64;
   TPaths64    = Clipper.Core.TPaths64;
-
   TPointD     = Clipper.Core.TPointD;
   TRectD      = Clipper.Core.TRectD;
   TPathD      = Clipper.Core.TPathD;
   TPathsD     = Clipper.Core.TPathsD;
-
-  TPolyTree   = Clipper.Engine.TPolyTree;
-  TPolyTreeD  = Clipper.Engine.TPolyTreeD;
-
   TFillRule   = Clipper.Core.TFillRule;
-
 const
   frEvenOdd   = Clipper.Core.frEvenOdd;
   frNonZero   = Clipper.Core.frNonZero;
