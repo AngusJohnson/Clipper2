@@ -2322,8 +2322,8 @@ namespace Clipper2Lib
     {
       Active? prevE;
       Active? nextE, maxPair;
-      prevE = ae.prevInAEL!;
-      nextE = ae.nextInAEL!;
+      prevE = ae.prevInAEL;
+      nextE = ae.nextInAEL;
 
       if (IsOpenEnd(ae))
       {
