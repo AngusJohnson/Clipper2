@@ -953,8 +953,8 @@ namespace Clipper2Lib
     {
       if (isOpen) _hasOpenPaths = true;
       _isSortedMinimaList = false;
-      for (int i = 0; i < paths.Count; i++)
-        AddPathToVertexList(paths[i], polytype, isOpen);
+      foreach (Path64 t in paths)
+        AddPathToVertexList(t, polytype, isOpen);
     }
 
     private bool IsContributingClosed(Active ae)
