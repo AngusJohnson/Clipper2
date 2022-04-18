@@ -3,7 +3,7 @@ unit Clipper.Engine;
 (*******************************************************************************
 * Author    :  Angus Johnson                                                   *
 * Version   :  10.0 (beta) - aka Clipper2                                      *
-* Date      :  11 April 2022                                                   *
+* Date      :  18 April 2022                                                   *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  This is the main polygon clipping module                        *
@@ -654,6 +654,15 @@ begin
 end;
 //------------------------------------------------------------------------------
 
+function GetRealOutRec(outRec: POutRec): POutRec;
+ {$IFDEF INLINING} inline; {$ENDIF}
+begin
+  Result := outRec;
+  while Assigned(Result) and not Assigned(Result.Pts) do
+    Result := Result.Owner;
+end;
+//------------------------------------------------------------------------------
+
 procedure UncoupleOutRec(e: PActive);
 var
   outRec: POutRec;
@@ -724,9 +733,7 @@ var
   tmpOp: POutPt;
   outRec: POutRec;
 begin
-  outRec := op.OutRec;
-  while not Assigned(outRec.Pts) and Assigned(outRec.Owner) do
-    outRec := outRec.Owner;
+  outRec := GetRealOutRec(op.OutRec);
   if Assigned(outRec.FrontE) then
     outRec.FrontE.OutRec := nil;
   if Assigned(outRec.BackE) then
@@ -2377,12 +2384,8 @@ begin
   op1 := joiner.op1;
   op2 := joiner.op2;
 
-  or1 := op1.OutRec;
-  while not Assigned(or1.Pts) and Assigned(or1.Owner) do
-    or1 := or1.Owner;
-  or2 := op2.OutRec;
-  while not Assigned(or2.Pts) and Assigned(or2.Owner) do
-    or2 := or2.Owner;
+  or1 := GetRealOutRec(op1.OutRec);
+  or2 := GetRealOutRec(op2.OutRec);
   op1.OutRec := or1;
   op2.OutRec := or2;
   DeleteJoin(joiner);
@@ -2421,11 +2424,9 @@ begin
     ((CrossProduct(op1.Prev.Pt, op1.Pt, op2.Next.Pt) = 0) and
       CollinearSegsOverlap(op1.Prev.Pt, op1.Pt, op2.Pt, op2.Next.Pt)) then
     begin
-      if or1 = or2 then //SPLIT REQUIRED
+      if or1 = or2 then
       begin
-        //first check it's safe to split
-        if (op1 = op2.Next) or (op2 = op1.Prev) then Exit;
-
+        //SPLIT REQUIRED
         //make sure op1.prev and op2.next match positions
         //by inserting an extra vertex if needed
         if not PointsEqual(op1.Prev.Pt, op2.Next.Pt) then
@@ -2475,11 +2476,9 @@ begin
       ((CrossProduct(op1.Next.Pt, op2.Pt, op2.Prev.Pt) = 0) and
        CollinearSegsOverlap(op1.Next.Pt, op1.Pt, op2.Pt, op2.Prev.Pt)) then
     begin
-      if or1 = or2 then //SPLIT REQUIRED
+      if or1 = or2 then
       begin
-        //first check it's safe to split
-        if (op2 = op1.Next) or (op1 = op2.Prev) then Exit;
-
+        //SPLIT REQUIRED
         //make sure op2.prev and op1.next match positions
         //by inserting an extra vertex if needed
         if not PointsEqual(op1.Next.Pt, op2.Prev.Pt) then
@@ -2561,8 +2560,7 @@ begin
     begin
       op2.Prev.Pt := op1.Next.Pt;
       Continue;
-    end
-    else
+    end else
     begin
       //OK, there doesn't seem to be a way to join afterall
       //so just tidy up the polygons
@@ -3163,22 +3161,18 @@ end;
 //------------------------------------------------------------------------------
 
 function HorzEdgesOverlap(x1a, x1b, x2a, x2b: Int64): Boolean;
+const
+  minOverlap: Int64 = 2;
 begin
-  if (x1a < x1b) then
-  begin
-    if (x2a < x2b) then
-      Result := ((x1b >= x2a) = (x2b >= x1a)) and
-        (x1b <> x2a) and (x1a <> x2b) else
-      Result := (x1b >= x2b) = (x2a >= x1a) and
-        (x1b <> x2b) and (x1a <> x2a);
-  end else
-  begin
-    if (x2a < x2b) then
-      Result := (x1a >= x2a) = (x2b >= x1b) and
-        (x1b <> x2b) and (x1a <> x2a) else
-      Result := (x1a >= x2b) = (x2a >= x1b) and
-        (x1b <> x2a) and (x1a <> x2b);
-  end;
+  if (Abs(x1a - x1b) <= minOverlap) or
+    (Abs(x2a - x2b) <= minOverlap) then
+      Result := false
+  else if (x2b - x1a >= minOverlap) then //x1a on left of x2b
+    Result := ((x1a - x2a)  >= minOverlap) or (x1b >= x2a)
+  else if (x1a - x2b >= minOverlap) then //x1a on right of x2b
+    Result := ((x2a - x1a) >= minOverlap) or (x2a >= x1b)
+  else //x1a must (almost) equal x2b
+    Result := ((x1b < x1a) = (x2b > x2a));
 end;
 //------------------------------------------------------------------------------
 
@@ -3306,7 +3300,7 @@ function GetHorzExtendedHorzSeg(var op, op2: POutPt): Boolean;
 var
   outRec: POutRec;
 begin
-  outRec := op.OutRec;
+  outRec := GetRealOutRec(op.OutRec);
   op2 := op;
   if Assigned(outRec.FrontE) then
   begin
@@ -3361,10 +3355,9 @@ begin
     while Assigned(joiner) do
     begin
       op2a := joiner.op1;
+
       if GetHorzExtendedHorzSeg(op2a, op2b) and
-        (op2a.Pt.X <> op2b.Pt.X) and
-        HorzEdgesOverlap(op1a.Pt.X, op1b.Pt.X,
-        op2a.Pt.X, op2b.Pt.X) then
+        HorzEdgesOverlap(op1a.Pt.X, op1b.Pt.X, op2a.Pt.X, op2b.Pt.X) then
       begin
         //overlap found so promote to a 'real' join
         if PointsEqual(op1a.Pt, op2b.Pt) then
@@ -3378,9 +3371,8 @@ begin
         else if ValueBetween(op2a.Pt.X, op1a.Pt.X, op1b.Pt.X) then
           joined := AddJoin(op2a, InsertOp(op2a.Pt, op1a))
         else if ValueBetween(op2b.Pt.X, op1a.Pt.X, op1b.Pt.X) then
-          joined := AddJoin(op2b, InsertOp(op2b.Pt, op1a))
-        else
-          Break;
+          joined := AddJoin(op2b, InsertOp(op2b.Pt, op1a));
+        if joined then Break;
       end;
       joiner := joiner.nextH;
     end;
@@ -3430,7 +3422,6 @@ var
   e: PActive;
   pt: TPoint64;
   op, op2: POutPt;
-  hotOutRec: POutRec;
   isLeftToRight, isMax, horzIsOpen: Boolean;
 begin
 (*******************************************************************************
@@ -3484,7 +3475,6 @@ begin
           if isLeftToRight then
             op := AddLocalMaxPoly(horzEdge, e, horzEdge.Top) else
             op := AddLocalMaxPoly(e, horzEdge, horzEdge.Top);
-
           if Assigned(op) and not IsOpen(horzEdge) and
             PointsEqual(op.Pt, horzEdge.Top) then
               AddTrialHorzJoin(op);

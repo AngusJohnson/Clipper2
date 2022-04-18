@@ -1,7 +1,7 @@
 ﻿/*******************************************************************************
 * Author    :  Angus Johnson                                                   *
 * Version   :  10.0 (beta) - also known as Clipper2                            *
-* Date      :  16 April 2022                                                   *
+* Date      :  18 April 2022                                                   *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  This is the main polygon clipping module                        *
@@ -624,6 +624,14 @@ namespace Clipper2Lib
       if ((Area(ae.outrec!.pts!) < 0.0) == isOuter)
         ReverseOutPts(ae.outrec.pts!);
       return true;
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static OutRec? GetRealOutRec(OutRec? outRec)
+    {
+      while (outRec != null & outRec!.pts == null)
+        outRec = outRec.owner;
+      return outRec;
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -2454,24 +2462,15 @@ namespace Clipper2Lib
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static bool HorzEdgesOverlap(long x1a, long x1b, long x2a, long x2b)
     {
-      if (x1a < x1b)
-      {
-        if (x2a < x2b)
-          return ((x1b >= x2a) == (x2b >= x1a)) &&
-                 (x1b != x2a) && (x1a != x2b);
-        else
-          return ((x1b >= x2b) == (x2a >= x1a)) &&
-                 (x1b != x2b) && (x1a != x2a);
-      }
-      else
-      {
-        if (x2a < x2b)
-          return ((x1a >= x2a) == (x2b >= x1b)) &&
-                 (x1b != x2b) && (x1a != x2a);
-        else
-          return ((x1a >= x2b) == (x2a >= x1b)) &&
-                 (x1b != x2a) && (x1a != x2b);
-      }
+      const long minOverlap = 2;
+      if (Math.Abs(x1a - x1b) <= minOverlap ||
+        Math.Abs(x2a - x2b) <= minOverlap) return false;
+      else if (x2b - x1a >= minOverlap) //x1a on left of x2b
+        return (x1a - x2a) >= minOverlap || (x1b >= x2a);
+      else if (x1a - x2b >= minOverlap) //x1a on right of x2b
+        return (x2a - x1a) >= minOverlap || (x2a >= x1b);
+      else //x1a must (almost) equal x2b
+        return (x1b < x1a) == (x2b > x2a);
     }
 
     private Joiner? GetHorzTrialParent(OutPt op)
@@ -2533,10 +2532,8 @@ namespace Clipper2Lib
 
     private void SafeDisposeOutPts(OutPt op)
     {
-      OutRec outRec = op!.outrec;
-      while (outRec.pts == null && outRec.owner != null)
-        outRec = outRec.owner;
-      if (outRec.frontEdge != null)
+      OutRec? outRec = GetRealOutRec(op.outrec);
+      if (outRec!.frontEdge != null)
         outRec.frontEdge.outrec = null;
       if (outRec.backEdge != null)
         outRec.backEdge.outrec = null;
@@ -2661,7 +2658,7 @@ namespace Clipper2Lib
 
     private bool GetHorzExtendedHorzSeg(ref OutPt op, out OutPt op2)
     {
-      OutRec outRec = op.outrec;
+      OutRec outRec = GetRealOutRec(op.outrec)!;
       op2 = op;
       if (outRec.frontEdge != null)
       {
@@ -2716,9 +2713,7 @@ namespace Clipper2Lib
         {
           op2a = joiner.op1;
           if (GetHorzExtendedHorzSeg(ref op2a, out OutPt op2b) &&
-            (op2a.pt.X != op2b.pt.X) &&
-            HorzEdgesOverlap(op1a.pt.X, op1b.pt.X,
-            op2a.pt.X, op2b.pt.X))
+            HorzEdgesOverlap(op1a.pt.X, op1b.pt.X, op2a.pt.X, op2b.pt.X))
           {
             //overlap found so promote to a 'real' join
             if (op1a.pt == op2b.pt)
@@ -2733,8 +2728,7 @@ namespace Clipper2Lib
               joined = AddJoin(op2a, InsertOp(op2a.pt, op1a));
             else if (ValueBetween(op2b.pt.X, op1a.pt.X, op1b.pt.X))
               joined = AddJoin(op2b, InsertOp(op2b.pt, op1a));
-            else
-              break;
+            if (joined) break;
           }
           joiner = joiner.nextH;
         }
@@ -2886,10 +2880,8 @@ namespace Clipper2Lib
     private OutRec ProcessJoin(Joiner j)
     {
       OutPt op1 = j.op1, op2 = j.op2!;
-      OutRec or1 = op1.outrec;
-      while (or1.pts == null && or1.owner != null) or1 = or1.owner;
-      OutRec or2 = op2.outrec;
-      while (or2.pts == null && or2.owner != null) or2 = or2.owner;
+      OutRec or1 = GetRealOutRec(op1.outrec)!;
+      OutRec or2 = GetRealOutRec(op2.outrec)!;
       DeleteJoin(j);
 
       if (or2.pts == null) return or1;
@@ -2920,10 +2912,9 @@ namespace Clipper2Lib
             ((InternalClipperFunc.CrossProduct(op1.prev.pt, op1.pt, op2.next.pt) == 0) &&
              CollinearSegsOverlap(op1.prev.pt, op1.pt, op2.pt, op2.next.pt)))
         {
-          if (or1 == or2) //SPLIT REQUIRED
+          if (or1 == or2)
           {
-            //first check if it's safe to split
-            if (op1 == op2.next || op2 == op1.prev) return or1;
+            //SPLIT REQUIRED
             //make sure op1.prev and op2.next match positions
             //by inserting an extra vertex if needed
             if (op1.prev.pt != op2.next.pt)
@@ -2975,10 +2966,9 @@ namespace Clipper2Lib
                  ((InternalClipperFunc.CrossProduct(op1.next.pt, op2.pt, op2.prev.pt) == 0) &&
                   CollinearSegsOverlap(op1.next.pt, op1.pt, op2.pt, op2.prev.pt)))
         {
-          if (or1 == or2) //SPLIT REQUIRED
+          if (or1 == or2) 
           {
-            //first check if it's safe to split
-            if (op2 == op1.next || op1 == op2.prev) return or1;
+            //SPLIT REQUIRED
             //make sure op2.prev and op1.next match positions
             //by inserting an extra vertex if needed
             if (op2.prev.pt != op1.next.pt)
