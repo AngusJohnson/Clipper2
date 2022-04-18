@@ -1617,7 +1617,7 @@ namespace Clipper2Lib
           case ClipType.Union:
             if (IsHotEdge(ae1) != ((Math.Abs(ae2.windCount) != 1) ||
                                    (IsHotEdge(ae1) != (ae2.windCount != 0)))) return null;
-            ; //it just works!
+            //it just works!
             break;
           case ClipType.Xor:
             if (Math.Abs(ae2.windCount) != 1) return null;
@@ -2202,7 +2202,7 @@ namespace Clipper2Lib
 
             if (IsHotEdge(horz) && op != null && 
               !IsOpen(horz) && op.pt == pt) 
-                AddTrialHorzJoin(op);
+              AddTrialHorzJoin(op);
 
             if (!IsHorizontal(ae) && TestJoinWithPrev1(ae, Y))
             {
@@ -2807,9 +2807,8 @@ namespace Clipper2Lib
 
     private void ProcessJoinList()
     {
-      for (int i = 0; i < _joinerList.Count; i++)
+      foreach (Joiner? j in _joinerList)
       {
-        Joiner? j = _joinerList[i];
         if (j == null) continue;
         OutRec outrec = ProcessJoin(j);
         TidyOutRec(outrec);
@@ -3306,9 +3305,8 @@ namespace Clipper2Lib
         solutionClosed.Capacity = _outrecList.Count;
         solutionOpen.Capacity = _outrecList.Count;
 
-        for (int j = 0; j < _outrecList.Count; j++)
+        foreach (OutRec outrec in _outrecList)
         {
-          OutRec outrec = _outrecList[j];
           if (outrec.pts == null) continue;
 
           Path64 path = new Path64();
@@ -3396,9 +3394,9 @@ namespace Clipper2Lib
       if (_vertexList.Count == 0) return new Rect64(0, 0, 0, 0);
       Rect64 bounds = new Rect64(long.MaxValue, long.MaxValue, long.MinValue, long.MinValue);
 
-      for (int i = 0; i < _vertexList.Count; i++)
+      foreach (Vertex t in _vertexList)
       {
-        Vertex vStart = _vertexList[i], v = vStart;
+        Vertex vStart = t, v = vStart;
         do
         {
           if (v.pt.X < bounds.left) bounds.left = v.pt.X;
