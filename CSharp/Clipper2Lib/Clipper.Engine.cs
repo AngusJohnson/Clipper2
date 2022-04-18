@@ -3141,7 +3141,7 @@ namespace Clipper2Lib
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private void TidyOutRec(OutRec outrec)
+    private void TidyOutRec(OutRec? outrec)
     {
       if (outrec != null && CleanCollinear(ref outrec.pts))
         FixSelfIntersects(ref outrec.pts!);
