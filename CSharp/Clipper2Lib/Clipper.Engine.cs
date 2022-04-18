@@ -10,6 +10,7 @@
 * License   :  http://www.boost.org/LICENSE_1_0.txt                            *
 *******************************************************************************/
 
+#nullable enable
 using System;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
@@ -25,6 +26,7 @@ namespace Clipper2Lib
   //into ascending and descending 'bounds' (or sides) that start at local
   //minima and ascend to a local maxima, before descending again.
 
+  [Flags]
   internal enum VertexFlags
   {
     None = 0,
@@ -208,7 +210,7 @@ namespace Clipper2Lib
     public delegate void ZCallback64(Point64 bot1, Point64 top1,
         Point64 bot2, Point64 top2, ref Point64 intersectPt);
 
-    public ZCallback64 ZFillFunc { get; set; }
+    public ZCallback64? ZFillFunc { get; set; }
 #endif
 
     public ClipperBase()
@@ -365,13 +367,13 @@ namespace Clipper2Lib
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static bool IsHeadingRightHorz(Active ae)
     {
-      return (ae.dx == double.NegativeInfinity);
+      return (double.IsNegativeInfinity(ae.dx));
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static bool IsHeadingLeftHorz(Active ae)
     {
-      return (ae.dx == double.PositiveInfinity);
+      return (double.IsPositiveInfinity(ae.dx));
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -487,7 +489,6 @@ namespace Clipper2Lib
 
     private static int PointCount(OutPt op)
     {
-      if (op == null) return 0;
       OutPt p = op;
       int cnt = 0;
       do
@@ -523,14 +524,18 @@ namespace Clipper2Lib
 
     private static void SwapOutrecs(Active ae1, Active ae2)
     {
-      OutRec? or1 = ae1.outrec!;
-      OutRec? or2 = ae2.outrec!;
+      OutRec? or1 = ae1.outrec;
+      OutRec? or2 = ae2.outrec;
       if (or1 == or2)
       {
         //nb: at least one edge is 'hot'
-        Active? ae = or1.frontEdge;
-        or1.frontEdge = or1.backEdge;
-        or1.backEdge = ae;
+        if (or1 != null)
+        {
+          Active? ae = or1.frontEdge;
+          or1.frontEdge = or1.backEdge;
+          or1.backEdge = ae;
+        }
+
         return;
       }
 
@@ -554,7 +559,7 @@ namespace Clipper2Lib
       ae2.outrec = or1;
     }
 
-    private static double Area(OutPt op)
+    private static double Area(OutPt? op)
     {
       if (op == null) return 0.0;
       double area = 0.0;
@@ -568,7 +573,7 @@ namespace Clipper2Lib
       return area * 0.5;
     }
 
-    private static void ReverseOutPts(OutPt op)
+    private static void ReverseOutPts(OutPt? op)
     {
       if (op == null) return;
 
@@ -629,7 +634,7 @@ namespace Clipper2Lib
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static OutRec? GetRealOutRec(OutRec? outRec)
     {
-      while (outRec != null & outRec!.pts == null)
+      while ((outRec != null) & (outRec!.pts == null))
         outRec = outRec.owner;
       return outRec;
     }
@@ -1824,8 +1829,8 @@ namespace Clipper2Lib
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private void DeleteFromAEL(Active ae)
     {
-      Active prev = ae.prevInAEL!;
-      Active next = ae.nextInAEL!;
+      Active? prev = ae.prevInAEL;
+      Active? next = ae.nextInAEL;
       if (prev == null && next == null && (ae != _actives)) return; //already deleted
       if (prev != null)
         prev.nextInAEL = next;
@@ -2315,7 +2320,7 @@ namespace Clipper2Lib
 
     private Active? DoMaxima(Active ae)
     {
-      Active prevE;
+      Active? prevE;
       Active? nextE, maxPair;
       prevE = ae.prevInAEL!;
       nextE = ae.nextInAEL!;
@@ -2365,7 +2370,7 @@ namespace Clipper2Lib
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static bool IsValidPath(OutPt op)
+    private static bool IsValidPath(OutPt? op)
     {
       return (op != null) && (op.next != op);
     }
@@ -3495,7 +3500,7 @@ namespace Clipper2Lib
     public delegate void ZCallbackD(PointD bot1, PointD top1,
         PointD bot2, PointD top2, ref PointD intersectPt);
 
-    public ZCallbackD ZFillDFunc { get; set; }
+    public ZCallbackD? ZFillDFunc { get; set; }
 #endif
 
     public ClipperD(int roundingDecimalPrecision = 2)
@@ -3568,7 +3573,7 @@ namespace Clipper2Lib
     {
       Paths64 solClosed64 = new Paths64(), solOpen64 = new Paths64();
 #if USINGZ
-      ZCallback64 ZFillSaved = ZFillFunc;
+      ZCallback64? ZFillSaved = ZFillFunc;
       if (ZFillDFunc != null && ZFillFunc == null)
         ZFillFunc = ProxyZCallback;
 #endif
@@ -3607,7 +3612,7 @@ namespace Clipper2Lib
       polytree.Clear();
       (polytree as PolyPathD).Scale = _scale;
 #if USINGZ
-      ZCallback64 ZFillSaved = ZFillFunc;
+      ZCallback64? ZFillSaved = ZFillFunc;
       if (ZFillDFunc != null && ZFillFunc == null)
         ZFillFunc = ProxyZCallback;
 #endif
