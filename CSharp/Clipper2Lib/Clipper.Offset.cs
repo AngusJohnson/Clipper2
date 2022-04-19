@@ -395,7 +395,7 @@ namespace Clipper2Lib
 
       if (isClosedPaths)
       {
-        //th  e lowermost polygon must be an outer polygon. So we can use that as the
+        //the lowermost polygon must be an outer polygon. So we can use that as the
         //designated orientation for outer polygons (needed for tidy-up clipping)
         int lowestIdx = GetLowestPolygonIdx(group._inPaths);
         if (lowestIdx < 0) return;
