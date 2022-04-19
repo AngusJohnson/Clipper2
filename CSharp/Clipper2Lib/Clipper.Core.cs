@@ -78,32 +78,32 @@ namespace Clipper2Lib
 #else
     public Point64(Point64 pt)
     {
-      this.X = pt.X;
-      this.Y = pt.Y;
+      X = pt.X;
+      Y = pt.Y;
     }
 
     public Point64(long x, long y)
     {
-      this.X = x;
-      this.Y = y;
+      X = x;
+      Y = y;
     }
 
     public Point64(double x, double y)
     {
-      this.X = (long) Math.Round(x);
-      this.Y = (long) Math.Round(y);
+      X = (long) Math.Round(x);
+      Y = (long) Math.Round(y);
     }
 
     public Point64(PointD pt)
     {
-      this.X = (long) Math.Round(pt.x);
-      this.Y = (long) Math.Round(pt.y);
+      X = (long) Math.Round(pt.x);
+      Y = (long) Math.Round(pt.y);
     }
 
     public Point64(PointD pt, double scale)
     {
-      this.X = (long) Math.Round(pt.x * scale);
-      this.Y = (long) Math.Round(pt.y * scale);
+      X = (long) Math.Round(pt.x * scale);
+      Y = (long) Math.Round(pt.y * scale);
     }
 
     public static bool operator ==(Point64 lhs, Point64 rhs)
@@ -139,7 +139,7 @@ namespace Clipper2Lib
       return $"({X},{Y})";
     }
 
-    public override int GetHashCode() => 0;
+    public override int GetHashCode() { return 0; }
   }
 
   public struct PointD
@@ -246,7 +246,7 @@ namespace Clipper2Lib
       return $"{x:F},{y:F} ";
     }
 
-    public override int GetHashCode() => 0;
+    public override int GetHashCode() { return 0; }
   }
 
   public struct Rect64
@@ -359,14 +359,14 @@ namespace Clipper2Lib
   };
 
   //PointInPolygon
-  enum PipResult
+  internal enum PipResult
   {
     Inside,
     Outside,
     OnEdge
   };
 
-  enum OutRecState
+  internal enum OutRecState
   {
     Undefined,
     Open,

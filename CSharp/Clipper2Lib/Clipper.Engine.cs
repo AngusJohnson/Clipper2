@@ -1728,8 +1728,8 @@ namespace Clipper2Lib
         {
           //can't treat as maxima & minima
           resultOp = AddOutPt(ae1, pt);
-#if USINGZ
           OutPt op2 = AddOutPt(ae2, pt);
+#if USINGZ
           SetZ(ae1, ae2, ref resultOp.pt);
           SetZ(ae1, ae2, ref op2.pt);
 #endif
@@ -2713,19 +2713,24 @@ namespace Clipper2Lib
             HorzEdgesOverlap(op1a.pt.X, op1b.pt.X, op2a.pt.X, op2b.pt.X))
           {
             //overlap found so promote to a 'real' join
+            joined = true;
             if (op1a.pt == op2b.pt)
-              joined = AddJoin(op1a, op2b);
+              AddJoin(op1a, op2b);
+            else if (op1b.pt == op2a.pt)
+              AddJoin(op1b, op2a);
             else if (op1a.pt == op2a.pt)
-              joined = AddJoin(op1a, op2a);
+              AddJoin(op1a, op2a);
+            else if (op1b.pt == op2b.pt)
+              AddJoin(op1b, op2b);
             else if (ValueBetween(op1a.pt.X, op2a.pt.X, op2b.pt.X))
-              joined = AddJoin(op1a, InsertOp(op1a.pt, op2a));
+              AddJoin(op1a, InsertOp(op1a.pt, op2a));
             else if (ValueBetween(op1b.pt.X, op2a.pt.X, op2b.pt.X))
-              joined = AddJoin(op1b, InsertOp(op1b.pt, op2a));
+              AddJoin(op1b, InsertOp(op1b.pt, op2a));
             else if (ValueBetween(op2a.pt.X, op1a.pt.X, op1b.pt.X))
-              joined = AddJoin(op2a, InsertOp(op2a.pt, op1a));
+              AddJoin(op2a, InsertOp(op2a.pt, op1a));
             else if (ValueBetween(op2b.pt.X, op1a.pt.X, op1b.pt.X))
-              joined = AddJoin(op2b, InsertOp(op2b.pt, op1a));
-            if (joined) break;
+              AddJoin(op2b, InsertOp(op2b.pt, op1a));
+            break;
           }
           joiner = joiner.nextH;
         }
@@ -2734,15 +2739,15 @@ namespace Clipper2Lib
       }
     }
 
-    private bool AddJoin(OutPt op1, OutPt op2)
+    private void AddJoin(OutPt op1, OutPt op2)
     {
       if ((op1.outrec == op2.outrec) && ((op1 == op2) ||
         //unless op1.next or op1.prev crosses the start-end divide
         //don't waste time trying to join adjacent vertices
         ((op1.next == op2) && (op1 != op1.outrec.pts)) ||
-        ((op2.next == op1) && (op2 != op1.outrec.pts)))) return false;
-
-      return true;
+        ((op2.next == op1) && (op2 != op1.outrec.pts)))) return;
+        
+      new Joiner(_joinerList, op1, op2, null);
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]

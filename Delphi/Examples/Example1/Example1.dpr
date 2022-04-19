@@ -11,6 +11,7 @@ uses
   Math,
   Diagnostics,
   Clipper in '..\Clipper.pas',
+  Clipper.Core in '..\Clipper.Core.pas',
   Clipper.SVG in '..\Clipper.SVG.pas';
 
 //------------------------------------------------------------------------------
@@ -35,7 +36,7 @@ begin
   finally
     free;
   end;
-  ShellExecute(0, nil, PChar(filename), Nil, Nil, SW_NORMAL);
+  //ShellExecute(0, nil, PChar(filename), Nil, Nil, SW_NORMAL);
 end;
 //------------------------------------------------------------------------------
 
@@ -86,21 +87,8 @@ begin
   subj[9] := MakePath([ 300,300,400,300,400,400,300,400 ]);
   subj[10] := MakePath([ 400,300,500,300,500,400,400,400 ]);
   sol := Union(subj, frNonZero);
-  MakeSvgAndDisplay('Blocks.svg',
+  MakeSvgAndDisplay('UnionBlocks.svg',
     'Blocks', frNonZero, subj, nil, nil, sol);
-end;
-//------------------------------------------------------------------------------
-
-procedure JoiningEdges;
-var
-  subj, sol: TPaths64;
-begin
-  SetLength(subj, 1);
-  subj[0] := MakePath([ 450,200,400,300,750,300,
-    100,450,150,250,600,150,750,300,250,300,350,350,600,300 ]);
-  sol := Union(subj, frEvenOdd);
-  MakeSvgAndDisplay('JoiningEdges.svg',
-    'JoiningEdges', frNonZero, subj, nil, nil, sol);
 end;
 //------------------------------------------------------------------------------
 
@@ -192,16 +180,32 @@ begin
 end;
 //------------------------------------------------------------------------------
 
+procedure MinkowskiSum1;
+var
+  circle, paths, sol: TPaths64;
+begin
+  SetLength(circle, 1);
+  circle[0] := MakePath([0,10,5,9,7,7,9,5,10,0,9,-5,7,-7,5,-9, 0,-10,
+    -5,-9,-7,-7,-9,-5,-10,0,-9,5,-7,7,-5,9,0,10]);
+  SetLength(paths, 2);
+  paths[0] := MakePath([40,40, 100,160, 160,40]);     //triangle
+  paths[1] := MakePath([0,0, 200,0, 200,200, 0,200]); //square
+
+  sol := MinkowskiSum(circle[0], paths[0], true);
+  AppendPaths(sol, MinkowskiSum(circle[0], paths[1], true));
+  MakeSvgAndDisplay('MinkowskiSum.svg',
+    'Minkowski Sum', frEvenOdd, paths, nil, circle, sol);
+end;
+//------------------------------------------------------------------------------
+
+
 var
   s: string;
 begin
   Randomize;
 
   WriteLn('RandomPaths 1');
-  DoRandomPaths1('Random20 EvenOdd', 800,600, 20, frEvenOdd);
-
-  WriteLn('RandomPaths 2');
-  DoRandomPaths1('Random20 NonZero', 800,600, 20, frNonZero);
+  DoRandomPaths1('Random20 EvenOdd', 800,600, 50, frEvenOdd);
 
   WriteLn('Star5 EvenOdd');
   Star5EvenOdd;
@@ -215,6 +219,9 @@ begin
   WriteLn('StarCircle Intersect EO');
   StarCircleIntersectEO;
 
+  WriteLn('UnionBlocks');
+  UnionBlocks;
+
   WriteLn('Inflate Closed (polygon) Circle');
   InflateClosedCircle;
 
@@ -224,13 +231,12 @@ begin
   WriteLn('Inflate Open Circle');
   InflateOpenCircle;
 
-  WriteLn('UnionBlocks');
-  UnionBlocks;
+  WriteLn('Minkowski Sum');
+  MinkowskiSum1;
 
-  //WriteLn('JoiningEdges');
-  //JoiningEdges;
+//  WriteLn('');
+//  WriteLn('Finished. Press Enter to exit.');
+//  ReadLn(s);
 
-  WriteLn('');
-  WriteLn('Finished. Press Enter to exit.');
-  ReadLn(s);
+  ShellExecute(0, 'open',PChar(ExtractFilePath(paramstr(0))), nil, nil, SW_SHOW);
 end.

@@ -4,7 +4,7 @@
 * Date      :  17 April 2022                                                   *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
-* Purpose   :  Offsets both open and closed paths (i.e. polylines & polygons).   *
+* Purpose   :  Offsets both open and closed paths (i.e. polylines & polygons). *
 * License   :  http://www.boost.org/LICENSE_1_0.txt                            *
 *******************************************************************************/
 

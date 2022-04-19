@@ -17,9 +17,9 @@ interface
 uses
   Math, Clipper.Core, Clipper.Engine, Clipper.Offset;
 
-//Redeclare a number of Clipper.Core and Clipper.Engine
-//structures here so they won't also be needed in 'uses'
-//when simply using the following functions.
+//Redeclare here a number of structures defined in
+//other units so those units won't need to be declared
+//just to use the following functions.
 type
   TPoint64    = Clipper.Core.TPoint64;
   TRect64     = Clipper.Core.TRect64;
@@ -80,6 +80,8 @@ function InflatePaths(const paths: TPaths64; delta: Double;
 function InflatePaths(const paths: TPathsD; delta: Double;
   jt: TJoinType = jtRound; et: TEndType = etPolygon): TPathsD; overload;
 
+function MinkowskiSum(const pattern, path: TPath64;
+  pathIsClosed: Boolean): TPaths64;
 
 function PolyTreeToPaths(PolyTree: TPolyTree): TPaths64;
 function PolyTreeDToPathsD(PolyTree: TPolyTreeD): TPathsD;
@@ -88,6 +90,9 @@ function MakePath(const ints: TArrayOfInteger): TPath64; overload;
 function MakePath(const dbls: TArrayOfDouble): TPathD; overload;
 
 implementation
+
+uses
+  Clipper.Minkowski;
 
 //------------------------------------------------------------------------------
 //------------------------------------------------------------------------------
@@ -292,6 +297,12 @@ begin
   end;
 end;
 //------------------------------------------------------------------------------
+
+function MinkowskiSum(const pattern, path: TPath64;
+  pathIsClosed: Boolean): TPaths64;
+begin
+ Result := Clipper.Minkowski.MinkowskiSum(pattern, path, pathIsClosed);
+end;
 //------------------------------------------------------------------------------
 
 end.

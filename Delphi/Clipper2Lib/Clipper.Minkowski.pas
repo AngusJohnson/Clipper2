@@ -14,7 +14,7 @@
 interface
 
 uses
-  Classes, SysUtils, Math, Clipper.Core, Clipper.Engine, Clipper;
+  Classes, SysUtils, Math, Clipper.Core, Clipper.Engine;
 
 function MinkowskiSum(const Pattern, Path: TPath64;
   PathIsClosed: Boolean): TPaths64; overload;
@@ -25,6 +25,9 @@ function MinkowskiDiff(const Pattern, Path: TPathD;
   PathIsClosed: Boolean; decimalPlaces: integer): TPathsD; overload;
 
 implementation
+
+uses
+  Clipper;
 
 function AddPoints(val1, val2: TPoint64): TPoint64;
   {$IFDEF INLINING} inline; {$ENDIF}
