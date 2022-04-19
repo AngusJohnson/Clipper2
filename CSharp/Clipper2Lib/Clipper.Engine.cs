@@ -2746,7 +2746,7 @@ namespace Clipper2Lib
     {
       if ((op1.outrec == op2.outrec) && ((op1 == op2) ||
         //unless op1.next or op1.prev crosses the start-end divide
-        //don't waist time trying to join adjacent vertices
+        //don't waste time trying to join adjacent vertices
         ((op1.next == op2) && (op1 != op1.outrec.pts)) ||
         ((op2.next == op1) && (op2 != op1.outrec.pts)))) return false;
 
