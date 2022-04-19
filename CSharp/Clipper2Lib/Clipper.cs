@@ -13,6 +13,7 @@
 *******************************************************************************/
 
 
+#nullable enable
 using System.Collections.Generic;
 
 namespace Clipper2Lib
@@ -25,7 +26,7 @@ namespace Clipper2Lib
   //PRE-COMPILER CONDITIONAL ...
   //USINGZ: For user defined Z-coordinates. See Clipper.SetZ
 
-  public class ClipperFunc
+  public static class ClipperFunc
   {
     public static Paths64 Intersect(Paths64 subject, Paths64 clip, FillRule fillRule)
     {
@@ -72,7 +73,7 @@ namespace Clipper2Lib
       return BooleanOp(ClipType.Xor, fillRule, subject, clip);
     }
 
-    public static Paths64 BooleanOp(ClipType clipType, FillRule fillRule, Paths64 subject, Paths64? clip)
+    public static Paths64 BooleanOp(ClipType clipType, FillRule fillRule, Paths64? subject, Paths64? clip)
     {
       Paths64 solution = new Paths64();
       if (subject == null) return solution;

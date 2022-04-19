@@ -374,7 +374,7 @@ namespace Clipper2Lib
     Inner
   };
 
-  public class InternalClipperFunc
+  public static class InternalClipperFunc
   {
     public const double floatingPointTolerance = 1E-15;
     public const double defaultMinimumEdgeLength = 0.1;
@@ -425,7 +425,7 @@ namespace Clipper2Lib
         b2 = ln2a.Y - m2 * ln2a.X;
         if (Math.Abs(m1 - m2) > floatingPointTolerance)
         {
-          ip.x = (double) (b2 - b1) / (m1 - m2);
+          ip.x = (b2 - b1) / (m1 - m2);
           ip.y = m1 * ip.x + b1;
         }
         else
