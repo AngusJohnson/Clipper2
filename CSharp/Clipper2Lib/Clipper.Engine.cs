@@ -524,18 +524,13 @@ namespace Clipper2Lib
 
     private static void SwapOutrecs(Active ae1, Active ae2)
     {
-      OutRec? or1 = ae1.outrec;
-      OutRec? or2 = ae2.outrec;
+      OutRec? or1 = ae1.outrec; //at least one edge has 
+      OutRec? or2 = ae2.outrec; //an assigned outrec
       if (or1 == or2)
       {
-        //NB at least one edge is 'hot'
-        if (or1 != null)
-        {
-          Active? ae = or1.frontEdge;
-          or1.frontEdge = or1.backEdge;
-          or1.backEdge = ae;
-        }
-
+        Active? ae = or1!.frontEdge;
+        or1.frontEdge = or1.backEdge;
+        or1.backEdge = ae;
         return;
       }
 
@@ -559,9 +554,8 @@ namespace Clipper2Lib
       ae2.outrec = or1;
     }
 
-    private static double Area(OutPt? op)
+    private static double Area(OutPt op)
     {
-      if (op == null) return 0.0;
       double area = 0.0;
       OutPt op2 = op;
       do
@@ -573,10 +567,8 @@ namespace Clipper2Lib
       return area * 0.5;
     }
 
-    private static void ReverseOutPts(OutPt? op)
+    private static void ReverseOutPts(OutPt op)
     {
-      if (op == null) return;
-
       OutPt op1 = op;
       OutPt op2;
 
@@ -634,7 +626,7 @@ namespace Clipper2Lib
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static OutRec? GetRealOutRec(OutRec? outRec)
     {
-      while ((outRec != null) & (outRec!.pts == null))
+      while ((outRec != null) && (outRec.pts == null))
         outRec = outRec.owner;
       return outRec;
     }
@@ -1281,7 +1273,7 @@ namespace Clipper2Lib
             windDx = -1,
 #endif
             vertexTop = localMinima.vertex.next, //i.e. ascending
-            top = localMinima.vertex!.next!.pt,
+            top = localMinima.vertex.next!.pt,
             outrec = null,
             localMin = localMinima
           };
@@ -1736,8 +1728,8 @@ namespace Clipper2Lib
         {
           //can't treat as maxima & minima
           resultOp = AddOutPt(ae1, pt);
-          OutPt op2 = AddOutPt(ae2, pt);
 #if USINGZ
+          OutPt op2 = AddOutPt(ae2, pt);
           SetZ(ae1, ae2, ref resultOp.pt);
           SetZ(ae1, ae2, ref op2.pt);
 #endif
@@ -2370,9 +2362,9 @@ namespace Clipper2Lib
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static bool IsValidPath(OutPt? op)
+    private static bool IsValidPath(OutPt op)
     {
-      return (op != null) && (op.next != op);
+      return (op.next != op);
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -2510,7 +2502,7 @@ namespace Clipper2Lib
     {
       if (IsValidClosedPath(op)) return true;
       if (op != null)
-        SafeDisposeOutPts(op!);
+        SafeDisposeOutPts(op);
       return false;
     }
 
@@ -2544,7 +2536,7 @@ namespace Clipper2Lib
         outRec.backEdge.outrec = null;
       outRec.pts = null;
 
-      op.prev!.next = null;
+      op.prev.next = null;
       OutPt? op2 = op;
       while (op2 != null)
       {
@@ -2564,8 +2556,8 @@ namespace Clipper2Lib
           DeleteTrialHorzJoin(op);
         else if (_horzJoiners != null)
         {
-          if (OutPtInTrialHorzList(joiner.op1!))
-            DeleteTrialHorzJoin(joiner.op1!);
+          if (OutPtInTrialHorzList(joiner.op1))
+            DeleteTrialHorzJoin(joiner.op1);
           if (OutPtInTrialHorzList(joiner.op2!))
             DeleteTrialHorzJoin(joiner.op2!);
           DeleteJoin(joiner);
@@ -2750,7 +2742,6 @@ namespace Clipper2Lib
         ((op1.next == op2) && (op1 != op1.outrec.pts)) ||
         ((op2.next == op1) && (op2 != op1.outrec.pts)))) return false;
 
-      new Joiner(_joinerList, op1, op2, null);
       return true;
     }
 
@@ -2912,7 +2903,7 @@ namespace Clipper2Lib
         if (!IsValidPath(op1) || !IsValidPath(op2) ||
           (or1 == or2 && (op1.prev == op2 || op1.next == op2))) return or1;
 
-        if (op1.prev!.pt == op2.next!.pt ||
+        if (op1.prev.pt == op2.next!.pt ||
             ((InternalClipperFunc.CrossProduct(op1.prev.pt, op1.pt, op2.next.pt) == 0) &&
              CollinearSegsOverlap(op1.prev.pt, op1.pt, op2.pt, op2.next.pt)))
         {
@@ -2966,7 +2957,7 @@ namespace Clipper2Lib
           }
           break;
         }
-        else if (op1.next!.pt == op2.prev!.pt ||
+        else if (op1.next!.pt == op2.prev.pt ||
                  ((InternalClipperFunc.CrossProduct(op1.next.pt, op2.pt, op2.prev.pt) == 0) &&
                   CollinearSegsOverlap(op1.next.pt, op1.pt, op2.pt, op2.prev.pt)))
         {
@@ -3045,7 +3036,7 @@ namespace Clipper2Lib
         //something odd needs tidying up
         if (CheckDisposeAdjacent(ref op1, op2, or1)) continue;
         else if (CheckDisposeAdjacent(ref op2, op1, or1)) continue;
-        else if (op1.prev!.pt != op2.next!.pt &&
+        else if (op1.prev.pt != op2.next!.pt &&
           (DistanceSqr(op1.prev.pt, op2.next.pt) < 2.01))
         {
           op1.prev.pt = op2.next.pt;
@@ -3078,7 +3069,7 @@ namespace Clipper2Lib
       OutPt opCurr = outrec.pts!;
       for (; ; )
       {
-        opCurr!.outrec = outrec;
+        opCurr.outrec = outrec;
         opCurr = opCurr.next!;
         if (opCurr == outrec.pts) return;
       }
