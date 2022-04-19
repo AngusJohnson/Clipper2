@@ -4,7 +4,7 @@
 * Date      :  17 April 2022                                                   *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
-* Purpose   :  Offsets both open and closed paths (ie polylines & polygons).   *
+* Purpose   :  Offsets both open and closed paths (i.e. polylines & polygons).   *
 * License   :  http://www.boost.org/LICENSE_1_0.txt                            *
 *******************************************************************************/
 
@@ -255,7 +255,7 @@ namespace Clipper2Lib
     {
       //A: angle between adjoining edges (on left side WRT winding direction).
       //A == 0 deg (or A == 360 deg): collinear edges heading in same direction
-      //A == 180 deg: collinear edges heading in opposite directions (ie a 'spike')
+      //A == 180 deg: collinear edges heading in opposite directions (i.e. a 'spike')
       //sin(A) < 0: convex on left.
       //cos(A) > 0: angles on both left and right sides > 90 degrees
       double sinA = _normals[k].x * _normals[j].y - _normals[j].x * _normals[k].y;
