@@ -970,8 +970,8 @@ namespace Clipper2Lib
         case FillRule.Negative:
           if (ae.windCount != -1) return false;
           break;
-        default:
-          break; // delphi2cpp translation note: no warnings
+        case FillRule.EvenOdd:
+          break;
       }
 
       switch (_cliptype)
