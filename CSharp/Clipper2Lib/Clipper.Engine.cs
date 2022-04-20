@@ -1,7 +1,7 @@
 ﻿/*******************************************************************************
 * Author    :  Angus Johnson                                                   *
 * Version   :  10.0 (beta) - also known as Clipper2                            *
-* Date      :  18 April 2022                                                   *
+* Date      :  20 April 2022                                                   *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  This is the main polygon clipping module                        *
@@ -2803,8 +2803,11 @@ namespace Clipper2Lib
 
     private void ProcessJoinList()
     {
-      foreach (Joiner? j in _joinerList)
+      // NB can't use foreach here because list may 
+      // contain nulls which can't be enumerated
+      for (int i = 0; i < _joinerList.Count; i++)
       {
+        Joiner? j = _joinerList[i];
         if (j == null) continue;
         OutRec outrec = ProcessJoin(j);
         TidyOutRec(outrec);
@@ -3229,7 +3232,6 @@ namespace Clipper2Lib
         splitOp.prev = newOp;
         splitOp.next.next = newOp;
       }
-
       return result;
     }
 
