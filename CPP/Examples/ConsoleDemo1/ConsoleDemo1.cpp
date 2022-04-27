@@ -351,12 +351,13 @@ Path64 Ellipse(const Rect64& rec)
 }
 //---------------------------------------------------------------------------
 
-inline void MakeRandomPoly(Path64& poly, int width, int height, unsigned vertCnt)
+inline Path64 MakeRandomPoly(int width, int height, unsigned vertCnt)
 {
-  poly.resize(0);
-  poly.reserve(vertCnt);
+  Path64 result;
+  result.reserve(vertCnt);
   for (unsigned i = 0; i < vertCnt; ++i)
-    poly.push_back(Clipper2Lib::Point64(rand() * width, rand() * height));
+    result.push_back(Clipper2Lib::Point64(rand() * width, rand() * height));
+  return result;
 }
 //---------------------------------------------------------------------------
 
@@ -468,25 +469,21 @@ void DoBenchmark(int edge_cnt_start, int edge_cnt_end, int increment = 1000)
   Clipper2Lib::ClipType ct_benchmark = Clipper2Lib::ClipType::Intersection;//Union;//
   Clipper2Lib::FillRule fr_benchmark = Clipper2Lib::FillRule::NonZero;//EvenOdd;//
 
-  Paths64 subject, clip;
-  Paths64 solution;
-  subject.resize(1);
-  clip.resize(1);
+  Paths64 subject, clip, solution;
 
   cout << "\nStarting Clipper2 Benchmarks:  " << endl << endl;
   for (int i = edge_cnt_start; i <= edge_cnt_end; i += increment)
   {
-    MakeRandomPoly(subject[0], display_width, display_height, i);
-    MakeRandomPoly(clip[0], display_width, display_height, i);
+    subject.clear();
+    clip.clear();
+    subject.push_back(MakeRandomPoly(display_width, display_height, i));
+    clip.push_back(MakeRandomPoly(display_width, display_height, i));
     //SaveToFile("benchmark_test.txt", subject, clip, ct_benchmark, fr_benchmark);
 
     cout << "Edges: " << i << endl;
     Timer t;
     t.Start();
-    Clipper2Lib::Clipper64 clipper_benchmark;
-    clipper_benchmark.AddSubject(subject);
-    clipper_benchmark.AddClip(clip);
-    clipper_benchmark.Execute(ct_benchmark, fr_benchmark, solution);
+    solution = Intersect(subject, clip, FillRule::NonZero);
     int64_t msecs = t.Elapsed_Millisecs();
     cout << FormatMillisecs(msecs) << endl << endl;
   }
@@ -496,28 +493,25 @@ void DoBenchmark(int edge_cnt_start, int edge_cnt_end, int increment = 1000)
 void DoMemoryLeakTest()
 {
   int edge_cnt = 1000;
-  Clipper2Lib::ClipType ct_mem_leak = Clipper2Lib::ClipType::Intersection;//Union;//
-  Clipper2Lib::FillRule fr_mem_leak = Clipper2Lib::FillRule::NonZero;//EvenOdd;//
 
-  Paths64 subject, clip;
-  Paths64 solution;
-  subject.resize(1);
-  clip.resize(1);
-
-  MakeRandomPoly(subject[0], display_width, display_height, edge_cnt);
-  MakeRandomPoly(clip[0], display_width, display_height, edge_cnt);
+  Paths64 subject, clip, solution, empty_path;
+  subject.push_back(MakeRandomPoly(display_width, display_height, edge_cnt));
+  clip.push_back(MakeRandomPoly(display_width, display_height, edge_cnt));
 
   _CrtMemState sOld, sNew, sDiff;
   _CrtMemCheckpoint(&sOld); //take a snapshot
 
-  Clipper2Lib::Clipper64* clipper2 = new Clipper2Lib::Clipper64();
-  clipper2->AddSubject(subject);
-  clipper2->AddClip(clip);
-  clipper2->Execute(ct_mem_leak, fr_mem_leak, solution);
-  delete clipper2;
+  solution = Intersect(subject, clip, FillRule::NonZero);
+  //display the intersection
+  SaveToSVG("solution.svg", display_width, display_height,
+    subject, empty_path, clip, solution, empty_path,
+    FillRule::NonZero, false);
+  system("solution.svg");
 
-  solution.resize(0);
+  //clean up ready for memory check 
+  solution.clear();
   solution.shrink_to_fit();
+
   _CrtMemCheckpoint(&sNew); //take another snapshot 
   if (_CrtMemDifference(&sDiff, &sOld, &sNew)) // is there is a difference
   {
@@ -538,7 +532,7 @@ void DoMemoryLeakTest()
 int main(int argc, char* argv[])
 {
   //////////////////////////////////////////////////////////////////////////
-  TestType test_type = TestType::TestFile;//Simple;//Benchmark;//MemoryLeak;//
+  TestType test_type = TestType::MemoryLeak;//TestFile;//Simple;//Benchmark;//
   //////////////////////////////////////////////////////////////////////////
 
   srand((unsigned)time(0));
