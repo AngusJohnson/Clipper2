@@ -18,6 +18,7 @@
 #include "clipper.core.h"
 #include "clipper.engine.h"
 #include "clipper.offset.h"
+#include "clipper.minkowski.h"
 
 namespace Clipper2Lib {
 
@@ -55,12 +56,7 @@ namespace Clipper2Lib {
 
   inline Paths64 Union(const Paths64& subjects, const Paths64& clips, FillRule fillrule)
   {
-    Paths64 result;
-    Clipper64 clipper;
-    clipper.AddSubject(subjects);
-    clipper.AddClip(clips);
-    clipper.Execute(ClipType::Union, fillrule, result);
-    return result;
+    return BooleanOp(ClipType::Union, fillrule, subjects, clips);
   }
 
   inline PathsD Union(const PathsD& subjects, const PathsD& clips, FillRule fillrule)
@@ -116,6 +112,7 @@ namespace Clipper2Lib {
       bool isNeg;
       while (s_iter != s.cend() && (int64_t)(*s_iter) < 33) ++s_iter;
       if (s_iter == s.cend()) break;
+  
       //get x ...
       isNeg = (int64_t)(*s_iter) == 45;
       if (isNeg) ++s_iter;
@@ -127,10 +124,12 @@ namespace Clipper2Lib {
       }
       if (s_iter2 == s.cend()) break;
       if (isNeg) x = -x;
+
       //skip space or comma between x & y ...
       s_iter = s_iter2;
       while (s_iter != s.cend() && 
         ((int64_t)(*s_iter) == 32 || (int64_t)(*s_iter) == 44)) ++s_iter;
+
       //get y ...
       if (s_iter == s.cend()) break;
       isNeg = (int64_t)(*s_iter) == 45;
@@ -143,6 +142,7 @@ namespace Clipper2Lib {
       }
       if (isNeg) y = -y;
       result.push_back(Point64(x, y));
+
       //skip trailing space, comma ...
       s_iter = s_iter2;
       while (s_iter != s.cend() &&

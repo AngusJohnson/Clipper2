@@ -1,7 +1,7 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
 * Version   :  10.0 (beta) - aka Clipper2                                      *
-* Date      :  26 April 2022                                                   *
+* Date      :  27 April 2022                                                   *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  This is the main polygon clipping module                        *
@@ -1383,6 +1383,7 @@ namespace Clipper2Lib {
 				startOp = op2;
 				continue;
 			}
+			op2 = op2->next;
 			if (op2 == startOp) break;
 		}
 		FixSelfIntersects(outrec);

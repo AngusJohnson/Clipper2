@@ -1,6 +1,7 @@
 
 #include <cstdlib>
 #include <iostream>
+#include <algorithm> 
 #include <fstream>
 #include <sstream>
 #include <string>
@@ -37,21 +38,21 @@ public:
 // Functions load clipping operations from text files
 //------------------------------------------------------------------------------
 
-bool GetNumericValue(const string& line, size_t &start_pos, int64_t &value)
+bool GetNumericValue(const string& line, string::const_iterator &s_it, int64_t &value)
 {
   value = 0;
-  size_t line_len = line.size();
-  while (start_pos < line_len && line[start_pos] == ' ') ++start_pos;
-  if (start_pos >= line_len) return false;
-  bool is_neg = (line[start_pos] == '-');
-  if (is_neg) ++start_pos;
-  size_t num_start_pos = start_pos;
-  while (start_pos < line_len && line[start_pos] >= '0' && line[start_pos] <= '9') {
-    value = value * 10 + (int64_t)line[start_pos] - 48;
-    ++start_pos;
+  while (s_it != line.cend() && *s_it == ' ') ++s_it;
+  if (s_it == line.cend()) return false;
+  bool is_neg = (*s_it == '-');
+  if (is_neg) ++s_it;
+  string::const_iterator s_it2 = s_it;
+  while (s_it != line.cend() && *s_it >= '0' && *s_it <= '9') 
+  {
+    value = value * 10 + (int64_t)(*s_it++) - 48;
   }
-  if (start_pos == num_start_pos) return false; //no value
-  if (start_pos < line_len && line[start_pos] == ',') ++start_pos;
+
+  if (s_it == s_it2) return false; //no value
+  if (s_it != line.cend() && *s_it == ',') ++s_it;
   if (is_neg) value = -value;
   return true;
 }
@@ -59,10 +60,10 @@ bool GetNumericValue(const string& line, size_t &start_pos, int64_t &value)
 
 bool GetPath(const string &line, Paths64 &paths)
 {
-  size_t line_pos = 0;
   Path64 p;
   int64_t x = 0, y = 0;
-  while (GetNumericValue(line, line_pos, x) && GetNumericValue(line, line_pos, y))
+  string::const_iterator s_it = line.cbegin();
+  while (GetNumericValue(line, s_it, x) && GetNumericValue(line, s_it, y))
     p.push_back(Clipper2Lib::Point64(x, y));
   if (p.empty()) return false; 
   paths.push_back(p);
@@ -77,32 +78,29 @@ bool GetTestNum(ifstream &source, int test_num, bool seek_from_start,
 {
   string line;
   bool found = false;
+  size_t last_read_line_pos = source.tellg();
   if (seek_from_start) source.seekg(0, ios_base::beg);
   while (std::getline(source, line))
   {
     size_t line_pos = line.find("CAPTION:");
     if (line_pos == string::npos) continue;
-    line_pos += 8;
-    size_t line_len = line.size();
-    int64_t num = 0;
-    if (!GetNumericValue(line, line_pos, num)) continue;
+    
+    string::const_iterator s_it = (line.cbegin() + 8);
+    int64_t num;
+    if (!GetNumericValue(line, s_it, num)) continue;
     if (num > test_num) return false;
     if (num != test_num) continue;
 
     found = true;
-    subj.clear(); subj_open.clear(); clip.clear(); 
-
-    size_t pos = 0;
+    subj.clear(); subj_open.clear(); clip.clear();
     while (std::getline(source, line))
-    {
-      if (line.find("CAPTION:") != string::npos) 
+    {            
+      if (line.find("CAPTION:") != string::npos)
       {
-        if (!pos) return false; //oops, something wrong with the test file
-        //we're heading into the next test, so go back a bit ...
-        source.seekg(pos, ios_base::beg);
-        return true;
+        source.seekg(last_read_line_pos, ios_base::beg);
+        return (!subj.empty() || !subj_open.empty() || !clip.empty());
       }
-      pos = static_cast<size_t>(source.tellg());
+      last_read_line_pos = source.tellg();
 
       if (line.find("INTERSECTION") != string::npos) 
       {
@@ -140,13 +138,13 @@ bool GetTestNum(ifstream &source, int test_num, bool seek_from_start,
       
       else if (line.find("SOL_AREA") != string::npos)
       {
-        size_t  pos_in_line = 10;
-        GetNumericValue(line, pos_in_line, area); continue;
+        s_it = (line.cbegin() + 10);
+        GetNumericValue(line, s_it, area); continue;
       }
       else if (line.find("SOL_COUNT") != string::npos)
       {
-        size_t  pos_in_line = 11;
-        GetNumericValue(line, pos_in_line, count); continue;
+        s_it = (line.cbegin() + 11);
+        GetNumericValue(line, s_it, count); continue;
       }
 
       if (line.find("SUBJECTS_OPEN") != string::npos) 
@@ -212,13 +210,13 @@ bool LoadFromFile(const string &filename,
   file.close();
 
   string line;
-  bool cap_found = false;
+  bool caption_found = false;
   for (;;)
   {
-    if (!getline(ss, line)) return cap_found;
-    if (!cap_found) 
+    if (!getline(ss, line)) return caption_found;
+    if (!caption_found) 
     {
-      cap_found = line.find("CAPTION: ") != std::string::npos;
+      caption_found = line.find("CAPTION: ") != std::string::npos;
       continue; //ie keep going until caption is found
     }
 
@@ -242,16 +240,17 @@ bool LoadFromFile(const string &filename,
     }
     else if (line.find("SUBJECTS") != std::string::npos) GetPaths(ss, subj);
     else if (line.find("CLIPS") != std::string::npos) GetPaths(ss, clip);
-    else if (line.find("CAPTION:") != std::string::npos) return true;
+    else if (line.find("CAPTION:") != std::string::npos) break;
+    else if (!subj.empty() && !clip.empty()) return true;
   }
-  return cap_found;
+  return !subj.empty() || !clip.empty();
 }
 
 //------------------------------------------------------------------------------
 // Functions save clipping operations to text files
 //------------------------------------------------------------------------------
 
-void PathsToOStream(Paths64& paths, std::ostream &stream)
+void PathsToOstream(Paths64& paths, std::ostream &stream)
 {
   for (Paths64::iterator paths_it = paths.begin(); paths_it != paths.end(); ++paths_it)
   {
@@ -294,9 +293,9 @@ void SaveToFile(const string &filename,
   file << "CLIPTYPE: " << cliptype << endl;
   file << "FILLRULE: " << fillrule << endl;
   file << "SUBJECTS" << endl;
-  PathsToOStream(subj, file);
+  PathsToOstream(subj, file);
   file << "CLIPS" << endl;
-  PathsToOStream(clip, file);
+  PathsToOstream(clip, file);
   file.close();
 }
 
@@ -390,6 +389,17 @@ void DoSimple()
   Clipper2Lib::FillRule fr_simple = Clipper2Lib::FillRule::NonZero;
   bool show_solution_coords = false;
 
+  ////Minkowski
+  //Path64 path = MakePath("0, 0, 100, 200, 200, 0 ");
+  //Path64 pattern = Ellipse(Rect64(-20, -20, 20, 20)); 
+  //solution = Paths64(MinkowskiSum(pattern, path, false));
+  //SaveToFile("temp.txt", solution, clip, ClipType::Union, FillRule::NonZero);
+  //SaveToSVG("solution.svg", display_width, display_height,
+  //  solution, subject, subject, solution, subject,
+  //  fr_simple, show_solution_coords);
+  //system("solution.svg");
+
+  //Intersection plus inflating
   subject.push_back(MakePath("500, 250, 50, 395, 325, 10, 325, 490, 50, 105"));
   clip.push_back(Ellipse(Rect64(100, 100, 400, 400)));
   //SaveToFile("simple.txt", subject, clip, ct_simple, fr_simple);
@@ -528,7 +538,7 @@ void DoMemoryLeakTest()
 int main(int argc, char* argv[])
 {
   //////////////////////////////////////////////////////////////////////////
-  TestType test_type = TestType::Simple;//Benchmark;//TestFile;//MemoryLeak;//
+  TestType test_type = TestType::TestFile;//Simple;//Benchmark;//MemoryLeak;//
   //////////////////////////////////////////////////////////////////////////
 
   srand((unsigned)time(0));
