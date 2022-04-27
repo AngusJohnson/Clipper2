@@ -1,0 +1,356 @@
+/*******************************************************************************
+* Author    :  Angus Johnson                                                   *
+* Version   :  10.0 (beta) - aka Clipper2                                      *
+* Date      :  26 April 2022                                                   *
+* Website   :  http://www.angusj.com                                           *
+* Copyright :  Angus Johnson 2010-2022                                         *
+* Purpose   :  Core Clipper Library structures and functions                   *
+* License   :  http://www.boost.org/LICENSE_1_0.txt                            *
+*******************************************************************************/
+
+#ifndef CLIPPER_CORE_H
+#define CLIPPER_CORE_H
+
+#include <cstdlib>
+#include <cmath>
+#include <vector>
+#include <iostream>
+
+namespace Clipper2Lib {
+
+// Point ------------------------------------------------------------------------
+	
+template <typename T>
+struct Point;
+
+template <typename T>
+struct Point {
+	T x;
+	T y;
+
+	Point(T x = 0, T y = 0) : x(x), y(y) {};
+
+	template <typename T2>
+	explicit Point<T>(Point<T2> p)
+	{
+		if (std::numeric_limits<T>::is_integer && !std::numeric_limits<T2>::is_integer) {
+			x = static_cast<T>(std::round(p.x));
+			y = static_cast<T>(std::round(p.y));
+		}
+		else
+		{
+			x = static_cast<T>(p.x); 
+			y = static_cast<T>(p.y);
+		}
+	};
+
+	friend inline bool operator==(const Point &a, const Point &b) {
+		return a.x == b.x && a.y == b.y;
+	}
+
+	inline Point<T> operator*(double scale) {
+		return Point<T>(x * scale, y * scale);
+	}
+
+	inline Point<T> operator-() const
+	{
+		return Point<T>(-x,-y);
+	}
+
+	inline Point operator+(const Point &b) const
+	{
+		return Point(x+b.x, y+b.y);
+	}
+
+	inline Point operator-(const Point &b) const
+	{
+		return Point(x-b.x, y-b.y);
+	}
+
+	friend inline bool operator!=(const Point &a, const Point &b) {
+		return !(a == b);
+	}
+
+	friend std::ostream &operator<<(std::ostream &os, const Point &point) {
+		os << point.x << "," << point.y;
+		return os;
+	}
+};
+
+using Point64 = Point<int64_t>;
+using PointD = Point<double>;
+
+template<>
+Point<int64_t> Point<int64_t>::operator*(double scale)
+{
+	return Point<int64_t>(static_cast<int64_t>(std::round(x * scale)),
+		static_cast<int64_t>(std::round(y * scale)));
+}
+
+using Path64 = std::vector< Point<int64_t>>;
+using PathD = std::vector< Point<double>>;
+using Paths64 = std::vector< Path64>;
+using PathsD = std::vector< PathD>;
+
+inline double Sqr(double val) { return val * val; }
+
+inline bool NearEqual(const PointD p1, const PointD p2, double max_dist_sqrd) {
+	return Sqr(p1.x - p2.x) + Sqr(p1.y - p2.y) < max_dist_sqrd;
+}
+
+static PathD StripNearEqual(const PathD& path, double max_dist_sqrd, bool is_closed_path)
+{
+	if (path.size() == 0) return PathD();
+	PathD result;
+	result.reserve(path.size());
+	PathD::const_iterator path_iter = path.cbegin();
+	PointD first_pt = *path_iter++, last_pt = first_pt;
+	result.push_back(first_pt);
+	for (; path_iter != path.cend(); ++path_iter)
+	{
+		if (!NearEqual(*path_iter, last_pt, max_dist_sqrd))
+		{
+			last_pt = *path_iter;
+			result.push_back(last_pt);
+		}
+	}
+	if (!is_closed_path) return result;
+	while (!result.empty() &&
+		NearEqual(result.back(), first_pt, max_dist_sqrd)) result.pop_back();
+	return result;
+}
+
+static PathsD StripNearEqual(const PathsD& paths, double max_dist_sqrd, bool is_closed_path)
+{
+	PathsD result;
+	result.reserve(paths.size());
+	for (PathsD::const_iterator paths_citer = paths.cbegin();
+		paths_citer != paths.cend(); ++paths_citer)
+	{
+		result.push_back(StripNearEqual(*paths_citer, max_dist_sqrd, is_closed_path));
+	}
+	return result;
+}
+
+inline Path64 PathDToPath64(const PathD& path, double scale = 1)
+{
+	Path64 result;
+	result.reserve(path.size());
+	PathD::const_iterator path_iter;
+	for (path_iter = path.cbegin(); path_iter != path.cend(); ++path_iter)
+		result.push_back(Point64(static_cast<int64_t>((*path_iter).x * scale),
+			static_cast<int64_t>((*path_iter).y * scale)));
+	return result;
+}
+
+inline PathD Path64ToPathD(const Path64& path, double scale = 1)
+{
+	PathD result;
+	result.reserve(path.size());
+	Path64::const_iterator path_iter;
+	for (path_iter = path.cbegin(); path_iter != path.cend(); ++path_iter)
+		result.push_back(PointD((*path_iter).x * scale, (*path_iter).y * scale));
+	return result;
+}
+
+inline Paths64 PathsDToPaths64(const PathsD& paths, double scale = 1)
+{
+	Paths64 result;
+	result.reserve(paths.size());
+	PathsD::const_iterator paths_iter;
+	for (paths_iter = paths.cbegin(); paths_iter != paths.cend(); ++paths_iter)
+		result.push_back(PathDToPath64((*paths_iter), scale));
+	return result;
+}
+
+inline PathsD Paths64ToPathsD(const Paths64& paths, double scale = 1)
+{
+	PathsD result;
+	result.reserve(paths.size());
+	Paths64::const_iterator paths_iter;
+	for (paths_iter = paths.cbegin(); paths_iter != paths.cend(); ++paths_iter)
+		result.push_back(Path64ToPathD((*paths_iter), scale));
+	return result;
+}
+
+// Rect ------------------------------------------------------------------------
+
+template <typename T>
+struct Rect;
+
+using Rect64 = Rect<int64_t>;
+using RectD = Rect<double>;
+
+template <typename T>
+struct Rect {
+	T left;
+	T top;
+	T right;
+	T bottom;
+
+	Rect() :
+		left(0),
+		top(0),
+		right(0),
+		bottom(0) {}
+
+	Rect(T l, T t, T r, T b) :
+		left(l),
+		top(t),
+		right(r),
+		bottom(b) {}
+
+
+	T Width() const { return right - left; }
+	T Height() const { return bottom - top; }
+	void Width(T width) { right = left + width; }
+	void Height(T height) { bottom = top + height; }
+
+	void Scale(double scale) { 
+		left *= scale; 
+		top *= scale;
+		right *= scale;
+		bottom *= scale;
+	}
+
+	bool IsEmpty() const { return bottom <= top || right <= left; };
+
+	friend std::ostream &operator<<(std::ostream &os, const Rect<T> &rect) {
+		os << "("
+		   << rect.left << "," << rect.top << "," << rect.right << "," << rect.bottom
+		   << ")";
+		return os;
+	}
+};
+
+// clipper2Exception ---------------------------------------------------------
+
+class Clipper2Exception : public std::exception {
+public:
+	explicit Clipper2Exception(const char *description) :
+		m_descr(description) {}
+	virtual const char *what() const throw() { return m_descr.c_str(); }
+
+private:
+	std::string m_descr;
+};
+
+// Miscellaneous ------------------------------------------------------------
+
+
+template <typename T>
+inline double CrossProduct(const Point<T>& pt1, const Point<T>& pt2, const Point<T>& pt3) {
+	return (static_cast<double>(pt2.x - pt1.x) * static_cast<double>(pt3.y - 
+		pt2.y) - static_cast<double>(pt2.y - pt1.y) * static_cast<double>(pt3.x - pt2.x));
+}
+
+template <typename T>
+inline double DotProduct(const Point<T>& pt1, const Point<T>& pt2, const Point<T>& pt3) {
+	return (static_cast<double>(pt2.x - pt1.x) * static_cast<double>(pt3.x - pt2.x) + 
+		static_cast<double>(pt2.y - pt1.y) * static_cast<double>(pt3.y - pt2.y));
+}
+
+template <typename T>
+inline double DotProduct(const Point<T>& vec1, const Point<T>& vec2)
+{
+	return static_cast<double>(vec1.x * vec2.x) + static_cast<double>(vec1.y * vec2.y);
+}
+
+template <typename T>
+inline double DistanceSqr(const Point<T> pt1, const Point<T> pt2) {
+	return std::pow(pt1.x - pt2.x, 2.0) + std::pow(pt1.y - pt2.y, 2.0);
+}
+
+template <typename T>
+inline double DistanceFromLineSqrd(const Point<T> &pt, const Point<T> &ln1, const Point<T> &ln2)
+{
+	//perpendicular distance of point (x³,y³) = (Ax³ + By³ + C)/Sqrt(A² + B²)
+	//see http://en.wikipedia.org/wiki/Perpendicular_distance
+	double A = static_cast<double>(ln1.y - ln2.y);
+	double B = static_cast<double>(ln2.x - ln1.x);
+	double C = A * ln1.x + B * ln1.y;
+	C = A * pt.x + B * pt.y - C;
+	return (C * C) / (A * A + B * B);
+}
+
+template <typename T>
+bool NearCollinear(const Point<T> &pt1, const Point<T> &pt2, const Point<T> &pt3, double sin_sqrd_min_angle_rads)
+{
+	double cp = std::abs(CrossProduct(pt1, pt2, pt3));
+	return (cp * cp) / (DistanceSqr(pt1, pt2) * DistanceSqr(pt2, pt3)) < sin_sqrd_min_angle_rads;
+}
+
+inline double Area(const Path64& path)
+{
+	if (path.size() == 0) return 0.0;
+	double a = 0.0;
+	Path64::const_iterator path_iter, path_iter_last = --path.cend();
+	for (path_iter = path.cbegin(); path_iter != path.cend();
+		path_iter_last = path_iter, ++path_iter)
+	{
+		a += static_cast<double>(path_iter_last->y - path_iter->y) * 
+			(path_iter_last->x + path_iter->x);
+	}
+#if REVERSE_ORIENTATION
+	return a * -0.5;
+#else
+	return a * 0.5;
+#endif
+}
+
+inline double Area(const Paths64& paths)
+{
+	double a = 0.0;
+	for (Paths64::const_iterator paths_iter = paths.cbegin();
+		paths_iter != paths.cend(); ++paths_iter)
+	{
+		a += Area(*paths_iter);
+	}
+	return a;
+}
+
+inline double Area(const PathD& path)
+{
+	{
+		if (path.size() == 0) return 0.0;
+		double a = 0.0;
+		PathD::const_iterator path_iter, path_iter_last = --path.cend();
+		for (path_iter = path.cbegin(); path_iter != path.cend();
+			path_iter_last = path_iter, ++path_iter)
+		{
+			a += static_cast<double>(path_iter_last->y - path_iter->y) *
+				(path_iter_last->x + path_iter->x);
+		}
+#if REVERSE_ORIENTATION
+		return a * -0.5;
+#else
+		return a * 0.5;
+#endif
+	}
+}
+
+inline double Area(const PathsD& paths)
+{
+	double a = 0.0;
+	for (PathsD::const_iterator paths_iter = paths.cbegin();
+		paths_iter != paths.cend(); ++paths_iter)
+	{
+		a += Area(*paths_iter);
+	}
+	return a;
+}
+
+inline bool IsClockwise(const Path64& poly)
+{
+	return Area(poly) >= 0;
+}
+
+inline bool IsClockwise(const PathD& poly)
+{
+	return Area(poly) >= 0;
+}
+
+
+}  //namespace
+
+#endif  // CLIPPER_CORE_H

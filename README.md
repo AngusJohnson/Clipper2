@@ -20,4 +20,4 @@ And Clipper2 has just about all the features of Clipper1 that sets Clipper apart
 <br>
 
 There's more detail in the Docs folder above, but proper documentation is still a little way off.
-![clipper_performance](https://user-images.githubusercontent.com/5280692/163812045-44d571bd-a475-485c-925a-460a41e2784c.png)
+![clipper_performance](https://user-images.githubusercontent.com/5280692/165470739-b3dff9e7-5a7b-45bb-80c1-494ad06f2bee.png)

@@ -216,9 +216,7 @@ type
     function  ValidateClosedPathEx(var op: POutPt): Boolean;
     procedure CompleteSplit(op1, op2: POutPt; OutRec: POutRec);
     procedure SafeDisposeOutPts(op: POutPt);
-    procedure TidyOutRec(outRec: POutRec);
-    function CleanCollinear(var op: POutPt;
-      preserveCollinear: Boolean): Boolean;
+    procedure CleanCollinear(outRec: POutRec);
     procedure FixSelfIntersects(var op: POutPt);
   protected
     procedure AddPath(const path: TPath64;
@@ -767,11 +765,13 @@ end;
 function LocMinListSort(item1, item2: Pointer): Integer;
 var
   dy: Int64;
+  lm1: PLocalMinima absolute item1;
+  lm2: PLocalMinima absolute item2;
 begin
-  dy := PLocalMinima(item2).Vertex.Pt.Y - PLocalMinima(item1).Vertex.Pt.Y;
+  dy := lm2.Vertex.Pt.Y - lm1.Vertex.Pt.Y;
   if dy < 0 then Result := -1
   else if dy > 0 then Result := 1
-  else Result := 0;
+  else Result := lm2.Vertex.Pt.X - lm1.Vertex.Pt.X;
 end;
 //------------------------------------------------------------------------------
 
@@ -1856,51 +1856,40 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-procedure TClipperBase.TidyOutRec(outRec: POutRec);
-begin
-  if Assigned(outRec.Pts) and
-    CleanCollinear(outRec.Pts, PreserveCollinear) then
-      FixSelfIntersects(outRec.Pts);
-end;
-//------------------------------------------------------------------------------
-
-function TClipperBase.CleanCollinear(var op: POutPt;
-  preserveCollinear: Boolean): Boolean;
+procedure TClipperBase.CleanCollinear(outRec: POutRec);
 var
   op2, startOp: POutPt;
 begin
-  //return true only when it's OK to FixSelfIntersects
-  Result := ValidateClosedPathEx(op);
-  if not Result then Exit;
+  outRec := GetRealOutRec(outRec);
+  if Assigned(outRec.FrontE) or
+    not ValidateClosedPathEx(outRec.Pts) then Exit;
 
-  startOp := op;
-  op2 := op;
+  startOp := outRec.Pts;
+  op2 := startOp;
   while true do
   begin
+    if Assigned(op2.Joiner) then Exit;
+
     if (CrossProduct(op2.Prev.Pt, op2.Pt, op2.Next.Pt) = 0) and
-      not Assigned(op2.Joiner) and
       (PointsEqual(op2.Pt,op2.Prev.Pt) or
       PointsEqual(op2.Pt,op2.Next.Pt) or
       not preserveCollinear or
       (DotProduct(op2.Prev.Pt, op2.Pt, op2.Next.Pt) < 0)) then
     begin
-      if op2 = op then op := op.Prev;
+      if op2 = outRec.Pts then outRec.Pts := op2.Prev;
       op2 := DisposeOutPt(op2);
       if not ValidateClosedPathEx(op2) then
       begin
-        op := nil;
-        Result := false;
+        outRec.Pts := nil;
         Exit;
       end;
       startOp := op2;
       Continue;
     end;
-    if Assigned(op2.Joiner) and
-      (op2.Joiner.idx >= 0) then
-        Result := false;
     op2 := op2.Next;
     if op2 = startOp then Break;
   end;
+  FixSelfIntersects(outRec.Pts);
 end;
 //------------------------------------------------------------------------------
 
@@ -1982,7 +1971,6 @@ procedure TClipperBase.FixSelfIntersects(var op: POutPt);
 var
   op2: POutPt;
 begin
-  if not IsValidClosedPath(op) then Exit;
   op2 := op;
   while true do
   begin
@@ -2030,7 +2018,7 @@ begin
     outRec := e1.outRec;
     outRec.Pts := Result;
     UncoupleOutRec(e1);
-    if not IsOpen(e1) then TidyOutRec(outRec);
+    if not IsOpen(e1) then CleanCollinear(outRec);
     Result := outRec.Pts;
   end
   //and to preserve the winding orientation of Outrec ...
@@ -2240,7 +2228,7 @@ begin
     begin
       joiner := FJoinerList[i];
       outrec := ProcessJoin(joiner);
-      TidyOutRec(outRec);
+      CleanCollinear(outRec);
     end;
   end;
   FJoinerList.Clear;
@@ -2308,7 +2296,7 @@ begin
         newOr.State := osOuter;
     end;
     UpdateOutrecOwner(newOr);
-    TidyOutRec(newOr);
+    CleanCollinear(newOr);
   end;
 end;
 //------------------------------------------------------------------------------
@@ -2438,13 +2426,13 @@ begin
     Exit
   else if not IsValidClosedPath(op2) then
   begin
-    TidyOutRec(or2);
+    CleanCollinear(or2);
     Exit;
   end
   else if not Assigned(or1.Pts) or
     not IsValidClosedPath(op1) then
   begin
-    TidyOutRec(or1);
+    CleanCollinear(or1);
     Result := or2; //ie tidy or2 in calling function;
     Exit;
   end
@@ -2611,7 +2599,7 @@ begin
       if or2 <> or1 then
       begin
         or2.Pts := op2;
-        TidyOutRec(or2);
+        CleanCollinear(or2);
       end;
       Break;
     end;
@@ -3207,15 +3195,19 @@ function HorzEdgesOverlap(x1a, x1b, x2a, x2b: Int64): Boolean;
 const
   minOverlap: Int64 = 2;
 begin
-  if (Abs(x1a - x1b) <= minOverlap) or
-    (Abs(x2a - x2b) <= minOverlap) then
-      Result := false
-  else if (x2b - x1a >= minOverlap) then //x1a on left of x2b
-    Result := ((x1a - x2a)  >= minOverlap) or (x1b >= x2a)
-  else if (x1a - x2b >= minOverlap) then //x1a on right of x2b
-    Result := ((x2a - x1a) >= minOverlap) or (x2a >= x1b)
-  else //x1a must (almost) equal x2b
-    Result := ((x1b < x1a) = (x2b > x2a));
+  if x1a > x1b + minOverlap then
+  begin
+    if x2a > x2b + minOverlap then
+      Result := not ((x1a <= x2b) or (x2a <= x1b)) else
+      Result := not ((x1a <= x2a) or (x2b <= x1b));
+  end
+  else if x1b > x1a + minOverlap then
+  begin
+    if x2a > x2b + minOverlap then
+      Result := not ((x1b <= x2b) or (x2a <= x1a)) else
+      Result := not ((x1b <= x2a) or (x2b <= x1a));
+  end else
+    Result := false;
 end;
 //------------------------------------------------------------------------------
 
@@ -3352,8 +3344,7 @@ begin
 
     if not GetHorzExtendedHorzSeg(op1a, op1b) then
     begin
-      if not Assigned(op1a.OutRec.FrontE) then
-        TidyOutRec(op1a.OutRec);
+      CleanCollinear(op1a.OutRec);
       Continue;
     end;
 
@@ -3362,7 +3353,6 @@ begin
     while Assigned(joiner) do
     begin
       op2a := joiner.op1;
-
       if GetHorzExtendedHorzSeg(op2a, op2b) and
         HorzEdgesOverlap(op1a.Pt.X, op1b.Pt.X, op2a.Pt.X, op2b.Pt.X) then
       begin
@@ -3388,9 +3378,8 @@ begin
       end;
       joiner := joiner.nextH;
     end;
-    if not joined and
-      not Assigned(op1a.OutRec.FrontE) then
-        TidyOutRec(op1a.OutRec);
+    if not joined then
+      CleanCollinear(op1a.OutRec);
   end;
 end;
 //------------------------------------------------------------------------------

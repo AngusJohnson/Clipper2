@@ -1466,7 +1466,7 @@ namespace Clipper2Lib
         outrec.pts = result;
         UncoupleOutRec(ae1);
         if (!IsOpen(ae1))
-          TidyOutRec(outrec);
+          CleanCollinear(outrec);
         result = outrec.pts;
       }
       //and to preserve the winding orientation of outrec ...
@@ -2460,14 +2460,22 @@ namespace Clipper2Lib
     private static bool HorzEdgesOverlap(long x1a, long x1b, long x2a, long x2b)
     {
       const long minOverlap = 2;
-      if (Math.Abs(x1a - x1b) <= minOverlap ||
-        Math.Abs(x2a - x2b) <= minOverlap) return false;
-      else if (x2b - x1a >= minOverlap) //x1a on left of x2b
-        return (x1a - x2a) >= minOverlap || (x1b >= x2a);
-      else if (x1a - x2b >= minOverlap) //x1a on right of x2b
-        return (x2a - x1a) >= minOverlap || (x2a >= x1b);
-      else //x1a must (almost) equal x2b
-        return (x1b < x1a) == (x2b > x2a);
+      if (x1a > x1b + minOverlap)
+      {
+        if (x2a > x2b + minOverlap)
+          return !((x1a <= x2b) || (x2a <= x1b));
+        else
+          return !((x1a <= x2a) || (x2b <= x1b));
+      }
+      else if (x1b > x1a + minOverlap)
+      {
+        if (x2a > x2b + minOverlap)
+          return !((x1b <= x2b) || (x2a <= x1a));
+        else
+          return !((x1b <= x2a) || (x2b <= x1a));
+      }
+      else
+        return false;
     }
 
     private Joiner? GetHorzTrialParent(OutPt op)
@@ -2699,7 +2707,7 @@ namespace Clipper2Lib
         if (!GetHorzExtendedHorzSeg(ref op1a, out OutPt op1b))
         {
           if (op1a.outrec.frontEdge == null)
-            TidyOutRec(op1a.outrec);
+            CleanCollinear(op1a.outrec);
           continue;
         }
 
@@ -2734,8 +2742,8 @@ namespace Clipper2Lib
           }
           joiner = joiner.nextH;
         }
-        if (!joined && op1a.outrec.frontEdge == null)
-          TidyOutRec(op1a.outrec);
+        if (!joined)
+          CleanCollinear(op1a.outrec);
       }
     }
 
@@ -2810,7 +2818,7 @@ namespace Clipper2Lib
         Joiner? j = _joinerList[i];
         if (j == null) continue;
         OutRec outrec = ProcessJoin(j);
-        TidyOutRec(outrec);
+        CleanCollinear(outrec);
       }
 
       _joinerList.Clear();
@@ -2890,12 +2898,12 @@ namespace Clipper2Lib
       if (or2.pts == null) return or1;
       else if (!IsValidClosedPath(op2))
       {
-        TidyOutRec(or2);
+        CleanCollinear(or2);
         return or1;
       }
       else if ((or1.pts == null) || !IsValidClosedPath(op1))
       {
-        TidyOutRec(or1);
+        CleanCollinear(or1);
         return or2;
       }
       else if (or1 == or2 &&
@@ -3064,7 +3072,7 @@ namespace Clipper2Lib
           if (or2 != or1)
           {
             or2.pts = op2;
-            TidyOutRec(or2);
+            CleanCollinear(or2);
           }
           break;
         }
@@ -3134,51 +3142,40 @@ namespace Clipper2Lib
         }
 
         UpdateOutrecOwner(newOr);
-        TidyOutRec(newOr);
+        CleanCollinear(newOr);
       }
     }
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private void TidyOutRec(OutRec? outrec)
+    private void CleanCollinear(OutRec? outrec)
     {
-      if (outrec != null && CleanCollinear(ref outrec.pts))
-        FixSelfIntersects(ref outrec.pts!);
-    }
-
-    private bool CleanCollinear(ref OutPt? op)
-    {
-      //return true only when it's OK to FixSelfIntersects
-      if (!ValidateClosedPathEx(ref op)) return false;
-      OutPt startOp = op!;
-      OutPt? op2 = op;
-      bool result = true;
+      outrec = GetRealOutRec(outrec);
+      if (outrec == null || outrec.frontEdge != null ||
+        !ValidateClosedPathEx(ref outrec.pts)) return;
+      OutPt startOp = outrec.pts!;
+      OutPt? op2 = startOp;
       for (; ; )
       {
+        if (op2!.joiner != null) return;
         //NB if preserveCollinear == true, then only remove 180 deg. spikes
         if ((InternalClipperFunc.CrossProduct(op2!.prev.pt, op2.pt, op2.next!.pt) == 0) &&
-            (op2.joiner == null) &&
-            ((op2.pt == op2.prev.pt) ||
-            (op2.pt == op2.next.pt) ||
-            !PreserveCollinear ||
-            (InternalClipperFunc.DotProduct(op2.prev.pt, op2.pt, op2.next.pt) < 0)))
+          ((op2.pt == op2.prev.pt) || (op2.pt == op2.next.pt) || !PreserveCollinear ||
+          (InternalClipperFunc.DotProduct(op2.prev.pt, op2.pt, op2.next.pt) < 0)))
         {
-          if (op2 == op)
-            op = op.prev;
+          if (op2 == outrec.pts)
+            outrec.pts = op2.prev;
           op2 = DisposeOutPt(op2);
           if (!ValidateClosedPathEx(ref op2))
           {
-            op = null;
-            return false;
+            outrec.pts = null;
+            return;
           }
           startOp = op2!;
           continue;
         }
-        if (op2.joiner != null && op2.joiner.idx >= 0)
-          result = false;
         op2 = op2.next;
         if (op2 == startOp) break;
       }
-      return result;
+      FixSelfIntersects(ref outrec.pts!);
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -3648,10 +3645,7 @@ namespace Clipper2Lib
 
     public bool IsHole => GetIsHole();
 
-    public PolyPathBase(PolyPathBase? parent = null)
-    {
-      _parent = parent;
-    }
+    public PolyPathBase(PolyPathBase? parent = null) { _parent = parent; }
 
     private bool GetIsHole()
     {
@@ -3686,9 +3680,7 @@ namespace Clipper2Lib
   {
     public Path64? Polygon { get; private set; } //polytree root's polygon == null
 
-    public PolyPath(PolyPathBase? parent = null) : base(parent)
-    {
-    }
+    public PolyPath(PolyPathBase? parent = null) : base(parent) {}
     internal override PolyPathBase AddChild(Path64 p)
     {
       PolyPathBase newChild = new PolyPath(this);
@@ -3703,9 +3695,7 @@ namespace Clipper2Lib
     internal double Scale { get; set; }
     public PathD? Polygon { get; private set; }
 
-    public PolyPathD(PolyPathBase? parent = null) : base(parent)
-    {
-    }
+    public PolyPathD(PolyPathBase? parent = null) : base(parent) {}
 
     internal override PolyPathBase AddChild(Path64 p)
     {
@@ -3717,9 +3707,7 @@ namespace Clipper2Lib
     }
   }
 
-  public class PolyTree : PolyPath
-  {
-  }
+  public class PolyTree : PolyPath {}
 
   public class PolyTreeD : PolyPathD
   {
@@ -3728,8 +3716,6 @@ namespace Clipper2Lib
 
   public class ClipperLibException : Exception
   {
-    public ClipperLibException(string description) : base(description)
-    {
-    }
+    public ClipperLibException(string description) : base(description) {}
   }
 } //namespace

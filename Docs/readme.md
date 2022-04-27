@@ -6,7 +6,7 @@ New features include:
 <ul>
   <li>Support for floating point coordinates. While the library still performs all clipping operations using integer coordinates (to preserve numerical robustness), floating point conversions can now be managed by the library.
   <li>There's more complete and more efficient removal of spikes and micro-self-intersections, and better merging of touching polygons from clipping solutions.
-  <li>And it's even a bit faster.
+  <li>And it's faster.
 </ul> 
 <br>
 
@@ -132,3 +132,25 @@ Example:
     Paths64 solution7 = ClipperFunc.InflatePaths(subj, -5.0, JoinType.Miter, EndType.Polygon);
     Paths64 solution8 = ClipperFunc.InflatePaths(subj, 10.0, JoinType.Miter, EndType.Square);
     Paths64 solution9 = ClipperFunc.InflatePaths(subj, 10.0, JoinType.Miter, EndType.Joined);
+
+**C++:**<br>
+
+    #include "..\Clipper2Lib\clipper.h"
+    
+    //code main entry 
+    Paths64 subj;
+    subj.push_back(MakePath("100, 50, 10, 79, 65, 2, 65, 98, 10, 21"));
+    Paths64 clip;
+    clip.push_back(MakePath("80, 50, 69, 73, 43, 79, 23, 63, 23, 37, 43, 21, 69, 27"));
+    Paths64 solution1 = Union(subj, FillRule::EvenOdd);
+    Paths64 solution2 = Union(subj, FillRule::NonZero);
+    Paths64 solution3 = Union(subj, clip, FillRule::NonZero);
+    Paths64 solution4 = Intersect(subj, clip, FillRule::NonZero);
+    Paths64 solution5 = Intersect(subj, clip, FillRule::EvenOdd);
+
+    subj.clear();
+    subj.push_back(MakePath("93, 50, 77, 84, 40, 92, 11, 69, 11, 31, 40, 8, 77, 16"));
+    Paths64 solution6 = InflatePaths(subj, 5.0, JoinType::Miter, EndType::Polygon);
+    Paths64 solution7 = InflatePaths(subj, -5.0, JoinType::Miter, EndType::Polygon);
+    Paths64 solution8 = InflatePaths(subj, 10.0, JoinType::Miter, EndType::Square);
+    Paths64 solution9 = InflatePaths(subj, 10.0, JoinType::Miter, EndType::Joined);
