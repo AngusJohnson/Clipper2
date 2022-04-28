@@ -78,7 +78,7 @@ bool GetTestNum(ifstream &source, int test_num, bool seek_from_start,
 {
   string line;
   bool found = false;
-  size_t last_read_line_pos = source.tellg();
+  std::streampos last_read_line_pos = source.tellg();
   if (seek_from_start) source.seekg(0, ios_base::beg);
   while (std::getline(source, line))
   {
@@ -387,7 +387,6 @@ void DoSimple()
 {
   Paths64 subject, subject_open, clip;
   Paths64 solution, solution_open;
-  Clipper2Lib::FillRule fr_simple = Clipper2Lib::FillRule::NonZero;
   bool show_solution_coords = false;
 
   ////Minkowski
@@ -404,11 +403,11 @@ void DoSimple()
   subject.push_back(MakePath("500, 250, 50, 395, 325, 10, 325, 490, 50, 105"));
   clip.push_back(Ellipse(Rect64(100, 100, 400, 400)));
   //SaveToFile("simple.txt", subject, clip, ct_simple, fr_simple);
-  solution = Intersect(subject, clip, fr_simple);
+  solution = Intersect(subject, clip, FillRule::NonZero);
   solution = InflatePaths(solution, 15, JoinType::Round, EndType::Polygon);
   SaveToSVG("solution.svg", display_width, display_height,
     subject, subject_open, clip, solution, solution_open, 
-    fr_simple, show_solution_coords);
+    FillRule::NonZero, show_solution_coords);
   system("solution.svg");
 }
 //------------------------------------------------------------------------------
@@ -532,7 +531,7 @@ void DoMemoryLeakTest()
 int main(int argc, char* argv[])
 {
   //////////////////////////////////////////////////////////////////////////
-  TestType test_type = TestType::MemoryLeak;//TestFile;//Simple;//Benchmark;//
+  TestType test_type = TestType::Simple;//Benchmark;//MemoryLeak;//TestFile;//
   //////////////////////////////////////////////////////////////////////////
 
   srand((unsigned)time(0));

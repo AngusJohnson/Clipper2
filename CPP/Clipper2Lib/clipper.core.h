@@ -1,7 +1,7 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
 * Version   :  10.0 (beta) - aka Clipper2                                      *
-* Date      :  26 April 2022                                                   *
+* Date      :  28 April 2022                                                   *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  Core Clipper Library structures and functions                   *
@@ -14,9 +14,11 @@
 #include <cstdlib>
 #include <cmath>
 #include <vector>
+#include <string>
 #include <iostream>
 
 namespace Clipper2Lib {
+
 
 // Point ------------------------------------------------------------------------
 	
@@ -27,21 +29,44 @@ template <typename T>
 struct Point {
 	T x;
 	T y;
+#ifdef USINGZ
+	T z;
 
-	Point(T x = 0, T y = 0) : x(x), y(y) {};
+	Point(T x_ = 0, T y_ = 0, T z_ = 0) : x(x_), y(y_), z(z_) {};
 
 	template <typename T2>
 	explicit Point<T>(Point<T2> p)
 	{
-		if (std::numeric_limits<T>::is_integer && !std::numeric_limits<T2>::is_integer) {
+		if (std::numeric_limits<T>::is_integer && !std::numeric_limits<T2>::is_integer)
+		{
+			x = static_cast<T>(std::round(p.x));
+			y = static_cast<T>(std::round(p.y));
+			z = static_cast<T>(std::round(p.z));
+		}
+		else
+		{
+			x = static_cast<T>(p.x);
+			y = static_cast<T>(p.y);
+			z = static_cast<T>(p.z);
+}
+#else
+	Point(T x_ = 0, T y_ = 0) : x(x_), y(y_) {};
+
+	template <typename T2>
+	explicit Point<T>(Point<T2> p)
+	{
+		if (std::numeric_limits<T>::is_integer && !std::numeric_limits<T2>::is_integer)
+		{
 			x = static_cast<T>(std::round(p.x));
 			y = static_cast<T>(std::round(p.y));
 		}
 		else
 		{
-			x = static_cast<T>(p.x); 
+			x = static_cast<T>(p.x);
 			y = static_cast<T>(p.y);
 		}
+#endif
+
 	};
 
 	friend inline bool operator==(const Point &a, const Point &b) {
@@ -71,11 +96,19 @@ struct Point {
 		return !(a == b);
 	}
 
+#ifdef USINGZ
 	friend std::ostream &operator<<(std::ostream &os, const Point &point) {
+		os << point.x << "," << point.y << "," << point.z;
+		return os;
+	}
+#else
+	friend std::ostream& operator<<(std::ostream& os, const Point& point)
+	{
 		os << point.x << "," << point.y;
 		return os;
 	}
-};
+#endif
+	};
 
 using Point64 = Point<int64_t>;
 using PointD = Point<double>;
@@ -350,6 +383,8 @@ inline bool IsClockwise(const PathD& poly)
 	return Area(poly) >= 0;
 }
 
+Path64 MakePath(const std::string& s);
+PathD MakePathD(const std::string& s);
 
 }  //namespace
 

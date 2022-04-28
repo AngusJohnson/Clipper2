@@ -1,7 +1,7 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
 * Version   :  10.0 (beta) - aka Clipper2                                      *
-* Date      :  27 April 2022                                                   *
+* Date      :  28 April 2022                                                   *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  Minkowski Sum and Difference                                    *
@@ -32,23 +32,14 @@ namespace Clipper2Lib
       Paths64 tmp;
       tmp.reserve(pathLen);
 
-
-      for (Path64::const_iterator path_citer = path.cbegin();
-        path_citer != path.cend(); ++path_citer)
+      for (Point64 pt : path)
       {
         Path64 path2;
         path2.reserve(pattern.size());
-        Path64::const_iterator pat_citer = pattern.cbegin();
         if (isSum)
-        {
-          while (pat_citer != pattern.cend())
-            path2.push_back(*path_citer + *pat_citer++);
-        }
+          for (Point64 pt2 : pattern) path2.push_back(pt + pt2);
         else
-        {
-          while (pat_citer != pattern.cend())
-            path2.push_back(*path_citer - *pat_citer++);
-        }
+          for (Point64 pt2 : pattern) path2.push_back(pt - pt2);
         tmp.push_back(path2);
       }
 

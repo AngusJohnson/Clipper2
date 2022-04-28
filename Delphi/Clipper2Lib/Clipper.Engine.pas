@@ -2682,7 +2682,7 @@ begin
     begin
       Result := AddOutPt(e1, pt);
       {$IFDEF USINGZ}
-      SetZ(e1, e2, op.pt);
+      SetZ(e1, e2, Result.pt);
       {$ENDIF}
       e1.OutRec := nil;
     end

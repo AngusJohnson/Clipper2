@@ -54,7 +54,7 @@ var
 begin
   if IsClosed then
     delta := 0 else
-    delta := -1;
+    delta := 1;
   baseLen := Length(Base);
   pathLen := Length(Path);
   setLength(tmp, pathLen);
@@ -71,16 +71,16 @@ begin
   end;
 
   SetLength(quad, 4);
-  SetLength(Result, (pathLen + delta) * baseLen);
+  SetLength(Result, (pathLen - delta) * baseLen);
 
   if IsClosed then
     g := pathLen - 1 else
     g := 0;
 
-  for i := -delta to pathLen - 1 do
+  for i := delta to pathLen - 1 do
   begin
     h := baseLen - 1;
-    k := (i + delta) * baseLen;
+    k := (i - delta) * baseLen;
     for j := 0 to baseLen - 1 do
     begin
       quad[0] := tmp[g][h];
