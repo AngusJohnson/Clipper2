@@ -83,10 +83,10 @@ namespace Clipper2Lib {
 	{
 		Path64 result;
 		StrConstIter s_iter = s.cbegin();
+		SkipWhiteSpace(s_iter, s.cend());
 		while (s_iter != s.cend())
 		{
 			int64_t y = 0, x = 0;
-			SkipWhiteSpace(s_iter, s.cend());
 			if (!GetInt(s_iter, s.cend(), x)) break;
 			SkipSpacesWithOptionalComma(s_iter, s.cend());
 			if (!GetInt(s_iter, s.cend(), y)) break;
@@ -100,10 +100,10 @@ namespace Clipper2Lib {
 	{
 		PathD result;
 		StrConstIter s_iter = s.cbegin();
+		SkipWhiteSpace(s_iter, s.cend());
 		while (s_iter != s.cend())
 		{
 			double y = 0, x = 0;
-			SkipWhiteSpace(s_iter, s.cend());
 			if (!GetFloat(s_iter, s.cend(), x)) break;
 			SkipSpacesWithOptionalComma(s_iter, s.cend());
 			if (!GetFloat(s_iter, s.cend(), y)) break;

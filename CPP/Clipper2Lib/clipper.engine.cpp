@@ -1,7 +1,7 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
 * Version   :  10.0 (beta) - aka Clipper2                                      *
-* Date      :  27 April 2022                                                   *
+* Date      :  30 April 2022                                                   *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  This is the main polygon clipping module                        *
@@ -667,6 +667,7 @@ namespace Clipper2Lib {
 		loc_min_iter_ = minima_list_.begin();
 		actives_ = NULL;
 		sel_ = NULL;
+		error_found_ = false;
 	}
 	//------------------------------------------------------------------------------
 
@@ -1324,20 +1325,20 @@ namespace Clipper2Lib {
 				IsOuter(*e2.outrec) == IsFront(e2))
 				SwapSides(*e2.outrec);
 			else
-				throw new Clipper2Exception("Error in Clipper.AddLocalMaxPoly");
+				error_found_ = true;
 			return true;
 		}
 		else if (!e.outrec->pts)
 		{
 			if (ValidateClosedPathEx(e2.outrec))
-				throw new Clipper2Exception("Error in Clipper.AddLocalMaxPoly");
+				error_found_ = true;
 			UncoupleOutRec(e);
 			UncoupleOutRec(e2);
 			//fixed, but there's nothing to terminate in AddLocalMaxPoly
 			return false;
 		}
 		else
-			throw new Clipper2Exception("Error in Clipper.AddLocalMaxPoly");
+			error_found_ = true;
 	}
 	//------------------------------------------------------------------------------
 
@@ -1743,7 +1744,7 @@ namespace Clipper2Lib {
 					if (abs(edge_c->wind_cnt) != 1) return NULL;
 					break;
 				case ClipType::None:
-					throw new Clipper2Exception("Error in IntersectEdges - ClipType is None!");
+					error_found_ = true;
 					break;
 			}	
 			//toggle contribution ...
@@ -1952,16 +1953,15 @@ namespace Clipper2Lib {
 	}
 	//------------------------------------------------------------------------------
 
-	void ClipperBase::ExecuteInternal(ClipType ct, FillRule ft) 
+	bool ClipperBase::ExecuteInternal(ClipType ct, FillRule ft) 
 	{
-		if (ct == ClipType::None) return;
 		fillrule_ = ft;
 		cliptype_ = ct;
 		Reset();
 		int64_t y;
-		if (!PopScanline(y)) return;
+		if (ct == ClipType::None || !PopScanline(y)) return true;
 
-		for (;;) {
+		while (!error_found_) {
 			InsertLocalMinimaIntoAEL(y);
 			Active *e;
 			while (PopHorz(e)) DoHorizontal(*e);
@@ -1973,22 +1973,18 @@ namespace Clipper2Lib {
 			while (PopHorz(e)) DoHorizontal(*e);
 		}
 		ProcessJoinerList();
+		return !error_found_;
 	}
 	//------------------------------------------------------------------------------
 
 	bool ClipperBase::Execute(ClipType clip_type, 
 		FillRule fill_rule, Paths64 &solution_closed)
 	{
-		bool executed = true;
 		solution_closed.clear();
-		try {
-			ExecuteInternal(clip_type, fill_rule);
+		if (ExecuteInternal(clip_type, fill_rule))
 			BuildPaths(solution_closed, NULL);
-		} catch (...) {
-			executed = false;
-		}
 		CleanUp();
-		return executed;
+		return !error_found_;
 	}
 	//------------------------------------------------------------------------------
 
@@ -1998,34 +1994,22 @@ namespace Clipper2Lib {
 		bool result = true;
 		solution_closed.clear();
 		solution_open.clear();
-		try {
-			ExecuteInternal(clip_type, fill_rule);
+		if (ExecuteInternal(clip_type, fill_rule))
 			BuildPaths(solution_closed, &solution_open);
-		} catch (...) {
-			result = false;
-		}
 		CleanUp();
-		return result;
+		return !error_found_;
 	}
 	//------------------------------------------------------------------------------
 
 	bool ClipperBase::Execute(ClipType clip_type, 
 		FillRule fill_rule, PolyTree64& polytree, Paths64& solution_open)
 	{
-		bool result = true;
 		polytree.Clear();
 		solution_open.clear();
-		try
-		{
-			ExecuteInternal(clip_type, fill_rule);
+		if (ExecuteInternal(clip_type, fill_rule))
 			BuildTree(polytree, solution_open);
-		}
-		catch (...)
-		{
-			result = false;
-		}
 		CleanUp();
-		return result;
+		return !error_found_;
 	}
 	//------------------------------------------------------------------------------
 
@@ -2827,15 +2811,24 @@ namespace Clipper2Lib {
 	{
 		for (Joiner* j : joiner_list_)
 		{
-			if (!j) continue;
-			OutRec* outrec = ProcessJoin(j);
-			CleanCollinear(outrec);
+			if (!j)
+			{
+				continue;
+			}
+			else if (error_found_)
+			{
+				delete j;
+			} else
+			{
+				OutRec* outrec = ProcessJoin(j);
+				CleanCollinear(outrec);
+			}
 		}
 		joiner_list_.resize(0);
 	}
 	//------------------------------------------------------------------------------
 
-	bool CheckDisposeAdjacent(OutPt* op, const OutPt* guard, OutRec& outRec)
+	bool CheckDisposeAdjacent(OutPt*& op, const OutPt* guard, OutRec& outRec)
 	{
 		bool result = false;
 		while (op->prev != op)

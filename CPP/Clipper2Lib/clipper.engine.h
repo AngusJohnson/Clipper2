@@ -141,6 +141,7 @@ namespace Clipper2Lib {
 		ClipType cliptype_ = ClipType::None;
 		FillRule fillrule_ = FillRule::EvenOdd;
 		int64_t bot_y_ = 0;
+		bool error_found_ = false;
 		bool has_open_paths_ = false;
 		bool minima_list_sorted_ = false;
 		Active *actives_ = NULL;
@@ -219,7 +220,7 @@ namespace Clipper2Lib {
 		void CleanUp();  //unlike Clear, CleanUp preserves added paths
 		void AddPath(const Path64& path, PathType polytype, bool is_open);
 		void AddPaths(const Paths64& paths, PathType polytype, bool is_open);
-		virtual void ExecuteInternal(ClipType ct, FillRule ft);
+		virtual bool ExecuteInternal(ClipType ct, FillRule ft);
 		bool BuildPaths(Paths64& solutionClosed, Paths64* solutionOpen);
 		void BuildTree(PolyPath64& polytree, Paths64& open_paths);
 
