@@ -1,7 +1,7 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
 * Version   :  10.0 (beta) - aka Clipper2                                      *
-* Date      :  28 April 2022                                                   *
+* Date      :  1 May 2022                                                      *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  Polygon offsetting                                              *
@@ -28,7 +28,7 @@ int GetLowestPolygonIdx(const PathsD& paths)
 	PointD lp;
 	for (size_t i = 0; i < static_cast<int>(paths.size()); ++i)
 		if (paths[i].size() > 0) {
-			lp_idx = i;
+			lp_idx = (int)i;
 			lp = paths[i][0];
 			break;
 		}
@@ -122,8 +122,8 @@ void ClipperOffset::DoMiter(PathGroup& group, const PathD& path, size_t j, size_
 		path[j].y + (norms[k].y + norms[j].y) * q));
 }
 
-void ClipperOffset::DoRound(PathGroup& group, PointD& pt, 
-	PointD& norm1, PointD& norm2, double angle)
+void ClipperOffset::DoRound(PathGroup& group, const PointD& pt,
+	const PointD& norm1, const PointD& norm2, double angle)
 {
 	//even though angle may be negative this is a convex join
 	PointD pt2 = PointD(norm2.x * delta_, norm2.y * delta_);

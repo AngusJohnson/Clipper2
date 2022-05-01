@@ -53,7 +53,7 @@ private:
 
 	void DoSquare(PathGroup& group, const PathD& path, size_t j, size_t k);
 	void DoMiter(PathGroup& group, const PathD& path, size_t j, size_t k, double cos_a);
-	void DoRound(PathGroup& group, PointD& pt, PointD& norm1, PointD& norm2, double angle);
+	void DoRound(PathGroup& group, const PointD& pt, const PointD& norm1, const PointD& norm2, double angle);
 	void BuildNormals(const PathD& path);
 	void OffsetPolygon(PathGroup& group, PathD& path);
 	void OffsetOpenJoined(PathGroup& group, PathD& path);

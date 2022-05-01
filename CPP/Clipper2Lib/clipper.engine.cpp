@@ -1,7 +1,7 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
 * Version   :  10.0 (beta) - aka Clipper2                                      *
-* Date      :  30 April 2022                                                   *
+* Date      :  1 May 2022                                                      *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  This is the main polygon clipping module                        *
@@ -735,6 +735,8 @@ namespace Clipper2Lib {
 				cnt++;
 			}
 			if (!prev_v) continue;
+			if (!is_open && prev_v->pt == v0->pt) 
+				prev_v = prev_v->prev;
 			prev_v->next = v0;
 			v0->prev = prev_v;
 			v = curr_v; //ie get ready for next path
@@ -768,8 +770,10 @@ namespace Clipper2Lib {
 			going_up0 = going_up;
 			prev_v = v0;
 			curr_v = v0->next;
-			while (curr_v != v0) {
-				if (curr_v->pt.y > prev_v->pt.y && going_up) {
+			while (curr_v != v0) 
+			{
+				if (curr_v->pt.y > prev_v->pt.y && going_up) 
+				{
 					prev_v->flags = (prev_v->flags | VertexFlags::LocalMax);
 					going_up = false;
 				}
@@ -780,7 +784,9 @@ namespace Clipper2Lib {
 				prev_v = curr_v;
 				curr_v = curr_v->next;
 			}
-			if (is_open) {
+			
+			if (is_open) 
+			{
 				prev_v->flags = prev_v->flags | VertexFlags::OpenEnd;
 				if (going_up)
 					prev_v->flags = prev_v->flags | VertexFlags::LocalMax;
@@ -793,6 +799,7 @@ namespace Clipper2Lib {
 				else prev_v->flags = prev_v->flags | VertexFlags::LocalMax;
 			}
 		} //end processing current path
+
 		vertex_lists_.emplace_back(vertices);
 	} //end AddPaths
 	//------------------------------------------------------------------------------

@@ -1,7 +1,7 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
 * Version   :  10.0 (beta) - aka Clipper2                                      *
-* Date      :  28 April 2022                                                   *
+* Date      :  1 May 2022                                                      *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  This is the main polygon clipping module                        *
@@ -283,7 +283,7 @@ namespace Clipper2Lib {
 
 		size_t ChildCount() const { return childs_.size(); }
 
-		const PolyPath<T>& operator [] (int index) const { return childs_[index]; }
+		const PolyPath<T>& operator [] (size_t index) const { return childs_[index]; }
 
 		const PolyPath<T>* Parent() const { return parent_; };
 
