@@ -3,7 +3,7 @@ unit Clipper.Engine;
 (*******************************************************************************
 * Author    :  Angus Johnson                                                   *
 * Version   :  10.0 (beta) - aka Clipper2                                      *
-* Date      :  18 April 2022                                                   *
+* Date      :  1 May 2022                                                      *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  This is the main polygon clipping module                        *
@@ -1861,7 +1861,7 @@ var
   op2, startOp: POutPt;
 begin
   outRec := GetRealOutRec(outRec);
-  if Assigned(outRec.FrontE) or
+  if not Assigned(outRec) or Assigned(outRec.FrontE) or
     not ValidateClosedPathEx(outRec.Pts) then Exit;
 
   startOp := outRec.Pts;

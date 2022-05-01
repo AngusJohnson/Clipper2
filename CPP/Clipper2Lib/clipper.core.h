@@ -1,7 +1,7 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
 * Version   :  10.0 (beta) - aka Clipper2                                      *
-* Date      :  28 April 2022                                                   *
+* Date      :  1 May 2022                                                      *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  Core Clipper Library structures and functions                   *
@@ -19,25 +19,29 @@
 
 namespace Clipper2Lib {
 
+//#define USINGZ
 
 // Point ------------------------------------------------------------------------
-	
-template <typename T>
-struct Point;
 
 template <typename T>
 struct Point {
 	T x;
 	T y;
+
 #ifdef USINGZ
 	T z;
 
-	Point(T x_ = 0, T y_ = 0, T z_ = 0) : x(x_), y(y_), z(z_) {};
+	explicit Point() : x(0), y(0), z(0) {};
 
 	template <typename T2>
-	explicit Point<T>(Point<T2> p)
+	explicit Point(const T2 x_ = 0, const T2 y_ = 0) :
+		x(static_cast<T>(x_)), y(static_cast<T>(y_)), z(0) { };
+
+	template <typename T2>
+	explicit Point<T>(const Point<T2>& p)
 	{
-		if (std::numeric_limits<T>::is_integer && !std::numeric_limits<T2>::is_integer)
+		if (std::numeric_limits<T>::is_integer &&
+			!std::numeric_limits<T2>::is_integer)
 		{
 			x = static_cast<T>(std::round(p.x));
 			y = static_cast<T>(std::round(p.y));
@@ -48,14 +52,28 @@ struct Point {
 			x = static_cast<T>(p.x);
 			y = static_cast<T>(p.y);
 			z = static_cast<T>(p.z);
-}
+		}
+	}
+
+	friend std::ostream& operator<<(std::ostream& os, const Point& point)
+	{
+		os << point.x << "," << point.y << "," << point.z;
+		return os;
+	}
+
 #else
-	Point(T x_ = 0, T y_ = 0) : x(x_), y(y_) {};
+
+	explicit Point() : x(0), y(0) {};
 
 	template <typename T2>
-	explicit Point<T>(Point<T2> p)
+	explicit Point(const T2 x_ = 0, const T2 y_ = 0) :
+		x(static_cast<T>(x_)), y(static_cast<T>(y_)) {};
+
+	template <typename T2>
+	explicit Point<T>(const Point<T2>& p)
 	{
-		if (std::numeric_limits<T>::is_integer && !std::numeric_limits<T2>::is_integer)
+		if (std::numeric_limits<T>::is_integer &&
+			!std::numeric_limits<T2>::is_integer)
 		{
 			x = static_cast<T>(std::round(p.x));
 			y = static_cast<T>(std::round(p.y));
@@ -65,16 +83,29 @@ struct Point {
 			x = static_cast<T>(p.x);
 			y = static_cast<T>(p.y);
 		}
+	}
+
+	friend std::ostream& operator<<(std::ostream& os, const Point& point)
+	{
+		os << point.x << "," << point.y;
+		return os;
+	}
+
 #endif
 
-	};
-
-	friend inline bool operator==(const Point &a, const Point &b) {
+	friend bool operator==(const Point &a, const Point &b) 
+	{
 		return a.x == b.x && a.y == b.y;
 	}
 
-	inline Point<T> operator*(double scale) {
-		return Point<T>(x * scale, y * scale);
+	friend bool operator!=(const Point& a, const Point& b)
+	{
+		return !(a == b);
+	}
+
+	Point operator * (const double scale) const
+	{
+		return Point(x * scale, y * scale);
 	}
 
 	inline Point<T> operator-() const
@@ -92,42 +123,23 @@ struct Point {
 		return Point(x-b.x, y-b.y);
 	}
 
-	friend inline bool operator!=(const Point &a, const Point &b) {
-		return !(a == b);
-	}
-
-#ifdef USINGZ
-	friend std::ostream &operator<<(std::ostream &os, const Point &point) {
-		os << point.x << "," << point.y << "," << point.z;
-		return os;
-	}
-#else
-	friend std::ostream& operator<<(std::ostream& os, const Point& point)
-	{
-		os << point.x << "," << point.y;
-		return os;
-	}
-#endif
-	};
+};
 
 using Point64 = Point<int64_t>;
 using PointD = Point<double>;
-
-template<>
-Point<int64_t> Point<int64_t>::operator*(double scale)
-{
-	return Point<int64_t>(static_cast<int64_t>(std::round(x * scale)),
-		static_cast<int64_t>(std::round(y * scale)));
-}
-
-using Path64 = std::vector< Point<int64_t>>;
-using PathD = std::vector< Point<double>>;
+using Path64 = std::vector<Point64>;
+using PathD = std::vector< PointD>;
 using Paths64 = std::vector< Path64>;
 using PathsD = std::vector< PathD>;
 
-inline double Sqr(double val) { return val * val; }
+template<typename T>
+inline double Sqr(T val)
+{
+	return static_cast<double>(val) * static_cast<double>(val);
+}
 
-inline bool NearEqual(const PointD p1, const PointD p2, double max_dist_sqrd) {
+inline bool NearEqual(const Point<double>& p1, const Point<double>& p2, double max_dist_sqrd)
+{
 	return Sqr(p1.x - p2.x) + Sqr(p1.y - p2.y) < max_dist_sqrd;
 }
 

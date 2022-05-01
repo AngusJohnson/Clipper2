@@ -1326,7 +1326,6 @@ namespace Clipper2Lib {
 				SwapSides(*e2.outrec);
 			else
 				error_found_ = true;
-			return true;
 		}
 		else if (!e.outrec->pts)
 		{
@@ -1335,10 +1334,11 @@ namespace Clipper2Lib {
 			UncoupleOutRec(e);
 			UncoupleOutRec(e2);
 			//fixed, but there's nothing to terminate in AddLocalMaxPoly
-			return false;
 		}
 		else
 			error_found_ = true;
+
+		return !error_found_;
 	}
 	//------------------------------------------------------------------------------
 
@@ -1459,7 +1459,7 @@ namespace Clipper2Lib {
 	void ClipperBase::CleanCollinear(OutRec* outrec)
 	{
 		outrec = GetRealOutRec(outrec);
-		if (outrec->front_edge || !ValidateClosedPathEx(outrec)) return;
+		if (!outrec || outrec->front_edge || !ValidateClosedPathEx(outrec)) return;
 
 		OutPt	*startOp = outrec->pts, *op2 = startOp;
 		for (; ; )
@@ -1491,8 +1491,8 @@ namespace Clipper2Lib {
 	}
 	//------------------------------------------------------------------------------
 
-	inline bool SegmentsIntersect(const Point64 seg1a, const Point64 seg1b, 
-		const Point64 const seg2a, Point64 seg2b)
+	inline bool SegmentsIntersect(const Point64& seg1a, const Point64& seg1b,
+		const Point64& seg2a, const Point64& seg2b)
 	{
 		double dx1 = static_cast<double>(seg1a.x - seg1b.x);
 		double dy1 = static_cast<double>(seg1a.y - seg1b.y);

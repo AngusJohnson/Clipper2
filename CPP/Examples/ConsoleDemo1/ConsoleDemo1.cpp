@@ -15,7 +15,7 @@ using namespace std;
 using namespace Clipper2Lib;
 
 const int display_width = 800, display_height = 600;
-enum class TestType { Simple, TestFile, Benchmark, MemoryLeak };
+enum class TestType { All, Simple, TestFile, Benchmark, MemoryLeak, ErrorFile};
 
 //------------------------------------------------------------------------------
 // Timer
@@ -52,34 +52,53 @@ bool GetNumericValue(const string& line, string::const_iterator &s_it, int64_t &
   }
 
   if (s_it == s_it2) return false; //no value
+  //trim trailing space and a comma if present
+  while (s_it != line.cend() && *s_it == ' ') ++s_it;
   if (s_it != line.cend() && *s_it == ',') ++s_it;
   if (is_neg) value = -value;
   return true;
 }
 //------------------------------------------------------------------------------
 
-bool GetPath(const string &line, Paths64 &paths)
+bool GetPath(const string& line, Paths64& paths)
 {
   Path64 p;
-  int64_t x = 0, y = 0;
+  int64_t x = 0, y = 0;  
   string::const_iterator s_it = line.cbegin();
   while (GetNumericValue(line, s_it, x) && GetNumericValue(line, s_it, y))
-    p.push_back(Clipper2Lib::Point64(x, y));
-  if (p.empty()) return false; 
+    p.push_back(Point64(x, y));
+  if (p.empty()) return false;
   paths.push_back(p);
   return true;
 }
 //------------------------------------------------------------------------------
 
+bool GetPaths(stringstream& ss, Paths64& paths)
+{
+  bool line_found = true;
+  stringstream::pos_type pos;
+  paths.clear();
+  std::string line;
+  while (line_found)
+  {
+    pos = ss.tellg();
+    if (!getline(ss, line)) line_found = false;
+    else if (!GetPath(line, paths)) break;
+  }
+  //go to the beginning of the line just read
+  ss.seekg(pos, ios_base::beg);
+  return line_found;
+}
+//------------------------------------------------------------------------------
+
 bool GetTestNum(ifstream &source, int test_num, bool seek_from_start,
   Paths64 &subj, Paths64 &subj_open, Paths64 &clip, 
-  int64_t& area, int64_t& count,
-  Clipper2Lib::ClipType &ct, Clipper2Lib::FillRule &fr)
+  int64_t& area, int64_t& count, ClipType &ct, FillRule &fr)
 {
   string line;
   bool found = false;
-  std::streampos last_read_line_pos = source.tellg();
   if (seek_from_start) source.seekg(0, ios_base::beg);
+  stringstream::pos_type last_read_line_pos = source.tellg();
   while (std::getline(source, line))
   {
     size_t line_pos = line.find("CAPTION:");
@@ -87,9 +106,11 @@ bool GetTestNum(ifstream &source, int test_num, bool seek_from_start,
     
     string::const_iterator s_it = (line.cbegin() + 8);
     int64_t num;
-    if (!GetNumericValue(line, s_it, num)) continue;
-    if (num > test_num) return false;
-    if (num != test_num) continue;
+    if (test_num > 0 && GetNumericValue(line, s_it, num))
+    {
+      if (num > test_num) return false;
+      if (num != test_num) continue;
+    }
 
     found = true;
     subj.clear(); subj_open.clear(); clip.clear();
@@ -104,36 +125,36 @@ bool GetTestNum(ifstream &source, int test_num, bool seek_from_start,
 
       if (line.find("INTERSECTION") != string::npos) 
       {
-        ct = Clipper2Lib::ClipType::Intersection; continue;
+        ct = ClipType::Intersection; continue;
       }
       else if (line.find("UNION") != string::npos) 
       {
-        ct = Clipper2Lib::ClipType::Union; continue;
+        ct = ClipType::Union; continue;
       }
       else if (line.find("DIFFERENCE") != string::npos) 
       {
-        ct = Clipper2Lib::ClipType::Difference; continue;
+        ct = ClipType::Difference; continue;
       }
       else if (line.find("XOR") != string::npos) 
       {
-        ct = Clipper2Lib::ClipType::Xor; continue;
+        ct = ClipType::Xor; continue;
       }
 
       if (line.find("EVENODD") != string::npos) 
       {
-        fr = Clipper2Lib::FillRule::EvenOdd; continue;
+        fr = FillRule::EvenOdd; continue;
       }
       else if (line.find("NONZERO") != string::npos) 
       {
-        fr = Clipper2Lib::FillRule::NonZero ; continue;
+        fr = FillRule::NonZero ; continue;
       }
       else if (line.find("POSITIVE") != string::npos) 
       {
-        fr = Clipper2Lib::FillRule::Positive; continue;
+        fr = FillRule::Positive; continue;
       }
       else if (line.find("NEGATIVE") != string::npos)
       {
-        fr = Clipper2Lib::FillRule::Negative; continue;
+        fr = FillRule::Negative; continue;
       }
       
       else if (line.find("SOL_AREA") != string::npos)
@@ -163,88 +184,6 @@ bool GetTestNum(ifstream &source, int test_num, bool seek_from_start,
   } //outer while still lines (not found)
   return found;
 }
-//------------------------------------------------------------------------------
-
-void GetPaths(stringstream &ss, Paths64 &paths)
-{
-  for (;;) 
-  { 
-    //for each path (line) ...
-    Path64 p;
-    for (;;) { //for each point
-      int64_t x, y;
-      char char_buf;
-      int c = ss.peek();
-      if (c == EOF) return;
-      if (c < ' ') { //assume one or more newline chars
-        ss.read(&char_buf, 1);
-        break;
-      }
-      if (!(c == '-' || (c >= '0' && c <= '9'))) return;
-      if (!(ss >> x)) return; //oops!
-      c = ss.peek();
-      if (c != ',') return;
-      ss.read(&char_buf, 1); //gobble comma
-      if (!(ss >> y)) return; //oops!
-      p.push_back(Clipper2Lib::Point64(x, y));
-      c = ss.peek();
-      if (c != ' ') break;
-      ss.read(&char_buf, 1); //gobble space
-    }
-    if (p.size() > 2) paths.push_back(p);
-    p.clear();
-  }
-}
-//------------------------------------------------------------------------------
-
-bool LoadFromFile(const string &filename, 
-  Paths64 &subj, Paths64 &clip, 
-  Clipper2Lib::ClipType &ct, Clipper2Lib::FillRule &fr)
-{
-  subj.clear();
-  clip.clear();
-  ifstream file(filename);
-	if (!file.is_open()) return false;
-  stringstream ss;
-  ss << file.rdbuf();
-  file.close();
-
-  string line;
-  bool caption_found = false;
-  for (;;)
-  {
-    if (!getline(ss, line)) return caption_found;
-    if (!caption_found) 
-    {
-      caption_found = line.find("CAPTION: ") != std::string::npos;
-      continue; //ie keep going until caption is found
-    }
-
-    if (line.find("CLIPTYPE:") != std::string::npos)
-    {
-      if (line.find("INTERSECTION") != std::string::npos)
-        ct = Clipper2Lib::ClipType::Intersection;
-      else if (line.find("UNION") != std::string::npos)
-        ct = Clipper2Lib::ClipType::Union;
-      else if (line.find("DIFFERENCE") != std::string::npos)
-        ct = Clipper2Lib::ClipType::Difference;
-      else
-        ct = Clipper2Lib::ClipType::Xor;
-    }
-    else if (line.find("FILLRULE:") != std::string::npos)
-    {
-      if (line.find("EVENODD") != std::string::npos)
-        fr = Clipper2Lib::FillRule::EvenOdd;
-      else
-        fr = Clipper2Lib::FillRule::NonZero;
-    }
-    else if (line.find("SUBJECTS") != std::string::npos) GetPaths(ss, subj);
-    else if (line.find("CLIPS") != std::string::npos) GetPaths(ss, clip);
-    else if (line.find("CAPTION:") != std::string::npos) break;
-    else if (!subj.empty() && !clip.empty()) return true;
-  }
-  return !subj.empty() || !clip.empty();
-}
 
 //------------------------------------------------------------------------------
 // Functions save clipping operations to text files
@@ -267,24 +206,24 @@ void PathsToOstream(Paths64& paths, std::ostream &stream)
 
 void SaveToFile(const string &filename, 
   Paths64 &subj, Paths64 &clip, 
-  Clipper2Lib::ClipType ct, Clipper2Lib::FillRule fr)
+  ClipType ct, FillRule fr)
 {
   string cliptype;
   string fillrule;
 
   switch (ct) 
   {
-  case Clipper2Lib::ClipType::None: cliptype = "NONE"; break;
-  case Clipper2Lib::ClipType::Intersection: cliptype = "INTERSECTION"; break;
-  case Clipper2Lib::ClipType::Union: cliptype = "UNION"; break;
-  case Clipper2Lib::ClipType::Difference: cliptype = "DIFFERENCE"; break;
-  case Clipper2Lib::ClipType::Xor: cliptype = "XOR"; break;
+  case ClipType::None: cliptype = "NONE"; break;
+  case ClipType::Intersection: cliptype = "INTERSECTION"; break;
+  case ClipType::Union: cliptype = "UNION"; break;
+  case ClipType::Difference: cliptype = "DIFFERENCE"; break;
+  case ClipType::Xor: cliptype = "XOR"; break;
   }
 
   switch (fr) 
   {
-  case Clipper2Lib::FillRule::EvenOdd: fillrule = "EVENODD"; break;
-  case Clipper2Lib::FillRule::NonZero : fillrule = "NONZERO"; break;
+  case FillRule::EvenOdd: fillrule = "EVENODD"; break;
+  case FillRule::NonZero : fillrule = "NONZERO"; break;
   }
 
   std::ofstream file;
@@ -356,18 +295,48 @@ inline Path64 MakeRandomPoly(int width, int height, unsigned vertCnt)
   Path64 result;
   result.reserve(vertCnt);
   for (unsigned i = 0; i < vertCnt; ++i)
-    result.push_back(Clipper2Lib::Point64(rand() * width, rand() * height));
+    result.push_back(Point64(rand() % width, rand() % height));
   return result;
 }
 //---------------------------------------------------------------------------
 
-inline void SaveToSVG(const string &filename, int max_width, int max_height, 
+inline Path64 MakeRectangle(int boxWidth, int boxHeight)
+{
+  Path64 result;
+  result.reserve(4);
+  result.push_back(Point64(0, 0));
+  result.push_back(Point64(boxWidth, 0));
+  result.push_back(Point64(boxWidth, boxHeight));
+  result.push_back(Point64(0, boxHeight));
+  return result;
+}
+//---------------------------------------------------------------------------
+
+inline Path64 MakeEllipse(int boxWidth, int boxHeight)
+{
+  return Ellipse(Rect64(0, 0, boxWidth, boxHeight));
+}
+//---------------------------------------------------------------------------
+
+Path64 RandomOffset(const Path64& path, int maxWidth, int maxHeight)
+{
+  int dx = rand() % (maxWidth);
+  int dy = rand() % (maxHeight);
+  Path64 result;
+  result.reserve(path.size());
+  for (Point64 pt : path)
+    result.push_back(Point64(pt.x + dx, pt.y +dy));
+  return result;
+}
+//---------------------------------------------------------------------------
+
+inline void SaveToSVG(const string &filename, int max_width, int max_height,
   const Paths64 &subj, const Paths64 &subj_open,
   const Paths64 &clip, const Paths64 &solution,
   const Paths64 &solution_open,
-  Clipper2Lib::FillRule fill_rule, bool show_coords = false)
+  FillRule fill_rule, bool show_coords = false)
 {
-  Clipper2Lib::SvgWriter svg;
+  SvgWriter svg;
   svg.fill_rule = fill_rule;
   svg.SetCoordsStyle("Verdana", 0xFF0000AA, 9);
   //svg.AddCaption("Clipper demo ...", 0xFF000000, 14, 20, 20);
@@ -375,7 +344,7 @@ inline void SaveToSVG(const string &filename, int max_width, int max_height,
   svg.AddPaths(subj, false, 0x1200009C, 0xCCD3D3DA, 0.8, show_coords);
   svg.AddPaths(subj_open, true, 0x0, 0xFFD3D3DA, 1.0, show_coords);
   svg.AddPaths(clip, false, 0x129C0000, 0xCCFFA07A, 0.8, show_coords);
-  svg.AddPaths(solution, false, 0x6080ff9C, 0xFF003300, 0.8, show_coords);
+  svg.AddPaths(solution, false, 0xFF80ff9C, 0xFF003300, 0.8, show_coords);
   //for (Paths::const_iterator i = solution.cbegin(); i != solution.cend(); ++i)
   //  if (Area(*i) < 0) svg.AddPath((*i), false, 0x0, 0xFFFF0000, 0.8, show_coords);
   svg.AddPaths(solution_open, true, 0x0, 0xFF000000, 1.0, show_coords);
@@ -383,37 +352,57 @@ inline void SaveToSVG(const string &filename, int max_width, int max_height,
 }
 //------------------------------------------------------------------------------
 
-void DoSimple()
+void DoErrorFile(const string& filename)
 {
-  Paths64 subject, subject_open, clip;
-  Paths64 solution, solution_open;
-  bool show_solution_coords = false;
+  Paths64 subject, clip, ignored, solution;
+  ClipType ct;
+  FillRule fr;
+  int64_t area, count;
 
-  ////Minkowski
-  //Path64 path = MakePath("0, 0, 100, 200, 200, 0 ");
-  //Path64 pattern = Ellipse(Rect64(-20, -20, 20, 20)); 
-  //solution = Paths64(MinkowskiSum(pattern, path, false));
-  //SaveToFile("temp.txt", solution, clip, ClipType::Union, FillRule::NonZero);
-  //SaveToSVG("solution.svg", display_width, display_height,
-  //  solution, subject, subject, solution, subject,
-  //  fr_simple, show_solution_coords);
-  //system("solution.svg");
+  ifstream ifs(filename);
+  if (!ifs) return;
+  GetTestNum(ifs, 0, true, subject, ignored, 
+    clip, area, count, ct, fr);
+  ifs.close();
 
+  solution = BooleanOp(ct, fr, subject, clip);
+
+  SaveToSVG("solution.svg", display_width, display_height,
+    subject, ignored, clip, solution, ignored, fr, false);
+  system("solution.svg");
+  return;
+}
+
+void DoSimpleTest(bool show_solution_coords = false)
+{
+  Paths64 subject, clip, ignored, solution;
+  ClipType ct = ClipType::Intersection;;
+  FillRule fr = FillRule::NonZero;
+
+  //Minkowski
+  Path64 path = MakePath("0, 0, 100, 200, 200, 0 ");
+  Path64 pattern = Ellipse(Rect64(-20, -20, 20, 20));
+  solution = Paths64(MinkowskiSum(pattern, path, false));
+  SaveToFile("temp.txt", solution, clip, ClipType::Union, fr);
+  SaveToSVG("solution1.svg", display_width, display_height,
+    ignored, ignored, ignored, solution, ignored, fr, show_solution_coords);
+  system("solution1.svg");
+
+  solution.clear();
   //Intersection plus inflating
   subject.push_back(MakePath("500, 250, 50, 395, 325, 10, 325, 490, 50, 105"));
   clip.push_back(Ellipse(Rect64(100, 100, 400, 400)));
-  //SaveToFile("simple.txt", subject, clip, ct_simple, fr_simple);
-  solution = Intersect(subject, clip, FillRule::NonZero);
+  SaveToFile("simple.txt", subject, clip, ct, fr);
+  solution = Intersect(subject, clip, fr);
   solution = InflatePaths(solution, 15, JoinType::Round, EndType::Polygon);
-  SaveToSVG("solution.svg", display_width, display_height,
-    subject, subject_open, clip, solution, solution_open, 
-    FillRule::NonZero, show_solution_coords);
-  system("solution.svg");
+  SaveToSVG("solution2.svg", display_width, display_height,
+    subject, ignored, clip, solution, ignored, fr, show_solution_coords);
+  system("solution2.svg");
 }
 //------------------------------------------------------------------------------
 
 void DoTestsFromFile(const string& filename, 
-  const int start_num, const int end_num, bool svg_draw)
+  const int start_num, const int end_num, bool svg_draw, bool show_solution_coords = false)
 {
   ifstream ifs(filename);
   if (!ifs) return;
@@ -427,14 +416,14 @@ void DoTestsFromFile(const string& filename,
   {
     Paths64 subject, subject_open, clip;
     Paths64 solution, solution_open;
-    Clipper2Lib::ClipType ct;
-    Clipper2Lib::FillRule fr;
+    ClipType ct;
+    FillRule fr;
     int64_t area, count;
 
     if (GetTestNum(ifs, i, false, subject, subject_open, clip, 
       area, count, ct, fr)) 
     {
-      Clipper2Lib::Clipper64 c;
+      Clipper64 c;
       c.AddSubject(subject);
       c.AddOpenSubject(subject_open);
       c.AddClip(clip);
@@ -453,7 +442,8 @@ void DoTestsFromFile(const string& filename,
       {
         string filename2 = "test_" + to_string(i) + ".svg";
         SaveToSVG(filename2, display_width, display_height,
-          subject, subject_open, clip, solution, solution_open, fr, false);
+          subject, subject_open, clip, solution, solution_open, 
+          fr, show_solution_coords);
         system(filename2.c_str());
       }
     }
@@ -463,29 +453,103 @@ void DoTestsFromFile(const string& filename,
 }
 //------------------------------------------------------------------------------
 
-void DoBenchmark(int edge_cnt_start, int edge_cnt_end, int increment = 1000)
+void DoBenchmark1(int edge_cnt_start, int edge_cnt_end, int increment = 1000)
 {
-  Clipper2Lib::ClipType ct_benchmark = Clipper2Lib::ClipType::Intersection;//Union;//
-  Clipper2Lib::FillRule fr_benchmark = Clipper2Lib::FillRule::NonZero;//EvenOdd;//
+  ClipType ct_benchmark = ClipType::Intersection;
+  FillRule fr_benchmark = FillRule::NonZero;//EvenOdd;//
 
   Paths64 subject, clip, solution;
 
-  cout << "\nStarting Clipper2 Benchmarks:  " << endl << endl;
+  cout << "\nStarting Clipper2 Benchmark Test1:  " << endl << endl;
   for (int i = edge_cnt_start; i <= edge_cnt_end; i += increment)
   {
     subject.clear();
     clip.clear();
-    subject.push_back(MakeRandomPoly(display_width, display_height, i));
-    clip.push_back(MakeRandomPoly(display_width, display_height, i));
+    subject.push_back(MakeRandomPoly(800, 600, i));
+    clip.push_back(MakeRandomPoly(800, 600, i));
     //SaveToFile("benchmark_test.txt", subject, clip, ct_benchmark, fr_benchmark);
-
     cout << "Edges: " << i << endl;
     Timer t;
     t.Start();
-    solution = Intersect(subject, clip, FillRule::NonZero);
+    solution = BooleanOp(ct_benchmark, fr_benchmark, subject, clip);
+    if (solution.empty()) break;
     int64_t msecs = t.Elapsed_Millisecs();
     cout << FormatMillisecs(msecs) << endl << endl;
   }
+  SaveToSVG("solution3.svg", 1200, 800,
+    clip, clip, clip, solution, clip, fr_benchmark, false);
+  system("solution3.svg");
+}
+//------------------------------------------------------------------------------
+
+void DoBenchmark2(int edge_cnt_start, int edge_cnt_end, int increment = 1000)
+{
+  FillRule fr_benchmark = FillRule::EvenOdd;//NonZero;//
+  Paths64 subject, clip, solution;
+
+  cout << "\nStarting Clipper2 Benchmark Test2:  " << endl << endl;
+  const int test_width = 7680, test_height = 4320;
+  for (int i = edge_cnt_start; i <= edge_cnt_end; i += increment)
+  {
+    subject.clear();
+    subject.reserve(i);
+    clip.clear();
+    solution.clear();
+    Path64 rectangle = MakeRectangle(10, 10);
+    for (int j = 0; j < i; ++j)
+      subject.push_back(RandomOffset(rectangle, test_width - 10, test_height - 10));
+    //SaveToFile("benchmark_test2.txt", subject, clip, ClipType::Union, fr_benchmark);    
+    cout << "Rect count: " << i << endl;
+    Timer t;
+    t.Start();
+    solution = Union(subject, fr_benchmark);
+    if (solution.empty()) break;
+    int64_t msecs = t.Elapsed_Millisecs();
+    cout << FormatMillisecs(msecs) << endl << endl;
+  }
+  //chrome struggles with very large SVG files (>50MB) 
+  //SaveToSVG("solution4.svg", 1200, 800,
+  //  clip, clip, clip, solution, clip, fr_benchmark, false);
+  //system("solution4.svg");
+}
+//------------------------------------------------------------------------------
+
+void DoBenchmark3(int ellipse_cnt_start, int ellipse_cnt_end, int increment = 1000)
+{
+  ClipType ct_benchmark = ClipType::Intersection;//Union;//
+  FillRule fr_benchmark = FillRule::EvenOdd;//NonZero;//
+
+  Paths64 subject, clip, solution;
+
+  cout << "\nStarting Clipper2 Benchmark Test3:  " << endl << endl;
+  const int test_width = 3840, test_height = 2160;
+  clip.clear();
+
+  Path64 ellipse = MakeEllipse(80, 80);
+
+  for (int i = ellipse_cnt_start; i <= ellipse_cnt_end; i += increment)
+  {
+    solution.clear();
+    subject.clear();
+    subject.reserve(i);
+
+    for (int j = 0; j < i; ++j)
+      subject.push_back(RandomOffset(ellipse, test_width - 100, test_height - 100));
+    //SaveToFile("benchmark_test3.txt", subject, clip, ClipType::Union, fr_benchmark);
+
+    cout << "Ellipse count: " << i << endl;
+    Timer t;
+    t.Start();
+    solution = Union(subject, fr_benchmark);
+    if (solution.empty()) break;
+    int64_t msecs = t.Elapsed_Millisecs();
+    cout << FormatMillisecs(msecs) << endl << endl;
+  }
+
+  SaveToSVG("solution5.svg", 960, 720,
+    clip, clip, clip, solution, clip, fr_benchmark, false);
+  system("solution5.svg");
+
 }
 //------------------------------------------------------------------------------
 
@@ -494,8 +558,8 @@ void DoMemoryLeakTest()
   int edge_cnt = 1000;
 
   Paths64 subject, clip, solution, empty_path;
-  subject.push_back(MakeRandomPoly(display_width, display_height, edge_cnt));
-  clip.push_back(MakeRandomPoly(display_width, display_height, edge_cnt));
+  subject.push_back(MakeRandomPoly(800, 600, edge_cnt));
+  clip.push_back(MakeRandomPoly(800, 600, edge_cnt));
 
   _CrtMemState sOld, sNew, sDiff;
   _CrtMemCheckpoint(&sOld); //take a snapshot
@@ -514,13 +578,13 @@ void DoMemoryLeakTest()
   _CrtMemCheckpoint(&sNew); //take another snapshot 
   if (_CrtMemDifference(&sDiff, &sOld, &sNew)) // is there is a difference
   {
-    cout << "Memory leaks detected! See debugger output." << endl;
+    cout << endl << "Memory leaks! (See debugger output.)" << endl;
     OutputDebugString(L"-----------_CrtMemDumpStatistics ---------\r\n");
     _CrtMemDumpStatistics(&sDiff);
   }
   else
   {
-    cout << "No memory leaks detected!" << endl;
+    cout << "No memory leaks detected :)" << endl << endl;
   }
 }
 
@@ -531,29 +595,39 @@ void DoMemoryLeakTest()
 int main(int argc, char* argv[])
 {
   //////////////////////////////////////////////////////////////////////////
-  TestType test_type = TestType::Simple;//Benchmark;//MemoryLeak;//TestFile;//
+  TestType test_type = TestType::All;//TestFile;//Benchmark;//Simple;//MemoryLeak;//ErrorFile;//
   //////////////////////////////////////////////////////////////////////////
 
   srand((unsigned)time(0));
 
   switch (test_type)
   {
-  case TestType::Simple:
-    DoSimple();
+  case TestType::ErrorFile:
+    DoErrorFile("./error.txt");
     break;
+  case TestType::All:
+  case TestType::Simple:
+    DoSimpleTest();
+    if (test_type != TestType::All) break;
   case TestType::TestFile:
     DoTestsFromFile("../../Tests/tests.txt", 1, 200, false);
-    break;
+    //or test just one of the samples in tests.txt 
+    //DoTestsFromFile("../../Tests/tests.txt", 16, 16, true, true);
+    if (test_type != TestType::All) break;
   case TestType::MemoryLeak:
     DoMemoryLeakTest();
-    break;
-  case TestType::Benchmark: 
-    DoBenchmark(1000, 7000);
+    if (test_type != TestType::All) break;
+  case TestType::Benchmark:
+    DoBenchmark1(1000, 5000);
+    DoBenchmark2(250000, 350000, 50000);
+    DoBenchmark3(10000, 20000, 10000);
     break;
   }
 
+#ifdef _DEBUG
   cout << "Press any key to continue" << endl;
   const char c = _getch();
+#endif
   return 0;
 }
 //---------------------------------------------------------------------------

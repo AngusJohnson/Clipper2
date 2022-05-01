@@ -168,7 +168,8 @@ namespace Clipper2Lib {
         svg_xml_5 << path_infos[i]->pen_width_ << svg_xml_6;
 
       if (path_infos[i]->show_coords_) {
-        file << "  <g font-family=\"" << coords_style.font_name << "\" font-size=\"" <<
+        file << std::setprecision(0) 
+          << "  <g font-family=\"" << coords_style.font_name << "\" font-size=\"" <<
           coords_style.font_size  << "\" fill=\""<< ColorToHtml(coords_style.font_color) << 
           "\" fill-opacity=\"" << GetAlphaAsFrac(coords_style.font_color) << "\">\n";
         for (size_t  j = 0; j < path_infos[i]->paths_.size(); ++j) {
