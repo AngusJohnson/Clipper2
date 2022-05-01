@@ -1,7 +1,7 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
 * Version   :  10.0 (beta) - aka Clipper2                                      *
-* Date      :  28 April 2022                                                   *
+* Date      :  2 May 2022                                                      *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  This module provides a simple interface to the Clipper Library  *
@@ -99,6 +99,25 @@ namespace Clipper2Lib {
   inline PathsD Xor(const PathsD& subjects, const PathsD& clips, FillRule fillrule)
   {
     return BooleanOp(ClipType::Xor, fillrule, subjects, clips);
+  }
+
+  namespace details {
+
+    static void AddPolyNodeToPaths(const PolyPath64& polytree, Paths64& paths)
+    {
+      if (!polytree.Path().empty())
+        paths.push_back(polytree.Path());
+      for (PolyPath64 child : polytree.childs)
+        AddPolyNodeToPaths(child, paths);
+    }
+
+  }
+
+  inline Paths64 PolyTreeToPaths(const PolyTree64& polytree)
+  {
+    Paths64 result;
+    details::AddPolyNodeToPaths(polytree, result);
+    return result;
   }
 
 }  //namespace

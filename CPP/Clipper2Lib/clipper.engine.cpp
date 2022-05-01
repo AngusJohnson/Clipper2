@@ -3267,7 +3267,8 @@ namespace Clipper2Lib {
 			else
 				owner_polypath = &polytree;
 
-			outrec->polypath = owner_polypath->AddChild(path);
+			owner_polypath->AddChild(path);
+			outrec->polypath = owner_polypath;
 		}
 	}
 

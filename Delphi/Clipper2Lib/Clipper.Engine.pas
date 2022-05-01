@@ -3,7 +3,7 @@ unit Clipper.Engine;
 (*******************************************************************************
 * Author    :  Angus Johnson                                                   *
 * Version   :  10.0 (beta) - aka Clipper2                                      *
-* Date      :  1 May 2022                                                      *
+* Date      :  2 May 2022                                                      *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  This is the main polygon clipping module                        *
@@ -3782,7 +3782,8 @@ begin
           ownerPP := outRec.Owner.PolyPath else
           ownerPP := polytree;
 
-        outRec.PolyPath := ownerPP.AddChild(path);
+        ownerPP.AddChild(path);
+        outRec.PolyPath := ownerPP;
       end;
     setLength(openPaths, cntOpen);
   except

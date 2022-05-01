@@ -1,7 +1,7 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
 * Version   :  10.0 (beta) - aka Clipper2                                      *
-* Date      :  1 May 2022                                                      *
+* Date      :  2 May 2022                                                      *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  This is the main polygon clipping module                        *
@@ -251,14 +251,14 @@ namespace Clipper2Lib {
 	class PolyPath {
 	private:
 		double scale_;
-		std::vector<Point<T>> path_;
 	protected:
 		const PolyPath<T>* parent_;
-		std::vector<PolyPath> childs_;
 		PolyPath(const PolyPath<T>* parent, 
 			const std::vector<Point<T>>& path) : 
-			parent_(parent), path_(path), scale_(parent->scale_) {};
+			parent_(parent), polygon(path), scale_(parent->scale_) {};
 	public:
+		std::vector<Point<T>> polygon;
+		std::vector<PolyPath> childs;
 
 		explicit PolyPath(int precision = 0) //NB only for root node
 		{  
@@ -268,26 +268,26 @@ namespace Clipper2Lib {
 
 		virtual ~PolyPath() { Clear(); };
 
-		void Clear() { childs_.resize(0); }
+		void Clear() { childs.resize(0); }
 
 		void reserve(size_t size)
 		{
-			if (size > childs_.size()) childs_.reserve(size);
+			if (size > childs.size()) childs.reserve(size);
 		}
 
 		PolyPath<T>* AddChild(const std::vector<Point<T>>& path)
 		{
-			childs_.push_back(PolyPath<T>(this, path));			
-			return &childs_.back();
+			childs.push_back(PolyPath<T>(this, path));			
+			return &childs.back();
 		}
 
-		size_t ChildCount() const { return childs_.size(); }
+		size_t ChildCount() const { return childs.size(); }
 
-		const PolyPath<T>& operator [] (size_t index) const { return childs_[index]; }
+		const PolyPath<T>& operator [] (size_t index) const { return childs[index]; }
 
 		const PolyPath<T>* Parent() const { return parent_; };
 
-		const std::vector<Point<T>>& Path() const { return path_; };
+		const std::vector<Point<T>>& Path() const { return polygon; };
 
 		bool IsHole() const {
 			PolyPath* pp = parent_;

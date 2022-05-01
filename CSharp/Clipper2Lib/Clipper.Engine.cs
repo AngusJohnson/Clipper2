@@ -1,7 +1,7 @@
 ﻿/*******************************************************************************
 * Author    :  Angus Johnson                                                   *
 * Version   :  10.0 (beta) - also known as Clipper2                            *
-* Date      :  20 April 2022                                                   *
+* Date      :  2 May 2022                                                      *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  This is the main polygon clipping module                        *
@@ -3368,7 +3368,9 @@ namespace Clipper2Lib
             ownerPP = outrec.owner.polypath;
           else
             ownerPP = polytree;
-          outrec.polypath = ownerPP.AddChild(path);
+
+          ownerPP.AddChild(path);
+          outrec.polypath = ownerPP;
         }
       }
       catch
