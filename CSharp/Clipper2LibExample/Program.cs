@@ -1,24 +1,20 @@
 ﻿using System;
 using Clipper2Lib;
-using System.Collections.Generic;
 
 namespace Clipper2LibExample
 {
-  using Path64 = List<Point64>;
-  using PathD = List<PointD>;
-  using Paths64 = List<List<Point64>>;
   internal class Program
   {
 
     internal static PathD Ellipse(RectD rec)
     {
-      PointD midpoint = new PointD((rec.left + rec.right) / 2, (rec.top + rec.bottom) / 2);
-      PointD radii = new PointD(Math.Abs(rec.right - rec.left) / 2, Math.Abs(rec.bottom - rec.top) / 2);
+      PointD midpoint = new ((rec.left + rec.right) / 2, (rec.top + rec.bottom) / 2);
+      PointD radii = new (Math.Abs(rec.right - rec.left) / 2, Math.Abs(rec.bottom - rec.top) / 2);
       int steps = (int) Math.Round(Math.PI * Math.Sqrt(radii.x + radii.y));
       double sinA = Math.Sin(2 * Math.PI / steps);
       double cosA = Math.Cos(2 * Math.PI / steps);
-      PointD delta = new PointD(cosA, sinA);
-      PathD result = new PathD(steps);
+      PointD delta = new (cosA, sinA);
+      PathD result = new (steps);
       result.Add(new PointD(midpoint.x + radii.x, midpoint.y));
       for (int i = 1; i < steps; i++)
       {
@@ -32,7 +28,7 @@ namespace Clipper2LibExample
       Paths64 subj, Paths64 openSubj, Paths64 clip,
       Paths64 solution, FillRule fill, bool hideSolutionCoords = false)
     {
-      SimpleClipperSvgWriter svg = new SimpleClipperSvgWriter(fill);
+      SimpleClipperSvgWriter svg = new (fill);
       svg.AddText(caption, 0, 25, 14);
       if (subj != null)
         svg.AddPaths(subj, false, 0x110066FF, 0x33000099, 0.8);
@@ -45,18 +41,16 @@ namespace Clipper2LibExample
       svg.SaveToFile(filename, 800, 600);
     }
 
-    static void Main(string[] args)
+    public static void Main()
     {
-      Paths64 subj = new Paths64
+      Paths64 subj = new ()
       {
         ClipperFunc.MakePath(new int[] { 100, 50, 10, 79, 65, 2, 65, 98, 10, 21 })
       };
-      Paths64 clip = new Paths64
+      Paths64 clip = new ()
       {
         ClipperFunc.MakePath(new int[] { 80, 50, 69, 73, 43, 79, 23, 63, 23, 37, 43, 21, 69, 27 })
       };
-
-      SimpleClipperSvgWriter svg = new SimpleClipperSvgWriter(FillRule.EvenOdd);
 
       Paths64 solution1 = ClipperFunc.Union(subj, null, FillRule.EvenOdd);
       MakeSvg("Sample 1 - union; even", "../../../solution1.svg",
@@ -100,6 +94,7 @@ namespace Clipper2LibExample
       //PathD pattern = ClipperFunc.MakePath(new double[] { -7,0, 0,-10, 7,0, 0,10 }); //diamond
       //PathD pattern = ClipperFunc.MakePath(new double[] { -10,-5, 10,-5, 10,5, -10,5 }); //rectangle
       PathD pattern = Ellipse(new RectD(-10, -10, 10, 10)); //circle
+
       PathD path = ClipperFunc.MakePath(new double[] { 0, 0, 100, 200, 200, 0 });
       Paths64 solution10 = ClipperFunc.Paths64(Minkowski.Sum(pattern, path, true));
       MakeSvg("Sample 10 - Minkowski.Sum", "../../../solution10.svg",

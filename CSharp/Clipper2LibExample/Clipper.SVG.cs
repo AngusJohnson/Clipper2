@@ -15,11 +15,6 @@ using System.IO;
 
 namespace Clipper2Lib
 {
-
-  using PathD = List<PointD>;
-  using Paths64 = List<List<Point64>>;
-  using PathsD = List<List<PointD>>;
-
   public class SimpleClipperSvgWriter
   {
 
@@ -239,7 +234,7 @@ namespace Clipper2Lib
 
         if (pi.ShowCoords)
         {
-          writer.Write(string.Format("<g font-family=\"{0}\" font-size=\"{1}\" fill=\"{2}\">\n\n",
+          writer.Write(string.Format("<g font-family=\"{0}\" font-size=\"{1}\" fill=\"{2}\">\n",
             coordStyle.FontName, coordStyle.FontSize, ColorToHtml(coordStyle.FontColor)));
           foreach (PathD path in pi.paths)
           {
@@ -255,9 +250,8 @@ namespace Clipper2Lib
                   (pt.x * scale + offsetX), (pt.y * scale + offsetY), pt.x, pt.y));
 #endif
             }
-            writer.Write("\n");
           }
-          writer.Write("</g>\n");
+          writer.Write("</g>\n\n");
         }
       }
 
@@ -268,7 +262,7 @@ namespace Clipper2Lib
             "font-weight=\"normal\" font-size=\"{0}\" fill=\"{1}\">\n",
             captionInfo.fontSize, ColorToHtml(captionInfo.fontColor)));
         writer.Write(string.Format(
-            "<text x=\"{0}\" y=\"{1}\">{2}</text>\n</g>\n\n",
+            "<text x=\"{0}\" y=\"{1}\">{2}</text>\n</g>\n",
             (int) (captionInfo.posX + margin),
             (int) (captionInfo.posY + margin),
             captionInfo.text));

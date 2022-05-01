@@ -14,14 +14,9 @@
 
 
 #nullable enable
-using System.Collections.Generic;
 
 namespace Clipper2Lib
 {
-  using Path64 = List<Point64>;
-  using PathD = List<PointD>;
-  using Paths64 = List<List<Point64>>;
-  using PathsD = List<List<PointD>>;
 
   //PRE-COMPILER CONDITIONAL ...
   //USINGZ: For user defined Z-coordinates. See Clipper.SetZ

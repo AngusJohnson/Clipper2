@@ -17,15 +17,10 @@ using System.Runtime.CompilerServices;
 
 namespace Clipper2Lib
 {
-  using Path64 = List<Point64>;
-  using PathD = List<PointD>;
-  using Paths64 = List<List<Point64>>;
-  using PathsD = List<List<PointD>>;
-
+ 
   //Vertex: a pre-clipping data structure. It is used to separate polygons
   //into ascending and descending 'bounds' (or sides) that start at local
   //minima and ascend to a local maxima, before descending again.
-
   [Flags]
   internal enum VertexFlags
   {
