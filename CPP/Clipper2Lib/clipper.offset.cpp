@@ -227,7 +227,7 @@ void ClipperOffset::OffsetOpenPath(PathGroup& group, PathD& path, EndType end_ty
 			path[j].y - norms[k].y * delta_));
 		break;
 	case EndType::Round:
-#if REVERSE_ORIENTATION
+#ifdef REVERSE_ORIENTATION
 		DoRound(group, path[j], norms[j], norms[k], PI);
 #else
 		DoRound(group, path[j], norms[j], norms[k], -PI);
@@ -258,7 +258,7 @@ void ClipperOffset::OffsetOpenPath(PathGroup& group, PathD& path, EndType end_ty
 			path[0].y - norms[1].y * delta_));
 		break;
 	case EndType::Round:
-#if REVERSE_ORIENTATION
+#ifdef REVERSE_ORIENTATION
 		DoRound(group, path[0], norms[0], norms[1], PI);
 #else
 		DoRound(group, path[0], norms[0], norms[1], -PI);
@@ -291,7 +291,7 @@ void ClipperOffset::DoGroupOffset(PathGroup& group, double delta)
 		}
 	}
 
-#if REVERSE_ORIENTATION
+#ifdef REVERSE_ORIENTATION
 	delta_ = delta;
 #else
 	delta_ = -delta;

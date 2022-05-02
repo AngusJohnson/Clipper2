@@ -734,7 +734,7 @@ namespace Clipper2Lib {
 				prev_v = curr_v++;
 				cnt++;
 			}
-			if (!prev_v) continue;
+			if (!prev_v || !prev_v->prev) continue;
 			if (!is_open && prev_v->pt == v0->pt) 
 				prev_v = prev_v->prev;
 			prev_v->next = v0;
@@ -901,7 +901,7 @@ namespace Clipper2Lib {
 					}
 				else
 					switch (fillrule_) {
-					case FillRule::EvenOdd:
+						case FillRule::EvenOdd:
 						case FillRule::NonZero : return (e.wind_cnt2 != 0);
 						case FillRule::Positive: return (e.wind_cnt2 > 0);
 						case FillRule::Negative: return (e.wind_cnt2 < 0);
@@ -1005,7 +1005,8 @@ namespace Clipper2Lib {
 	void ClipperBase::SetWindCountForOpenPathEdge(Active &e) 
 	{
 		Active *e2 = actives_;
-		if (fillrule_ == FillRule::EvenOdd) {
+		if (fillrule_ == FillRule::EvenOdd) 
+		{
 			int cnt1 = 0, cnt2 = 0;
 			while (e2 != &e) {
 				if (GetPolyType(*e2) == PathType::Clip)
@@ -1016,8 +1017,11 @@ namespace Clipper2Lib {
 			}
 			e.wind_cnt = (IsOdd(cnt1) ? 1 : 0);
 			e.wind_cnt2 = (IsOdd(cnt2) ? 1 : 0);
-		} else {
-			while (e2 != &e) {
+		} 
+		else 
+		{
+			while (e2 != &e) 
+			{
 				if (GetPolyType(*e2) == PathType::Clip)
 					e.wind_cnt2 += e2->wind_dx;
 				else if (!IsOpen(*e2))
@@ -1774,11 +1778,14 @@ namespace Clipper2Lib {
 
 		int old_e1_windcnt, old_e2_windcnt;
 		if (e1.local_min->polytype == e2.local_min->polytype) {
-			if (fillrule_ == FillRule::EvenOdd) {
+			if (fillrule_ == FillRule::EvenOdd) 
+			{
 				old_e1_windcnt = e1.wind_cnt;
 				e1.wind_cnt = e2.wind_cnt;
 				e2.wind_cnt = old_e1_windcnt;
-			} else {
+			} 
+			else 
+			{
 				if (e1.wind_cnt + e2.wind_dx == 0)
 					e1.wind_cnt = -e1.wind_cnt;
 				else
@@ -1788,15 +1795,19 @@ namespace Clipper2Lib {
 				else
 					e2.wind_cnt -= e1.wind_dx;
 			}
-		} else {
+		} 
+		else 
+		{
 			if (fillrule_ != FillRule::EvenOdd)
+			{
 				e1.wind_cnt2 += e2.wind_dx;
-			else
-				e1.wind_cnt2 = (e1.wind_cnt2 == 0 ? 1 : 0);
-			if (fillrule_ != FillRule::EvenOdd)
 				e2.wind_cnt2 -= e1.wind_dx;
+			}
 			else
+			{
+				e1.wind_cnt2 = (e1.wind_cnt2 == 0 ? 1 : 0);
 				e2.wind_cnt2 = (e2.wind_cnt2 == 0 ? 1 : 0);
+			}
 		}
 
 		switch (fillrule_) {
@@ -1960,9 +1971,9 @@ namespace Clipper2Lib {
 	}
 	//------------------------------------------------------------------------------
 
-	bool ClipperBase::ExecuteInternal(ClipType ct, FillRule ft) 
+	bool ClipperBase::ExecuteInternal(ClipType ct, FillRule fillrule) 
 	{
-		fillrule_ = ft;
+		fillrule_ = fillrule;
 		cliptype_ = ct;
 		Reset();
 		int64_t y;
@@ -3153,7 +3164,7 @@ namespace Clipper2Lib {
 			Point64 lastPt = op.pt;
 			path.push_back(lastPt);
 			{
-#if REVERSE_ORIENTATION
+#ifdef REVERSE_ORIENTATION
 				OutPt* op2 = op.next;
 #else
 				OutPt* op2 = op.prev;
@@ -3165,8 +3176,8 @@ namespace Clipper2Lib {
 						lastPt = op2->pt;
 						path.push_back(lastPt);
 					}
-#if REVERSE_ORIENTATION
-					op2 = *op2->next;
+#ifdef REVERSE_ORIENTATION
+					op2 = op2->next;
 #else
 					op2 = op2->prev;
 #endif

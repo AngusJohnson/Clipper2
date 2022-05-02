@@ -19,6 +19,7 @@
 
 namespace Clipper2Lib {
 
+//#define REVERSE_ORIENTATION
 //#define USINGZ
 
 // Point ------------------------------------------------------------------------
@@ -336,7 +337,7 @@ inline double Area(const Path64& path)
 		a += static_cast<double>(path_iter_last->y - path_iter->y) * 
 			(path_iter_last->x + path_iter->x);
 	}
-#if REVERSE_ORIENTATION
+#ifdef REVERSE_ORIENTATION
 	return a * -0.5;
 #else
 	return a * 0.5;
@@ -366,7 +367,7 @@ inline double Area(const PathD& path)
 			a += static_cast<double>(path_iter_last->y - path_iter->y) *
 				(path_iter_last->x + path_iter->x);
 		}
-#if REVERSE_ORIENTATION
+#ifdef REVERSE_ORIENTATION
 		return a * -0.5;
 #else
 		return a * 0.5;
