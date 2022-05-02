@@ -1950,6 +1950,7 @@ procedure TClipperBase.FixSelfIntersects(var op: POutPt);
       newOutRec.Idx := FOutRecList.Add(newOutRec);
       newOutRec.Owner := prevOp.OutRec.Owner;
       newOutRec.State := prevOp.OutRec.State;
+      newOutRec.PolyPath := nil;
       splitOp.OutRec := newOutRec;
       splitOp.Next.OutRec := newOutRec;
       new(newOp);
@@ -3782,8 +3783,7 @@ begin
           ownerPP := outRec.Owner.PolyPath else
           ownerPP := polytree;
 
-        ownerPP.AddChild(path);
-        outRec.PolyPath := ownerPP;
+        outRec.PolyPath := ownerPP.AddChild(path);
       end;
     setLength(openPaths, cntOpen);
   except

@@ -1558,7 +1558,7 @@ namespace Clipper2Lib
       outrec.owner = null;
       outrec.state = OutRecState.Open;
       outrec.pts = null;
-      //outrec.PolyTree = null;
+      outrec.polypath = null;
       outrec.backEdge = null;
       outrec.frontEdge = null;
 
@@ -3110,6 +3110,7 @@ namespace Clipper2Lib
         OutRec newOr = new OutRec()
         { idx = _outrecList.Count };
         _outrecList.Add(newOr);
+        newOr.polypath = null;
 
         if (Math.Abs(area1) >= Math.Abs(area2))
         {
@@ -3216,6 +3217,7 @@ namespace Clipper2Lib
         _outrecList.Add(newOutRec);
         newOutRec.owner = prevOp.outrec.owner;
         newOutRec.state = prevOp.outrec.state;
+        newOutRec.polypath = null;
         splitOp.outrec = newOutRec;
         splitOp.next.outrec = newOutRec;
 
@@ -3369,8 +3371,7 @@ namespace Clipper2Lib
           else
             ownerPP = polytree;
 
-          ownerPP.AddChild(path);
-          outrec.polypath = ownerPP;
+          outrec.polypath = ownerPP.AddChild(path);
         }
       }
       catch

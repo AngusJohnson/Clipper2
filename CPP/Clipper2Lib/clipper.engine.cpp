@@ -1303,7 +1303,7 @@ namespace Clipper2Lib {
 		outrec->idx = (unsigned)outrec_list_.size();
 		outrec_list_.push_back(outrec);
 		outrec->pts = NULL;
-		//outrec->PolyTree = NULL;
+		outrec->polypath = NULL;
 
 		e1.outrec = outrec;
 		SetOwnerAndInnerOuterState(e1);
@@ -1565,6 +1565,7 @@ namespace Clipper2Lib {
 			outrec_list_.push_back(newOutRec);
 			newOutRec->owner = prevOp->outrec->owner;
 			newOutRec->state = prevOp->outrec->state;
+			newOutRec->polypath = NULL;
 			splitOp->outrec = newOutRec;
 			splitOp->next->outrec = newOutRec;
 
@@ -1659,6 +1660,7 @@ namespace Clipper2Lib {
 			OutRec* newOr = new OutRec();
 			newOr->idx = outrec_list_.size();
 			outrec_list_.push_back(newOr);
+			newOr->polypath = NULL;
 
 			if (std::abs(area1) >= std::abs(area2))
 			{
@@ -1698,7 +1700,7 @@ namespace Clipper2Lib {
 		outrec->owner = NULL;
 		outrec->state = OutRecState::Open;
 		outrec->pts = NULL;
-		//outrec->PolyTree = NULL;
+		outrec->polypath = NULL;
 		outrec->back_edge = NULL;
 		outrec->front_edge = NULL;
 		e.outrec = outrec;
@@ -3278,8 +3280,7 @@ namespace Clipper2Lib {
 			else
 				owner_polypath = &polytree;
 
-			owner_polypath->AddChild(path);
-			outrec->polypath = owner_polypath;
+			outrec->polypath = owner_polypath->AddChild(path);
 		}
 	}
 
