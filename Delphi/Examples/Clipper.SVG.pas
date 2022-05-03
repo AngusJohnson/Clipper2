@@ -99,7 +99,7 @@ const
   svg_header: string = '<?xml version="1.0" standalone="no"?>'#10 +
       '<!DOCTYPE svg PUBLIC "-/W3C/DTD SVG 1.0/EN"'#10 +
       '"http://www.w3.org/TR/2001/REC-SVG-20010904/DTD/svg10.dtd">'#10#10 +
-      '<svg width="%1.0npx" height="%1.0npx" viewBox="0 0 %0:1.0n %1:1.0n" ' +
+      '<svg width="%dpx" height="%dpx" viewBox="0 0 %0:d %1:d" ' +
       'version="1.1" xmlns="http://www.w3.org/2000/svg">'#10#10;
   svg_path_format: string = '" style="fill:%s;' +
         ' fill-opacity:%1.2f; fill-rule:%s; stroke:%s;' +
@@ -270,8 +270,9 @@ begin
   with TStringList.Create do
   try
     if (maxWidth <= 0) or (maxHeight <= 0) then
-       Add(Format(svg_header, [(bounds.right - bounds.left) + margin * 2,
-        (bounds.bottom - bounds.top) + margin * 2]))
+       Add(Format(svg_header,
+       [Round(bounds.right - bounds.left) + margin * 2,
+        Round(bounds.bottom - bounds.top) + margin * 2]))
     else
       Add(Format(svg_header, [maxWidth, maxHeight]));
 
