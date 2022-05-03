@@ -1,7 +1,7 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
 * Version   :  10.0 (beta) - aka Clipper2                                      *
-* Date      :  2 May 2022                                                      *
+* Date      :  3 May 2022                                                      *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  This is the main polygon clipping module                        *
@@ -67,7 +67,7 @@ namespace Clipper2Lib {
 		OutRec* outrec;
 		Joiner* joiner = NULL;
 
-		OutPt(const Point64 pt_, OutRec* outrec_): pt(pt_), outrec(outrec_) {
+		OutPt(const Point64& pt_, OutRec* outrec_): pt(pt_), outrec(outrec_) {
 			next = this;
 			prev = this;
 		}
@@ -91,7 +91,7 @@ namespace Clipper2Lib {
 		Active* front_edge;
 		Active* back_edge;
 		OutPt* pts;
-		PolyPath64* polypath;
+		PolyPath64* polypath = NULL;
 		OutRecState state = OutRecState::Undefined;
 	};
 
@@ -168,9 +168,9 @@ namespace Clipper2Lib {
 		void InsertLeftEdge(Active &e);
 		inline void PushHorz(Active &e);
 		inline bool PopHorz(Active *&e);
-		inline OutPt* StartOpenPath(Active &e, const Point64 pt);
+		inline OutPt* StartOpenPath(Active &e, const Point64& pt);
 		inline void UpdateEdgeIntoAEL(Active *e);
-		OutPt* IntersectEdges(Active &e1, Active &e2, const Point64 pt);
+		OutPt* IntersectEdges(Active &e1, Active &e2, const Point64& pt);
 		inline void DeleteFromAEL(Active &e);
 		inline void AdjustCurrXAndCopyToSEL(const int64_t top_y);
 		void DoIntersections(const int64_t top_y);
@@ -179,15 +179,15 @@ namespace Clipper2Lib {
 		bool BuildIntersectList(const int64_t top_y);
 		void ProcessIntersectList();
 		void SwapPositionsInAEL(Active& edge1, Active& edge2);
-		OutPt* AddOutPt(const Active &e, const Point64 pt);
+		OutPt* AddOutPt(const Active &e, const Point64& pt);
 		bool TestJoinWithPrev1(const Active& e, int64_t curr_y);
 		bool TestJoinWithPrev2(const Active& e, const Point64& curr_pt);
 		bool TestJoinWithNext1(const Active& e, int64_t curr_y);
 		bool TestJoinWithNext2(const Active& e, const Point64& curr_pt);
 
 		OutPt* AddLocalMinPoly(Active &e1, Active &e2, 
-			const Point64 pt, bool is_new = false);
-		OutPt* AddLocalMaxPoly(Active &e1, Active &e2, const Point64 pt);
+			const Point64& pt, bool is_new = false);
+		OutPt* AddLocalMaxPoly(Active &e1, Active &e2, const Point64& pt);
 		void DoHorizontal(Active &horz);
 		bool ResetHorzDiRect64on(const Active &horz, const Active *max_pair,
 			int64_t &horz_left, int64_t &horz_right);
@@ -258,7 +258,7 @@ namespace Clipper2Lib {
 			parent_(parent), polygon(path), scale_(parent->scale_) {};
 	public:
 		std::vector<Point<T>> polygon;
-		std::vector<PolyPath> childs;
+		std::vector<PolyPath*> childs;
 
 		explicit PolyPath(int precision = 0) //NB only for root node
 		{  
@@ -268,7 +268,10 @@ namespace Clipper2Lib {
 
 		virtual ~PolyPath() { Clear(); };
 
-		void Clear() { childs.resize(0); }
+		void Clear() { 
+			for (PolyPath<T>* child : childs) delete child;
+			childs.resize(0); 
+		}
 
 		void reserve(size_t size)
 		{
@@ -277,13 +280,13 @@ namespace Clipper2Lib {
 
 		PolyPath<T>* AddChild(const std::vector<Point<T>>& path)
 		{
-			childs.push_back(PolyPath<T>(this, path));			
-			return &childs.back();
+			childs.push_back(new PolyPath<T>(this, path));
+			return childs.back();
 		}
 
 		size_t ChildCount() const { return childs.size(); }
 
-		const PolyPath<T>& operator [] (size_t index) const { return childs[index]; }
+		const PolyPath<T>* operator [] (size_t index) const { return childs[index]; }
 
 		const PolyPath<T>* Parent() const { return parent_; };
 

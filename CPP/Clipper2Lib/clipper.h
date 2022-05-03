@@ -107,11 +107,11 @@ namespace Clipper2Lib {
     {
       if (!polytree.Path().empty())
         paths.push_back(polytree.Path());
-      for (PolyPath64 child : polytree.childs)
-        AddPolyNodeToPaths(child, paths);
+      for (PolyPath64* child : polytree.childs)
+        AddPolyNodeToPaths(*child, paths);
     }
 
-  }
+  } //details namespace 
 
   inline Paths64 PolyTreeToPaths(const PolyTree64& polytree)
   {
@@ -120,6 +120,6 @@ namespace Clipper2Lib {
     return result;
   }
 
-}  //namespace
+}  //Clipper2Lib namespace
 
 #endif  // CLIPPER_H

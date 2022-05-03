@@ -1,7 +1,7 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
 * Version   :  10.0 (beta) - aka Clipper2                                      *
-* Date      :  1 May 2022                                                      *
+* Date      :  3 May 2022                                                      *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  This is the main polygon clipping module                        *
@@ -12,6 +12,7 @@
 #include <cmath>
 #include <stdexcept>
 #include <vector>
+#include <numeric>
 #include "clipper.core.h"
 #include "clipper.engine.h"
 
@@ -38,7 +39,7 @@ namespace Clipper2Lib {
 		Active* edge1;
 		Active* edge2;
 
-		IntersectNode(Active* e1, Active* e2, Point64 pt_) : 
+		IntersectNode(Active* e1, Active* e2, Point64& pt_) : 
 			edge1(e1), edge2(e2), pt(pt_) {}
 	};
 
@@ -165,7 +166,7 @@ namespace Clipper2Lib {
 		*               +inf (180deg) <--- o ---> -inf (0deg)                          *
 		*******************************************************************************/
 
-	inline double GetDx(const Point64 pt1, const Point64 pt2)
+	inline double GetDx(const Point64& pt1, const Point64& pt2)
 	{
 		double dy = double(pt2.y - pt1.y);
 		if (dy != 0)
@@ -712,8 +713,7 @@ namespace Clipper2Lib {
 
 		Paths64::size_type paths_cnt = paths.size();
 		Path64::size_type total_vertex_count = 0;
-		for (const Path64 path : paths)
-			total_vertex_count += path.size();
+		for (const Path64& path : paths) total_vertex_count += path.size();
 		if (total_vertex_count == 0) return;
 		Vertex *vertices = new Vertex[total_vertex_count], *v = vertices;
 		for (const Path64 path : paths)
@@ -1297,7 +1297,7 @@ namespace Clipper2Lib {
 	//------------------------------------------------------------------------------
 
 	OutPt* ClipperBase::AddLocalMinPoly(Active &e1, Active &e2,
-		const Point64 pt, bool is_new)
+		const Point64& pt, bool is_new)
 	{
 		OutRec *outrec = new OutRec();
 		outrec->idx = (unsigned)outrec_list_.size();
@@ -1353,7 +1353,7 @@ namespace Clipper2Lib {
 	}
 	//------------------------------------------------------------------------------
 
-	OutPt* ClipperBase::AddLocalMaxPoly(Active &e1, Active &e2, const Point64 pt)
+	OutPt* ClipperBase::AddLocalMaxPoly(Active &e1, Active &e2, const Point64& pt)
 	{
 		if (IsFront(e1) == IsFront(e2))
 		{
@@ -1432,7 +1432,7 @@ namespace Clipper2Lib {
 	}
 	//------------------------------------------------------------------------------
 
-	OutPt* ClipperBase::AddOutPt(const Active &e, const Point64 pt) 
+	OutPt* ClipperBase::AddOutPt(const Active &e, const Point64& pt) 
 	{
 		OutPt *new_op = NULL;
 
@@ -1693,7 +1693,7 @@ namespace Clipper2Lib {
 	}
 	//------------------------------------------------------------------------------
 
-	OutPt* ClipperBase::StartOpenPath(Active &e, const Point64 pt) {
+	OutPt* ClipperBase::StartOpenPath(Active &e, const Point64& pt) {
 		OutRec *outrec = new OutRec();
 		outrec->idx = outrec_list_.size();
 		outrec_list_.push_back(outrec);
@@ -1728,7 +1728,7 @@ namespace Clipper2Lib {
 	}
 	//------------------------------------------------------------------------------
 
-	OutPt* ClipperBase::IntersectEdges(Active &e1, Active &e2, const Point64 pt) 
+	OutPt* ClipperBase::IntersectEdges(Active &e1, Active &e2, const Point64& pt) 
 	{
 		OutPt* resultOp = NULL;
 
@@ -3288,9 +3288,9 @@ namespace Clipper2Lib {
 	{
 		for (size_t i = 0; i < polypath.ChildCount(); ++i)
 		{
-			const PolyPath64& child = polypath[i];
-			PolyPathD* child2 = result.AddChild(Path64ToPathD(child.Path()));
-			Polypath64ToPolypathD(child, *child2);
+			const PolyPath64 *child = polypath[i];
+			PolyPathD* res_child = result.AddChild(Path64ToPathD(child->Path()));
+			Polypath64ToPolypathD(*child, *res_child);
 		}
 	}
 

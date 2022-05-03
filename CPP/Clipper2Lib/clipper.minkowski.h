@@ -37,9 +37,9 @@ namespace Clipper2Lib
         Path64 path2;
         path2.reserve(pattern.size());
         if (isSum)
-          for (Point64 pt2 : pattern) path2.push_back(pt + pt2);
+          for (const Point64& pt2 : pattern) path2.push_back(pt + pt2);
         else
-          for (Point64 pt2 : pattern) path2.push_back(pt - pt2);
+          for (const Point64& pt2 : pattern) path2.push_back(pt - pt2);
         tmp.push_back(path2);
       }
 
