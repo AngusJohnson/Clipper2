@@ -1,7 +1,7 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
 * Version   :  10.0 (beta) - aka Clipper2                                      *
-* Date      :  3 May 2022                                                      *
+* Date      :  4 May 2022                                                      *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  This is the main polygon clipping module                        *
@@ -304,16 +304,29 @@ namespace Clipper2Lib {
 	}
 	//---------------------------------------------------------------------------
 
-	inline Vertex& NextVertex(const Active& e)
+	inline Vertex* NextVertex(const Active& e)
 	{
 #ifdef REVERSE_ORIENTATION
 		if (e.wind_dx > 0)
 #else 
 		if (e.wind_dx < 0)
 #endif 
-			return *e.vertex_top->next;
+			return e.vertex_top->next;
 		else
-			return *e.vertex_top->prev;
+			return e.vertex_top->prev;
+	}
+	//------------------------------------------------------------------------------
+
+	inline Vertex* PrevPrevVertex(const Active& ae)
+	{
+#ifdef REVERSE_ORIENTATION
+		if (ae.wind_dx > 0)
+#else 
+		if (ae.wind_dx < 0)
+#endif 
+			return ae.vertex_top->prev->prev;
+		else 
+			return ae.vertex_top->next->next;
 	}
 	//------------------------------------------------------------------------------
 
@@ -708,7 +721,7 @@ namespace Clipper2Lib {
 
 	void ClipperBase::AddPaths(const Paths64& paths, PathType polytype, bool is_open)
 	{
-		has_open_paths_ = is_open;
+		if (is_open) has_open_paths_ = true;
 		minima_list_sorted_ = false;
 
 		Paths64::size_type paths_cnt = paths.size();
@@ -1032,13 +1045,6 @@ namespace Clipper2Lib {
 	}
 	//------------------------------------------------------------------------------
 
-	inline Vertex* PrevPrevVertex(const Active& ae)
-	{
-		if (ae.wind_dx < 0) return ae.vertex_top->prev->prev;
-		else return ae.vertex_top->next->next;
-	}
-	//------------------------------------------------------------------------------
-
 	bool IsValidAelOrder(const Active &a1, const Active &a2) 
 	{
 		//a2 is always the new edge being inserted
@@ -1057,10 +1063,10 @@ namespace Clipper2Lib {
 		//the direction they're about to turn
 		if (IsOpen(a1) && !IsMaxima(a1) && (a1.bot.y <= a2.bot.y) &&
 			!IsSamePolyType(a1, a2) && (a1.top.y > a2.top.y))
-			return CrossProduct(a1.bot, a1.top, NextVertex(a1).pt) <= 0;
+			return CrossProduct(a1.bot, a1.top, NextVertex(a1)->pt) <= 0;
 		else if (IsOpen(a2) && !IsMaxima(a2) && (a2.bot.y <= a1.bot.y) &&
 			!IsSamePolyType(a1, a2) && (a2.top.y > a1.top.y))
-			return CrossProduct(a2.bot, a2.top, NextVertex(a2).pt) >= 0;
+			return CrossProduct(a2.bot, a2.top, NextVertex(a2)->pt) >= 0;
 
 		int64_t a2botY = a2.bot.y;
 		bool a1IsNewEdge = !IsOpen(a1) &&
@@ -1713,7 +1719,7 @@ namespace Clipper2Lib {
 
 	inline void ClipperBase::UpdateEdgeIntoAEL(Active *e) {
 		e->bot = e->top;
-		e->vertex_top = &NextVertex(*e);
+		e->vertex_top = NextVertex(*e);
 		e->top = e->vertex_top->pt;
 		e->curr_x = e->bot.x;
 		SetDx(*e);
@@ -2224,16 +2230,16 @@ namespace Clipper2Lib {
 	bool TrimHorz(Active& horzEdge, bool preserveCollinear)
 	{
 		bool result = false;
-		Point64 pt = NextVertex(horzEdge).pt;
+		Point64 pt = NextVertex(horzEdge)->pt;
 		//trim 180 deg. spikes in closed paths
 		while ((pt.y == horzEdge.top.y) && (!preserveCollinear ||
 			((pt.x < horzEdge.top.x) == (horzEdge.bot.x < horzEdge.top.x))))
 		{
-			horzEdge.vertex_top = &NextVertex(horzEdge);
+			horzEdge.vertex_top = NextVertex(horzEdge);
 			horzEdge.top = pt;
 			result = true;
 			if (IsMaxima(horzEdge)) break;
-			pt = NextVertex(horzEdge).pt;
+			pt = NextVertex(horzEdge)->pt;
 		}
 
 		if (result) SetDx(horzEdge); // +/-infinity
@@ -2315,7 +2321,7 @@ namespace Clipper2Lib {
 					{
 						//for edges at horzEdge's end, only stop when horzEdge's
 						//outslope is greater than e's slope when heading right or when
-						pt = NextVertex(horz).pt;
+						pt = NextVertex(horz)->pt;
 						if ((is_left_to_right && TopX(*e, pt.y) >= pt.x) ||
 							(!is_left_to_right && TopX(*e, pt.y) <= pt.x)) break;
 					}
@@ -2364,7 +2370,7 @@ namespace Clipper2Lib {
 			}
 
 			//check if we've finished with (consecutive) horizontals ...
-			if (isMax || NextVertex(horz).pt.y != horz.top.y) break;
+			if (isMax || NextVertex(horz)->pt.y != horz.top.y) break;
 
 			//still more horizontals in bound to process ...
 			if (IsHotEdge(horz))
@@ -3212,13 +3218,13 @@ namespace Clipper2Lib {
 				Path64 path;
 				if (solutionOpen && outrec->state == OutRecState::Open)
 				{
-					if (BuildPath(*outrec->pts->next, true, path))
+					if (BuildPath(*outrec->pts, true, path))
 						solutionOpen->emplace_back(std::move(path));
 					path.resize(0);
 				}
 				else
 				{
-					if (BuildPath(*outrec->pts->next, false, path))
+					if (BuildPath(*outrec->pts, false, path))
 						solutionClosed.emplace_back(std::move(path));
 					path.resize(0);
 				}
@@ -3257,7 +3263,7 @@ namespace Clipper2Lib {
 
 			Path64 path;
 			bool is_open_path = IsOpen(*outrec);
-			if (!BuildPath(*outrec->pts->next, is_open_path, path)) continue;
+			if (!BuildPath(*outrec->pts, is_open_path, path)) continue;
 
 			if (is_open_path)
 			{

@@ -1,17 +1,23 @@
 ﻿/*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Version   :  10.0 (release candidate 1) - also known as Clipper2             *
-* Date      :  28 April 2022                                                   *
+* Version   :  10.0 (beta) - also known as Clipper2                            *
+* Date      :  4 May 2022                                                      *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  Minkowski Sum and Difference                                    *
 * License   :  http://www.boost.org/LICENSE_1_0.txt                            *
 *******************************************************************************/
 
+#nullable enable
 using System;
+using System.Collections.Generic;
 
 namespace Clipper2Lib
 {
+  using Path64 = List<Point64>;
+  using Paths64 = List<List<Point64>>;
+  using PathD = List<PointD>;
+  using PathsD = List<List<PointD>>;
   public class Minkowski
   {
     private static Paths64 MinkowskiInternal(Path64 pattern, Path64 path, bool isSum, bool isClosed)

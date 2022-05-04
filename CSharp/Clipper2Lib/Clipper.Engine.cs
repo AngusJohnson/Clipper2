@@ -1,7 +1,7 @@
 ﻿/*******************************************************************************
 * Author    :  Angus Johnson                                                   *
 * Version   :  10.0 (beta) - also known as Clipper2                            *
-* Date      :  2 May 2022                                                      *
+* Date      :  4 May 2022                                                      *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  This is the main polygon clipping module                        *
@@ -17,7 +17,12 @@ using System.Runtime.CompilerServices;
 
 namespace Clipper2Lib
 {
- 
+
+  using Path64  = List<Point64>;
+  using Paths64 = List<List<Point64>>;
+  using PathD   = List<PointD>;
+  using PathsD  = List<List<PointD>>;
+
   //Vertex: a pre-clipping data structure. It is used to separate polygons
   //into ascending and descending 'bounds' (or sides) that start at local
   //minima and ascend to a local maxima, before descending again.
@@ -442,6 +447,19 @@ namespace Clipper2Lib
         return ae.vertexTop!.next!;
       else
         return ae.vertexTop!.prev!;
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private Vertex PrevPrevVertex(Active ae)
+    {
+#if REVERSE_ORIENTATION
+      if (ae.windDx > 0)
+#else
+      if (ae.windDx < 0)
+#endif
+        return ae.vertexTop!.prev!.prev!;
+      else 
+        return ae.vertexTop!.next!.next!;
     }
 
     private static bool IsMaxima(Active ae)
@@ -1132,12 +1150,6 @@ namespace Clipper2Lib
       }
     }
 
-    private Vertex PrevPrevVertex(Active ae)
-    {
-      if (ae.windDx < 0) return ae.vertexTop!.prev!.prev!;
-      else return ae.vertexTop!.next!.next!;
-    }
-
     private bool IsValidAelOrder(Active a1, Active a2)
     {
       //a2 is always the new edge being inserted
@@ -1500,6 +1512,7 @@ namespace Clipper2Lib
         p2Start.next = p1End;
         p1Start.next = p2End;
         p2End.prev = p1Start;
+
         if (!IsOpen(ae1))
         {
           ae1.outrec.backEdge = ae2.outrec.backEdge;
@@ -3304,12 +3317,12 @@ namespace Clipper2Lib
           Path64 path = new Path64();
           if (outrec.state == OutRecState.Open)
           {
-            if (BuildPath(outrec.pts.next!, true, path))
+            if (BuildPath(outrec.pts!, true, path))
               solutionOpen.Add(path);
           }
           else
           {
-            if (BuildPath(outrec.pts.next!, false, path))
+            if (BuildPath(outrec.pts!, false, path))
               solutionClosed.Add(path);
           }
         }
@@ -3348,7 +3361,7 @@ namespace Clipper2Lib
           bool isOpenPath = outrec.state == OutRecState.Open;
 
           Path64 path = new Path64();
-          if (!BuildPath(outrec.pts.next!, isOpenPath, path)) continue;
+          if (!BuildPath(outrec.pts!, isOpenPath, path)) continue;
 
           if (isOpenPath)
           {

@@ -1,6 +1,6 @@
 ﻿/*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  6 April 2022                                                    *
+* Date      :  4 May 2022                                                      *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * License:                                                                     *
@@ -15,6 +15,10 @@ using System.IO;
 
 namespace Clipper2Lib
 {
+
+  using Paths64 = List<List<Point64>>;
+  using PathD = List<PointD>;
+  using PathsD = List<List<PointD>>;
   public class SimpleClipperSvgWriter
   {
 

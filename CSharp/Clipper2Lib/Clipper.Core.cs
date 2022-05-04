@@ -1,7 +1,7 @@
 ﻿/*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Version   :  10.0 (release candidate 1) - also known as Clipper2             *
-* Date      :  1 May 2022                                                      *
+* Version   :  10.0 (beta) - also known as Clipper2                            *
+* Date      :  4 May 2022                                                      *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  Core structures and functions for the Clipper Library           *
@@ -9,7 +9,6 @@
 *******************************************************************************/
 
 using System;
-using System.Collections.Generic;
 
 namespace Clipper2Lib
 {
@@ -248,34 +247,6 @@ namespace Clipper2Lib
     }
 
     public override int GetHashCode() { return 0; }
-  }
-
-  public class Path64 : List<Point64>
-  {
-    public Path64() { }
-    public Path64(Path64 other) : base(other) { }
-    public Path64(int capacity) : base(capacity) { }
-  }
-
-  public class Paths64 : List<Path64>
-  {
-    public Paths64() { }
-    public Paths64(Paths64 other) : base (other) { }
-    public Paths64(int capacity) : base(capacity) { }
-  }
-
-  public class PathD : List<PointD>
-  {
-    public PathD() { }
-    public PathD(PathD other) : base(other) { }
-    public PathD(int capacity) : base(capacity) { }
-  }
-
-  public class PathsD : List<PathD>
-  {
-    public PathsD() { }
-    public PathsD(PathsD other) : base(other) { }
-    public PathsD(int capacity) : base(capacity) { }
   }
 
   public struct Rect64

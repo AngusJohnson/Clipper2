@@ -1,11 +1,17 @@
 ﻿using System;
+using System.Collections.Generic;
 using Clipper2Lib;
 
 namespace Clipper2LibExample
 {
+
+  using Path64 = List<Point64>;
+  using Paths64 = List<List<Point64>>;
+  using PathD = List<PointD>;
+  using PathsD = List<List<PointD>>;
+
   internal class Program
   {
-
     internal static PathD Ellipse(RectD rec)
     {
       PointD midpoint = new ((rec.left + rec.right) / 2, (rec.top + rec.bottom) / 2);

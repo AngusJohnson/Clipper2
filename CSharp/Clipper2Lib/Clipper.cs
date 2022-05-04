@@ -1,7 +1,7 @@
 ﻿/*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Version   :  10.0 (release candidate 1) - also known as Clipper2             *
-* Date      :  16 April 2022                                                   *
+* Version   :  10.0 (beta) - also known as Clipper2                            *
+* Date      :  4 May 2022                                                      *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  This module contains simple functions that will likely cover    *
@@ -14,12 +14,18 @@
 
 
 #nullable enable
+using System.Collections.Generic;
 
 namespace Clipper2Lib
 {
 
   //PRE-COMPILER CONDITIONAL ...
   //USINGZ: For user defined Z-coordinates. See Clipper.SetZ
+
+  using Path64 = List<Point64>;
+  using Paths64 = List<List<Point64>>;
+  using PathD = List<PointD>;
+  using PathsD = List<List<PointD>>;
 
   public static class ClipperFunc
   {

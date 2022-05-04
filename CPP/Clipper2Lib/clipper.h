@@ -101,6 +101,25 @@ namespace Clipper2Lib {
     return BooleanOp(ClipType::Xor, fillrule, subjects, clips);
   }
 
+  inline Path64 ScalePath(const Path64 path, double scale)
+  {
+    Path64 result;
+    result.reserve(path.size());
+    for (const Point64 pt : path)
+      result.push_back(pt * scale);
+    return result;
+  }
+
+  inline Paths64 ScalePaths(const Paths64 paths, double scale)
+  {
+    Paths64 result;
+    result.reserve(paths.size());
+    for (const Path64 path : paths)
+      result.push_back(ScalePath(path, scale));
+    return result;
+  }
+
+
   namespace details {
 
     static void AddPolyNodeToPaths(const PolyPath64& polytree, Paths64& paths)

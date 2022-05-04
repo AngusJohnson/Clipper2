@@ -1,7 +1,7 @@
 ﻿/*******************************************************************************
 * Author    :  Angus Johnson                                                   *
 * Version   :  10.0 (beta) - also known as Clipper2                            *
-* Date      :  17 April 2022                                                   *
+* Date      :  4 May 2022                                                      *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  Offsets both open and closed paths (i.e. polylines & polygons). *
@@ -14,6 +14,11 @@ using System.Runtime.CompilerServices;
 
 namespace Clipper2Lib
 {
+
+  using Path64 = List<Point64>;
+  using Paths64 = List<List<Point64>>;
+  using PathD = List<PointD>;
+  using PathsD = List<List<PointD>>;
   public enum JoinType
   {
     Square,

@@ -10,9 +10,9 @@
 
 #include <cmath>
 
-#include "clipper.h"
 #include "clipper.core.h"
 #include "clipper.engine.h"
+#include "clipper.offset.h"
 
 namespace Clipper2Lib {
 

@@ -334,7 +334,7 @@ inline double Area(const Path64& path)
 	for (path_iter = path.cbegin(); path_iter != path.cend();
 		path_iter_last = path_iter, ++path_iter)
 	{
-		a += static_cast<double>(path_iter_last->y - path_iter->y) * 
+		a += static_cast<double>(path_iter_last->y - path_iter->y) *
 			(path_iter_last->x + path_iter->x);
 	}
 #ifdef REVERSE_ORIENTATION

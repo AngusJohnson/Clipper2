@@ -3,7 +3,7 @@ unit Clipper.Engine;
 (*******************************************************************************
 * Author    :  Angus Johnson                                                   *
 * Version   :  10.0 (beta) - aka Clipper2                                      *
-* Date      :  2 May 2022                                                      *
+* Date      :  4 May 2022                                                      *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  This is the main polygon clipping module                        *
@@ -3744,47 +3744,48 @@ begin
       setLength(openPaths, FOutRecList.Count);
     cntOpen := 0;
     for i := 0 to FOutRecList.Count -1 do
-      if Assigned(FOutRecList[i]) then
+    begin
+      outRec := FOutRecList[i];
+      if not Assigned(outRec) then Continue;
+
+      //make sure outer/owner paths preceed their inner paths ...
+      if assigned(outRec.Owner) and (outRec.Owner.Idx > outRec.Idx) then
       begin
+        j := outRec.Owner.Idx;
+        outRec.idx := j;
+        FOutRecList[i] := FOutRecList[j];
+        FOutRecList[j] := outRec;
         outRec := FOutRecList[i];
-
-        //make sure outer/owner paths preceed their inner paths ...
-        if assigned(outRec.Owner) and (outRec.Owner.Idx > outRec.Idx) then
-        begin
-          j := outRec.Owner.Idx;
-          outRec.idx := j;
-          FOutRecList[i] := FOutRecList[j];
-          FOutRecList[j] := outRec;
-          outRec := FOutRecList[i];
-          outRec.Idx := i;
-        end;
-
-        if not assigned(outRec.Pts) then Continue;
-        isOpenPath := IsOpen(outRec);
-        if not BuildPath(outRec.Pts.Next, isOpenPath, path) then
-          Continue;
-
-        if isOpenPath then
-        begin
-          openPaths[cntOpen] := path;
-          inc(cntOpen);
-          Continue;
-        end;
-        //update ownership ...
-        while assigned(outRec.Owner) and not assigned(outRec.Owner.Pts) do
-          outRec.Owner := outRec.Owner.Owner;
-        if assigned(outRec.Owner) and (outRec.Owner.State = outRec.State) then
-        begin
-          if IsOuter(outRec) then outRec.Owner := nil
-          else outRec.Owner := outRec.Owner.Owner;
-        end;
-
-        if assigned(outRec.Owner) and assigned(outRec.Owner.PolyPath) then
-          ownerPP := outRec.Owner.PolyPath else
-          ownerPP := polytree;
-
-        outRec.PolyPath := ownerPP.AddChild(path);
+        outRec.Idx := i;
       end;
+
+      if not assigned(outRec.Pts) then Continue;
+      isOpenPath := IsOpen(outRec);
+      if not BuildPath(outRec.Pts, isOpenPath, path) then
+        Continue;
+
+      if isOpenPath then
+      begin
+        openPaths[cntOpen] := path;
+        inc(cntOpen);
+        Continue;
+      end;
+
+      //update ownership ...
+      while assigned(outRec.Owner) and not assigned(outRec.Owner.Pts) do
+        outRec.Owner := outRec.Owner.Owner;
+      if assigned(outRec.Owner) and (outRec.Owner.State = outRec.State) then
+      begin
+        if IsOuter(outRec) then outRec.Owner := nil
+        else outRec.Owner := outRec.Owner.Owner;
+      end;
+
+      if assigned(outRec.Owner) and assigned(outRec.Owner.PolyPath) then
+        ownerPP := outRec.Owner.PolyPath else
+        ownerPP := polytree;
+
+      outRec.PolyPath := ownerPP.AddChild(path);
+    end;
     setLength(openPaths, cntOpen);
   except
   end;
