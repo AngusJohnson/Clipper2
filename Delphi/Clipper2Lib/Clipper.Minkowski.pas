@@ -1,4 +1,4 @@
-﻿unit Clipper.Minkowski;
+unit Clipper.Minkowski;
 
 (*******************************************************************************
 * Author    :  Angus Johnson                                                   *

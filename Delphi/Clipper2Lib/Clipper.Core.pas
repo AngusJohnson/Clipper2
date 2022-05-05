@@ -1,4 +1,4 @@
-﻿unit Clipper.Core;
+unit Clipper.Core;
 
 (*******************************************************************************
 * Author    :  Angus Johnson                                                   *
