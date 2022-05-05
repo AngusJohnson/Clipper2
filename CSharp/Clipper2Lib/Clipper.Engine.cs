@@ -850,6 +850,7 @@ namespace Clipper2Lib
           else if (prev_v!.pt != pt) //ie skips duplicates
           {
             curr_v = new Vertex(pt, VertexFlags.None, prev_v);
+            _vertexList.Add(v0);
             prev_v.next = curr_v;
             prev_v = curr_v;
           }
