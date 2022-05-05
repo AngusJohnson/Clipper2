@@ -1414,7 +1414,7 @@ var
 begin
   SetLength(pp, 1);
   pp[0] := path;
-  AddPathsToVertexList(pp, pathType, isOpen);
+  AddPaths(pp, pathType, isOpen);
 end;
 //------------------------------------------------------------------------------
 

@@ -830,105 +830,94 @@ namespace Clipper2Lib
       _minimaList.Add(lm);
     }
 
-    protected void AddPathToVertexList(Path64 path, PathType polytype, bool isOpen)
+    protected void AddPathsToVertexList(Paths64 paths, PathType polytype, bool isOpen)
     {
-      int pathCnt = path.Count;
-      if (!isOpen)
-      {
-        while (pathCnt > 1 && (path[pathCnt - 1] == path[0])) --pathCnt;
-        if (pathCnt < 2) return;
-      }
-      else if (pathCnt == 0) return;
+      int pathCnt = paths.Count, totalVertCnt = 0;
+      foreach (Path64 p in paths) totalVertCnt += p.Count;
+      _vertexList.Capacity = _vertexList.Count + totalVertCnt;
 
-      _vertexList.Capacity = _vertexList.Count + pathCnt;
-      Vertex? vCurr, vPrev, v0 = new Vertex(path[0], VertexFlags.None, null);
-      _vertexList.Add(v0);
-      vPrev = v0;
-      for (int i = 1; i < pathCnt; i++)
+      foreach (Path64 path in paths)
       {
-        vCurr = new Vertex(path[i], VertexFlags.None, vPrev);
-        vPrev.next = vCurr;
-        _vertexList.Add(vCurr);
-        vPrev = vCurr;
-      }
-
-      v0.prev = vPrev;
-      vPrev.next = v0;
-
-      bool goingUp, goingUp0;
-      if (isOpen)
-      {
-        vCurr = v0.next;
-        while (vCurr != v0 && vCurr!.pt.Y == v0.pt.Y) vCurr = vCurr.next;
-        goingUp = vCurr.pt.Y <= v0.pt.Y;
-        if (goingUp)
+        Vertex? v0 = null, prev_v = null, curr_v;
+        foreach (Point64 pt in path)
         {
-          v0.flags = VertexFlags.OpenStart;
-          AddLocMin(v0, polytype, true);
+          if (v0 == null)
+          {
+            v0 = new Vertex(pt, VertexFlags.None, null);
+            _vertexList.Add(v0);
+            prev_v = v0;
+          }
+          else if (prev_v!.pt != pt) //ie skips duplicates
+          {
+            curr_v = new Vertex(pt, VertexFlags.None, prev_v);
+            prev_v.next = curr_v;
+            prev_v = curr_v;
+          }
         }
-        else
-          v0.flags = VertexFlags.OpenStart | VertexFlags.LocalMax;
-      }
-      else if (v0.pt.Y == vPrev.pt.Y)
-      {
-        vPrev = vPrev.prev;
-        while (vPrev != v0 && vPrev!.pt.Y == v0.pt.Y) vPrev = vPrev.prev;
-        if (vPrev == v0) return; //i.e. a flat closed path
-        goingUp = v0.pt.Y < vPrev.pt.Y; //i.e. direction leading up to v0
-      }
-      else
-        goingUp = v0.pt.Y < vPrev.pt.Y; //i.e. direction leading up to v0
+        if (prev_v == null || prev_v.prev == null) continue;
+        if (!isOpen && prev_v.pt == v0!.pt) prev_v = prev_v.prev;
+        prev_v.next = v0;
+        v0!.prev = prev_v;
+        if (!isOpen && prev_v.next == prev_v.prev) continue;
 
-      goingUp0 = goingUp;
-      vPrev = v0;
-      vCurr = v0.next;
-      //NB polygon orientation is determined later (see InsertLocalMinimaIntoAEL).
-      while (vCurr != v0)
-      {
-        if (vCurr!.pt == vPrev.pt)
+        //OK, we have a valid path
+        bool going_up, going_up0;
+        if (isOpen)
         {
-          vCurr = vCurr.next;
-          continue;
+          curr_v = v0!.next;
+          while (curr_v != v0 && curr_v!.pt.Y == v0.pt.Y)
+            curr_v = curr_v.next;
+          going_up = curr_v.pt.Y <= v0.pt.Y;
+          if (going_up)
+          {
+            v0.flags = VertexFlags.OpenStart;
+            AddLocMin(v0, polytype, true);
+          }
+          else
+            v0.flags = VertexFlags.OpenStart | VertexFlags.LocalMax;
+        }
+        else //closed path
+        {
+          prev_v = v0!.prev;
+          while (prev_v != v0 && prev_v!.pt.Y == v0.pt.Y)
+            prev_v = prev_v.prev;
+          if (prev_v == v0)
+            continue; //only open paths can be completely flat
+          going_up = prev_v.pt.Y > v0.pt.Y;
         }
 
-        if (vPrev.next != vCurr)
+        going_up0 = going_up;
+        prev_v = v0;
+        curr_v = v0.next;
+        while (curr_v != v0)
         {
-          //i.e. remove duplicates
-          vPrev.next = vCurr;
-          vCurr.prev = vPrev;
+          if (curr_v!.pt.Y > prev_v.pt.Y && going_up)
+          {
+            prev_v.flags = (prev_v.flags | VertexFlags.LocalMax);
+            going_up = false;
+          }
+          else if (curr_v.pt.Y < prev_v.pt.Y && !going_up)
+          {
+            going_up = true;
+            AddLocMin(prev_v, polytype, isOpen);
+          }
+          prev_v = curr_v;
+          curr_v = curr_v.next;
         }
 
-        if (goingUp && vCurr.pt.Y > vPrev.pt.Y)
+        if (isOpen)
         {
-          vPrev.flags |= VertexFlags.LocalMax;
-          goingUp = false;
+          prev_v.flags = prev_v.flags | VertexFlags.OpenEnd;
+          if (going_up)
+            prev_v.flags = prev_v.flags | VertexFlags.LocalMax;
+          else
+            AddLocMin(prev_v, polytype, isOpen);
         }
-        else if (!goingUp && vCurr.pt.Y < vPrev.pt.Y)
+        else if (going_up != going_up0)
         {
-          AddLocMin(vPrev, polytype, isOpen);
-          goingUp = true;
+          if (going_up0) AddLocMin(prev_v, polytype, false);
+          else prev_v.flags = prev_v.flags | VertexFlags.LocalMax;
         }
-
-        vPrev = vCurr;
-        vCurr = vCurr.next;
-      }
-
-      //close the double-linked loop
-      vPrev.next = v0;
-      v0.prev = vPrev;
-
-      if (isOpen)
-      {
-        vPrev.flags |= VertexFlags.OpenEnd;
-        if (goingUp)
-          vPrev.flags |= VertexFlags.LocalMax;
-        else
-          AddLocMin(vPrev, polytype, isOpen);
-      }
-      else if (goingUp != goingUp0)
-      {
-        if (goingUp0) AddLocMin(vPrev, polytype, isOpen);
-        else vPrev.flags |= VertexFlags.LocalMax;
       }
     }
 
@@ -949,17 +938,16 @@ namespace Clipper2Lib
 
     protected void AddPath(Path64 path, PathType polytype, bool isOpen = false)
     {
-      if (isOpen) _hasOpenPaths = true;
-      _isSortedMinimaList = false;
-      AddPathToVertexList(path, polytype, isOpen);
+      Paths64 tmp = new Paths64(1);
+      tmp.Add(path);
+      AddPaths(tmp, polytype, isOpen);
     }
 
     protected void AddPaths(Paths64 paths, PathType polytype, bool isOpen = false)
     {
       if (isOpen) _hasOpenPaths = true;
       _isSortedMinimaList = false;
-      foreach (Path64 t in paths)
-        AddPathToVertexList(t, polytype, isOpen);
+      AddPathsToVertexList(paths, polytype, isOpen);
     }
 
     private bool IsContributingClosed(Active ae)
