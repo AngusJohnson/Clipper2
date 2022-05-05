@@ -141,6 +141,7 @@ namespace Clipper2Lib
       {
         //clean up self-intersections ...
         ClipperD c = new ClipperD(RoundingDecimalPrecision);
+        c.PreserveCollinear = false;
         c.AddSubject(solution);
         if (_pathGroups[0]._pathsReversed)
           c.Execute(ClipType.Union, FillRule.Negative, solution);
@@ -464,6 +465,7 @@ namespace Clipper2Lib
       {
         //clean up self-intersections ...
         ClipperD c = new ClipperD(RoundingDecimalPrecision);
+        c.PreserveCollinear = false;
         c.AddSubject(group._outPaths);
         if (group._pathsReversed)
           c.Execute(ClipType.Union, FillRule.Negative, group._outPaths);

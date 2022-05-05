@@ -211,6 +211,9 @@ namespace Clipper2Lib {
 		void DeleteJoin(Joiner* joiner);
 		void ProcessJoinerList();
 		OutRec* ProcessJoin(Joiner* joiner);
+		virtual bool ExecuteInternal(ClipType ct, FillRule ft);
+		void BuildPaths(Paths64& solutionClosed, Paths64* solutionOpen);
+		void BuildTree(PolyPath64& polytree, Paths64& open_paths);
 #ifdef USINGZ
 		ZFillCallback zfill_func_; //custom callback 
 		void SetZ(const Active& e1, const Active& e2, Point64& pt);
@@ -220,9 +223,6 @@ namespace Clipper2Lib {
 		void CleanUp();  //unlike Clear, CleanUp preserves added paths
 		void AddPath(const Path64& path, PathType polytype, bool is_open);
 		void AddPaths(const Paths64& paths, PathType polytype, bool is_open);
-		virtual bool ExecuteInternal(ClipType ct, FillRule ft);
-		bool BuildPaths(Paths64& solutionClosed, Paths64* solutionOpen);
-		void BuildTree(PolyPath64& polytree, Paths64& open_paths);
 
 		virtual bool Execute(ClipType clip_type,
 			FillRule fill_rule, Paths64& solution_closed);

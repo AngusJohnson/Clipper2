@@ -3272,11 +3272,14 @@ namespace Clipper2Lib
         int cnt = PointCount(op);
         if (cnt < 2) return false;
         path.Clear();
-        Point64 lastPt = op.pt;
-        path.Add(lastPt);
 #if REVERSE_ORIENTATION
         op = op.next;
+        Point64 lastPt = op.pt;
+        path.Add(lastPt);
+        op = op.next;
 #else
+        Point64 lastPt = op.pt;
+        path.Add(lastPt);
         op = op.prev;
 #endif
         for (int i = 1; i < cnt; i++)

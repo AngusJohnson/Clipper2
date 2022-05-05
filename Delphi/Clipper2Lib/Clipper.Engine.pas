@@ -174,7 +174,7 @@ type
     procedure DisposeScanLineList;
     procedure DisposeOutRecsAndJoiners;
     procedure DisposeVerticesAndLocalMinima;
-    procedure AddPathToVertexList(const p: TPath64;
+    procedure AddPathsToVertexList(const paths: TPaths64;
       polyType: TPathType; isOpen: Boolean);
     function  IsContributingClosed(e: PActive): Boolean;
     function  IsContributingOpen(e: PActive): Boolean;
@@ -686,10 +686,12 @@ begin
   end;
 
   setLength(path, cnt);
-    path[0] := op.Pt;
 {$IFDEF REVERSE_ORIENTATION}
   op := op.Next;
+  path[0] := op.Pt;
+  op := op.Next;
 {$ELSE}
+  path[0] := op.Pt;
   op := op.Prev;
 {$ENDIF}
   j := 0;
@@ -1278,23 +1280,12 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-procedure SetVertex(v, prevV: PVertex; const point: TPoint64);
-  {$IFDEF INLINING} inline; {$ENDIF}
-begin
-  v.pt := point;
-  v.Flags := [];
-  if assigned(prevV) then
-    prevV.Next := v;
-  v.Next := nil;
-  v.Prev := prevV;
-end;
-//------------------------------------------------------------------------------
-
-procedure TClipperBase.AddPathToVertexList(const p: TPath64;
+procedure TClipperBase.AddPathsToVertexList(const paths: TPaths64;
   polyType: TPathType; isOpen: Boolean);
 var
-  i, highI: integer;
-  va0, vaCurr, vaPrev: PVertex;
+  i, j, len, totalVerts: integer;
+  p: PPoint64;
+  v, va0, vaCurr, vaPrev: PVertex;
   ascending, ascending0: Boolean;
 
   procedure AddLocMin(vert: PVertex);
@@ -1312,100 +1303,127 @@ var
   //---------------------------------------------------------
 
 begin
-  highI := high(p);
-  if not isOpen then
-  begin
-    while (highI > 0) and PointsEqual(p[highI], p[0]) do dec(highI);
-    if (highI < 2) then Exit;
-  end
-  else if (highI < 1) then Exit;
+  //count the total (maximum) number of vertices required
+  totalVerts := 0;
+  for i := 0 to High(paths) do
+    totalVerts := totalVerts + Length(paths[i]);
+  if (totalVerts = 0) then Exit;
+  //allocate memory
+  GetMem(v, sizeof(TVertex) * totalVerts);
+  FVertexArrayList.Add(v);
 
-  GetMem(va0, sizeof(TVertex) * (highI +1));
-  FVertexArrayList.Add(va0);
-
-  SetVertex(va0, nil, p[0]);
-
-  if isOpen then
+  for i := 0 to High(paths) do
   begin
-    i := 1;
-    while (i < highI) and (p[i].Y = p[0].Y) do inc(i);
-    ascending := p[i].Y <= p[0].Y;
-    if ascending then
-    begin
-      va0.Flags := [vfOpenStart];
-      AddLocMin(va0);
-    end else
-      va0.Flags := [vfOpenStart, vfLocMax];
-  end
-  else if p[0].Y = p[highI].Y then
-  begin
-    //since path[0] and path[highI] are horizontal
-    //find the first prior non-horizontal pt
-    i := (highI -1);
-    while (i > 0) and (p[i].Y = p[highI].Y) do dec(i);
-    if (i = 0) then Exit; //quit as path is entirely horizontal
-    //now get the initial winding direction
-    ascending := p[0].Y < p[i].Y;
-  end else
-    ascending := p[0].Y < p[highI].Y;
-
-  ascending0 := ascending; //save the initial winding direction
-  vaCurr := va0;
-  for i := 1 to highI do
-  begin
-    if PointsEqual(p[i], vaCurr.pt) then Continue; //skip duplicate
+    len := Length(paths[i]);
+    if len = 0 then Continue;
+    p := @paths[i][0];
+    va0 := v; vaCurr := v;
+    vaCurr.Pt := p^;
+    inc(p);
+    vaCurr.Flags := [];
     vaPrev := vaCurr;
     inc(vaCurr);
-    SetVertex(vaCurr, vaPrev, p[i]);
-
-    if ascending and (vaCurr.pt.Y > vaPrev.pt.Y) then
+    for j := 1 to len -1 do
     begin
-      Include(vaPrev.Flags, vfLocMax);
-      ascending := false;
-    end
-    else if not ascending and (vaCurr.pt.Y < vaPrev.pt.Y) then
-    begin
-      AddLocMin(vaPrev);
-      ascending := true;
+      if PointsEqual(vaPrev.Pt, p^) then
+      begin
+        inc(p);
+        Continue; //skips duplicates
+      end;
+      vaPrev.Next := vaCurr;
+      vaCurr.Prev := vaPrev;
+      vaCurr.Pt := p^;
+      vaCurr.Flags := [];
+      vaPrev := vaCurr;
+      inc(vaCurr);
+      inc(p);
     end;
-  end;
+    if not Assigned(vaPrev.Prev) then Continue;
+    if not isOpen and PointsEqual(vaPrev.Pt, va0.Pt) then
+      vaPrev := vaPrev.Prev;
 
-  vaCurr.Next := va0;
-  va0.Prev := vaCurr;
-  if isOpen then
-  begin
-    Include(vaCurr.Flags, vfOpenEnd);
-    if ascending then
-      Include(vaCurr.Flags, vfLocMax) else
-      AddLocMin(vaCurr);
-  end
-  else if ascending0 <> ascending then
-  begin
-    if ascending0 then
-      AddLocMin(vaCurr) else
-      Include(vaCurr.Flags, vfLocMax);
+    vaPrev.Next := va0;
+    va0.Prev := vaPrev;
+    v := vaCurr; //ie get ready for next path
+    if isOpen and (va0.Next = va0.Prev) then Continue;
+
+    //now find and assign local minima
+    if (isOpen) then
+    begin
+      vaCurr := va0.Next;
+      while (vaCurr <> va0) and (vaCurr.Pt.Y = va0.Pt.Y) do
+        vaCurr := vaCurr.Next;
+      ascending := vaCurr.Pt.Y <= va0.Pt.Y;
+      if (ascending) then
+      begin
+        va0.Flags := [vfOpenStart];
+        AddLocMin(va0);
+      end
+      else
+        va0.Flags := [vfOpenStart, vfLocMax];
+    end else
+    begin
+      //closed path
+      vaPrev := va0.Prev;
+      while (vaPrev <> va0) and (vaPrev.Pt.Y = va0.Pt.Y) do
+        vaPrev := vaPrev.Prev;
+      if (vaPrev = va0) then
+        Continue; //only open paths can be completely flat
+      ascending := vaPrev.Pt.Y > va0.Pt.Y;
+    end;
+
+    ascending0 := ascending;
+    vaPrev := va0;
+    vaCurr := va0.Next;
+    while (vaCurr <> va0) do
+    begin
+      if (vaCurr.Pt.Y > vaPrev.Pt.Y) and ascending then
+      begin
+        Include(vaPrev.flags, vfLocMax);
+        ascending := false;
+      end
+      else if (vaCurr.Pt.Y < vaPrev.Pt.Y) and not ascending then
+      begin
+        ascending := true;
+        AddLocMin(vaPrev);
+      end;
+      vaPrev := vaCurr;
+      vaCurr := vaCurr.Next;
+    end;
+
+    if (isOpen) then
+    begin
+      Include(vaPrev.flags, vfOpenEnd);
+      if ascending then
+        Include(vaPrev.flags, vfLocMax) else
+        AddLocMin(vaPrev);
+    end
+    else if (ascending <> ascending0) then
+    begin
+      if (ascending0) then AddLocMin(vaPrev)
+      else Include(vaPrev.flags, vfLocMax);
+    end;
   end;
 end;
 //------------------------------------------------------------------------------
 
 procedure TClipperBase.AddPath(const path: TPath64;
   pathType: TPathType; isOpen: Boolean);
+var
+  pp: TPaths64;
 begin
-  if isOpen then FHasOpenPaths := true;
-  FLocMinListSorted := false;
-  AddPathToVertexList(path, pathType, isOpen);
+  SetLength(pp, 1);
+  pp[0] := path;
+  AddPathsToVertexList(pp, pathType, isOpen);
 end;
 //------------------------------------------------------------------------------
 
 procedure TClipperBase.AddPaths(const paths: TPaths64;
   pathType: TPathType; isOpen: Boolean);
-var
-  i: integer;
 begin
   if isOpen then FHasOpenPaths := true;
   FLocMinListSorted := false;
-  for i := 0 to High(paths) do
-    AddPathToVertexList(paths[i], pathType, isOpen);
+  AddPathsToVertexList(paths, pathType, isOpen);
 end;
 //------------------------------------------------------------------------------
 

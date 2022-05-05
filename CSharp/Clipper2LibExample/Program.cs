@@ -1,14 +1,13 @@
 ﻿using System;
+using System.IO;
 using System.Collections.Generic;
 using Clipper2Lib;
 
 namespace Clipper2LibExample
 {
 
-  using Path64 = List<Point64>;
   using Paths64 = List<List<Point64>>;
   using PathD = List<PointD>;
-  using PathsD = List<List<PointD>>;
 
   internal class Program
   {
@@ -30,6 +29,14 @@ namespace Clipper2LibExample
       return result;
     }
 
+    internal static void OpenFile(string filename)
+    {
+      string path = Path.GetFullPath(filename);
+      System.Diagnostics.Process p = new System.Diagnostics.Process();
+      p.StartInfo = new System.Diagnostics.ProcessStartInfo(path) { UseShellExecute = true };
+      p.Start();
+    }
+
     internal static void MakeSvg(string caption, string filename,
       Paths64 subj, Paths64 openSubj, Paths64 clip,
       Paths64 solution, FillRule fill, bool hideSolutionCoords = false)
@@ -45,6 +52,8 @@ namespace Clipper2LibExample
       if (solution != null)
         svg.AddPaths(solution, false, 0x4000FF00, 0x80000000, 1.2, !hideSolutionCoords);
       svg.SaveToFile(filename, 800, 600);
+
+      OpenFile(filename);
     }
 
     public static void Main()
@@ -97,10 +106,7 @@ namespace Clipper2LibExample
       MakeSvg("Sample 9 - inflate:10; end:joined", "../../../solution9.svg",
         null, subj, null, solution9, FillRule.EvenOdd);
 
-      //PathD pattern = ClipperFunc.MakePath(new double[] { -7,0, 0,-10, 7,0, 0,10 }); //diamond
-      //PathD pattern = ClipperFunc.MakePath(new double[] { -10,-5, 10,-5, 10,5, -10,5 }); //rectangle
       PathD pattern = Ellipse(new RectD(-10, -10, 10, 10)); //circle
-
       PathD path = ClipperFunc.MakePath(new double[] { 0, 0, 100, 200, 200, 0 });
       Paths64 solution10 = ClipperFunc.Paths64(Minkowski.Sum(pattern, path, true));
       MakeSvg("Sample 10 - Minkowski.Sum", "../../../solution10.svg",

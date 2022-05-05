@@ -3163,76 +3163,64 @@ namespace Clipper2Lib {
 
 	bool BuildPath(OutPt& op, bool isOpen, Path64& path)
 	{
-		try
+		int cnt = PointCount(&op);
+		if (cnt < 2) return false;
+		path.resize(0);
+		path.reserve(cnt);
+#ifdef REVERSE_ORIENTATION
+		op = op.next;
+		Point64 lastPt = op.pt;
+		path.push_back(lastPt);
+		OutPt* op2 = op.next;
+#else
+		Point64 lastPt = op.pt;
+		path.push_back(lastPt);
+		OutPt* op2 = op.prev;
+#endif
+		while (op2 != &op)
 		{
-			int cnt = PointCount(&op);
-			if (cnt < 2) return false;
-			path.resize(0);
-			path.reserve(cnt);
-			Point64 lastPt = op.pt;
-			path.push_back(lastPt);
+			if (op2->pt != lastPt)
 			{
-#ifdef REVERSE_ORIENTATION
-				OutPt* op2 = op.next;
-#else
-				OutPt* op2 = op.prev;
-#endif
-				while (op2 != &op)
-				{
-					if (op2->pt != lastPt)
-					{
-						lastPt = op2->pt;
-						path.push_back(lastPt);
-					}
-#ifdef REVERSE_ORIENTATION
-					op2 = op2->next;
-#else
-					op2 = op2->prev;
-#endif
-				}
+				lastPt = op2->pt;
+				path.push_back(lastPt);
 			}
+#ifdef REVERSE_ORIENTATION
+			op2 = op2->next;
+#else
+			op2 = op2->prev;
+#endif
 		}
-		catch (...)
-		{
-			return false;
-		}
-
-		return true;
+	return true;
 	}
 	//------------------------------------------------------------------------------
 
-	bool ClipperBase::BuildPaths(Paths64& solutionClosed, Paths64* solutionOpen)
+	void ClipperBase::BuildPaths(Paths64& solutionClosed, Paths64* solutionOpen)
 	{
-		try
+		solutionClosed.resize(0);
+		//solutionClosed.reserve(outrec_list_.size());
+		if (solutionOpen)
 		{
-			solutionClosed.resize(0);
-			//solutionClosed.reserve(outrec_list_.size());
-			if (solutionOpen)
-			{
-				solutionOpen->resize(0);
-				solutionOpen->reserve(outrec_list_.size());
-			}
-			for(OutRec* outrec : outrec_list_)
-			{
-				if (outrec->pts == NULL) continue;
-				Path64 path;
-				if (solutionOpen && outrec->state == OutRecState::Open)
-				{
-					if (BuildPath(*outrec->pts, true, path))
-						solutionOpen->emplace_back(std::move(path));
-					path.resize(0);
-				}
-				else
-				{
-					if (BuildPath(*outrec->pts, false, path))
-						solutionClosed.emplace_back(std::move(path));
-					path.resize(0);
-				}
-				 
-			}
+			solutionOpen->resize(0);
+			solutionOpen->reserve(outrec_list_.size());
 		}
-		catch(...) { return false; }		
-		return true;
+		for(OutRec* outrec : outrec_list_)
+		{
+			if (outrec->pts == NULL) continue;
+			Path64 path;
+			if (solutionOpen && outrec->state == OutRecState::Open)
+			{
+				if (BuildPath(*outrec->pts, true, path))
+					solutionOpen->emplace_back(std::move(path));
+				path.resize(0);
+			}
+			else
+			{
+				if (BuildPath(*outrec->pts, false, path))
+					solutionClosed.emplace_back(std::move(path));
+				path.resize(0);
+			}
+				 
+		}
 	}
 	//------------------------------------------------------------------------------
 

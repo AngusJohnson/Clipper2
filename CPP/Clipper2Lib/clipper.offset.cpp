@@ -347,6 +347,7 @@ void ClipperOffset::DoGroupOffset(PathGroup& group, double delta)
 	{
 		//clean up self-intersections ...
 		ClipperD c(0);
+		c.PreserveCollinear = false;
 		c.AddSubject(group.paths_out_);
 		if (group.is_reversed)
 			c.Execute(ClipType::Union, FillRule::Negative, group.paths_out_);
@@ -389,6 +390,7 @@ PathsD ClipperOffset::Execute(double delta)
 	{
 		//clean up self-intersections ...
 		ClipperD c(0);
+		c.PreserveCollinear = false;
 		c.AddSubject(result);
 		if (groups_[0].is_reversed)
 			c.Execute(ClipType::Union, FillRule::Negative, result);

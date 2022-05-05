@@ -333,6 +333,7 @@ begin
     //clean up self-intersections ...
     with TClipperD.Create(fPrecision) do
     try
+      PreserveCollinear := false;
       AddSubject(fOutPaths);
       if pathgroup.reversed then
         Execute(ctUnion, frNegative, fOutPaths) else
@@ -488,6 +489,7 @@ begin
     //clean up self-intersections ...
     with TClipperD.Create(fPrecision) do
     try
+      PreserveCollinear := false;
       AddSubject(fSolution);
       if TPathGroup(fInGroups[0]).reversed then
         Execute(ctUnion, frNegative, fSolution) else
