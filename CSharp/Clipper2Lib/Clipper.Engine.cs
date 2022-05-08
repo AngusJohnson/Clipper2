@@ -573,7 +573,8 @@ namespace Clipper2Lib
       OutPt op2 = op;
       do
       {
-        area += (double) (op2.pt.Y - op2.prev.pt.Y) * (op2.pt.X + op2.prev.pt.X);
+        area += (double)(op2.pt.Y - op2.prev.pt.Y) * 
+          (op2.pt.X + op2.prev.pt.X);
         op2 = op2.next!;
       } while (op2 != op);
 
@@ -2869,21 +2870,21 @@ namespace Clipper2Lib
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static double DistanceFromLineSqrd(Point64 pt, Point64 linePt1, Point64 linePt2)
     {
-      //perpendicular distance of point (x³,y³) = (Ax³ + By³ + C)/Sqrt(A² + B²)
-      //see http://en.wikipedia.org/wiki/Perpendicular_distance
+      //perpendicular distance of point (x0,y0) = (a*x0 + b*y0 + C)/Sqrt(a*a + b*b)
+      //where ax + by +c = 0 is the equation of the line
+      //see https://en.wikipedia.org/wiki/Distance_from_a_point_to_a_line
       double a = (linePt1.Y - linePt2.Y);
       double b = (linePt2.X - linePt1.X);
       double c = a * linePt1.X + b * linePt1.Y;
-      c = a * pt.X + b * pt.Y - c;
-      return (c * c) / (a * a + b * b);
+      double q = a * pt.X + b * pt.Y - c;
+      return (q * q) / (a * a + b * b);
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static double DistanceSqr(Point64 pt1, Point64 pt2)
     {
-      //nb: casting to double is important here!
-      return (double)(pt1.X - pt2.X) * (double) (pt1.X - pt2.X) +
-             (double) (pt1.Y - pt2.Y) * (double) (pt1.Y - pt2.Y);
+      return (double) (pt1.X - pt2.X) * (pt1.X - pt2.X) +
+             (double) (pt1.Y - pt2.Y) * (pt1.Y - pt2.Y);
     }
 
     private OutRec ProcessJoin(Joiner j)
@@ -3180,8 +3181,9 @@ namespace Clipper2Lib
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static double AreaTriangle(Point64 pt1, Point64 pt2, Point64 pt3)
     {
-      return 0.5 * (pt1.X * (pt2.Y - pt3.Y) +
-                    pt2.X * (pt3.Y - pt1.Y) + pt3.X * (pt1.Y - pt2.Y));
+      return 0.5 * (pt1.X * (double)(pt2.Y - pt3.Y) +
+                    pt2.X * (double)(pt3.Y - pt1.Y) + 
+                    pt3.X * (double)(pt1.Y - pt2.Y));
     }
 
     private OutPt DoSplitOp(ref OutPt outRecOp, OutPt splitOp)
@@ -3594,8 +3596,8 @@ namespace Clipper2Lib
 #endif
 
       if (!success) return false;
-      ClipperFunc.ScalePaths(solClosed64, _invScale, ref solutionClosed);
-      ClipperFunc.ScalePaths(solOpen64, _invScale, ref solutionOpen);
+      solutionClosed = ClipperFunc.ScalePathsD(solClosed64, _invScale);
+      solutionOpen   = ClipperFunc.ScalePathsD(solOpen64,   _invScale);
       return true;
     }
 
@@ -3631,7 +3633,7 @@ namespace Clipper2Lib
       ClearSolution();
       if (!success) return false;
       if (oPaths.Count > 0)
-        ClipperFunc.ScalePaths(oPaths, _invScale, ref openPaths);
+        openPaths = ClipperFunc.ScalePathsD(oPaths, _invScale);
       return true;
     }
 
@@ -3705,7 +3707,7 @@ namespace Clipper2Lib
     {
       PolyPathBase newChild = new PolyPathD(this);
       (newChild as PolyPathD)!.Scale = Scale;
-      (newChild as PolyPathD)!.Polygon = ClipperFunc.ScalePath(p, 1 / Scale);
+      (newChild as PolyPathD)!.Polygon = ClipperFunc.ScalePathD(p, 1 / Scale);
       _childs.Add(newChild);
       return newChild;
     }

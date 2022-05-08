@@ -100,6 +100,12 @@ namespace Clipper2Lib
       Y = (long) Math.Round(pt.y);
     }
 
+    public Point64(Point64 pt, double scale)
+    {
+      X = (long) Math.Round(pt.X * scale);
+      Y = (long) Math.Round(pt.Y * scale);
+    }
+
     public Point64(PointD pt, double scale)
     {
       X = (long) Math.Round(pt.x * scale);
@@ -196,6 +202,12 @@ namespace Clipper2Lib
     {
       x = pt.X;
       y = pt.Y;
+    }
+
+    public PointD(PointD pt, double scale)
+    {
+      x = pt.x * scale;
+      y = pt.y * scale;
     }
 
     public PointD(Point64 pt, double scale)
@@ -430,8 +442,8 @@ namespace Clipper2Lib
         }
         else
         {
-          ip.x = (double) (ln1a.X + ln1b.X) / 2;
-          ip.y = (double) (ln1a.Y + ln1b.Y) / 2;
+          ip.x = (ln1a.X + ln1b.X) * 0.5;
+          ip.y = (ln1a.Y + ln1b.Y) * 0.5;
         }
       }
 
@@ -444,10 +456,12 @@ namespace Clipper2Lib
       double dy1 = seg1a.Y - seg1b.Y;
       double dx2 = seg2a.X - seg2b.X;
       double dy2 = seg2a.Y - seg2b.Y;
-      return (((dy1 * (seg2a.X - seg1a.X) - dx1 * (seg2a.Y - seg1a.Y)) *
-                  (dy1 * (seg2b.X - seg1a.X) - dx1 * (seg2b.Y - seg1a.Y)) < 0) &&
-              ((dy2 * (seg1a.X - seg2a.X) - dx2 * (seg1a.Y - seg2a.Y)) *
-                  (dy2 * (seg1b.X - seg2a.X) - dx2 * (seg1b.Y - seg2a.Y)) < 0));
+      return (((dy1 * (seg2a.X - seg1a.X) - 
+        dx1 * (seg2a.Y - seg1a.Y)) * (dy1 * (seg2b.X - seg1a.X) - 
+        dx1 * (seg2b.Y - seg1a.Y)) < 0) &&
+        ((dy2 * (seg1a.X - seg2a.X) - 
+        dx2 * (seg1a.Y - seg2a.Y)) * (dy2 * (seg1b.X - seg2a.X) - 
+        dx2 * (seg1b.Y - seg2a.Y)) < 0));
     }
 
   } //InternalClipperFuncs

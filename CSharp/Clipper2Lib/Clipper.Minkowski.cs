@@ -70,9 +70,9 @@ namespace Clipper2Lib
     public static PathsD Sum(PathD pattern, PathD path, bool isClosed, int decimalPlaces = 2)
     {
       double scale = Math.Pow(10, decimalPlaces);
-      Paths64 tmp = ClipperFunc.Union(MinkowskiInternal(ClipperFunc.Path64(pattern, scale),
-        ClipperFunc.Path64(path, scale), true, isClosed), FillRule.NonZero);
-      return ClipperFunc.PathsD(tmp, 1 / scale);
+      Paths64 tmp = ClipperFunc.Union(MinkowskiInternal(ClipperFunc.ScalePath64(pattern, scale),
+        ClipperFunc.ScalePath64(path, scale), true, isClosed), FillRule.NonZero);
+      return ClipperFunc.ScalePathsD(tmp, 1 / scale);
     }
 
     public static Paths64 Diff(Path64 pattern, Path64 path, bool isClosed)
@@ -83,9 +83,9 @@ namespace Clipper2Lib
     public static PathsD Diff(PathD pattern, PathD path, bool isClosed, int decimalPlaces = 2)
     {
       double scale = Math.Pow(10, decimalPlaces);
-      Paths64 tmp = ClipperFunc.Union(MinkowskiInternal(ClipperFunc.Path64(pattern, scale),
-        ClipperFunc.Path64(path, scale), false, isClosed), FillRule.NonZero);
-      return ClipperFunc.PathsD(tmp, 1 / scale);
+      Paths64 tmp = ClipperFunc.Union(MinkowskiInternal(ClipperFunc.ScalePath64(pattern, scale),
+        ClipperFunc.ScalePath64(path, scale), false, isClosed), FillRule.NonZero);
+      return ClipperFunc.ScalePathsD(tmp, 1 / scale);
     }
 
   }

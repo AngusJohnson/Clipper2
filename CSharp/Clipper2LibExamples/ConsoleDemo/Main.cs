@@ -11,7 +11,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Reflection;
-using System.Diagnostics; //for Stopwatch
+using System.Diagnostics;
 using Clipper2Lib;
 
 namespace ClipperDemo1
@@ -31,11 +31,11 @@ namespace ClipperDemo1
     //-----------------------------------------------------------------------
     //-----------------------------------------------------------------------
 
-    private enum DoCase { simple, timedRandom, fromSimpleFile, fromTestFile, fromResource };
+    private enum DoCase { simple, timedRandom, 
+      fromSimpleFile, fromTestFile, fromResource };
 
     public static void Main()
     {
-
       Paths64 subj = new Paths64();
       Paths64 subj_open = new Paths64();
       Paths64 clip = new Paths64();
@@ -47,22 +47,20 @@ namespace ClipperDemo1
 
       ClipType clipType = ClipType.Intersection;
       FillRule fillrule = FillRule.EvenOdd;
-      bool displaySolutionCoords = false;// true; //
+      bool displaySolutionCoords = false;//true;//
       int edgeCount = 1000; //for timed random simple benchmark
       /////////////////////////////////////////////////////////////////////////
       // choose your poison here ...
-      DoCase testCase = DoCase.fromResource;//simple;//timedRandom;//fromTestFile;//fromSimpleFile;//simple;//
+      DoCase testCase = DoCase.simple;//fromResource;//timedRandom;//fromTestFile;//fromSimpleFile;//simple;//
       /////////////////////////////////////////////////////////////////////////
 
       switch (testCase)
       {
         case DoCase.simple:
-          subj = new Paths64();
-          subj_open = new Paths64();
-          clip = new Paths64();
-          subj.Add(ClipperFunc.MakePath(new int[] { 0, 30, 0, 0, 48, 0, 48, 30, 0, 30 }));
-          clip.Add(ClipperFunc.MakePath(new int[] { 0, 13, 0, 21, 13, 21, 13, 30, 24, 30, 24, 21, 48, 21, 48, 13, 24, 13, 24, 0, 13, 0, 13, 13 }));
-          sol = ClipperFunc.Difference(subj, clip, FillRule.NonZero);
+          fillrule = FillRule.NonZero;
+          subj.Add(ClipperFunc.MakePath(new int[] { 100,50, 10,79, 65,2, 65,98, 10,21 }));
+          clip.Add(ClipperFunc.MakePath(new int[] { 98,63, 4,68, 77,8, 52,100, 19,12 }));
+          sol = ClipperFunc.Intersect(subj, clip, fillrule);
           break;
 
         case DoCase.fromResource:
@@ -148,9 +146,9 @@ namespace ClipperDemo1
           return;
       }
 
-      CreateDisplaySvg("..\\..\\clipperA.svg", caption, subj, subj_open, clip, null, null,
+      CreateDisplaySvg("..\\..\\..\\clipperA.svg", caption, subj, subj_open, clip, null, null,
         fillrule, displaySolutionCoords);
-      CreateDisplaySvg("..\\..\\clipperB.svg", caption, subj, subj_open, clip, sol, sol_open,
+      CreateDisplaySvg("..\\..\\..\\clipperB.svg", caption, subj, subj_open, clip, sol, sol_open,
         fillrule, displaySolutionCoords);
 
       GC.Collect();
@@ -432,6 +430,7 @@ namespace ClipperDemo1
     internal static void OpenFile(string filename)
     {
       string path = Path.GetFullPath(filename);
+      if (!File.Exists(path)) return;
       Process p = new Process();
       p.StartInfo = new ProcessStartInfo(path) { UseShellExecute = true };
       p.Start();
@@ -442,6 +441,8 @@ namespace ClipperDemo1
       Paths64 subj, Paths64 subj_open, Paths64 clip, Paths64 sol, Paths64 sol_open, 
       FillRule fillrule,  bool displaySolutionCoords)
     {
+      afilename = Path.GetFullPath(afilename);
+      if (File.Exists(afilename)) File.Delete(afilename);
       SimpleClipperSvgWriter svg = new SimpleClipperSvgWriter(fillrule);
       if (caption != "")
         svg.AddText(caption, margin, margin, 14, SimpleClipperSvgWriter.navy);
