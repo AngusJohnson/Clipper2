@@ -3,7 +3,7 @@ unit Clipper.SVG;
 (*******************************************************************************
 * Author    :  Angus Johnson                                                   *
 * Version   :  10.0 (beta) - aka Clipper2                                      *
-* Date      :  17 April 2022                                                   *
+* Date      :  7 May 2022                                                      *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  This module provides a very simple SVG Writer for Clipper2      *

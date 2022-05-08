@@ -1,7 +1,7 @@
 ﻿/*******************************************************************************
 * Author    :  Angus Johnson                                                   *
 * Version   :  10.0 (beta) - also known as Clipper2                            *
-* Date      :  4 May 2022                                                      *
+* Date      :  8 May 2022                                                      *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  This is the main polygon clipping module                        *
@@ -850,7 +850,7 @@ namespace Clipper2Lib
           else if (prev_v!.pt != pt) //ie skips duplicates
           {
             curr_v = new Vertex(pt, VertexFlags.None, prev_v);
-            _vertexList.Add(v0);
+            _vertexList.Add(curr_v);
             prev_v.next = curr_v;
             prev_v = curr_v;
           }

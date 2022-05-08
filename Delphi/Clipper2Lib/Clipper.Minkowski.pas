@@ -3,7 +3,7 @@ unit Clipper.Minkowski;
 (*******************************************************************************
 * Author    :  Angus Johnson                                                   *
 * Version   :  10.0 (beta) - aka Clipper2                                      *
-* Date      :  11 April 2022                                                   *
+* Date      :  7 May 2022                                                      *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  Minkowski Addition and Difference                               *
 * License   :  http://www.boost.org/LICENSE_1_0.txt                            *

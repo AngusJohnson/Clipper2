@@ -3,7 +3,7 @@ unit Clipper.Core;
 (*******************************************************************************
 * Author    :  Angus Johnson                                                   *
 * Version   :  10.0 (beta) - aka Clipper2                                      *
-* Date      :  11 April 2022                                                   *
+* Date      :  7 May 2022                                                      *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  Core Clipper Library module                                     *
 *              Contains structures and functions used throughout the library   *
@@ -95,16 +95,26 @@ type
 
 function Area(const path: TPath64): Double; overload;
 function Area(const paths: TPaths64): Double; overload;
+  {$IFDEF INLINING} inline; {$ENDIF}
 function Area(const path: TPathD): Double; overload;
 function Area(const paths: TPathsD): Double; overload;
+  {$IFDEF INLINING} inline; {$ENDIF}
 function IsClockwise(const path: TPath64): Boolean; overload;
+  {$IFDEF INLINING} inline; {$ENDIF}
 function IsClockwise(const path: TPathD): Boolean; overload;
+  {$IFDEF INLINING} inline; {$ENDIF}
 function PointInPolygon(const pt: TPoint64;
   const path: TPath64): TPointInPolygonResult;
 
 function CrossProduct(const pt1, pt2, pt3: TPoint64): double; overload;
+  {$IFDEF INLINING} inline; {$ENDIF}
 function CrossProduct(const pt1, pt2, pt3: TPointD): double; overload;
+  {$IFDEF INLINING} inline; {$ENDIF}
+function CrossProduct(vec1x, vec1y, vec2x, vec2y: double): double; overload;
+  {$IFDEF INLINING} inline; {$ENDIF}
+
 function DotProduct(const pt1, pt2, pt3: TPoint64): double;
+  {$IFDEF INLINING} inline; {$ENDIF}
 
 function DistanceSqr(const pt1, pt2: TPoint64): double; overload;
   {$IFDEF INLINING} inline; {$ENDIF}
@@ -113,7 +123,7 @@ function DistanceSqr(const pt1, pt2: TPointD): double; overload;
 function DistanceFromLineSqrd(const pt, linePt1, linePt2: TPoint64): double; overload;
 function DistanceFromLineSqrd(const pt, linePt1, linePt2: TPointD): double; overload;
 
-function SegmentsIntersect(const seg1a, seg1b, seg2a, seg2b: TPoint64): boolean;
+function SegmentsIntersect(const s1a, s1b, s2a, s2b: TPoint64): boolean;
 
 function PointsEqual(const pt1, pt2: TPoint64): Boolean; overload;
   {$IFDEF INLINING} inline; {$ENDIF}
@@ -121,9 +131,12 @@ function PointsNearEqual(const pt1, pt2: TPointD; distanceSqrd: double): Boolean
   {$IFDEF INLINING} inline; {$ENDIF}
 
 {$IFDEF USINGZ}
-function Point64(const X, Y: Int64; Z: Int64 = 0): TPoint64; overload; {$IFDEF INLINING} inline; {$ENDIF}
-function Point64(const X, Y: Double; Z: double = 0.0): TPoint64; overload; {$IFDEF INLINING} inline; {$ENDIF}
-function PointD(const X, Y: Double; Z: double = 0.0): TPointD; overload; {$IFDEF INLINING} inline; {$ENDIF}
+function Point64(const X, Y: Int64; Z: Int64 = 0): TPoint64; overload;
+{$IFDEF INLINING} inline; {$ENDIF}
+function Point64(const X, Y: Double; Z: double = 0.0): TPoint64; overload;
+{$IFDEF INLINING} inline; {$ENDIF}
+function PointD(const X, Y: Double; Z: double = 0.0): TPointD; overload;
+{$IFDEF INLINING} inline; {$ENDIF}
 {$ELSE}
 function Point64(const X, Y: Int64): TPoint64; overload; {$IFDEF INLINING} inline; {$ENDIF}
 function Point64(const X, Y: Double): TPoint64; overload; {$IFDEF INLINING} inline; {$ENDIF}
@@ -134,24 +147,35 @@ function Point64(const pt: TPointD): TPoint64; overload; {$IFDEF INLINING} inlin
 function PointD(const pt: TPoint64): TPointD; overload;
   {$IFDEF INLINING} inline; {$ENDIF}
 function Rect64(const left, top, right, bottom: Int64): TRect64; overload;
+  {$IFDEF INLINING} inline; {$ENDIF}
 function Rect64(const recD: TRectD): TRect64; overload;
+  {$IFDEF INLINING} inline; {$ENDIF}
 function RectD(const left, top, right, bottom: double): TRectD; overload;
+  {$IFDEF INLINING} inline; {$ENDIF}
 function RectD(const rec64: TRect64): TRectD; overload;
+  {$IFDEF INLINING} inline; {$ENDIF}
 function GetBounds(const paths: TArrayOfPaths): TRect64; overload;
 function GetBounds(const paths: TPaths64): TRect64; overload;
 function GetBounds(const paths: TPathsD): TRectD; overload;
 
 procedure InflateRect(var rec: TRect64; dx, dy: Int64); overload;
+  {$IFDEF INLINING} inline; {$ENDIF}
 procedure InflateRect(var rec: TRectD; dx, dy: double); overload;
+  {$IFDEF INLINING} inline; {$ENDIF}
 function  UnionRect(const rec, rec2: TRect64): TRect64; overload;
+  {$IFDEF INLINING} inline; {$ENDIF}
 function  UnionRect(const rec, rec2: TRectD): TRectD; overload;
+  {$IFDEF INLINING} inline; {$ENDIF}
 
 function  RotateRect(const rec: TRect64; angleRad: double): TRect64; overload;
 function  RotateRect(const rec: TRectD; angleRad: double): TRectD; overload;
 procedure OffsetRect(var rec: TRect64; dx, dy: Int64); overload;
+  {$IFDEF INLINING} inline; {$ENDIF}
 procedure OffsetRect(var rec: TRectD; dx, dy: double); overload;
+  {$IFDEF INLINING} inline; {$ENDIF}
 
 function ScalePoint(const pt: TPoint64; scale: double): TPointD;
+  {$IFDEF INLINING} inline; {$ENDIF}
 
 function ScalePath(const path: TPath64; sx, sy: double): TPath64; overload;
 function ScalePath(const path: TPathD; sx, sy: double): TPath64; overload;
@@ -186,15 +210,22 @@ function StripNearDuplicates(const path: TPathD;
   minLenSqrd: double; isClosedPath: Boolean): TPathD;
 
 function ValueBetween(val, end1, end2: Int64): Boolean;
+  {$IFDEF INLINING} inline; {$ENDIF}
 function ValueEqualOrBetween(val, end1, end2: Int64): Boolean;
+  {$IFDEF INLINING} inline; {$ENDIF}
 
 function ReversePath(const path: TPath64): TPath64; overload;
+  {$IFDEF INLINING} inline; {$ENDIF}
 function ReversePath(const path: TPathD): TPathD; overload;
 function ReversePaths(const paths: TPaths64): TPaths64; overload;
+  {$IFDEF INLINING} inline; {$ENDIF}
 function ReversePaths(const paths: TPathsD): TPathsD; overload;
+  {$IFDEF INLINING} inline; {$ENDIF}
 
 procedure AppendPoint(var path: TPath64; const pt: TPoint64); overload;
+  {$IFDEF INLINING} inline; {$ENDIF}
 procedure AppendPoint(var path: TPathD; const pt: TPointD); overload;
+  {$IFDEF INLINING} inline; {$ENDIF}
 
 procedure AppendPath(var paths: TPaths64; const extra: TPath64); overload;
 procedure AppendPath(var paths: TPathsD; const extra: TPathD); overload;
@@ -1319,14 +1350,24 @@ end;
 //---------------------------------------------------------------------------
 
 function CrossProduct(const pt1, pt2, pt3: TPoint64): double;
-var
-  x1,x2,y1,y2: double; //avoids potential int overflow
 begin
-  x1 := pt2.X - pt1.X;
-  y1 := pt2.Y - pt1.Y;
-  x2 := pt3.X - pt2.X;
-  y2 := pt3.Y - pt2.Y;
-  result := (x1 * y2 - y1 * x2);
+  result := CrossProduct(
+    pt2.X - pt1.X, pt2.Y - pt1.Y,
+    pt3.X - pt2.X, pt3.Y - pt2.Y);
+end;
+//------------------------------------------------------------------------------
+
+function CrossProduct(const pt1, pt2, pt3: TPointD): double;
+begin
+  result := CrossProduct(
+    pt2.X - pt1.X, pt2.Y - pt1.Y,
+    pt3.X - pt2.X, pt3.Y - pt2.Y);
+end;
+//------------------------------------------------------------------------------
+
+function CrossProduct(vec1x, vec1y, vec2x, vec2y: double): double;
+begin
+  result := (vec1x * vec2y - vec1y * vec2x);
 end;
 //------------------------------------------------------------------------------
 
@@ -1339,18 +1380,6 @@ begin
   x2 := pt3.X - pt2.X;
   y2 := pt3.Y - pt2.Y;
   result := (x1 * x2 + y1 * y2);
-end;
-//------------------------------------------------------------------------------
-
-function CrossProduct(const pt1, pt2, pt3: TPointD): double;
-var
-  x1,x2,y1,y2: double;
-begin
-  x1 := pt2.X - pt1.X;
-  y1 := pt2.Y - pt1.Y;
-  x2 := pt3.X - pt2.X;
-  y2 := pt3.Y - pt2.Y;
-  result := (x1 * y2 - y1 * x2);
 end;
 //------------------------------------------------------------------------------
 
@@ -1370,7 +1399,7 @@ function DistanceFromLineSqrd(const pt, linePt1, linePt2: TPoint64): double;
 var
   a,b,c: double;
 begin
-	//perpendicular distance of point (x³,y³) = (Ax³ + By³ + C)/Sqrt(A² + B²)
+	//perpendicular distance of point (x0,y0) = (a*x0 + b*y0 + c)/Sqrt(a^2 + b^2)
 	//see http://en.wikipedia.org/wiki/Perpendicular_distance
 	a := (linePt1.Y - linePt2.Y);
 	b := (linePt2.X - linePt1.X);
@@ -1384,8 +1413,6 @@ function DistanceFromLineSqrd(const pt, linePt1, linePt2: TPointD): double;
 var
   a,b,c: double;
 begin
-	//perpendicular distance of point (x³,y³) = (Ax³ + By³ + C)/Sqrt(A² + B²)
-	//see http://en.wikipedia.org/wiki/Perpendicular_distance
 	a := (linePt1.Y - linePt2.Y);
 	b := (linePt2.X - linePt1.X);
 	c := a * linePt1.X + b * linePt1.Y;
@@ -1419,18 +1446,11 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-function SegmentsIntersect(const seg1a, seg1b, seg2a, seg2b: TPoint64): boolean;
-var
-  dx1, dy1, dx2, dy2: double;
+function SegmentsIntersect(const s1a, s1b, s2a, s2b: TPoint64): boolean;
 begin
-  dx1 := seg1a.X - seg1b.X;
-  dy1 := seg1a.Y - seg1b.Y;
-  dx2 := seg2a.X - seg2b.X;
-  dy2 := seg2a.Y - seg2b.Y;
-  result := ((dy1 * (seg2a.X - seg1a.X) - dx1 * (seg2a.Y - seg1a.Y)) *
-             (dy1 * (seg2b.X - seg1a.X) - dx1 * (seg2b.Y - seg1a.Y)) < 0) and
-            ((dy2 * (seg1a.X - seg2a.X) - dx2 * (seg1a.Y - seg2a.Y)) *
-             (dy2 * (seg1b.X - seg2a.X) - dx2 * (seg1b.Y - seg2a.Y)) < 0);
+  //nb: result excludes overlapping collinear segments
+  result := (CrossProduct(s1a, s2a, s2b) * CrossProduct(s1b, s2a, s2b) < 0) and
+    (CrossProduct(s2a, s1a, s1b) * CrossProduct(s2b, s1a, s1b) < 0);
 end;
 //------------------------------------------------------------------------------
 
