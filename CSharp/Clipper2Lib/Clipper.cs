@@ -15,6 +15,7 @@
 
 #nullable enable
 using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 
 namespace Clipper2Lib
 {
@@ -172,11 +173,13 @@ namespace Clipper2Lib
       return a;
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static bool IsClockwise(Path64 poly)
     {
       return Area(poly) >= 0;
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static bool IsClockwise(PathD poly)
     {
       return Area(poly) >= 0;
@@ -190,7 +193,8 @@ namespace Clipper2Lib
       return result;
     }
 
-    public static PointD ScalePoint(Point64 pt, double scale)
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static PointD ScalePoint(Point64 pt, double scale) 
     {
       PointD result = new PointD()
       {
@@ -202,6 +206,7 @@ namespace Clipper2Lib
 
     public static Path64 ScalePath(Path64 path, double scale)
     {
+      if (scale == 1) return path;
       Path64 result = new Path64(path.Count);
       foreach (Point64 pt in path)
         result.Add(new Point64(pt, scale));
@@ -210,6 +215,7 @@ namespace Clipper2Lib
 
     public static Paths64 ScalePaths(Paths64 paths, double scale)
     {
+      if (scale == 1) return paths;
       Paths64 result = new Paths64(paths.Count);
       foreach (Path64 path in paths)
         result.Add(ScalePath(path, scale));
@@ -218,6 +224,7 @@ namespace Clipper2Lib
 
     public static PathD ScalePath(PathD path, double scale)
     {
+      if (scale == 1) return path;
       PathD result = new PathD(path.Count);
       foreach (PointD pt in path)
         result.Add(new PointD(pt, scale));
@@ -226,6 +233,7 @@ namespace Clipper2Lib
 
     public static PathsD ScalePaths(PathsD paths, double scale)
     {
+      if (scale == 1) return paths;
       PathsD result = new PathsD(paths.Count);
       foreach (PathD path in paths)
         result.Add(ScalePath(path, scale));
@@ -235,7 +243,6 @@ namespace Clipper2Lib
     //Unlike ScalePath, both ScalePath64 & ScalePathD also involve type conversion
     public static Path64 ScalePath64(PathD path, double scale)
     {
-      if (scale == 0) scale = 1;
       int cnt = path.Count;
       Path64 res = new Path64(cnt);
       for (int i = 0; i < cnt; i++)
@@ -245,7 +252,6 @@ namespace Clipper2Lib
 
     public static Paths64 ScalePaths64(PathsD paths, double scale)
     {
-      if (scale == 0) scale = 1;
       int cnt = paths.Count;
       Paths64 res = new Paths64(cnt);
       for (int i = 0; i < cnt; i++)
@@ -255,7 +261,6 @@ namespace Clipper2Lib
 
     public static PathD ScalePathD(Path64 path, double scale)
     {
-      if (scale == 0) scale = 1;
       int cnt = path.Count;
       PathD res = new PathD(cnt);
       for (int i = 0; i < cnt; i++)
@@ -265,7 +270,6 @@ namespace Clipper2Lib
 
     public static PathsD ScalePathsD(Paths64 paths, double scale)
     {
-      if (scale == 0) scale = 1;
       int cnt = paths.Count;
       PathsD res = new PathsD(cnt);
       for (int i = 0; i < cnt; i++)
@@ -419,11 +423,13 @@ namespace Clipper2Lib
       return p;
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static double Sqr(double value)
     {
       return value * value;
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static bool PointsNearEqual(PointD pt1, PointD pt2, double distanceSqrd)
     {
       return Sqr(pt1.x - pt2.x) + Sqr(pt1.y - pt2.y) < distanceSqrd;

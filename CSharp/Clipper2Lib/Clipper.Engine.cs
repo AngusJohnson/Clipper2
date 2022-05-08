@@ -1,7 +1,7 @@
 ﻿/*******************************************************************************
 * Author    :  Angus Johnson                                                   *
 * Version   :  10.0 (beta) - also known as Clipper2                            *
-* Date      :  8 May 2022                                                      *
+* Date      :  9 May 2022                                                      *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  This is the main polygon clipping module                        *
@@ -3529,12 +3529,12 @@ namespace Clipper2Lib
 
     public void AddPath(PathD path, PathType polytype, bool isOpen = false)
     {
-      AddPath(ClipperFunc.ScalePath(path, _scale), polytype, isOpen);
+      base.AddPath(ClipperFunc.ScalePath64(path, _scale), polytype, isOpen);
     }
 
     public void AddPaths(PathsD paths, PathType polytype, bool isOpen = false)
     {
-      AddPaths(ClipperFunc.ScalePaths(paths, _scale), polytype, isOpen);
+      base.AddPaths(ClipperFunc.ScalePaths64(paths, _scale), polytype, isOpen);
     }
 
     public void AddSubject(PathD path)
@@ -3596,8 +3596,15 @@ namespace Clipper2Lib
 #endif
 
       if (!success) return false;
-      solutionClosed = ClipperFunc.ScalePathsD(solClosed64, _invScale);
-      solutionOpen   = ClipperFunc.ScalePathsD(solOpen64,   _invScale);
+
+      solutionClosed.Capacity = solClosed64.Count;
+      foreach (Path64 path in solClosed64)
+        solutionClosed.Add(ClipperFunc.ScalePathD(path, _invScale));
+
+      solutionOpen.Capacity = solOpen64.Count;
+      foreach (Path64 path in solOpen64)
+        solutionOpen.Add(ClipperFunc.ScalePathD(path, _invScale));
+
       return true;
     }
 
@@ -3633,7 +3640,12 @@ namespace Clipper2Lib
       ClearSolution();
       if (!success) return false;
       if (oPaths.Count > 0)
-        openPaths = ClipperFunc.ScalePathsD(oPaths, _invScale);
+      {
+        openPaths.Capacity = oPaths.Count;
+        foreach (Path64 path in oPaths)
+          openPaths.Add(ClipperFunc.ScalePathD(path, _invScale));
+      }
+
       return true;
     }
 
