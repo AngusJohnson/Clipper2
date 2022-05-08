@@ -2881,8 +2881,9 @@ namespace Clipper2Lib
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static double DistanceSqr(Point64 pt1, Point64 pt2)
     {
-      return (pt1.X - pt2.X) * (pt1.X - pt2.X) +
-             (pt1.Y - pt2.Y) * (pt1.Y - pt2.Y);
+      //nb: casting to double is important here!
+      return (double)(pt1.X - pt2.X) * (double) (pt1.X - pt2.X) +
+             (double) (pt1.Y - pt2.Y) * (double) (pt1.Y - pt2.Y);
     }
 
     private OutRec ProcessJoin(Joiner j)
