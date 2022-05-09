@@ -13,7 +13,7 @@
 #include <fstream>
 #include <sstream>
 #include <string>
-#include "./Clipper2Lib/clipper.h"
+#include "../Clipper2Lib/clipper.h"
 #include "clipper.svg.h"
 
 namespace Clipper2Lib {
