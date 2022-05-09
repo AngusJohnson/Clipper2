@@ -268,7 +268,7 @@ namespace Clipper2Lib {
       if (!GetNum(path, p, x) || !GetNum(path, p, y)) return false;
       PathsD ppp;
       PathD pp;
-      pp.push_back(PointD(x, y));
+      pp.push_back(point_mutable_traits<PointD>::construct(x, y));
       while (SkipBlanks(path, p)) {
           if (GetCommand(path, p, command, is_relative)) {
               switch (command) {
@@ -305,7 +305,7 @@ namespace Clipper2Lib {
               default: break;
               }
 
-              pp.push_back(PointD(x, y));
+              pp.push_back(point_mutable_traits<PointD>::construct(x, y));
           }
 
       }

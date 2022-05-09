@@ -103,10 +103,12 @@ namespace Clipper2Lib {
 
   inline Path64 ScalePath(const Path64 path, double scale)
   {
+    using PointType      = Path64::value_type;
+    using CoordinateType = PointType::coordinate_type;
     Path64 result;
     result.reserve(path.size());
     for (const Point64 pt : path)
-      result.push_back(pt * scale);
+      result.emplace_back(point_mutable_traits<PointType>::construct(CoordinateType(point_traits<PointType>::get(pt, 0) * scale), CoordinateType(point_traits<PointType>::get(pt, 1) * scale)));
     return result;
   }
 

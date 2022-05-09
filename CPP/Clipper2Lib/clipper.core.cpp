@@ -1,4 +1,4 @@
-/*******************************************************************************
+	/*******************************************************************************
 * Author    :  Angus Johnson                                                   *
 * Version   :  10.0 (beta) - aka Clipper2                                      *
 * Date      :  28 April 2022                                                   *
@@ -90,7 +90,7 @@ namespace Clipper2Lib {
 			if (!GetInt(s_iter, s.cend(), x)) break;
 			SkipSpacesWithOptionalComma(s_iter, s.cend());
 			if (!GetInt(s_iter, s.cend(), y)) break;
-			result.push_back(Point64(x, y));
+			result.push_back(point_mutable_traits<Point64>::construct(x, y));
 			SkipSpacesWithOptionalComma(s_iter, s.cend());
 		}
 		return result;
@@ -107,7 +107,7 @@ namespace Clipper2Lib {
 			if (!GetFloat(s_iter, s.cend(), x)) break;
 			SkipSpacesWithOptionalComma(s_iter, s.cend());
 			if (!GetFloat(s_iter, s.cend(), y)) break;
-			result.push_back(PointD(x, y));
+			result.push_back(point_mutable_traits<PointD>::construct(x, y));
 			SkipSpacesWithOptionalComma(s_iter, s.cend());
 		}
 		return result;

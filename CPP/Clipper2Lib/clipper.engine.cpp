@@ -231,15 +231,15 @@ namespace Clipper2Lib {
 
 		if (e1.dx == 0)
 		{
-			if (IsHorizontal(e2)) return Point64(e1.bot.x, e2.bot.y);
+			if (IsHorizontal(e2)) return point_mutable_traits<Point64>::construct(e1.bot.x, e2.bot.y);
 			b2 = e2.bot.y - (e2.bot.x / e2.dx);
-			return Point64(e1.bot.x, (int64_t)std::round(e1.bot.x / e2.dx + b2));
+			return point_mutable_traits<Point64>::construct(e1.bot.x, (int64_t)std::round(e1.bot.x / e2.dx + b2));
 		}
 		else if (e2.dx == 0)
 		{
-			if (IsHorizontal(e1)) return Point64(e2.bot.x, e1.bot.y);
+			if (IsHorizontal(e1)) return point_mutable_traits<Point64>::construct(e2.bot.x, e1.bot.y);
 			b1 = e1.bot.y - (e1.bot.x / e1.dx);
-			return Point64(e2.bot.x, (int64_t)std::round(e2.bot.x / e1.dx + b1));
+			return point_mutable_traits<Point64>::construct(e2.bot.x, (int64_t)std::round(e2.bot.x / e1.dx + b1));
 		}
 		else
 		{
@@ -247,8 +247,8 @@ namespace Clipper2Lib {
 			b2 = e2.bot.x - e2.bot.y * e2.dx;
 			double q = (b2 - b1) / (e1.dx - e2.dx);
 			return (abs(e1.dx) < abs(e2.dx)) ?
-				Point64((int64_t)std::round(e1.dx * q + b1), (int64_t)std::round(q)) :
-				Point64((int64_t)std::round(e2.dx * q + b2), (int64_t)std::round(q));
+				point_mutable_traits<Point64>::construct((int64_t)std::round(e1.dx * q + b1), (int64_t)std::round(q)) :
+				point_mutable_traits<Point64>::construct((int64_t)std::round(e2.dx * q + b2), (int64_t)std::round(q));
 		}
 	}
 	//------------------------------------------------------------------------------
@@ -256,7 +256,7 @@ namespace Clipper2Lib {
 	bool GetIntersectPoint(const Point64& ln1a, const Point64& ln1b,
 		const Point64& ln2a, const Point64& ln2b, PointD& ip)
 	{
-		ip = PointD(0, 0);
+		ip = point_mutable_traits<PointD>::construct(0, 0);
 		double m1, b1, m2, b2;
 		if (ln1b.x == ln1a.x)
 		{
@@ -738,7 +738,7 @@ namespace Clipper2Lib {
 			{
 				if (prev_v)
 				{
-					if (prev_v->pt == pt) continue; //ie skips duplicates
+					if (xy_equals(prev_v->pt, pt)) continue; //ie skips duplicates
 					prev_v->next = curr_v;
 				}
 				curr_v->prev = prev_v;
@@ -748,7 +748,7 @@ namespace Clipper2Lib {
 				cnt++;
 			}
 			if (!prev_v || !prev_v->prev) continue;
-			if (!is_open && prev_v->pt == v0->pt) 
+			if (!is_open && xy_equals(prev_v->pt, v0->pt))
 				prev_v = prev_v->prev;
 			prev_v->next = v0;
 			v0->prev = prev_v;
@@ -1449,9 +1449,9 @@ namespace Clipper2Lib {
 		OutPt *op_front = outrec->pts;
 		OutPt *op_back = op_front->next;
 
-		if (to_front && (pt == op_front->pt))
+		if (to_front && xy_equals(pt, op_front->pt))
 			new_op = op_front;
-		else if (!to_front && (pt == op_back->pt))
+		else if (!to_front && xy_equals(pt, op_back->pt))
 			new_op = op_back;
 		else {
 			new_op = new OutPt(pt, outrec);
@@ -1485,8 +1485,8 @@ namespace Clipper2Lib {
 
 			//NB if preserveCollinear == true, then only remove 180 deg. spikes
 			if ((CrossProduct(op2->prev->pt, op2->pt, op2->next->pt) == 0) &&
-			 (op2->pt == op2->prev->pt ||
-					op2->pt == op2->next->pt || !PreserveCollinear ||
+			 (xy_equals(op2->pt, op2->prev->pt) ||
+					xy_equals(op2->pt, op2->next->pt) || !PreserveCollinear ||
 					DotProduct(op2->prev->pt, op2->pt, op2->next->pt) < 0))
 			{
 				
@@ -1533,10 +1533,11 @@ namespace Clipper2Lib {
 	{
 		OutPt *prevOp = splitOp->prev, *nextNextOp = splitOp->next->next;
 		OutPt* result = prevOp;
-		PointD ipD;
+		PointD ipD = point_mutable_traits<PointD>::construct(0, 0);
 		GetIntersectPoint(prevOp->pt, 
 			splitOp->pt, splitOp->next->pt, nextNextOp->pt, ipD);
-		Point64 ip = Point64(ipD);
+		using CoordType = Point64::coordinate_type;
+		Point64 ip { point_mutable_traits<Point64>::construct(CoordType(std::round(point_traits<PointD>::get(ipD, 0))), CoordType(std::round(point_traits<PointD>::get(ipD, 1)))) };
 #ifdef USINGZ
 		if (zfill_func_) 
 			zfill_func_(prevOp->pt, splitOp->pt, splitOp->next->pt, nextNextOp->pt, ip);
@@ -1544,7 +1545,7 @@ namespace Clipper2Lib {
 		double area1 = Area(outRecOp);
 		double area2 = AreaTriangle(ip, splitOp->pt, splitOp->next->pt);
 
-		if (ip == prevOp->pt || ip == nextNextOp->pt)
+		if (xy_equals(ip, prevOp->pt) || xy_equals(ip, nextNextOp->pt))
 		{
 			nextNextOp->prev = prevOp;
 			prevOp->next = nextNextOp;
@@ -1859,7 +1860,7 @@ namespace Clipper2Lib {
 				if (zfill_func_ && resultOp) SetZ(e1, e2, resultOp->pt);
 				if (zfill_func_) SetZ(e1, e2, op2->pt);
 #endif
-				if (resultOp && resultOp->pt == op2->pt &&
+				if (resultOp && xy_equals(resultOp->pt, op2->pt) &&
 					!IsHorizontal(e1) && !IsHorizontal(e2) &&
 					(CrossProduct(e1.bot, resultOp->pt, e2.bot) == 0))
 						AddJoin(resultOp, op2);
@@ -2263,7 +2264,7 @@ namespace Clipper2Lib {
 			*         /              |        /       |       /                            *
 			*******************************************************************************/
 	{
-		Point64 pt;
+		Point64 pt = point_mutable_traits<Point64>::construct(0, 0);
 		bool horzIsOpen = IsOpen(horz);
 		int64_t y = horz.bot.y;
 		Active* max_pair = NULL;
@@ -2282,7 +2283,7 @@ namespace Clipper2Lib {
 			ResetHorzDiRect64on(horz, max_pair, horz_left, horz_right);
 
 		if (IsHotEdge(horz))
-			AddOutPt(horz, Point64(horz.curr_x, y));
+			AddOutPt(horz, point_mutable_traits<Point64>::construct(horz.curr_x, y));
 
 		OutPt* op;
 		while (true) {  //loops through consec. horizontal edges (if open)
@@ -2301,7 +2302,7 @@ namespace Clipper2Lib {
 						else
 							op = AddLocalMaxPoly(*e, horz, horz.top);
 
-						if (op && !IsOpen(horz) && op->pt == horz.top)
+						if (op && !IsOpen(horz) && xy_equals(op->pt,horz.top))
 							AddTrialHorzJoin(op);
 					}
 					DeleteFromAEL(*e);
@@ -2327,7 +2328,7 @@ namespace Clipper2Lib {
 					}
 				}
 
-				pt = Point64(e->curr_x, horz.bot.y);
+				pt = point_mutable_traits<Point64>::construct(e->curr_x, horz.bot.y);
 
 				if (is_left_to_right) 
 				{
@@ -2335,7 +2336,7 @@ namespace Clipper2Lib {
 					SwapPositionsInAEL(horz, *e);
 
 
-					if (IsHotEdge(horz) && op && !IsOpen(horz) && op->pt == pt)
+					if (IsHotEdge(horz) && op && !IsOpen(horz) && xy_equals(op->pt, pt))
 						AddTrialHorzJoin(op);
 
 					if (!IsHorizontal(*e) && TestJoinWithPrev1(*e, y))
@@ -2354,7 +2355,7 @@ namespace Clipper2Lib {
 					SwapPositionsInAEL(*e, horz);
 
 					if (IsHotEdge(horz) && op &&
-						!IsOpen(horz) && op->pt == pt)
+						!IsOpen(horz) && xy_equals(op->pt, pt))
 							AddTrialHorzJoin(op);
 
 					if (!IsHorizontal(*e) && TestJoinWithNext1(*e, y))
@@ -2760,13 +2761,13 @@ namespace Clipper2Lib {
 				{
 					//overlap found so promote to a 'real' join
 					joined = true;
-					if (op1a->pt == op2b->pt)
+					if (xy_equals(op1a->pt, op2b->pt))
 						AddJoin(op1a, op2b);
-					else if (op1b->pt == op2a->pt)
+					else if (xy_equals(op1b->pt, op2a->pt))
 						AddJoin(op1b, op2a);
-					else if (op1a->pt == op2a->pt)
+					else if (xy_equals(op1a->pt, op2a->pt))
 						AddJoin(op1a, op2a);
-					else if (op1b->pt == op2b->pt)
+					else if (xy_equals(op1b->pt, op2b->pt))
 						AddJoin(op1b, op2b);
 					else if (ValueBetween(op1a->pt.x, op2a->pt.x, op2b->pt.x))
 						AddJoin(op1a, InsertOp(op1a->pt, op2a));
@@ -2859,7 +2860,7 @@ namespace Clipper2Lib {
 		bool result = false;
 		while (op->prev != op)
 		{
-			if (op->pt == op->prev->pt && op != guard &&
+			if (xy_equals(op->pt, op->prev->pt) && op != guard &&
 				op->prev->joiner && !op->joiner)
 			{
 				if (op == outRec.pts) outRec.pts = op->prev;
@@ -2879,7 +2880,7 @@ namespace Clipper2Lib {
 
 		while (op->next != op)
 		{
-			if (op->pt == op->next->pt && op != guard &&
+			if (xy_equals(op->pt, op->next->pt) && op != guard &&
 				op->next->joiner && !op->joiner)
 			{
 				if (op == outRec.pts) outRec.pts = op->prev;
@@ -2998,7 +2999,7 @@ namespace Clipper2Lib {
 			if (!IsValidPath(op1) || !IsValidPath(op2) ||
 				(or1 == or2 && (op1->prev == op2 || op1->next == op2))) return or1;
 
-			if (op1->prev->pt == op2->next->pt ||
+			if (xy_equals(op1->prev->pt, op2->next->pt) ||
 				((CrossProduct(op1->prev->pt, op1->pt, op2->next->pt) == 0) &&
 					CollinearSegsOverlap(op1->prev->pt, op1->pt, op2->pt, op2->next->pt)))
 			{
@@ -3007,7 +3008,7 @@ namespace Clipper2Lib {
 					//SPLIT REQUIRED
 					//make sure op1.prev and op2.next match positions
 					//by inserting an extra vertex if needed
-					if (op1->prev->pt != op2->next->pt)
+					if (! xy_equals(op1->prev->pt, op2->next->pt))
 					{
 						if (PointBetween(op1->prev->pt, op2->pt, op2->next->pt))
 							op2->next = InsertOp(op1->prev->pt, op2);
@@ -3052,7 +3053,7 @@ namespace Clipper2Lib {
 				}
 				break;
 			}
-			else if (op1->next->pt == op2->prev->pt ||
+			else if (xy_equals(op1->next->pt, op2->prev->pt) ||
 				((CrossProduct(op1->next->pt, op2->pt, op2->prev->pt) == 0) &&
 					CollinearSegsOverlap(op1->next->pt, op1->pt, op2->pt, op2->prev->pt)))
 			{
@@ -3061,7 +3062,7 @@ namespace Clipper2Lib {
 					//SPLIT REQUIRED
 					//make sure op2.prev and op1.next match positions
 					//by inserting an extra vertex if needed
-					if (op2->prev->pt != op1->next->pt)
+					if (! xy_equals(op2->prev->pt, op1->next->pt))
 					{
 						if (PointBetween(op2->prev->pt, op1->pt, op1->next->pt))
 							op1->next = InsertOp(op2->prev->pt, op1);
@@ -3131,13 +3132,13 @@ namespace Clipper2Lib {
 			//something odd needs tidying up
 			if (CheckDisposeAdjacent(op1, op2, *or1)) continue;
 			else if (CheckDisposeAdjacent(op2, op1, *or1)) continue;
-			else if (op1->prev->pt != op2->next->pt &&
+			else if (! xy_equals(op1->prev->pt, op2->next->pt) &&
 				(DistanceSqr(op1->prev->pt, op2->next->pt) < 2.01))
 			{
 				op1->prev->pt = op2->next->pt;
 				continue;
 			}
-			else if (op1->next->pt != op2->prev->pt &&
+			else if (! xy_equals(op1->next->pt, op2->prev->pt) &&
 				(DistanceSqr(op1->next->pt, op2->prev->pt) < 2.01))
 			{
 				op2->prev->pt = op1->next->pt;
@@ -3179,7 +3180,7 @@ namespace Clipper2Lib {
 #endif
 		while (op2 != &op)
 		{
-			if (op2->pt != lastPt)
+			if (! xy_equals(op2->pt, lastPt))
 			{
 				lastPt = op2->pt;
 				path.push_back(lastPt);

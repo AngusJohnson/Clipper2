@@ -11,6 +11,7 @@
 #ifndef CLIPPER_CORE_H
 #define CLIPPER_CORE_H
 
+#include <cassert>
 #include <cstdlib>
 #include <cmath>
 #include <vector>
@@ -26,8 +27,11 @@ namespace Clipper2Lib {
 
 template <typename T>
 struct Point {
+	using coordinate_type = T;
 	T x;
 	T y;
+
+	explicit Point() {}
 
 #ifdef USINGZ
 	T z;
@@ -64,6 +68,7 @@ struct Point {
 
 #else
 
+/*
 	explicit Point() : x(0), y(0) {};
 
 	template <typename T2>
@@ -85,6 +90,12 @@ struct Point {
 			y = static_cast<T>(p.y);
 		}
 	}
+*/
+	static Point construct(T x, T y)
+	{
+		Point p; p.x = x; p.y = y; 
+		return p;
+	}
 
 	friend std::ostream& operator<<(std::ostream& os, const Point& point)
 	{
@@ -93,7 +104,7 @@ struct Point {
 	}
 
 #endif
-
+/*
 	friend bool operator==(const Point &a, const Point &b) 
 	{
 		return a.x == b.x && a.y == b.y;
@@ -123,8 +134,43 @@ struct Point {
 	{
 		return Point(x-b.x, y-b.y);
 	}
-
+*/
 };
+
+//    template <>
+//    struct geometry_concept<Slic3r::Point> { using type = point_concept; };
+
+	// Losely modeled after boost::polygon::point_traits
+	template <typename PointType>
+	struct point_traits {
+		typedef PointType point_type;
+		typedef typename point_type::coordinate_type coordinate_type;
+
+		static coordinate_type get(const point_type& point, int i) {
+			assert(i == 0 || i == 1);
+			return i == 0 ? point.x : point.y;
+		}
+	};
+
+	template <typename PointType>
+	struct point_mutable_traits {
+		typedef PointType point_type;
+		typedef typename point_type::coordinate_type coordinate_type;
+
+		static void set(point_type& point, int i, coordinate_type value) {
+			assert(i == 0 || i == 1);
+			(i == 0 ? point.x : point.y) = value;
+		}
+
+		static point_type construct(coordinate_type x, coordinate_type y) {
+			return point_type::construct(x, y);
+		}
+	};
+
+	template <typename PointType>
+	inline bool xy_equals(const PointType& p1, const PointType& p2) {
+		return point_traits<PointType>::get(p1, 0) == point_traits<PointType>::get(p2, 0) && point_traits<PointType>::get(p1, 1) == point_traits<PointType>::get(p2, 1);
+	}
 
 using Point64 = Point<int64_t>;
 using PointD = Point<double>;
@@ -184,7 +230,7 @@ inline Path64 PathDToPath64(const PathD& path, double scale = 1)
 	result.reserve(path.size());
 	PathD::const_iterator path_iter;
 	for (path_iter = path.cbegin(); path_iter != path.cend(); ++path_iter)
-		result.push_back(Point64(static_cast<int64_t>((*path_iter).x * scale),
+		result.push_back(point_mutable_traits<Point64>::construct(static_cast<int64_t>((*path_iter).x * scale),
 			static_cast<int64_t>((*path_iter).y * scale)));
 	return result;
 }
@@ -195,7 +241,7 @@ inline PathD Path64ToPathD(const Path64& path, double scale = 1)
 	result.reserve(path.size());
 	Path64::const_iterator path_iter;
 	for (path_iter = path.cbegin(); path_iter != path.cend(); ++path_iter)
-		result.push_back(PointD((*path_iter).x * scale, (*path_iter).y * scale));
+		result.emplace_back(point_mutable_traits<PointD>::construct(point_traits<Point64>::get(*path_iter, 0) * scale, point_traits<Point64>::get(*path_iter, 1) * scale));
 	return result;
 }
 

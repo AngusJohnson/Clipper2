@@ -25,7 +25,7 @@ const double floating_point_tolerance = 1e-12;
 int GetLowestPolygonIdx(const PathsD& paths)
 {
 	int lp_idx = -1;
-	PointD lp;
+	auto lp = point_mutable_traits<PointD>::construct(0, 0);
 	for (size_t i = 0; i < static_cast<int>(paths.size()); ++i)
 		if (paths[i].size() > 0) {
 			lp_idx = (int)i;
@@ -50,13 +50,13 @@ int GetLowestPolygonIdx(const PathsD& paths)
 PointD GetUnitNormal(const PointD pt1, const PointD pt2)
 {
 	double dx, dy, inverse_hypot;
-	if (pt1 == pt2) return PointD(0.0, 0.0);
+	if (xy_equals(pt1, pt2)) return point_mutable_traits<PointD>::construct(0.0, 0.0);
 	dx = pt2.x - pt1.x;
 	dy = pt2.y - pt1.y;
 	inverse_hypot = 1.0 / hypot(dx, dy);
 	dx *= inverse_hypot;
 	dy *= inverse_hypot;
-	return PointD(dy, -dx);
+	return point_mutable_traits<PointD>::construct(dy, -dx);
 }
 
 inline bool IsFullOpenEndType(EndType et)
@@ -96,19 +96,19 @@ void ClipperOffset::DoSquare(PathGroup& group, const PathD& path, size_t j, size
 {
 	if (delta_ > 0)
 	{
-		group.path_.push_back(PointD(
+		group.path_.push_back(point_mutable_traits<PointD>::construct(
 			path[j].x + delta_ * (norms[k].x - norms[k].y),
 			path[j].y + delta_ * (norms[k].y + norms[k].x)));
-		group.path_.push_back(PointD(
+		group.path_.push_back(point_mutable_traits<PointD>::construct(
 			path[j].x + delta_ * (norms[j].x + norms[j].y),
 			path[j].y + delta_ * (norms[j].y - norms[j].x)));
 	}
 	else
 	{
-		group.path_.push_back(PointD(
+		group.path_.push_back(point_mutable_traits<PointD>::construct(
 			path[j].x + delta_ * (norms[k].x + norms[k].y),
 			path[j].y + delta_ * (norms[k].y - norms[k].x)));
-		group.path_.push_back(PointD(
+		group.path_.push_back(point_mutable_traits<PointD>::construct(
 			path[j].x + delta_ * (norms[j].x - norms[j].y),
 			path[j].y + delta_ * (norms[j].y + norms[j].x)));
 	}
@@ -117,7 +117,7 @@ void ClipperOffset::DoSquare(PathGroup& group, const PathD& path, size_t j, size
 void ClipperOffset::DoMiter(PathGroup& group, const PathD& path, size_t j, size_t k, double cos_a)
 {
 	double q = delta_ / (cos_a + 1);
-	group.path_.push_back(PointD(
+	group.path_.push_back(point_mutable_traits<PointD>::construct(
 		path[j].x + (norms[k].x + norms[j].x) * q,
 		path[j].y + (norms[k].y + norms[j].y) * q));
 }
@@ -126,23 +126,23 @@ void ClipperOffset::DoRound(PathGroup& group, const PointD& pt,
 	const PointD& norm1, const PointD& norm2, double angle)
 {
 	//even though angle may be negative this is a convex join
-	PointD pt2 = PointD(norm2.x * delta_, norm2.y * delta_);
+	PointD pt2 = point_mutable_traits<PointD>::construct(norm2.x * delta_, norm2.y * delta_);
 	int steps = static_cast<int>(std::round(steps_per_rad_ * std::abs(angle) + 0.5));
-	group.path_.push_back(PointD(pt.x + pt2.x, pt.y + pt2.y));
+	group.path_.push_back(point_mutable_traits<PointD>::construct(pt.x + pt2.x, pt.y + pt2.y));
 	if (steps > 0)
 	{
 		double step_sin = std::sin(angle / steps);
 		double step_cos = std::cos(angle / steps);
 		for (int i = 0; i < steps; i++)
 		{
-			pt2 = PointD(pt2.x * step_cos - step_sin * pt2.y,
+			pt2 = point_mutable_traits<PointD>::construct(pt2.x * step_cos - step_sin * pt2.y,
 				pt2.x * step_sin + pt2.y * step_cos);
-			group.path_.push_back(PointD(pt.x + pt2.x, pt.y + pt2.y));
+			group.path_.push_back(point_mutable_traits<PointD>::construct(pt.x + pt2.x, pt.y + pt2.y));
 		}
 	}
 	pt2.x = norm1.x * delta_;
 	pt2.y = norm1.y * delta_;
-	group.path_.push_back(PointD(pt.x + pt2.x, pt.y + pt2.y));
+	group.path_.push_back(point_mutable_traits<PointD>::construct(pt.x + pt2.x, pt.y + pt2.y));
 }
 
 void ClipperOffset::OffsetPoint(PathGroup& group, PathD& path, size_t j, size_t& k)
@@ -158,10 +158,10 @@ void ClipperOffset::OffsetPoint(PathGroup& group, PathD& path, size_t j, size_t&
 
 	if (sin_a * delta_ < 0) // a concave offset
 	{
-		PointD p1 = PointD(
+		PointD p1 = point_mutable_traits<PointD>::construct(
 			path[j].x + norms[k].x * delta_,
 			path[j].y + norms[k].y * delta_);
-		PointD p2 = PointD(
+		PointD p2 = point_mutable_traits<PointD>::construct(
 			path[j].x + norms[j].x * delta_,
 			path[j].y + norms[j].y * delta_);
 		group.path_.push_back(p1);
@@ -214,15 +214,15 @@ void ClipperOffset::OffsetOpenPath(PathGroup& group, PathD& path, EndType end_ty
 	for (size_t i = 1, j = 0; i < path.size() -1; j = i, ++i)
 		OffsetPoint(group, path, i, j);
 	size_t j = norms.size() - 1, k = j - 1;
-	norms[j] = PointD(-norms[k].x, -norms[k].y);
+	norms[j] = point_mutable_traits<PointD>::construct(-norms[k].x, -norms[k].y);
 
 	switch (end_type)
 	{
 	case EndType::Butt:
-		group.path_.push_back(PointD(
+		group.path_.push_back(point_mutable_traits<PointD>::construct(
 			path[j].x + norms[k].x * delta_,
 			path[j].y + norms[k].y * delta_));
-		group.path_.push_back(PointD(
+		group.path_.push_back(point_mutable_traits<PointD>::construct(
 			path[j].x - norms[k].x * delta_,
 			path[j].y - norms[k].y * delta_));
 		break;
@@ -240,8 +240,8 @@ void ClipperOffset::OffsetOpenPath(PathGroup& group, PathD& path, EndType end_ty
 
 	//reverse normals ...
 	for (size_t i = k; i > 0; i--)
-		norms[i] = PointD(-norms[i - 1].x, -norms[i - 1].y);
-	norms[0] = PointD(-norms[1].x, -norms[1].y);
+		norms[i] = point_mutable_traits<PointD>::construct(-norms[i - 1].x, -norms[i - 1].y);
+	norms[0] = point_mutable_traits<PointD>::construct(-norms[1].x, -norms[1].y);
 
 	for (size_t i = k; i > 0; i--)
 		OffsetPoint(group, path, i, j);
@@ -250,10 +250,10 @@ void ClipperOffset::OffsetOpenPath(PathGroup& group, PathD& path, EndType end_ty
 	switch (end_type)
 	{
 	case EndType::Butt:
-		group.path_.push_back(PointD(
+		group.path_.push_back(point_mutable_traits<PointD>::construct(
 			path[0].x + norms[1].x * delta_,
 			path[0].y + norms[1].y * delta_));
-		group.path_.push_back(PointD(
+		group.path_.push_back(point_mutable_traits<PointD>::construct(
 			path[0].x - norms[1].x * delta_,
 			path[0].y - norms[1].y * delta_));
 		break;
@@ -322,15 +322,15 @@ void ClipperOffset::DoGroupOffset(PathGroup& group, double delta)
 			//single vertex so build a circle or square ...
 			if (group.end_type == EndType::Round)
 			{
-				DoRound(group, path[0], PointD(1.0, 0.0), PointD(-1.0, 0.0), PI *2);
+				DoRound(group, path[0], point_mutable_traits<PointD>::construct(1.0, 0.0), point_mutable_traits<PointD>::construct(-1.0, 0.0), PI *2);
 			}
 			else
 			{
 				group.path_.reserve(4);
-				group.path_.push_back(PointD(path[0].x - delta_, path[0].y - delta_));
-				group.path_.push_back(PointD(path[0].x + delta_, path[0].y - delta_));
-				group.path_.push_back(PointD(path[0].x + delta_, path[0].y + delta_));
-				group.path_.push_back(PointD(path[0].x - delta_, path[0].y + delta_));
+				group.path_.push_back(point_mutable_traits<PointD>::construct(path[0].x - delta_, path[0].y - delta_));
+				group.path_.push_back(point_mutable_traits<PointD>::construct(path[0].x + delta_, path[0].y - delta_));
+				group.path_.push_back(point_mutable_traits<PointD>::construct(path[0].x + delta_, path[0].y + delta_));
+				group.path_.push_back(point_mutable_traits<PointD>::construct(path[0].x - delta_, path[0].y + delta_));
 			}
 			group.paths_out_.push_back(group.path_);
 		}

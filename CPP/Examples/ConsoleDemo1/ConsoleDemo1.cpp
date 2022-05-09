@@ -66,7 +66,7 @@ bool GetPath(const string& line, Paths64& paths)
   int64_t x = 0, y = 0;  
   string::const_iterator s_it = line.cbegin();
   while (GetNumericValue(line, s_it, x) && GetNumericValue(line, s_it, y))
-    p.push_back(Point64(x, y));
+    p.push_back(point_mutable_traits<Point64>::construct(x, y));
   if (p.empty()) return false;
   paths.push_back(p);
   return true;
@@ -269,18 +269,18 @@ std::string FormatMillisecs(int64_t value)
 Path64 Ellipse(const Rect64& rec)
 {
   if (rec.IsEmpty()) return Path64();
-  Point64 centre = Point64((rec.right + rec.left) / 2, (rec.bottom + rec.top) / 2);
-  Point64 radii = Point64(rec.Width() /2, rec.Height() /2);
+  auto centre = point_mutable_traits<Point64>::construct((rec.right + rec.left) / 2, (rec.bottom + rec.top) / 2);
+  auto radii = point_mutable_traits<Point64>::construct(rec.Width() /2, rec.Height() /2);
   int steps = static_cast<int>(PI * sqrt((radii.x + radii.y)/2));
   double si = std::sin(2 * PI / steps);
   double co = std::cos(2 * PI / steps);
   double dx = co, dy = si;
   Path64 result;
   result.reserve(steps);
-  result.push_back(Point64(centre.x + radii.x, centre.y));
+  result.push_back(point_mutable_traits<Point64>::construct(centre.x + radii.x, centre.y));
   for (int i = 1; i < steps; ++i)
   {
-    result.push_back(Point64(centre.x + static_cast<int64_t>(radii.x * dx), 
+    result.push_back(point_mutable_traits<Point64>::construct(centre.x + static_cast<int64_t>(radii.x * dx),
       centre.y + static_cast<int64_t>(radii.y * dy)));
     double x = dx * co - dy * si;
     dy = dy * co + dx * si;
@@ -295,7 +295,7 @@ inline Path64 MakeRandomPoly(int width, int height, unsigned vertCnt)
   Path64 result;
   result.reserve(vertCnt);
   for (unsigned i = 0; i < vertCnt; ++i)
-    result.push_back(Point64(rand() % width, rand() % height));
+    result.push_back(point_mutable_traits<Point64>::construct(rand() % width, rand() % height));
   return result;
 }
 //---------------------------------------------------------------------------
@@ -304,10 +304,10 @@ inline Path64 MakeRectangle(int boxWidth, int boxHeight)
 {
   Path64 result;
   result.reserve(4);
-  result.push_back(Point64(0, 0));
-  result.push_back(Point64(boxWidth, 0));
-  result.push_back(Point64(boxWidth, boxHeight));
-  result.push_back(Point64(0, boxHeight));
+  result.push_back(point_mutable_traits<Point64>::construct(0, 0));
+  result.push_back(point_mutable_traits<Point64>::construct(boxWidth, 0));
+  result.push_back(point_mutable_traits<Point64>::construct(boxWidth, boxHeight));
+  result.push_back(point_mutable_traits<Point64>::construct(0, boxHeight));
   return result;
 }
 //---------------------------------------------------------------------------
@@ -325,7 +325,7 @@ Path64 RandomOffset(const Path64& path, int maxWidth, int maxHeight)
   Path64 result;
   result.reserve(path.size());
   for (Point64 pt : path)
-    result.push_back(Point64(pt.x + dx, pt.y +dy));
+    result.push_back(point_mutable_traits<Point64>::construct(pt.x + dx, pt.y +dy));
   return result;
 }
 //---------------------------------------------------------------------------

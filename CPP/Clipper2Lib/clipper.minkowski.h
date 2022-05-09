@@ -26,6 +26,7 @@ namespace Clipper2Lib
   {
     static Paths64 Minkowski(const Path64& pattern, const Path64& path, bool isSum, bool isClosed)
     {
+      using PointType = Path64::value_type;
       size_t delta = isClosed ? 0 : 1;
       size_t patLen = pattern.size(), pathLen = path.size();
       if (patLen == 0 || pathLen == 0) return Paths64();
@@ -37,9 +38,15 @@ namespace Clipper2Lib
         Path64 path2;
         path2.reserve(pattern.size());
         if (isSum)
-          for (const Point64& pt2 : pattern) path2.push_back(pt + pt2);
+          for (const Point64& pt2 : pattern) 
+              path2.emplace_back(point_mutable_traits<PointType>::construct(
+                  point_traits<PointType>::get(pt, 0) + point_traits<PointType>::get(pt2, 0), 
+                  point_traits<PointType>::get(pt, 1) + point_traits<PointType>::get(pt2, 0)));
         else
-          for (const Point64& pt2 : pattern) path2.push_back(pt - pt2);
+          for (const Point64& pt2 : pattern)
+            path2.emplace_back(point_mutable_traits<PointType>::construct(
+                point_traits<PointType>::get(pt, 0) - point_traits<PointType>::get(pt2, 0),
+                point_traits<PointType>::get(pt, 1) - point_traits<PointType>::get(pt2, 0)));
         tmp.push_back(path2);
       }
 
