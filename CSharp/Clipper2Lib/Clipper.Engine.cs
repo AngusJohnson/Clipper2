@@ -833,15 +833,17 @@ namespace Clipper2Lib
 
     protected void AddPathsToVertexList(Paths64 paths, PathType polytype, bool isOpen)
     {
-      int pathCnt = paths.Count, totalVertCnt = 0;
-      foreach (Path64 p in paths) totalVertCnt += p.Count;
+      int pathsCnt = paths.Count, totalVertCnt = 0;
+      for (int i = 0; i < pathsCnt; i++) totalVertCnt += paths[i].Count;
       _vertexList.Capacity = _vertexList.Count + totalVertCnt;
 
-      foreach (Path64 path in paths)
+      for (int i = 0; i < pathsCnt; i++) 
       {
+        Path64 path = paths[i];
         Vertex? v0 = null, prev_v = null, curr_v;
-        foreach (Point64 pt in path)
+        for (int j = 0; j < path.Count; j++)
         {
+          Point64 pt = path[j];
           if (v0 == null)
           {
             v0 = new Vertex(pt, VertexFlags.None, null);
@@ -2818,7 +2820,6 @@ namespace Clipper2Lib
         OutRec outrec = ProcessJoin(j);
         CleanCollinear(outrec);
       }
-
       _joinerList.Clear();
     }
 
@@ -3305,8 +3306,9 @@ namespace Clipper2Lib
         solutionClosed.Capacity = _outrecList.Count;
         solutionOpen.Capacity = _outrecList.Count;
 
-        foreach (OutRec outrec in _outrecList)
+        for (int i = 0; i < _outrecList.Count; i++)
         {
+          OutRec outrec = _outrecList[i];
           if (outrec.pts == null) continue;
 
           Path64 path = new Path64();
@@ -3392,12 +3394,11 @@ namespace Clipper2Lib
 
     public Rect64 GetBounds()
     {
-      if (_vertexList.Count == 0) return new Rect64(0, 0, 0, 0);
-      Rect64 bounds = new Rect64(long.MaxValue, long.MaxValue, long.MinValue, long.MinValue);
-
-      foreach (Vertex t in _vertexList)
+      Rect64 bounds = new Rect64(long.MaxValue, long.MaxValue, 
+        long.MinValue, long.MinValue);
+      for (int i = 0; i < _vertexList.Count; i++)
       {
-        Vertex vStart = t, v = vStart;
+        Vertex t = _vertexList[i], v = t;
         do
         {
           if (v.pt.X < bounds.left) bounds.left = v.pt.X;
@@ -3405,9 +3406,9 @@ namespace Clipper2Lib
           if (v.pt.Y < bounds.top) bounds.top = v.pt.Y;
           if (v.pt.Y > bounds.bottom) bounds.bottom = v.pt.Y;
           v = v.next!;
-        } while (v == vStart);
+        } while (v != t);
       }
-
+      if (bounds.IsEmpty()) return new Rect64(0, 0, 0, 0);
       return bounds;
     }
   } //ClipperBase class
@@ -3502,7 +3503,7 @@ namespace Clipper2Lib
     public ZCallbackD? ZFillDFunc { get; set; }
 #endif
 
-    public ClipperD(int roundingDecimalPrecision = 2)
+    public ClipperD(int roundingDecimalPrecision = 0)
     {
       if (roundingDecimalPrecision < -8 || roundingDecimalPrecision > 8)
         throw new ClipperLibException("Error - RoundingDecimalPrecision exceeds the allowed range.");
@@ -3598,12 +3599,11 @@ namespace Clipper2Lib
       if (!success) return false;
 
       solutionClosed.Capacity = solClosed64.Count;
-      foreach (Path64 path in solClosed64)
-        solutionClosed.Add(ClipperFunc.ScalePathD(path, _invScale));
-
+      for (int i = 0; i < solClosed64.Count; i++)
+        solutionClosed.Add(ClipperFunc.ScalePathD(solClosed64[i], _invScale));
       solutionOpen.Capacity = solOpen64.Count;
-      foreach (Path64 path in solOpen64)
-        solutionOpen.Add(ClipperFunc.ScalePathD(path, _invScale));
+      for (int i = 0; i < solOpen64.Count; i++)
+        solutionOpen.Add(ClipperFunc.ScalePathD(solOpen64[i], _invScale));
 
       return true;
     }
@@ -3642,8 +3642,8 @@ namespace Clipper2Lib
       if (oPaths.Count > 0)
       {
         openPaths.Capacity = oPaths.Count;
-        foreach (Path64 path in oPaths)
-          openPaths.Add(ClipperFunc.ScalePathD(path, _invScale));
+        for (int i = 0; i < oPaths.Count; i++)
+          openPaths.Add(ClipperFunc.ScalePathD(oPaths[i], _invScale));
       }
 
       return true;

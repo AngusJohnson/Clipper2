@@ -32,15 +32,28 @@ namespace Clipper2Lib
       Paths64 tmp;
       tmp.reserve(pathLen);
 
-      for (Point64 pt : path)
+      if (isSum)
       {
-        Path64 path2;
-        path2.reserve(pattern.size());
-        if (isSum)
+        for (Point64 pt : path)
+        {
+          //Path64 path2(pattern.size());
+          //std::transform(pattern.cbegin(), pattern.cend(),
+          //  path2.begin(), [pt](const Point64& pt2) {return pt + pt2; });
+          Path64 path2;
+          path2.reserve(pattern.size());
           for (const Point64& pt2 : pattern) path2.push_back(pt + pt2);
-        else
+          tmp.push_back(path2);
+        }
+      }
+      else
+      {
+        for (Point64 pt : path)
+        {
+          Path64 path2;
+          path2.reserve(pattern.size());
           for (const Point64& pt2 : pattern) path2.push_back(pt - pt2);
-        tmp.push_back(path2);
+          tmp.push_back(path2);
+        }
       }
 
       Paths64 result;
