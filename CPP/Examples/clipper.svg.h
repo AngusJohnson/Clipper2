@@ -13,8 +13,8 @@
 #include <cstdlib>
 #include <string>
 
-#include ".\Clipper2Lib\clipper.engine.h"
-#include ".\Clipper2Lib\clipper.core.h"
+#include "../Clipper2Lib/clipper.engine.h"
+#include "../Clipper2Lib/clipper.core.h"
 
 namespace Clipper2Lib {
 

@@ -8,8 +8,8 @@
 #include <conio.h>
 #include "windows.h"
 
-#include "..\Clipper2Lib\clipper.h"
-#include "..\clipper.svg.h"
+#include "../../Clipper2Lib/clipper.h"
+#include "../clipper.svg.h"
 
 using namespace std;
 using namespace Clipper2Lib;

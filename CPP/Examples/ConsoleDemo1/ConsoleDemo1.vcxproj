@@ -144,17 +144,14 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="..\Clipper2Lib\clipper.engine.cpp" />
-    <ClCompile Include="..\Clipper2Svg\clipper.svg.cpp" />
+    <ClCompile Include="..\..\Clipper2Lib\clipper.core.cpp" />
+    <ClCompile Include="..\..\Clipper2Lib\clipper.engine.cpp" />
+    <ClCompile Include="..\..\Clipper2Lib\clipper.offset.cpp" />
+    <ClCompile Include="..\clipper.svg.cpp" />
     <ClCompile Include="ConsoleDemo1.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">NotUsing</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">NotUsing</PrecompiledHeader>
     </ClCompile>
-  </ItemGroup>
-  <ItemGroup>
-    <ClInclude Include="..\Clipper2Lib\clipper.core.h" />
-    <ClInclude Include="..\Clipper2Lib\clipper.engine.h" />
-    <ClInclude Include="..\Clipper2Svg\clipper.svg.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
