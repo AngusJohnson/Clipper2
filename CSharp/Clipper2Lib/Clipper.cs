@@ -126,10 +126,10 @@ namespace Clipper2Lib
       int cnt = path.Count;
       if (cnt < 3) return 0.0;
       Point64 prevPt = path[cnt - 1];
-      foreach (Point64 pt in path)
+      for (int i = 0; i < path.Count; i++)
       {
-        a += (double) (prevPt.Y - pt.Y) * (prevPt.X + pt.X);
-        prevPt = pt;
+        a += (double) (prevPt.Y - path[i].Y) * (prevPt.X + path[i].X);
+        prevPt = path[i];
       }
 #if REVERSE_ORIENTATION
       return a * -0.5;
@@ -153,10 +153,10 @@ namespace Clipper2Lib
       int cnt = path.Count;
       if (cnt < 3) return 0.0;
       PointD prevPt = path[cnt - 1];
-      foreach (PointD pt in path)
+      for (int i = 0; i < cnt; i++)
       {
-        a += (prevPt.y - pt.y) * (prevPt.x + pt.x);
-        prevPt = pt;
+        a += (prevPt.y - path[i].y) * (prevPt.x + path[i].x);
+        prevPt = path[i];
       }
 #if REVERSE_ORIENTATION
       return a * -0.5;
@@ -168,8 +168,8 @@ namespace Clipper2Lib
     public static double Area(PathsD paths)
     {
       double a = 0.0;
-      foreach (PathD path in paths)
-        a += Area(path);
+      for (int i = 0; i < paths.Count; i++)
+        a += Area(paths[i]);
       return a;
     }
 
@@ -188,8 +188,8 @@ namespace Clipper2Lib
     public static Path64 OffsetPath(Path64 path, long dx, long dy)
     {
       Path64 result = new Path64(path.Count);
-      foreach (Point64 pt in path)
-        result.Add(new Point64(pt.X + dx, pt.Y + dy));
+      for (int i = 0; i < path.Count; i++)
+        result.Add(new Point64(path[i].X + dx, path[i].Y + dy));
       return result;
     }
 
@@ -208,8 +208,8 @@ namespace Clipper2Lib
     {
       if (scale == 1) return path;
       Path64 result = new Path64(path.Count);
-      foreach (Point64 pt in path)
-        result.Add(new Point64(pt, scale));
+      for (int i = 0; i < path.Count; i++)
+        result.Add(new Point64(path[i], scale));
       return result;
     }
 
@@ -217,8 +217,8 @@ namespace Clipper2Lib
     {
       if (scale == 1) return paths;
       Paths64 result = new Paths64(paths.Count);
-      foreach (Path64 path in paths)
-        result.Add(ScalePath(path, scale));
+      for (int i = 0; i < paths.Count; i++)
+        result.Add(ScalePath(paths[i], scale));
       return result;
     }
 
@@ -226,8 +226,8 @@ namespace Clipper2Lib
     {
       if (scale == 1) return path;
       PathD result = new PathD(path.Count);
-      foreach (PointD pt in path)
-        result.Add(new PointD(pt, scale));
+      for (int i = 0; i < path.Count; i++)
+        result.Add(new PointD(path[i], scale));
       return result;
     }
 
@@ -235,8 +235,8 @@ namespace Clipper2Lib
     {
       if (scale == 1) return paths;
       PathsD result = new PathsD(paths.Count);
-      foreach (PathD path in paths)
-        result.Add(ScalePath(path, scale));
+      for (int i = 0; i < paths.Count; i++)
+        result.Add(ScalePath(paths[i], scale));
       return result;
     }
 
@@ -281,56 +281,56 @@ namespace Clipper2Lib
     public static Path64 Path64(PathD path)
     {
       Path64 result = new Path64(path.Count);
-      foreach (PointD pt in path)
-        result.Add(new Point64(pt));
+      for (int i = 0; i < path.Count; i++)
+        result.Add(new Point64(path[i]));
       return result;
     }
 
     public static Paths64 Paths64(PathsD paths)
     {
       Paths64 result = new Paths64(paths.Count);
-      foreach (PathD path in paths)
-        result.Add(Path64(path));
+      for (int i = 0; i < paths.Count; i++)
+        result.Add(Path64(paths[i]));
       return result;
     }
 
     public static PathsD PathsD(Paths64 paths)
     {
       PathsD result = new PathsD(paths.Count);
-      foreach (Path64 path in paths)
-        result.Add(PathD(path));
+      for (int i = 0; i < paths.Count; i++)
+        result.Add(PathD(paths[i]));
       return result;
     }
 
     public static PathD PathD(Path64 path)
     {
       PathD result = new PathD(path.Count);
-      foreach (Point64 pt in path)
-        result.Add(new PointD(pt));
+      for (int i = 0; i < path.Count; i++)
+        result.Add(new PointD(path[i]));
       return result;
     }
 
     public static Paths64 OffsetPaths(Paths64 paths, long dx, long dy)
     {
       Paths64 result = new Paths64(paths.Count);
-      foreach (Path64 path in paths)
-        result.Add(OffsetPath(path, dx, dy));
+      for (int i = 0; i < paths.Count; i++)
+        result.Add(OffsetPath(paths[i], dx, dy));
       return result;
     }
 
     public static PathD OffsetPath(PathD path, long dx, long dy)
     {
       PathD result = new PathD(path.Count);
-      foreach (PointD pt in path)
-        result.Add(new PointD(pt.y + dx, pt.y + dy));
+      for (int i = 0; i < path.Count; i++)
+        result.Add(new PointD(path[i].y + dx, path[i].y + dy));
       return result;
     }
 
     public static PathsD OffsetPaths(PathsD paths, long dx, long dy)
     {
       PathsD result = new PathsD(paths.Count);
-      foreach (PathD path in paths)
-        result.Add(OffsetPath(path, dx, dy));
+      for (int i = 0; i < paths.Count; i++)
+        result.Add(OffsetPath(paths[i], dx, dy));
       return result;
     }
 
@@ -353,16 +353,16 @@ namespace Clipper2Lib
     public static Paths64 ReversePaths(Paths64 paths)
     {
       Paths64 result = new Paths64(paths.Count);
-      foreach (Path64 path in paths)
-        result.Add(ReversePath(path));
+      for (int i = 0; i < paths.Count; i++)
+        result.Add(ReversePath(paths[i]));
       return result;
     }
 
     public static PathsD ReversePaths(PathsD paths)
     {
       PathsD result = new PathsD(paths.Count);
-      foreach (PathD path in paths)
-        result.Add(ReversePath(path));
+      for (int i = 0; i < paths.Count; i++)
+        result.Add(ReversePath(paths[i]));
       return result;
     }
 
@@ -370,9 +370,10 @@ namespace Clipper2Lib
     {
       Rect64 result = new Rect64(
         long.MaxValue, long.MaxValue, long.MinValue, long.MinValue);
-      foreach (Path64 path in paths)
-        foreach (Point64 pt in path)
+      for (int i = 0; i < paths.Count; i++)
+        for (int j = 0; j < paths[i].Count; j++)
         {
+          Point64 pt = paths[i][j];
           if (pt.X < result.left) result.left = pt.X;
           if (pt.X > result.right) result.right = pt.X;
           if (pt.Y < result.top) result.top = pt.Y;
@@ -385,9 +386,10 @@ namespace Clipper2Lib
     {
       RectD result = new RectD(double.MaxValue, -double.MaxValue,
         -double.MaxValue, -double.MaxValue);
-      foreach (PathD path in paths)
-        foreach (PointD pt in path)
+      for (int i = 0; i < paths.Count; i++)
+        for (int j = 0; j < paths[i].Count; j++)
         {
+          PointD pt = paths[i][j];
           if (pt.x < result.left) result.left = pt.x;
           if (pt.x > result.right) result.right = pt.x;
           if (pt.y < result.top) result.top = pt.y;
