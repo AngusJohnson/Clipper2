@@ -108,7 +108,7 @@ namespace Clipper2Lib {
     Path64 result;
     result.reserve(path.size());
     for (const Point64 pt : path)
-      result.emplace_back(point_mutable_traits<PointType>::construct(CoordinateType(point_traits<PointType>::get(pt, 0) * scale), CoordinateType(point_traits<PointType>::get(pt, 1) * scale)));
+      result.emplace_back(point_traits<PointType>::construct(CoordinateType(point_traits<PointType>::get(pt, 0) * scale), CoordinateType(point_traits<PointType>::get(pt, 1) * scale)));
     return result;
   }
 

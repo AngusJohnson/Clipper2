@@ -20,8 +20,11 @@
 
 namespace Clipper2Lib {
 
-//#define REVERSE_ORIENTATION
-//#define USINGZ
+// ClipperFlags traits.
+// Currently only used for configuring the default contour orientation.
+struct DefaultClipperFlags {
+	static constexpr const bool reverse_orientation = false;
+};
 
 // Point ------------------------------------------------------------------------
 
@@ -33,64 +36,6 @@ struct Point {
 
 	explicit Point() {}
 
-#ifdef USINGZ
-	T z;
-
-	explicit Point() : x(0), y(0), z(0) {};
-
-	template <typename T2>
-	explicit Point(const T2 x_ = 0, const T2 y_ = 0) :
-		x(static_cast<T>(x_)), y(static_cast<T>(y_)), z(0) { };
-
-	template <typename T2>
-	explicit Point<T>(const Point<T2>& p)
-	{
-		if (std::numeric_limits<T>::is_integer &&
-			!std::numeric_limits<T2>::is_integer)
-		{
-			x = static_cast<T>(std::round(p.x));
-			y = static_cast<T>(std::round(p.y));
-			z = static_cast<T>(std::round(p.z));
-		}
-		else
-		{
-			x = static_cast<T>(p.x);
-			y = static_cast<T>(p.y);
-			z = static_cast<T>(p.z);
-		}
-	}
-
-	friend std::ostream& operator<<(std::ostream& os, const Point& point)
-	{
-		os << point.x << "," << point.y << "," << point.z;
-		return os;
-	}
-
-#else
-
-/*
-	explicit Point() : x(0), y(0) {};
-
-	template <typename T2>
-	explicit Point(const T2 x_ = 0, const T2 y_ = 0) :
-		x(static_cast<T>(x_)), y(static_cast<T>(y_)) {};
-
-	template <typename T2>
-	explicit Point<T>(const Point<T2>& p)
-	{
-		if (std::numeric_limits<T>::is_integer &&
-			!std::numeric_limits<T2>::is_integer)
-		{
-			x = static_cast<T>(std::round(p.x));
-			y = static_cast<T>(std::round(p.y));
-		}
-		else
-		{
-			x = static_cast<T>(p.x);
-			y = static_cast<T>(p.y);
-		}
-	}
-*/
 	static Point construct(T x, T y)
 	{
 		Point p; p.x = x; p.y = y; 
@@ -102,75 +47,51 @@ struct Point {
 		os << point.x << "," << point.y;
 		return os;
 	}
-
-#endif
-/*
-	friend bool operator==(const Point &a, const Point &b) 
-	{
-		return a.x == b.x && a.y == b.y;
-	}
-
-	friend bool operator!=(const Point& a, const Point& b)
-	{
-		return !(a == b);
-	}
-
-	Point operator * (const double scale) const
-	{
-		return Point(x * scale, y * scale);
-	}
-
-	inline Point<T> operator-() const
-	{
-		return Point<T>(-x,-y);
-	}
-
-	inline Point operator+(const Point &b) const
-	{
-		return Point(x+b.x, y+b.y);
-	}
-
-	inline Point operator-(const Point &b) const
-	{
-		return Point(x-b.x, y-b.y);
-	}
-*/
 };
 
-//    template <>
-//    struct geometry_concept<Slic3r::Point> { using type = point_concept; };
+template <typename T>
+struct Point3 {
+	using coordinate_type = T;
+	T x;
+	T y;
+	T z;
 
-	// Losely modeled after boost::polygon::point_traits
-	template <typename PointType>
-	struct point_traits {
-		typedef PointType point_type;
-		typedef typename point_type::coordinate_type coordinate_type;
+	explicit Point3() {}
 
-		static coordinate_type get(const point_type& point, int i) {
-			assert(i == 0 || i == 1);
-			return i == 0 ? point.x : point.y;
-		}
-	};
-
-	template <typename PointType>
-	struct point_mutable_traits {
-		typedef PointType point_type;
-		typedef typename point_type::coordinate_type coordinate_type;
-
-		static void set(point_type& point, int i, coordinate_type value) {
-			assert(i == 0 || i == 1);
-			(i == 0 ? point.x : point.y) = value;
-		}
-
-		static point_type construct(coordinate_type x, coordinate_type y) {
-			return point_type::construct(x, y);
-		}
-	};
-
-	template <typename PointType>
-	inline bool xy_equals(const PointType& p1, const PointType& p2) {
-		return point_traits<PointType>::get(p1, 0) == point_traits<PointType>::get(p2, 0) && point_traits<PointType>::get(p1, 1) == point_traits<PointType>::get(p2, 1);
+	friend std::ostream& operator<<(std::ostream& os, const Point3& point)
+	{
+		os << point.x << "," << point.y << "," << point.z;
+		return os;
 	}
+
+	static Point3 construct(T x, T y)
+	{
+		Point3 p; p.x = x; p.y = y;
+		return p;
+	}
+};
+
+// Losely modeled after boost::polygon::point_traits
+template <typename PointType>
+struct point_traits {
+	typedef PointType point_type;
+	typedef typename point_type::coordinate_type coordinate_type;
+	static constexpr const bool has_z = false;
+
+	static coordinate_type get(const point_type& point, int i) {
+		assert(i == 0 || i == 1);
+		return i == 0 ? point.x : point.y;
+	}
+
+	static void set(point_type& point, int i, coordinate_type value) {
+		assert(i == 0 || i == 1);
+		(i == 0 ? point.x : point.y) = value;
+	}
+
+	static point_type construct(coordinate_type x, coordinate_type y) {
+		return point_type::construct(x, y);
+	}
+};
 
 using Point64 = Point<int64_t>;
 using PointD = Point<double>;
@@ -179,15 +100,47 @@ using PathD = std::vector< PointD>;
 using Paths64 = std::vector< Path64>;
 using PathsD = std::vector< PathD>;
 
+
+/////////////////////////////////////////////////////////////////////////////////////
+//                                 Implementation                                  //
+/////////////////////////////////////////////////////////////////////////////////////
+
+namespace detail 
+{
+	template<typename PointType>
+	inline auto GetX(const PointType& p)
+	{
+		return point_traits<PointType>::get(p, 0);
+	}
+
+	template<typename PointType>
+	inline auto GetY(const PointType& p)
+	{
+		return point_traits<PointType>::get(p, 1);
+	}
+
+	template <typename PointType>
+	inline bool EqualsXY(const PointType& p1, const PointType& p2) {
+		return GetX(p1) == GetX(p2) && GetY(p1) == GetY(p2);
+	}
+
+	template <typename PointType>
+	inline PointType Construct(const typename PointType::coordinate_type x, const typename PointType::coordinate_type y) {
+		return point_traits<PointType>::construct(x, y);
+	}
+}
+
 template<typename T>
 inline double Sqr(T val)
 {
 	return static_cast<double>(val) * static_cast<double>(val);
 }
 
-inline bool NearEqual(const Point<double>& p1, const Point<double>& p2, double max_dist_sqrd)
+template<typename PointType>
+inline bool NearEqual(const PointType& p1, const PointType& p2, double max_dist_sqrd)
 {
-	return Sqr(p1.x - p2.x) + Sqr(p1.y - p2.y) < max_dist_sqrd;
+	using namespace detail;
+	return Sqr<double>(GetX(p1) - GetX(p2)) + Sqr<double>(GetY(p1) - GetY(p2)) < max_dist_sqrd;
 }
 
 static PathD StripNearEqual(const PathD& path, double max_dist_sqrd, bool is_closed_path)
@@ -230,7 +183,7 @@ inline Path64 PathDToPath64(const PathD& path, double scale = 1)
 	result.reserve(path.size());
 	PathD::const_iterator path_iter;
 	for (path_iter = path.cbegin(); path_iter != path.cend(); ++path_iter)
-		result.push_back(point_mutable_traits<Point64>::construct(static_cast<int64_t>((*path_iter).x * scale),
+		result.push_back(point_traits<Point64>::construct(static_cast<int64_t>((*path_iter).x * scale),
 			static_cast<int64_t>((*path_iter).y * scale)));
 	return result;
 }
@@ -241,7 +194,7 @@ inline PathD Path64ToPathD(const Path64& path, double scale = 1)
 	result.reserve(path.size());
 	Path64::const_iterator path_iter;
 	for (path_iter = path.cbegin(); path_iter != path.cend(); ++path_iter)
-		result.emplace_back(point_mutable_traits<PointD>::construct(point_traits<Point64>::get(*path_iter, 0) * scale, point_traits<Point64>::get(*path_iter, 1) * scale));
+		result.emplace_back(point_traits<PointD>::construct(detail::GetX(*path_iter) * scale, detail::GetY(*path_iter) * scale));
 	return result;
 }
 
@@ -330,38 +283,45 @@ private:
 // Miscellaneous ------------------------------------------------------------
 
 
-template <typename T>
-inline double CrossProduct(const Point<T>& pt1, const Point<T>& pt2, const Point<T>& pt3) {
-	return (static_cast<double>(pt2.x - pt1.x) * static_cast<double>(pt3.y - 
-		pt2.y) - static_cast<double>(pt2.y - pt1.y) * static_cast<double>(pt3.x - pt2.x));
+template <typename PointType>
+inline double CrossProduct(const PointType& pt1, const PointType& pt2, const PointType& pt3) {
+	using namespace detail;
+	return  static_cast<double>(GetX(pt2) - GetX(pt1)) * static_cast<double>(GetY(pt3) - GetY(pt2)) 
+		  - static_cast<double>(GetY(pt2) - GetY(pt1)) * static_cast<double>(GetX(pt3) - GetX(pt2));
 }
 
-template <typename T>
-inline double DotProduct(const Point<T>& pt1, const Point<T>& pt2, const Point<T>& pt3) {
-	return (static_cast<double>(pt2.x - pt1.x) * static_cast<double>(pt3.x - pt2.x) + 
-		static_cast<double>(pt2.y - pt1.y) * static_cast<double>(pt3.y - pt2.y));
+template <typename PointType>
+inline double DotProduct(const PointType& pt1, const PointType& pt2, const PointType& pt3) {
+	using namespace detail;
+	return static_cast<double>(GetX(pt2) - GetX(pt1)) * static_cast<double>(GetX(pt3) - GetX(pt2)) +
+		   static_cast<double>(GetY(pt2) - GetY(pt1)) * static_cast<double>(GetY(pt3) - GetY(pt2));
 }
 
-template <typename T>
-inline double DotProduct(const Point<T>& vec1, const Point<T>& vec2)
+template <typename PointType>
+inline double DotProduct(const PointType& vec1, const PointType& vec2)
 {
-	return static_cast<double>(vec1.x * vec2.x) + static_cast<double>(vec1.y * vec2.y);
+	using namespace detail;
+	return static_cast<double>(GetX(vec1) * GetX(vec2)) + 
+		   static_cast<double>(GetY(vec1) * GetY(vec2));
 }
 
-template <typename T>
-inline double DistanceSqr(const Point<T> pt1, const Point<T> pt2) {
-	return std::pow(pt1.x - pt2.x, 2.0) + std::pow(pt1.y - pt2.y, 2.0);
+template <typename PointType>
+inline double DistanceSqr(const PointType pt1, const PointType pt2) {
+	using namespace detail;
+	return Sqr(GetX(pt1) - GetX(pt2)) + 
+		   Sqr(GetY(pt1) - GetY(pt2));
 }
 
-template <typename T>
-inline double DistanceFromLineSqrd(const Point<T> &pt, const Point<T> &ln1, const Point<T> &ln2)
+template <typename PointType>
+inline double DistanceFromLineSqrd(const PointType &pt, const PointType &ln1, const PointType &ln2)
 {
 	//perpendicular distance of point (x³,y³) = (Ax³ + By³ + C)/Sqrt(A² + B²)
 	//see http://en.wikipedia.org/wiki/Perpendicular_distance
-	double A = static_cast<double>(ln1.y - ln2.y);
-	double B = static_cast<double>(ln2.x - ln1.x);
-	double C = A * ln1.x + B * ln1.y;
-	C = A * pt.x + B * pt.y - C;
+	using namespace detail;
+	double A = static_cast<double>(GetY(ln1) - GetY(ln2));
+	double B = static_cast<double>(GetX(ln2) - GetX(ln1));
+	double C = A * GetX(ln1) + B * GetY(ln1);
+	C = A * GetX(pt) + B * GetY(pt) - C;
 	return (C * C) / (A * A + B * B);
 }
 
@@ -372,78 +332,147 @@ bool NearCollinear(const Point<T> &pt1, const Point<T> &pt2, const Point<T> &pt3
 	return (cp * cp) / (DistanceSqr(pt1, pt2) * DistanceSqr(pt2, pt3)) < sin_sqrd_min_angle_rads;
 }
 
-inline double Area(const Path64& path)
+template<typename PointType, typename ClipperFlags>
+inline double Area(const std::vector<PointType>& path)
 {
 	if (path.size() == 0) return 0.0;
 	double a = 0.0;
-	Path64::const_iterator path_iter, path_iter_last = --path.cend();
+	std::vector<PointType>::const_iterator path_iter, path_iter_last = --path.cend();
 	for (path_iter = path.cbegin(); path_iter != path.cend();
 		path_iter_last = path_iter, ++path_iter)
 	{
 		a += static_cast<double>(path_iter_last->y - path_iter->y) *
 			(path_iter_last->x + path_iter->x);
 	}
-#ifdef REVERSE_ORIENTATION
-	return a * -0.5;
-#else
-	return a * 0.5;
-#endif
-}
-
-inline double Area(const Paths64& paths)
-{
-	double a = 0.0;
-	for (Paths64::const_iterator paths_iter = paths.cbegin();
-		paths_iter != paths.cend(); ++paths_iter)
-	{
-		a += Area(*paths_iter);
-	}
-	return a;
-}
-
-inline double Area(const PathD& path)
-{
-	{
-		if (path.size() == 0) return 0.0;
-		double a = 0.0;
-		PathD::const_iterator path_iter, path_iter_last = --path.cend();
-		for (path_iter = path.cbegin(); path_iter != path.cend();
-			path_iter_last = path_iter, ++path_iter)
-		{
-			a += static_cast<double>(path_iter_last->y - path_iter->y) *
-				(path_iter_last->x + path_iter->x);
-		}
-#ifdef REVERSE_ORIENTATION
+	if constexpr (ClipperFlags::reverse_orientation)
 		return a * -0.5;
-#else
+	else
 		return a * 0.5;
-#endif
-	}
 }
 
-inline double Area(const PathsD& paths)
+template<typename PointType, typename ClipperFlags>
+inline double Area(const std::vector<std::vector<PointType>>& paths)
 {
 	double a = 0.0;
-	for (PathsD::const_iterator paths_iter = paths.cbegin();
-		paths_iter != paths.cend(); ++paths_iter)
+	for (const auto &path : paths)
 	{
-		a += Area(*paths_iter);
+		a += Area<PointType, ClipperFlags>(path);
 	}
 	return a;
 }
 
-inline bool IsClockwise(const Path64& poly)
+template<typename PointType, typename ClipperFlags>
+inline bool IsClockwise(const std::vector<PointType>& poly)
 {
-	return Area(poly) >= 0;
+	return Area<PointType, ClipperFlags>(poly) >= 0;
 }
 
-inline bool IsClockwise(const PathD& poly)
+inline Path64 MakePath(const std::string& s);
+inline PathD MakePathD(const std::string& s);
+
+namespace core::detail
 {
-	return Area(poly) >= 0;
+	using StrConstIter = std::string::const_iterator;
+
+	inline bool GetInt(StrConstIter& iter, const StrConstIter end_iter, int64_t& val)
+	{
+		val = 0;
+		bool is_neg = *iter == '-';
+		if (is_neg) ++iter;
+		std::string::const_iterator start_iter = iter;
+		while (iter != end_iter &&
+			((*iter >= '0') && (*iter <= '9')))
+		{
+			val = val * 10 + ((int64_t)(*iter++) - '0');
+		}
+		if (is_neg) val = -val;
+		return (iter != start_iter);
+	}
+
+	inline bool GetFloat(StrConstIter& iter, const StrConstIter end_iter, double& val)
+	{
+		val = 0;
+		bool is_neg = *iter == '-';
+		if (is_neg) ++iter;
+		int dec_pos = -1;
+		std::string::const_iterator start_iter = iter;
+		while (iter != end_iter && (*iter == '.' ||
+			((*iter >= '0') && (*iter <= '9'))))
+		{
+			if (*iter == '.')
+			{
+				if (dec_pos >= 0) return false;
+				dec_pos = 0;
+				++iter;
+				continue;
+			}
+
+			if (dec_pos >= 0) dec_pos++;
+			val = val * 10 + ((int64_t)(*iter++) - '0');
+		}
+		if (iter == start_iter || dec_pos == 0) return false;
+		if (dec_pos > 0)
+			val *= std::pow(10, -dec_pos);
+		return true;
+	}
+
+	inline void SkipWhiteSpace(StrConstIter& iter, const StrConstIter end_iter)
+	{
+		while (iter != end_iter && *iter <= ' ') ++iter;
+	}
+
+	inline void SkipSpacesWithOptionalComma(StrConstIter& iter, const StrConstIter end_iter)
+	{
+		int comma_cnt = 0;
+		while (iter != end_iter && (*iter == ' ' || *iter == ','))
+		{
+			if (*iter == ',')
+			{
+				if (comma_cnt > 0) return;
+				++comma_cnt;
+			}
+			++iter;
+		}
+	}
+} // namespace core::detail
+
+inline Path64 MakePath(const std::string& s)
+{
+	using namespace core::detail;
+
+	Path64 result;
+	StrConstIter s_iter = s.cbegin();
+	SkipWhiteSpace(s_iter, s.cend());
+	while (s_iter != s.cend())
+	{
+		int64_t y = 0, x = 0;
+		if (!GetInt(s_iter, s.cend(), x)) break;
+		SkipSpacesWithOptionalComma(s_iter, s.cend());
+		if (!GetInt(s_iter, s.cend(), y)) break;
+		result.push_back(point_traits<Point64>::construct(x, y));
+		SkipSpacesWithOptionalComma(s_iter, s.cend());
+	}
+	return result;
 }
 
-Path64 MakePath(const std::string& s);
-PathD MakePathD(const std::string& s);
+inline PathD MakePathD(const std::string& s)
+{
+	using namespace core::detail;
+
+	PathD result;
+	StrConstIter s_iter = s.cbegin();
+	SkipWhiteSpace(s_iter, s.cend());
+	while (s_iter != s.cend())
+	{
+		double y = 0, x = 0;
+		if (!GetFloat(s_iter, s.cend(), x)) break;
+		SkipSpacesWithOptionalComma(s_iter, s.cend());
+		if (!GetFloat(s_iter, s.cend(), y)) break;
+		result.push_back(point_traits<PointD>::construct(x, y));
+		SkipSpacesWithOptionalComma(s_iter, s.cend());
+	}
+	return result;
+}
 
 }  //namespace
 

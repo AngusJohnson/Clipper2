@@ -19,11 +19,16 @@
 #include "clipper.engine.h"
 #include "clipper.offset.h"
 
-namespace Clipper2Lib 
+namespace Clipper2Lib
 {
 
-  namespace detail
+  namespace detail::minkowski
   {
+      using Clipper2Lib::detail::GetX;
+      using Clipper2Lib::detail::GetY;
+      using Clipper2Lib::IsClockwise;
+
+    template<typename ClipperFlags>
     static Paths64 Minkowski(const Path64& pattern, const Path64& path, bool isSum, bool isClosed)
     {
       using PointType = Path64::value_type;
@@ -39,14 +44,14 @@ namespace Clipper2Lib
         path2.reserve(pattern.size());
         if (isSum)
           for (const Point64& pt2 : pattern) 
-              path2.emplace_back(point_mutable_traits<PointType>::construct(
-                  point_traits<PointType>::get(pt, 0) + point_traits<PointType>::get(pt2, 0), 
-                  point_traits<PointType>::get(pt, 1) + point_traits<PointType>::get(pt2, 0)));
+              path2.emplace_back(point_traits<PointType>::construct(
+                  GetX(pt) + GetX(pt2), 
+                  GetY(pt) + GetX(pt2)));
         else
           for (const Point64& pt2 : pattern)
-            path2.emplace_back(point_mutable_traits<PointType>::construct(
-                point_traits<PointType>::get(pt, 0) - point_traits<PointType>::get(pt2, 0),
-                point_traits<PointType>::get(pt, 1) - point_traits<PointType>::get(pt2, 0)));
+            path2.emplace_back(point_traits<PointType>::construct(
+                GetX(pt) - GetX(pt2),
+                GetY(pt) - GetX(pt2)));
         tmp.push_back(path2);
       }
 
@@ -65,7 +70,7 @@ namespace Clipper2Lib
             quad.push_back(tmp[i][j]);
             quad.push_back(tmp[g][j]);
           };
-          if (!IsClockwise(quad))
+          if (!IsClockwise<Point64, ClipperFlags>(quad))
             std::reverse(quad.begin(), quad.end());
           result.push_back(quad);
           h = j;
@@ -75,10 +80,11 @@ namespace Clipper2Lib
       return result;
     }
 
+    template<typename ClipperFlags>
     inline Paths64 Union(const Paths64& subjects, FillRule fillrule)
     {
       Paths64 result;
-      Clipper64 clipper;
+      ClipperBase<Point64, EmptyZFillFunc<Point64>, ClipperFlags> clipper;
       clipper.AddSubject(subjects);
       clipper.Execute(ClipType::Union, fillrule, result);
       return result;
@@ -86,29 +92,33 @@ namespace Clipper2Lib
 
   } //namespace internal
 
-  static Paths64 MinkowskiSum(const Path64& pattern, const Path64& path, bool isClosed)
+  template<typename ClipperFlags = DefaultClipperFlags>
+  inline Paths64 MinkowskiSum(const Path64& pattern, const Path64& path, bool isClosed)
   {
-    return detail::Union(detail::Minkowski(pattern, path, true, isClosed), FillRule::NonZero);
+    return detail::minkowski::Union<ClipperFlags>(detail::minkowski::Minkowski<ClipperFlags>(pattern, path, true, isClosed), FillRule::NonZero);
   }
 
-  static PathsD MinkowskiSum(const PathD& pattern, const PathD& path, bool isClosed, int decimalPlaces = 2)
+  template<typename ClipperFlags = DefaultClipperFlags>
+  inline PathsD MinkowskiSum(const PathD& pattern, const PathD& path, bool isClosed, int decimalPlaces = 2)
   {
     double scale = pow(10, decimalPlaces);
     Path64 pat64 = PathDToPath64(pattern, scale), path64 = PathDToPath64(path, scale);
-    Paths64 tmp = detail::Union(detail::Minkowski(pat64, path64, true, isClosed), FillRule::NonZero);
+    Paths64 tmp = detail::minkowski::Union<ClipperFlags>(detail::minkowski::Minkowski<ClipperFlags>(pat64, path64, true, isClosed), FillRule::NonZero);
     return Paths64ToPathsD(tmp, 1 / scale);
   }
 
-  static Paths64 MinkowskiDiff(const Path64& pattern, const Path64& path, bool isClosed)
+  template<typename ClipperFlags = DefaultClipperFlags>
+  inline Paths64 MinkowskiDiff(const Path64& pattern, const Path64& path, bool isClosed)
   {
-    return detail::Union(detail::Minkowski(pattern, path, false, isClosed), FillRule::NonZero);
+    return detail::minkowski::Union<ClipperFlags>(detail::minkowski::Minkowski(pattern, path, false, isClosed), FillRule::NonZero);
   }
 
-  static PathsD MinkowskiDiff(const PathD& pattern, const PathD& path, bool isClosed, int decimalPlaces = 2)
+  template<typename ClipperFlags = DefaultClipperFlags>
+  inline PathsD MinkowskiDiff(const PathD& pattern, const PathD& path, bool isClosed, int decimalPlaces = 2)
   {
     double scale = pow(10, decimalPlaces);
     Path64 pat64 = PathDToPath64(pattern, scale), path64 = PathDToPath64(path, scale);
-    Paths64 tmp = detail::Union(detail::Minkowski(pat64, path64, false, isClosed), FillRule::NonZero);
+    Paths64 tmp = detail::minkowski::Union<ClipperFlags>(detail::minkowski::Minkowski(pat64, path64, false, isClosed), FillRule::NonZero);
     return Paths64ToPathsD(tmp, 1 / scale);
   }
 

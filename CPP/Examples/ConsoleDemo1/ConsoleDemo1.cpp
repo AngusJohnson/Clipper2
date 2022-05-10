@@ -66,7 +66,7 @@ bool GetPath(const string& line, Paths64& paths)
   int64_t x = 0, y = 0;  
   string::const_iterator s_it = line.cbegin();
   while (GetNumericValue(line, s_it, x) && GetNumericValue(line, s_it, y))
-    p.push_back(point_mutable_traits<Point64>::construct(x, y));
+    p.push_back(point_traits<Point64>::construct(x, y));
   if (p.empty()) return false;
   paths.push_back(p);
   return true;
@@ -269,18 +269,18 @@ std::string FormatMillisecs(int64_t value)
 Path64 Ellipse(const Rect64& rec)
 {
   if (rec.IsEmpty()) return Path64();
-  auto centre = point_mutable_traits<Point64>::construct((rec.right + rec.left) / 2, (rec.bottom + rec.top) / 2);
-  auto radii = point_mutable_traits<Point64>::construct(rec.Width() /2, rec.Height() /2);
+  auto centre = point_traits<Point64>::construct((rec.right + rec.left) / 2, (rec.bottom + rec.top) / 2);
+  auto radii = point_traits<Point64>::construct(rec.Width() /2, rec.Height() /2);
   int steps = static_cast<int>(PI * sqrt((radii.x + radii.y)/2));
   double si = std::sin(2 * PI / steps);
   double co = std::cos(2 * PI / steps);
   double dx = co, dy = si;
   Path64 result;
   result.reserve(steps);
-  result.push_back(point_mutable_traits<Point64>::construct(centre.x + radii.x, centre.y));
+  result.push_back(point_traits<Point64>::construct(centre.x + radii.x, centre.y));
   for (int i = 1; i < steps; ++i)
   {
-    result.push_back(point_mutable_traits<Point64>::construct(centre.x + static_cast<int64_t>(radii.x * dx),
+    result.push_back(point_traits<Point64>::construct(centre.x + static_cast<int64_t>(radii.x * dx),
       centre.y + static_cast<int64_t>(radii.y * dy)));
     double x = dx * co - dy * si;
     dy = dy * co + dx * si;
@@ -295,7 +295,7 @@ inline Path64 MakeRandomPoly(int width, int height, unsigned vertCnt)
   Path64 result;
   result.reserve(vertCnt);
   for (unsigned i = 0; i < vertCnt; ++i)
-    result.push_back(point_mutable_traits<Point64>::construct(rand() % width, rand() % height));
+    result.push_back(point_traits<Point64>::construct(rand() % width, rand() % height));
   return result;
 }
 //---------------------------------------------------------------------------
@@ -304,10 +304,10 @@ inline Path64 MakeRectangle(int boxWidth, int boxHeight)
 {
   Path64 result;
   result.reserve(4);
-  result.push_back(point_mutable_traits<Point64>::construct(0, 0));
-  result.push_back(point_mutable_traits<Point64>::construct(boxWidth, 0));
-  result.push_back(point_mutable_traits<Point64>::construct(boxWidth, boxHeight));
-  result.push_back(point_mutable_traits<Point64>::construct(0, boxHeight));
+  result.push_back(point_traits<Point64>::construct(0, 0));
+  result.push_back(point_traits<Point64>::construct(boxWidth, 0));
+  result.push_back(point_traits<Point64>::construct(boxWidth, boxHeight));
+  result.push_back(point_traits<Point64>::construct(0, boxHeight));
   return result;
 }
 //---------------------------------------------------------------------------
@@ -325,7 +325,7 @@ Path64 RandomOffset(const Path64& path, int maxWidth, int maxHeight)
   Path64 result;
   result.reserve(path.size());
   for (Point64 pt : path)
-    result.push_back(point_mutable_traits<Point64>::construct(pt.x + dx, pt.y +dy));
+    result.push_back(point_traits<Point64>::construct(pt.x + dx, pt.y +dy));
   return result;
 }
 //---------------------------------------------------------------------------
@@ -428,7 +428,7 @@ void DoTestsFromFile(const string& filename,
       c.AddOpenSubject(subject_open);
       c.AddClip(clip);
       c.Execute(ct, fr, solution, solution_open);
-      int64_t area2 = static_cast<int64_t>(Area(solution));
+      int64_t area2 = static_cast<int64_t>(Area<Point64, DefaultClipperFlags>(solution));
       int64_t count2 = solution.size();
       int64_t count_diff = abs(count2 - count);
       if (count && count_diff > 2 && count_diff/ static_cast<double>(count) > 0.02)
@@ -588,12 +588,80 @@ void DoMemoryLeakTest()
   }
 }
 
+template<typename CoordType>
+struct EPoint
+{
+  using coordinate_type = CoordType;
+  CoordType ax;
+  CoordType ay;
+
+  static EPoint<CoordType> construct(CoordType x, CoordType y)
+  {
+    EPoint<CoordType> p; p.ax = x; p.ay = y;
+    return p;
+  }
+};
+
+namespace Clipper2Lib::detail {
+  // Losely modeled after boost::polygon::point_traits
+  template <typename CoordType>
+  struct point_traits<EPoint<CoordType>> {
+    using point_type = EPoint<CoordType>;
+    using coordinate_type = CoordType;
+    static constexpr const bool has_z = false;
+
+    static coordinate_type get(const point_type& point, int i) {
+      assert(i == 0 || i == 1);
+      return i == 0 ? point.ax : point.ay;
+    }
+
+    static void set(point_type& point, int i, coordinate_type value) {
+      assert(i == 0 || i == 1);
+      (i == 0 ? point.ax : point.ay) = value;
+    }
+
+    static point_type construct(coordinate_type x, coordinate_type y) {
+      return point_type::construct(x, y);
+    }
+  };
+}
+
+void test_custom_point_type()
+{
+  using PointType = EPoint<int64_t>;
+  Clipper2Lib::ClipperBase<PointType> clipper;
+  std::vector<PointType> subjects;
+  clipper.AddPaths({ subjects }, Clipper2Lib::PathType::Subject, false);
+  std::vector<std::vector<PointType>> out;
+  clipper.Execute(Clipper2Lib::ClipType::Union, Clipper2Lib::FillRule::EvenOdd, out);
+}
+
+void test_z_fill()
+{
+    using PointType = Clipper2Lib::Point3<int64_t>;
+    struct CenterPointZFill {
+        void operator()(const PointType& e1bot, const PointType& e1top,
+            const PointType& e2bot, const PointType& e2top, PointType& pt) {
+            pt.z = (e1bot.z + e1top.z + e2bot.z + e2top.z) / 4;
+        }
+    };
+    CenterPointZFill zfill;
+    Clipper2Lib::ClipperBase<PointType, CenterPointZFill> clipper(zfill);
+    std::vector<PointType> subjects;
+    clipper.AddPaths({ subjects }, Clipper2Lib::PathType::Subject, false);
+    std::vector<std::vector<PointType>> out;
+    clipper.Execute(Clipper2Lib::ClipType::Union, Clipper2Lib::FillRule::EvenOdd, out);
+}
+
 //------------------------------------------------------------------------------
 // Main entry point ...
 //------------------------------------------------------------------------------
 
 int main(int argc, char* argv[])
 {
+    test_custom_point_type();
+    test_z_fill();
+
   //////////////////////////////////////////////////////////////////////////
   TestType test_type = TestType::All;//TestFile;//Benchmark;//Simple;//MemoryLeak;//ErrorFile;//
   //////////////////////////////////////////////////////////////////////////
