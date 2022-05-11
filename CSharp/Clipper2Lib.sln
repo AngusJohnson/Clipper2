@@ -7,12 +7,12 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Clipper2Lib", "Clipper2Lib\
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Clipper2Lib.Benchmark", "Clipper2Lib.Benchmark\Clipper2Lib.Benchmark.csproj", "{F8A168C6-286A-4ECF-8750-C505ADBCB7D5}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Clipper2LibExample", "Clipper2LibExample\Clipper2LibExample.csproj", "{4BA8DEFE-0678-4C41-9B16-3A4639DFB838}"
-EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{3B52CBF2-1267-44C7-B447-C51ACDD25371}"
 	ProjectSection(SolutionItems) = preProject
 		.editorconfig = .editorconfig
 	EndProjectSection
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ConsoleDemo", "Clipper2LibExamples\ConsoleDemo\ConsoleDemo.csproj", "{83382379-D65D-4F8E-8EB3-3925100CEC07}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -28,10 +28,10 @@ Global
 		{F8A168C6-286A-4ECF-8750-C505ADBCB7D5}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{F8A168C6-286A-4ECF-8750-C505ADBCB7D5}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{F8A168C6-286A-4ECF-8750-C505ADBCB7D5}.Release|Any CPU.Build.0 = Release|Any CPU
-		{4BA8DEFE-0678-4C41-9B16-3A4639DFB838}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{4BA8DEFE-0678-4C41-9B16-3A4639DFB838}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{4BA8DEFE-0678-4C41-9B16-3A4639DFB838}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{4BA8DEFE-0678-4C41-9B16-3A4639DFB838}.Release|Any CPU.Build.0 = Release|Any CPU
+		{83382379-D65D-4F8E-8EB3-3925100CEC07}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{83382379-D65D-4F8E-8EB3-3925100CEC07}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{83382379-D65D-4F8E-8EB3-3925100CEC07}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{83382379-D65D-4F8E-8EB3-3925100CEC07}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

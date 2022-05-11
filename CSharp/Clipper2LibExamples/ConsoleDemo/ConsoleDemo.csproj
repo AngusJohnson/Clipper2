@@ -23,14 +23,14 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Clipper2Lib\Clipper2Lib.csproj" />
-  </ItemGroup>
-
-  <ItemGroup>
     <Resource Include="Clipper.SVG.cs" />
     <Resource Include="Clipper2.ico" />
     <Resource Include="Main.cs" />
     <Resource Include="tests.txt" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\Clipper2Lib\Clipper2Lib.csproj" />
   </ItemGroup>
 
 </Project>
