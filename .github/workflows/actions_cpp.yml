@@ -1,0 +1,15 @@
+name: C++
+on: push
+jobs:
+  windows-latest:
+    runs-on: 'windows-latest'
+    steps:
+    - uses: actions/checkout@v2
+    - name: Get GoogleTest
+      run: git submodule update --init
+    - name: Add MSBuild to PATH
+      uses: microsoft/setup-msbuild@v1.0.2      
+    - name: Build tests
+      run: msbuild CPP/Tests/VisualStudio/Tests_cpp.sln /p:Configuration=Release /p:Platform=x64
+    - name: Run tests
+      run: CPP\Tests\VisualStudio\x64\Release\Tests.exe
