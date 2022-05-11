@@ -64,7 +64,7 @@ namespace Clipper2Lib::engine::detail {
 				op2->joiner = this;
 			}
 			else
-				next2 = NULL;
+				next2 = nullptr;
 		}
 	};
 
@@ -405,7 +405,7 @@ namespace Clipper2Lib::engine::detail {
 				if (e2->vertex_top == e.vertex_top) return e2;  //Found!
 				e2 = e2->next_in_ael;
 			}
-			return NULL;
+			return nullptr;
 		}
 		else
 		{
@@ -415,7 +415,7 @@ namespace Clipper2Lib::engine::detail {
 				if (e2->vertex_top == e.vertex_top) return e2;  //Found!
 				e2 = e2->next_in_ael;
 			}
-			return NULL;
+			return nullptr;
 		}
 	}
 	//------------------------------------------------------------------------------
@@ -469,7 +469,7 @@ namespace Clipper2Lib::engine::detail {
 			op2 = tmp;
 		}
 		delete outrec.pts;
-		outrec.pts = NULL;
+		outrec.pts = nullptr;
 	}
 	//------------------------------------------------------------------------------
 
@@ -578,10 +578,10 @@ namespace Clipper2Lib::engine::detail {
 	{
 		OutRec<PointType>* outrec = ae.outrec;
 		if (!outrec) return;
-		outrec->front_edge->outrec = NULL;
-		outrec->back_edge->outrec = NULL;
-		outrec->front_edge = NULL;
-		outrec->back_edge = NULL;
+		outrec->front_edge->outrec = nullptr;
+		outrec->back_edge->outrec = nullptr;
+		outrec->front_edge = nullptr;
+		outrec->back_edge = nullptr;
 	}
 	//------------------------------------------------------------------------------
 
@@ -618,7 +618,7 @@ namespace Clipper2Lib::engine::detail {
 			if (ae2 && IsInner(*ae2->outrec))
 				ae.outrec->owner = ae2->outrec;
 			else
-				ae.outrec->owner = NULL;
+				ae.outrec->owner = nullptr;
 		}
 		else
 		{
@@ -644,7 +644,7 @@ namespace Clipper2Lib::engine::detail {
 
 		if (IsOpen(e))
 		{
-			outrec->owner = NULL;
+			outrec->owner = nullptr;
 			outrec->state = OutRecState::Open;
 			return;
 		}
@@ -655,7 +655,7 @@ namespace Clipper2Lib::engine::detail {
 			while (e2 && (!IsHotEdge(*e2) || IsOpen(*e2)))
 				e2 = e2->next_in_ael;
 			if (!e2)
-				outrec->owner = NULL;
+				outrec->owner = nullptr;
 			else if ((e2->outrec->state == OutRecState::Outer) == (e2->outrec->front_edge == e2))
 				outrec->owner = e2->outrec->owner;
 			else
@@ -667,7 +667,7 @@ namespace Clipper2Lib::engine::detail {
 			while (e2 && (!IsHotEdge(*e2) || IsOpen(*e2)))
 				e2 = e2->prev_in_ael;
 			if (!e2)
-				outrec->owner = NULL;
+				outrec->owner = nullptr;
 			else if (IsOuter(*e2->outrec) == (e2->outrec->back_edge == e2))
 				outrec->owner = e2->outrec->owner;
 			else
@@ -923,7 +923,7 @@ namespace Clipper2Lib::engine::detail {
 				parent = parent->next2;
 			}
 		}
-		return NULL;
+		return nullptr;
 	}
 	//------------------------------------------------------------------------------
 

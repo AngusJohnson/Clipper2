@@ -64,18 +64,18 @@ namespace Clipper2Lib {
 		template<typename PointType>
 		struct Vertex {
 			PointType pt { point_traits<PointType>::construct(0, 0) };
-			Vertex<PointType>* next = NULL;
-			Vertex<PointType>* prev = NULL;
+			Vertex<PointType>* next = nullptr;
+			Vertex<PointType>* prev = nullptr;
 			VertexFlags flags = VertexFlags::None;
 		};
 
 		template<typename PointType>
 		struct OutPt {
 			PointType pt;
-			OutPt<PointType>*	next = NULL;
-			OutPt<PointType>*	prev = NULL;
+			OutPt<PointType>*	next = nullptr;
+			OutPt<PointType>*	prev = nullptr;
 			OutRec<PointType>*  outrec;
-			Joiner<PointType>*  joiner = NULL;
+			Joiner<PointType>*  joiner = nullptr;
 
 			OutPt(const PointType& pt_, OutRec<PointType>* outrec_): pt(pt_), outrec(outrec_) {
 				next = this;
@@ -94,7 +94,7 @@ namespace Clipper2Lib {
 			Active<PointType>* front_edge;
 			Active<PointType>* back_edge;
 			OutPt<PointType>* pts;
-			PolyPath<PointType>* polypath = NULL;
+			PolyPath<PointType>* polypath = nullptr;
 			OutRecState state = OutRecState::Undefined;
 		};
 
@@ -107,21 +107,21 @@ namespace Clipper2Lib {
 			int wind_dx = 1;			//1 or -1 depending on winding diRect64on
 			int wind_cnt = 0;
 			int wind_cnt2 = 0;		//winding count of the opposite polytype
-			OutRec<PointType>* outrec = NULL;
+			OutRec<PointType>* outrec = nullptr;
 			//AEL: 'active edge list' (Vatti's AET - active edge table)
 			//     a linked list of all edges (from left to right) that are present
 			//     (or 'active') within the current scanbeam (a horizontal 'beam' that
 			//     sweeps from bottom to top over the paths in the clipping operation).
-			Active<PointType>* prev_in_ael = NULL;
-			Active<PointType>* next_in_ael = NULL;
+			Active<PointType>* prev_in_ael = nullptr;
+			Active<PointType>* next_in_ael = nullptr;
 			//SEL: 'sorted edge list' (Vatti's ST - sorted table)
 			//     linked list used when sorting edges into their new positions at the
 			//     top of scanbeams, but also (re)used to process horizontals.
-			Active<PointType>* prev_in_sel = NULL;
-			Active<PointType>* next_in_sel = NULL;
-			Active<PointType>* jump = NULL;
-			Vertex<PointType>* vertex_top = NULL;
-			LocalMinima<PointType>* local_min = NULL;  //the bottom of an edge 'bound' (also Vatti)
+			Active<PointType>* prev_in_sel = nullptr;
+			Active<PointType>* next_in_sel = nullptr;
+			Active<PointType>* jump = nullptr;
+			Vertex<PointType>* vertex_top = nullptr;
+			LocalMinima<PointType>* local_min = nullptr;  //the bottom of an edge 'bound' (also Vatti)
 			bool is_left_bound = false;
 		};
 
@@ -166,9 +166,9 @@ namespace Clipper2Lib {
 		bool error_found_ = false;
 		bool has_open_paths_ = false;
 		bool minima_list_sorted_ = false;
-		Active* actives_ = NULL;
-		Active* sel_ = NULL;
-		Joiner* horz_joiners_ = NULL;
+		Active* actives_ = nullptr;
+		Active* sel_ = nullptr;
+		Joiner* horz_joiners_ = nullptr;
 		std::vector<LocalMinima*> minima_list_;
 		typename std::vector<LocalMinima*>::iterator loc_min_iter_;
 		std::vector<Vertex*> vertex_lists_;
@@ -284,23 +284,18 @@ namespace Clipper2Lib {
 	template <typename PointType>
 	class PolyPath {
 	private:
-		double scale_;
 	protected:
-		const PolyPath<PointType>* parent_;
+		const PolyPath<PointType>* parent_ { nullptr };
 		PolyPath(const PolyPath<PointType>* parent, 
 			const std::vector<PointType>& path) : 
-			parent_(parent), polygon(path), scale_(parent->scale_) {};
+			parent_(parent), polygon(path)
+			{}
 	public:
 		std::vector<PointType> polygon;
 		std::vector<PolyPath*> childs;
 
-		explicit PolyPath(int precision = 0) //NB only for root node
-		{  
-			scale_ = std::pow(10, precision);
-			parent_ = NULL;
-		}
-
-		virtual ~PolyPath() { Clear(); };
+		explicit PolyPath() = default; //NB only for root node
+		virtual ~PolyPath() { Clear(); }
 
 		void Clear() { 
 			for (PolyPath<PointType>* child : childs) delete child;
@@ -322,9 +317,9 @@ namespace Clipper2Lib {
 
 		const PolyPath<PointType>* operator [] (size_t index) const { return childs[index]; }
 
-		const PolyPath<PointType>* Parent() const { return parent_; };
+		const PolyPath<PointType>* Parent() const { return parent_; }
 
-		const std::vector<PointType>& Path() const { return polygon; };
+		const std::vector<PointType>& Path() const { return polygon; }
 
 		bool IsHole() const {
 			PolyPath* pp = parent_;
@@ -449,8 +444,8 @@ namespace Clipper2Lib {
 			InsertScanline(GetY((*i)->vertex->pt));
 
 		loc_min_iter_ = minima_list_.begin();
-		actives_ = NULL;
-		sel_ = NULL;
+		actives_ = nullptr;
+		sel_ = nullptr;
 		error_found_ = false;
 	}
 	//------------------------------------------------------------------------------
@@ -507,7 +502,7 @@ namespace Clipper2Lib {
 		for (const Path path : paths)
 		{
 			//for each path create a circular double linked list of vertices
-			Vertex* v0 = v, * curr_v = v, * prev_v = NULL;
+			Vertex* v0 = v, * curr_v = v, * prev_v = nullptr;
 			int cnt = 0;
 			for (const PointType &pt : path)
 			{
@@ -839,11 +834,11 @@ namespace Clipper2Lib {
 		using namespace engine::detail;
 		Active*e2;
 		if (!actives_) {
-			e.prev_in_ael = NULL;
-			e.next_in_ael = NULL;
+			e.prev_in_ael = nullptr;
+			e.next_in_ael = nullptr;
 			actives_ = &e;
 		} else if (!IsValidAelOrder<PointType, ClipperFlags>(*actives_, e)) {
-			e.prev_in_ael = NULL;
+			e.prev_in_ael = nullptr;
 			e.next_in_ael = actives_;
 			actives_->prev_in_ael = &e;
 			actives_ = &e;
@@ -871,7 +866,7 @@ namespace Clipper2Lib {
 
 		while (PopLocalMinima(bot_y, local_minima)) {
 			if ((local_minima->vertex->flags & VertexFlags::OpenStart) != VertexFlags::None) {
-				left_bound = NULL;
+				left_bound = nullptr;
 			} 
 			else 
 			{
@@ -884,13 +879,13 @@ namespace Clipper2Lib {
 					left_bound->wind_dx = 1;
 				left_bound->vertex_top = local_minima->vertex->prev;  //ie descending
 				left_bound->top = left_bound->vertex_top->pt;
-				left_bound->outrec = NULL;
+				left_bound->outrec = nullptr;
 				left_bound->local_min = local_minima;
 				SetDx(*left_bound);
 			}
 
 			if ((local_minima->vertex->flags & VertexFlags::OpenEnd) != VertexFlags::None) {
-				right_bound = NULL;
+				right_bound = nullptr;
 			} else {
 				right_bound = new Active();
 				right_bound->bot = local_minima->vertex->pt;
@@ -901,7 +896,7 @@ namespace Clipper2Lib {
 					right_bound->wind_dx = -1,
 				right_bound->vertex_top = local_minima->vertex->next;  //ie ascending
 				right_bound->top = right_bound->vertex_top->pt;
-				right_bound->outrec = NULL;
+				right_bound->outrec = nullptr;
 				right_bound->local_min = local_minima;
 				SetDx(*right_bound);
 			}
@@ -917,7 +912,7 @@ namespace Clipper2Lib {
 					SwapActives(left_bound, right_bound);
 			} else if (!left_bound) {
 				left_bound = right_bound;
-				right_bound = NULL;
+				right_bound = nullptr;
 			}
 
 			bool contributing;
@@ -986,7 +981,7 @@ namespace Clipper2Lib {
 	template<typename PointType, typename ZFillFunc, typename ClipperFlags>
 	inline void ClipperBase<PointType, ZFillFunc, ClipperFlags>::PushHorz(Active&e)
 	{
-		e.next_in_sel = (sel_ ? sel_ : NULL);
+		e.next_in_sel = (sel_ ? sel_ : nullptr);
 		sel_ = &e;
 	}
 	//------------------------------------------------------------------------------
@@ -1062,8 +1057,8 @@ namespace Clipper2Lib {
 		auto *outrec = new OutRec();
 		outrec->idx = (unsigned)outrec_list_.size();
 		outrec_list_.push_back(outrec);
-		outrec->pts = NULL;
-		outrec->polypath = NULL;
+		outrec->pts = nullptr;
+		outrec->polypath = nullptr;
 
 		e1.outrec = outrec;
 		SetOwnerAndInnerOuterState(e1);
@@ -1126,7 +1121,7 @@ namespace Clipper2Lib {
 			if (IsOpen(e1))
 				SwapSides(*e2.outrec);
 			else if (!FixSides(e1, e2))
-				return NULL;
+				return nullptr;
 		}
 
 		OutPt* result = AddOutPt(e1, pt);
@@ -1184,27 +1179,27 @@ namespace Clipper2Lib {
 			}
 		}
 		//after joining, the e2.OutRec must contains no vertices ...
-		e2.outrec->front_edge = NULL;
-		e2.outrec->back_edge = NULL;
-		e2.outrec->pts = NULL;
+		e2.outrec->front_edge = nullptr;
+		e2.outrec->back_edge = nullptr;
+		e2.outrec->pts = nullptr;
 		e2.outrec->owner = e1.outrec;
 
 		if (IsOpenEnd(e1))
 		{
 			e2.outrec->pts = e1.outrec->pts;
-			e1.outrec->pts = NULL;
+			e1.outrec->pts = nullptr;
 		}
 		
 		//and e1 and e2 are maxima and are about to be dropped from the Actives list.
-		e1.outrec = NULL;
-		e2.outrec = NULL;
+		e1.outrec = nullptr;
+		e2.outrec = nullptr;
 	}
 	//------------------------------------------------------------------------------
 
 	template<typename PointType, typename ZFillFunc, typename ClipperFlags>
 	inline engine::detail::OutPt<PointType>* ClipperBase<PointType, ZFillFunc, ClipperFlags>::AddOutPt(const Active&e, const PointType& pt)
 	{
-		OutPt*new_op = NULL;
+		OutPt*new_op = nullptr;
 
 		//Outrec.OutPts: a circular doubly-linked-list of POutPt where ...
 		//op_front[.Prev]* ~~~> op_back & op_back == op_front.Next
@@ -1263,7 +1258,7 @@ namespace Clipper2Lib {
 				op2 = DisposeOutPt(op2);
 				if (!ValidateClosedPathEx(outrec))
 				{
-					outrec->pts = NULL;
+					outrec->pts = nullptr;
 					return;
 				}
 				startOp = op2;
@@ -1319,7 +1314,7 @@ namespace Clipper2Lib {
 			outrec_list_.push_back(newOutRec);
 			newOutRec->owner = prevOp->outrec->owner;
 			newOutRec->state = prevOp->outrec->state;
-			newOutRec->polypath = NULL;
+			newOutRec->polypath = nullptr;
 			splitOp->outrec = newOutRec;
 			splitOp->next->outrec = newOutRec;
 
@@ -1369,12 +1364,12 @@ namespace Clipper2Lib {
 	{
 		OutRec* outrec = engine::detail::GetRealOutRec(op->outrec);
 		if (outrec->front_edge)
-			outrec->front_edge->outrec = NULL;
+			outrec->front_edge->outrec = nullptr;
 		if (outrec->back_edge)
-			outrec->back_edge->outrec = NULL;
-		outrec->pts = NULL;
+			outrec->back_edge->outrec = nullptr;
+		outrec->pts = nullptr;
 
-		op->prev->next = NULL;
+		op->prev->next = nullptr;
 		while (op)
 		{
 			SafeDeleteOutPtJoiners(op);
@@ -1407,7 +1402,7 @@ namespace Clipper2Lib {
 			auto *newOr = new OutRec();
 			newOr->idx = outrec_list_.size();
 			outrec_list_.push_back(newOr);
-			newOr->polypath = NULL;
+			newOr->polypath = nullptr;
 
 			if (std::abs(area1) >= std::abs(area2))
 			{
@@ -1445,12 +1440,12 @@ namespace Clipper2Lib {
 		auto *outrec = new OutRec();
 		outrec->idx = outrec_list_.size();
 		outrec_list_.push_back(outrec);
-		outrec->owner = NULL;
+		outrec->owner = nullptr;
 		outrec->state = OutRecState::Open;
-		outrec->pts = NULL;
-		outrec->polypath = NULL;
-		outrec->back_edge = NULL;
-		outrec->front_edge = NULL;
+		outrec->pts = nullptr;
+		outrec->polypath = nullptr;
+		outrec->back_edge = nullptr;
+		outrec->front_edge = nullptr;
 		e.outrec = outrec;
 
 		auto *op = new OutPt(pt, outrec);
@@ -1485,11 +1480,11 @@ namespace Clipper2Lib {
 	{
 		using namespace engine::detail;
 
-		OutPt* resultOp = NULL;
+		OutPt* resultOp = nullptr;
 
 		//MANAGE OPEN PATH INTERSECTIONS SEPARATELY ...
 		if (has_open_paths_ && (IsOpen(e1) || IsOpen(e2))) {
-			if (IsOpen(e1) && IsOpen(e2)) return NULL;
+			if (IsOpen(e1) && IsOpen(e2)) return nullptr;
 			Active*edge_o, *edge_c;
 			if (IsOpen(e1)) {
 				edge_o = &e1;
@@ -1502,14 +1497,14 @@ namespace Clipper2Lib {
 			switch (cliptype_) {
 				case ClipType::Intersection:
 				case ClipType::Difference:
-					if (IsSamePolyType(*edge_o, *edge_c) || (abs(edge_c->wind_cnt) != 1)) return NULL;
+					if (IsSamePolyType(*edge_o, *edge_c) || (abs(edge_c->wind_cnt) != 1)) return nullptr;
 					break;
 				case ClipType::Union:
 					if (IsHotEdge(*edge_o) != ((abs(edge_c->wind_cnt) != 1) ||
-														(IsHotEdge(*edge_o) != (edge_c->wind_cnt != 0)))) return NULL;
+														(IsHotEdge(*edge_o) != (edge_c->wind_cnt != 0)))) return nullptr;
 					break;
 				case ClipType::Xor:
-					if (abs(edge_c->wind_cnt) != 1) return NULL;
+					if (abs(edge_c->wind_cnt) != 1) return nullptr;
 					break;
 				case ClipType::None:
 					error_found_ = true;
@@ -1520,7 +1515,7 @@ namespace Clipper2Lib {
 			{
 				resultOp = AddOutPt(*edge_o, pt);
 				SetZ(e1, e2, resultOp->pt);
-				edge_o->outrec = NULL;
+				edge_o->outrec = nullptr;
 			} 
 			else
 			{
@@ -1584,7 +1579,7 @@ namespace Clipper2Lib {
 		const bool e2_windcnt_in_01 = old_e2_windcnt == 0 || old_e2_windcnt == 1;
 
 		if ((!IsHotEdge(e1) && !e1_windcnt_in_01) || (!IsHotEdge(e2) && !e2_windcnt_in_01)) {
-			return NULL;
+			return nullptr;
 		}
 		//NOW PROCESS THE INTERSECTION ...
 
@@ -1653,7 +1648,7 @@ namespace Clipper2Lib {
 			}
 			else if (old_e1_windcnt == 1 && old_e2_windcnt == 1)
 			{
-				resultOp = NULL;
+				resultOp = nullptr;
 				switch (cliptype_) 
 				{
 				case ClipType::Union:
@@ -1742,7 +1737,7 @@ namespace Clipper2Lib {
 	{
 		solution_closed.clear();
 		if (ExecuteInternal(clip_type, fill_rule))
-			BuildPaths(solution_closed, NULL);
+			BuildPaths(solution_closed, nullptr);
 		CleanUp();
 		return !error_found_;
 	}
@@ -1839,7 +1834,7 @@ namespace Clipper2Lib {
 
 		while (left && left->jump) 
 		{
-			Active* prev_base = NULL;
+			Active* prev_base = nullptr;
 			while (left && left->jump)
 			{
 				curr_base = left;
@@ -1956,7 +1951,7 @@ namespace Clipper2Lib {
 			horz_right = horz.curr_x;
 			Active*e = horz.next_in_ael;
 			while (e && e != max_pair) e = e->next_in_ael;
-			return e != NULL;
+			return e != nullptr;
 		} else if (horz.curr_x < GetX(horz.top)) {
 			horz_left = horz.curr_x;
 			horz_right = GetX(horz.top);
@@ -1991,7 +1986,7 @@ namespace Clipper2Lib {
 		PointType pt = point_traits<PointType>::construct(0, 0);
 		bool horzIsOpen = IsOpen(horz);
 		int64_t y = GetY(horz.bot);
-		Active* max_pair = NULL;
+		Active* max_pair = nullptr;
 		bool isMax = IsMaxima(horz);
 
 		//remove 180 deg.spikes and also with closed paths and not PreserveCollinear
@@ -2118,7 +2113,7 @@ namespace Clipper2Lib {
 				AddTrialHorzJoin(op);
 		}
 		else 
-			op = NULL;
+			op = nullptr;
 
 		if (!isMax)
 		{
@@ -2151,7 +2146,7 @@ namespace Clipper2Lib {
 	{
 		using namespace engine::detail;
 
-		sel_ = NULL;  // sel_ is reused to flag horizontals (see PushHorz below)
+		sel_ = nullptr;  // sel_ is reused to flag horizontals (see PushHorz below)
 		Active*e = actives_;
 		while (e) 
 		{
@@ -2193,7 +2188,7 @@ namespace Clipper2Lib {
 			if (IsHotEdge(e)) AddOutPt(e, e.top);
 			if (!IsHorizontal(e))
 			{
-				if (IsHotEdge(e)) e.outrec = NULL;
+				if (IsHotEdge(e)) e.outrec = nullptr;
 				DeleteFromAEL(e);
 			}
 			return next_e;
@@ -2289,7 +2284,7 @@ namespace Clipper2Lib {
 	{
 		//make sure 'op' isn't added more than once
 		if (!OutPtInTrialHorzList(op))
-			horz_joiners_ = new Joiner(op, NULL, horz_joiners_);
+			horz_joiners_ = new Joiner(op, nullptr, horz_joiners_);
 		}
 	//------------------------------------------------------------------------------
 
@@ -2299,7 +2294,7 @@ namespace Clipper2Lib {
 		if (!horz_joiners_) return;
 
 		Joiner* joiner = op->joiner;
-		Joiner* parentH, *parentOp = NULL;
+		Joiner* parentH, *parentOp = nullptr;
 		while (joiner)
 		{
 			if (joiner->idx < 0)
@@ -2423,7 +2418,7 @@ namespace Clipper2Lib {
 			((op1->next == op2) && (op1 != op1->outrec->pts)) ||
 			((op2->next == op1) && (op2 != op1->outrec->pts)))) return;
 
-		auto *j = new Joiner(op1, op2, NULL);
+		auto *j = new Joiner(op1, op2, nullptr);
 		j->idx = static_cast<int>(joiner_list_.size());
 		joiner_list_.push_back(j);
 	}
@@ -2461,7 +2456,7 @@ namespace Clipper2Lib {
 		else
 			op2->joiner = joiner->next2;
 
-		joiner_list_[joiner->idx] = NULL;
+		joiner_list_[joiner->idx] = nullptr;
 		delete joiner;
 	}
 
@@ -2497,13 +2492,13 @@ namespace Clipper2Lib {
 		OutRec* or2 = GetRealOutRec(op2->outrec);
 		DeleteJoin(joiner);
 
-		if (or2->pts == NULL) return or1;
+		if (or2->pts == nullptr) return or1;
 		else if (!IsValidClosedPath(op2))
 		{
 			CleanCollinear(or2);
 			return or1;
 		}
-		else if ((or1->pts == NULL) || !IsValidClosedPath(op1))
+		else if ((or1->pts == nullptr) || !IsValidClosedPath(op1))
 		{
 			CleanCollinear(or1);
 			return or2;
@@ -2562,14 +2557,14 @@ namespace Clipper2Lib {
 					if (or1->idx < or2->idx)
 					{
 						or1->pts = op1;
-						or2->pts = NULL;
+						or2->pts = nullptr;
 						or2->owner = or1;
 					}
 					else
 					{
 						result = or2;
 						or2->pts = op1;
-						or1->pts = NULL;
+						or1->pts = nullptr;
 						or1->owner = or2;
 					}
 				}
@@ -2613,14 +2608,14 @@ namespace Clipper2Lib {
 					if (or1->idx < or2->idx)
 					{
 						or1->pts = op1;
-						or2->pts = NULL;
+						or2->pts = nullptr;
 						or2->owner = or1;
 					}
 					else
 					{
 						result = or2;
 						or2->pts = op1;
-						or1->pts = NULL;
+						or1->pts = nullptr;
 						or1->owner = or2;
 					}
 				}
@@ -2699,7 +2694,7 @@ namespace Clipper2Lib {
 		}
 		for(OutRec* outrec : outrec_list_)
 		{
-			if (outrec->pts == NULL) continue;
+			if (outrec->pts == nullptr) continue;
 			Path path;
 			if (solutionOpen && outrec->state == OutRecState::Open)
 			{
@@ -2761,7 +2756,7 @@ namespace Clipper2Lib {
 				outrec->owner = outrec->owner->owner;
 			if (outrec->owner && outrec->owner->state == outrec->state)
 			{
-				if (IsOuter(*outrec)) outrec->owner = NULL;
+				if (IsOuter(*outrec)) outrec->owner = nullptr;
 				else outrec->owner = outrec->owner->owner;
 			}
 
