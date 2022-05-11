@@ -1,7 +1,7 @@
 ﻿/*******************************************************************************
 * Author    :  Angus Johnson                                                   *
 * Version   :  10.0 (beta) - also known as Clipper2                            *
-* Date      :  4 May 2022                                                      *
+* Date      :  10 May 2022                                                     *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  Offsets both open and closed paths (i.e. polylines & polygons). *
@@ -123,20 +123,19 @@ namespace Clipper2Lib
 
       if (Math.Abs(delta) < _minLenSqrd)
       {
-        for (int i = 0; i < _pathGroups.Count; i++)
-          for (int j = 0; j < _pathGroups[i]._inPaths.Count; j++)
-            solution.Add(_pathGroups[i]._inPaths[j]);
+        foreach (PathGroup group in _pathGroups)
+          foreach (PathD path in group._inPaths)
+            solution.Add(path);
         return solution;
       }
 
       _tmpLimit = (MiterLimit <= 1 ? 2.0 : 2.0 / ClipperFunc.Sqr(MiterLimit));
 
-      for (int i = 0; i < _pathGroups.Count; i++)
+      foreach (PathGroup group in _pathGroups)
       {
-        PathGroup group = _pathGroups[i];
         DoGroupOffset(group, delta);
-        for (int j = 0; j < group._outPaths.Count; j++)
-          solution.Add(group._outPaths[j]);
+        foreach (PathD path in group._outPaths)
+          solution.Add(path);
       }
 
       if (MergeGroups && _pathGroups.Count > 0)
@@ -176,14 +175,15 @@ namespace Clipper2Lib
       {
         PathD p = paths[i];
         for (int j = 0; j < p.Count; j++)
+        {
           if (p[j].y < lp.y) continue;
           else if (p[j].y > lp.y || p[j].x < lp.x)
           {
             result = i;
             lp = p[j];
           }
+        }
       }
-
       return result;
     }
 
@@ -429,10 +429,9 @@ namespace Clipper2Lib
         _stepsPerRad = Math.PI / Math.Acos(1 - arcTol / absDelta) / TwoPi;
       }
 
-      for (int i = 0; i < group._inPaths.Count; i++)
+      foreach (PathD p in group._inPaths)
       {
-        PathD path = group._inPaths[i];
-        path = ClipperFunc.StripNearDuplicates(path, _minLenSqrd, isClosedPaths);
+        PathD path = ClipperFunc.StripNearDuplicates(p, _minLenSqrd, isClosedPaths);
         int cnt = path.Count;
         if (cnt == 0 || (cnt < 3 && !IsFullyOpenEndType(group._endType))) continue;
 

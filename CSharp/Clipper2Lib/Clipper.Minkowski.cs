@@ -1,7 +1,7 @@
 ﻿/*******************************************************************************
 * Author    :  Angus Johnson                                                   *
 * Version   :  10.0 (beta) - also known as Clipper2                            *
-* Date      :  4 May 2022                                                      *
+* Date      :  10 May 2022                                                     *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  Minkowski Sum and Difference                                    *
@@ -26,18 +26,18 @@ namespace Clipper2Lib
       int patLen = pattern.Count, pathLen = path.Count;
       Paths64 tmp = new Paths64(pathLen);
 
-      for (int i = 0; i < path.Count; i++)
+      foreach (Point64 pathPt in path)
       {
         Path64 path2 = new Path64(patLen);
         if (isSum)
         {
-          for (int j = 0; j < pattern.Count; j++)
-            path2.Add(path[i] + pattern[j]);
+          foreach (Point64 basePt in pattern)
+            path2.Add(pathPt + basePt);
         }
         else
         {
-          for (int j = 0; j < pattern.Count; j++)
-            path2.Add(path[i] - pattern[j]);
+          foreach (Point64 basePt in pattern)
+            path2.Add(pathPt - basePt);
         }
         tmp.Add(path2);
       }

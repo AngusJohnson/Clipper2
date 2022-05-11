@@ -1,7 +1,7 @@
 ﻿/*******************************************************************************
 * Author    :  Angus Johnson                                                   *
 * Version   :  10.0 (beta) - also known as Clipper2                            *
-* Date      :  9 May 2022                                                      *
+* Date      :  10 May 2022                                                     *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  This is the main polygon clipping module                        *
@@ -833,17 +833,15 @@ namespace Clipper2Lib
 
     protected void AddPathsToVertexList(Paths64 paths, PathType polytype, bool isOpen)
     {
-      int pathsCnt = paths.Count, totalVertCnt = 0;
-      for (int i = 0; i < pathsCnt; i++) totalVertCnt += paths[i].Count;
+      int totalVertCnt = 0;
+      foreach (Path64 path in paths) totalVertCnt += path.Count;
       _vertexList.Capacity = _vertexList.Count + totalVertCnt;
 
-      for (int i = 0; i < pathsCnt; i++) 
+      foreach (Path64 path in paths) 
       {
-        Path64 path = paths[i];
         Vertex? v0 = null, prev_v = null, curr_v;
-        for (int j = 0; j < path.Count; j++)
+        foreach (Point64 pt in path)
         {
-          Point64 pt = path[j];
           if (v0 == null)
           {
             v0 = new Vertex(pt, VertexFlags.None, null);
@@ -3306,9 +3304,8 @@ namespace Clipper2Lib
         solutionClosed.Capacity = _outrecList.Count;
         solutionOpen.Capacity = _outrecList.Count;
 
-        for (int i = 0; i < _outrecList.Count; i++)
+        foreach (OutRec outrec in _outrecList)
         {
-          OutRec outrec = _outrecList[i];
           if (outrec.pts == null) continue;
 
           Path64 path = new Path64();
@@ -3342,16 +3339,15 @@ namespace Clipper2Lib
         for (int i = 0; i < _outrecList.Count; i++)
         {
           OutRec outrec = _outrecList[i];
-
           //make sure outer/owner paths preceed their inner paths ...
           if (outrec.owner != null && outrec.owner.idx > outrec.idx)
           {
             int j = outrec.owner.idx;
+            outrec.owner.idx = i;
             outrec.idx = j;
             _outrecList[i] = _outrecList[j];
             _outrecList[j] = outrec;
             outrec = _outrecList[i];
-            outrec.idx = i;
           }
 
           if (outrec.pts == null) continue;
@@ -3394,11 +3390,10 @@ namespace Clipper2Lib
 
     public Rect64 GetBounds()
     {
-      Rect64 bounds = new Rect64(long.MaxValue, long.MaxValue, 
-        long.MinValue, long.MinValue);
-      for (int i = 0; i < _vertexList.Count; i++)
+      Rect64 bounds = ClipperFunc.MaxInvalidRect64;
+      foreach (Vertex t in _vertexList)
       {
-        Vertex t = _vertexList[i], v = t;
+        Vertex v = t;
         do
         {
           if (v.pt.X < bounds.left) bounds.left = v.pt.X;
@@ -3599,11 +3594,11 @@ namespace Clipper2Lib
       if (!success) return false;
 
       solutionClosed.Capacity = solClosed64.Count;
-      for (int i = 0; i < solClosed64.Count; i++)
-        solutionClosed.Add(ClipperFunc.ScalePathD(solClosed64[i], _invScale));
+      foreach (Path64 path in solClosed64)
+        solutionClosed.Add(ClipperFunc.ScalePathD(path, _invScale));
       solutionOpen.Capacity = solOpen64.Count;
-      for (int i = 0; i < solOpen64.Count; i++)
-        solutionOpen.Add(ClipperFunc.ScalePathD(solOpen64[i], _invScale));
+      foreach (Path64 path in solOpen64)
+        solutionOpen.Add(ClipperFunc.ScalePathD(path, _invScale));
 
       return true;
     }
@@ -3641,9 +3636,9 @@ namespace Clipper2Lib
       if (!success) return false;
       if (oPaths.Count > 0)
       {
-        openPaths.Capacity = oPaths.Count;
-        for (int i = 0; i < oPaths.Count; i++)
-          openPaths.Add(ClipperFunc.ScalePathD(oPaths[i], _invScale));
+        openPaths.Capacity = oPaths.Count;        
+        foreach (Path64 path in oPaths)
+          openPaths.Add(ClipperFunc.ScalePathD(path, _invScale));
       }
 
       return true;
