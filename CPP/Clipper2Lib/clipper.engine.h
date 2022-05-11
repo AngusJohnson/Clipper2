@@ -293,7 +293,7 @@ namespace Clipper2Lib {
 		const std::vector<Point<T>>& Path() const { return polygon; };
 
 		bool IsHole() const {
-			PolyPath* pp = parent_;
+			const PolyPath* pp = parent_;
 			bool is_hole = pp;
 			while (pp) {
 				is_hole = !is_hole;
