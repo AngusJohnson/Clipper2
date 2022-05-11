@@ -130,6 +130,7 @@
     <ClCompile Include="..\..\Clipper2Lib\clipper.core.cpp" />
     <ClCompile Include="..\..\Clipper2Lib\clipper.engine.cpp" />
     <ClCompile Include="..\..\Clipper2Lib\clipper.offset.cpp" />
+    <ClCompile Include="..\..\Examples\ConsoleDemo1\TextFileLoader.cpp" />
     <ClCompile Include="..\googletest\googletest\src\gtest-all.cc">
       <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">../googletest/googletest/include;../googletest/googletest</AdditionalIncludeDirectories>
       <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">../googletest/googletest/include;../googletest/googletest</AdditionalIncludeDirectories>
@@ -137,6 +138,7 @@
       <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Release|x64'">../googletest/googletest/include;../googletest/googletest</AdditionalIncludeDirectories>
     </ClCompile>
     <ClCompile Include="..\googletest\googletest\src\gtest_main.cc" />
+    <ClCompile Include="..\Tests\TestFromTextFile.cpp" />
     <ClCompile Include="..\Tests\TestIntersection.cpp" />
     <ClCompile Include="..\Tests\TestUnion.cpp" />
   </ItemGroup>
