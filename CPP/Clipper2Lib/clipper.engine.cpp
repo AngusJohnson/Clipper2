@@ -13,6 +13,7 @@
 #include <stdexcept>
 #include <vector>
 #include <numeric>
+#include <algorithm> // for std::sort
 #include <assert.h>
 #include "clipper.engine.h"
 
@@ -40,7 +41,7 @@ namespace Clipper2Lib {
 		Active* edge2;
 
 		IntersectNode(Active* e1, Active* e2, Point64& pt_) : 
-			edge1(e1), edge2(e2), pt(pt_) {}
+			pt(pt_), edge1(e1), edge2(e2) {}
 	};
 
 	struct  Joiner {
@@ -172,9 +173,9 @@ namespace Clipper2Lib {
 		if (dy != 0)
 			return double(pt2.x - pt1.x) / dy;
 		else if (pt2.x > pt1.x)
-			return -DBL_MAX;
+			return -std::numeric_limits<double>::max();
 		else
-			return DBL_MAX;
+			return std::numeric_limits<double>::max();
 	}
 	//------------------------------------------------------------------------------
 
@@ -194,13 +195,13 @@ namespace Clipper2Lib {
 
 	inline bool IsHeadingRightHorz(const Active& e)
 	{
-		return (e.dx == -DBL_MAX);
+		return (e.dx == -std::numeric_limits<double>::max());
 	}
 	//------------------------------------------------------------------------------
 
 	inline bool IsHeadingLeftHorz(const Active& e)
 	{
-		return (e.dx == DBL_MAX);
+		return (e.dx == std::numeric_limits<double>::max());
 	}
 	//------------------------------------------------------------------------------
 
@@ -724,7 +725,6 @@ namespace Clipper2Lib {
 		if (is_open) has_open_paths_ = true;
 		minima_list_sorted_ = false;
 
-		Paths64::size_type paths_cnt = paths.size();
 		Path64::size_type total_vertex_count = 0;
 		for (const Path64& path : paths) total_vertex_count += path.size();
 		if (total_vertex_count == 0) return;
@@ -1872,7 +1872,10 @@ namespace Clipper2Lib {
 			else 
 			{
 				resultOp = AddOutPt(e1, pt);
-				OutPt* op2 = AddOutPt(e2, pt);
+#ifdef USINGZ
+				OutPt* op2 = 
+#endif
+				AddOutPt(e2, pt);
 #ifdef USINGZ
 				if (zfill_func_)
 				{
@@ -2022,7 +2025,6 @@ namespace Clipper2Lib {
 	bool ClipperBase::Execute(ClipType clip_type, FillRule fill_rule,
 		Paths64& solution_closed, Paths64& solution_open) 
 	{
-		bool result = true;
 		solution_closed.clear();
 		solution_open.clear();
 		if (ExecuteInternal(clip_type, fill_rule))

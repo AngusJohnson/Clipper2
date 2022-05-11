@@ -68,7 +68,7 @@ struct Point {
 
 	template <typename T2>
 	explicit Point(const T2 x_ = 0, const T2 y_ = 0) :
-		x(static_cast<T>(x_)), y(static_cast<T>(y_)) {};
+		x(static_cast<T>(x_)), y(static_cast<T>(y_)) {}
 
 	template <typename T2>
 	explicit Point<T>(const Point<T2>& p)
@@ -144,7 +144,7 @@ inline bool NearEqual(const Point<double>& p1, const Point<double>& p2, double m
 	return Sqr(p1.x - p2.x) + Sqr(p1.y - p2.y) < max_dist_sqrd;
 }
 
-static PathD StripNearEqual(const PathD& path, double max_dist_sqrd, bool is_closed_path)
+inline PathD StripNearEqual(const PathD& path, double max_dist_sqrd, bool is_closed_path)
 {
 	if (path.size() == 0) return PathD();
 	PathD result;
@@ -166,7 +166,7 @@ static PathD StripNearEqual(const PathD& path, double max_dist_sqrd, bool is_clo
 	return result;
 }
 
-static PathsD StripNearEqual(const PathsD& paths, double max_dist_sqrd, bool is_closed_path)
+inline PathsD StripNearEqual(const PathsD& paths, double max_dist_sqrd, bool is_closed_path)
 {
 	PathsD result;
 	result.reserve(paths.size());

@@ -63,7 +63,7 @@ private:
 public:
 	ClipperOffset(double miter_limit = 2.0, 
 		double arc_tolerance = 0.0) :
-		miter_limit_(miter_limit), arc_tolerance_(arc_tolerance) {};
+		arc_tolerance_(arc_tolerance), miter_limit_(miter_limit) {};
 
 	~ClipperOffset() { Clear(); };
 
