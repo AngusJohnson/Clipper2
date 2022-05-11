@@ -68,17 +68,6 @@ namespace Clipper2Lib::engine::detail {
 		}
 	};
 
-	template<typename PointType>
-	struct LocMinSorter {
-		inline bool operator()(const LocalMinima<PointType>* locMin1, const LocalMinima<PointType>* locMin2)
-		{
-			if (GetY(locMin2->vertex->pt) != GetY(locMin1->vertex->pt))
-				return GetY(locMin2->vertex->pt) < GetY(locMin1->vertex->pt);
-			else
-				return GetX(locMin2->vertex->pt) < GetX(locMin1->vertex->pt);
-		}
-	};
-
 	inline bool IsOdd(int val)
 	{
 		return (val & 1) ? true : false;

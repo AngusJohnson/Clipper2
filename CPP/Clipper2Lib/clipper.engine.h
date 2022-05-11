@@ -13,6 +13,7 @@
 
 #define CLIPPER2_VERSION "1.0.0"
 
+#include <cstdint>
 #include <cstdlib>
 #include <queue>
 #include <stdexcept>
@@ -26,7 +27,8 @@ namespace Clipper2Lib {
 	//Note: all clipping operations except for Difference are commutative.
 	enum class ClipType { None, Intersection, Union, Difference, Xor };
 
-	enum class PathType { Subject, Clip };
+	// On 32bit systems, LocalMinima will be just 8 bytes with int8_t PathType.
+	enum class PathType : int8_t { Subject, Clip };
 
 	//By far the most widely used filling rules for polygons are EvenOdd
 	//and NonZero, sometimes called Alternate and Winding respectively.
@@ -130,8 +132,6 @@ namespace Clipper2Lib {
 			Vertex<PointType>* vertex;
 			PathType polytype;
 			bool is_open;
-			LocalMinima(Vertex<PointType>* v, PathType pt, bool open) :
-				vertex(v), polytype(pt), is_open(open){}
 		};
 	}
 
@@ -169,8 +169,8 @@ namespace Clipper2Lib {
 		Active* actives_ = nullptr;
 		Active* sel_ = nullptr;
 		Joiner* horz_joiners_ = nullptr;
-		std::vector<LocalMinima*> minima_list_;
-		typename std::vector<LocalMinima*>::iterator loc_min_iter_;
+		std::vector<LocalMinima> minima_list_;
+		typename std::vector<LocalMinima>::iterator loc_min_iter_;
 		std::vector<Vertex*> vertex_lists_;
 		std::priority_queue<int64_t> scanline_list_;
 		std::vector<IntersectNode*> intersect_nodes_;
@@ -425,7 +425,7 @@ namespace Clipper2Lib {
 	{
 		CleanUp();
 		DisposeVerticesAndLocalMinima();
-		loc_min_iter_ = minima_list_.begin();
+		loc_min_iter_ = minima_list_.end();
 		minima_list_sorted_ = false;
 		has_open_paths_ = false;
 	}
@@ -436,12 +436,16 @@ namespace Clipper2Lib {
 	{
 		if (!minima_list_sorted_)
 		{
-			std::sort(minima_list_.begin(), minima_list_.end(), engine::detail::LocMinSorter<PointType>());
+			std::sort(minima_list_.begin(), minima_list_.end(),
+				[](const LocalMinima& locMin1, const LocalMinima& locMin2) {
+					return GetY(locMin2.vertex->pt) == GetY(locMin1.vertex->pt) ?
+						GetX(locMin2.vertex->pt) < GetX(locMin1.vertex->pt) :
+						GetY(locMin2.vertex->pt) < GetY(locMin1.vertex->pt);
+				});
 			minima_list_sorted_ = true;
 		}
-		std::vector<LocalMinima*>::const_reverse_iterator i;
-		for (i = minima_list_.rbegin(); i != minima_list_.rend(); ++i)
-			InsertScanline(GetY((*i)->vertex->pt));
+		for (auto i = minima_list_.crbegin(); i != minima_list_.rend(); ++i)
+			InsertScanline(GetY((*i).vertex->pt));
 
 		loc_min_iter_ = minima_list_.begin();
 		actives_ = nullptr;
@@ -609,8 +613,8 @@ namespace Clipper2Lib {
 	template<typename PointType, typename ZFillFunc, typename ClipperFlags>
 	inline bool ClipperBase<PointType, ZFillFunc, ClipperFlags>::PopLocalMinima(int64_t y, LocalMinima*&local_minima)
 	{
-		if (loc_min_iter_ == minima_list_.end() || GetY((*loc_min_iter_)->vertex->pt) != y) return false;
-		local_minima = (*loc_min_iter_++);
+		if (loc_min_iter_ == minima_list_.end() || GetY(loc_min_iter_->vertex->pt) != y) return false;
+		local_minima = &(*loc_min_iter_++);
 		return true;
 	}
 	//------------------------------------------------------------------------------
@@ -629,7 +633,6 @@ namespace Clipper2Lib {
 	template<typename PointType, typename ZFillFunc, typename ClipperFlags>
 	inline void ClipperBase<PointType, ZFillFunc, ClipperFlags>::DisposeVerticesAndLocalMinima()
 	{
-		for (auto lm : minima_list_) delete lm;
 		minima_list_.clear();
 		for (auto v : vertex_lists_) delete [] v;
 		vertex_lists_.clear();
@@ -637,13 +640,13 @@ namespace Clipper2Lib {
 	//------------------------------------------------------------------------------
 
 	template<typename PointType, typename ZFillFunc, typename ClipperFlags>
-	inline void ClipperBase<PointType, ZFillFunc, ClipperFlags>::AddLocMin(Vertex&vert, PathType polytype, bool is_open)
+	inline void ClipperBase<PointType, ZFillFunc, ClipperFlags>::AddLocMin(Vertex &vert, PathType polytype, bool is_open)
 	{
 		//make sure the vertex is added only once ...
 		if ((VertexFlags::LocalMin & vert.flags) != VertexFlags::None) return;
 
 		vert.flags = (vert.flags | VertexFlags::LocalMin);
-		minima_list_.push_back(new LocalMinima(&vert, polytype, is_open));
+		minima_list_.push_back({ &vert, polytype, is_open });
 	}
 	//----------------------------------------------------------------------------
 
