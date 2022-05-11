@@ -356,8 +356,9 @@ namespace Clipper2Lib
     public static Paths64 ReversePaths(Paths64 paths)
     {
       Paths64 result = new Paths64(paths.Count);
-      for (int i = 0; i < paths.Count; i++)
-        result.Add(ReversePath(paths[i]));
+      foreach (Path64 t in paths)
+        result.Add(ReversePath(t));
+
       return result;
     }
 
