@@ -15,6 +15,7 @@
 
 #include <cstdint>
 #include <cstdlib>
+#include <memory>
 #include <queue>
 #include <stdexcept>
 #include <vector>
@@ -171,7 +172,7 @@ namespace Clipper2Lib {
 		Joiner* horz_joiners_ = nullptr;
 		std::vector<LocalMinima> minima_list_;
 		typename std::vector<LocalMinima>::iterator loc_min_iter_;
-		std::vector<Vertex*> vertex_lists_;
+		std::vector<std::unique_ptr<Vertex[]>> vertex_lists_;
 		std::priority_queue<int64_t> scanline_list_;
 		std::vector<IntersectNode*> intersect_nodes_;
 		std::vector<Joiner*> joiner_list_;
@@ -180,7 +181,6 @@ namespace Clipper2Lib {
 		bool PopScanline(int64_t &y);
 		bool PopLocalMinima(int64_t y, LocalMinima*&local_minima);
 		void DisposeAllOutRecs();
-		void DisposeVerticesAndLocalMinima();
 		void AddLocMin(Vertex &vert, PathType polytype, bool is_open);
 		bool IsContributingClosed(const Active&e) const;
 		inline bool IsContributingOpen(const Active&e) const;
@@ -424,7 +424,8 @@ namespace Clipper2Lib {
 	inline void ClipperBase<PointType, ZFillFunc, ClipperFlags>::Clear()
 	{
 		CleanUp();
-		DisposeVerticesAndLocalMinima();
+		minima_list_.clear();
+		vertex_lists_.clear();
 		loc_min_iter_ = minima_list_.end();
 		minima_list_sorted_ = false;
 		has_open_paths_ = false;
@@ -502,7 +503,8 @@ namespace Clipper2Lib {
 		Path::size_type total_vertex_count = 0;
 		for (const Path& path : paths) total_vertex_count += path.size();
 		if (total_vertex_count == 0) return;
-		auto *vertices = new Vertex[total_vertex_count], *v = vertices;
+		auto vertices = std::unique_ptr<Vertex[]>(new Vertex[total_vertex_count]);
+		Vertex *v = vertices.get();
 		for (const Path path : paths)
 		{
 			//for each path create a circular double linked list of vertices
@@ -587,7 +589,7 @@ namespace Clipper2Lib {
 			}
 		} //end processing current path
 
-		vertex_lists_.emplace_back(vertices);
+		vertex_lists_.emplace_back(std::move(vertices));
 	} //end AddPaths
 	//------------------------------------------------------------------------------
 
@@ -627,15 +629,6 @@ namespace Clipper2Lib {
 			delete outrec;
 		}
 		outrec_list_.resize(0);
-	}
-	//------------------------------------------------------------------------------
-
-	template<typename PointType, typename ZFillFunc, typename ClipperFlags>
-	inline void ClipperBase<PointType, ZFillFunc, ClipperFlags>::DisposeVerticesAndLocalMinima()
-	{
-		minima_list_.clear();
-		for (auto v : vertex_lists_) delete [] v;
-		vertex_lists_.clear();
 	}
 	//------------------------------------------------------------------------------
 
