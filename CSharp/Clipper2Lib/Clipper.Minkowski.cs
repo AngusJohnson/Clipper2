@@ -26,18 +26,18 @@ namespace Clipper2Lib
       int patLen = pattern.Count, pathLen = path.Count;
       Paths64 tmp = new Paths64(pathLen);
 
-      for (int i = 0; i < path.Count; i++)
+      foreach (Point64 t1 in path)
       {
         Path64 path2 = new Path64(patLen);
         if (isSum)
         {
-          for (int j = 0; j < pattern.Count; j++)
-            path2.Add(path[i] + pattern[j]);
+          foreach (Point64 t in pattern)
+            path2.Add(t1 + t);
         }
         else
         {
-          for (int j = 0; j < pattern.Count; j++)
-            path2.Add(path[i] - pattern[j]);
+          foreach (Point64 t in pattern)
+            path2.Add(t1 - t);
         }
         tmp.Add(path2);
       }
