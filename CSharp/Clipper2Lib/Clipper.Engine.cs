@@ -841,8 +841,9 @@ namespace Clipper2Lib
       {
         Path64 path = paths[i];
         Vertex? v0 = null, prev_v = null, curr_v;
-        foreach (Point64 pt in path)
+        for (int j = 0; j < path.Count; j++)
         {
+          Point64 pt = path[j];
           if (v0 == null)
           {
             v0 = new Vertex(pt, VertexFlags.None, null);
@@ -3305,8 +3306,9 @@ namespace Clipper2Lib
         solutionClosed.Capacity = _outrecList.Count;
         solutionOpen.Capacity = _outrecList.Count;
 
-        foreach (OutRec outrec in _outrecList)
+        for (int i = 0; i < _outrecList.Count; i++)
         {
+          OutRec outrec = _outrecList[i];
           if (outrec.pts == null) continue;
 
           Path64 path = new Path64();
@@ -3394,9 +3396,9 @@ namespace Clipper2Lib
     {
       Rect64 bounds = new Rect64(long.MaxValue, long.MaxValue, 
         long.MinValue, long.MinValue);
-      foreach (Vertex t1 in _vertexList)
+      for (int i = 0; i < _vertexList.Count; i++)
       {
-        Vertex t = t1, v = t;
+        Vertex t = _vertexList[i], v = t;
         do
         {
           if (v.pt.X < bounds.left) bounds.left = v.pt.X;
@@ -3597,12 +3599,11 @@ namespace Clipper2Lib
       if (!success) return false;
 
       solutionClosed.Capacity = solClosed64.Count;
-      foreach (Path64 t in solClosed64)
-        solutionClosed.Add(ClipperFunc.ScalePathD(t, _invScale));
-
+      for (int i = 0; i < solClosed64.Count; i++)
+        solutionClosed.Add(ClipperFunc.ScalePathD(solClosed64[i], _invScale));
       solutionOpen.Capacity = solOpen64.Count;
-      foreach (Path64 t in solOpen64)
-        solutionOpen.Add(ClipperFunc.ScalePathD(t, _invScale));
+      for (int i = 0; i < solOpen64.Count; i++)
+        solutionOpen.Add(ClipperFunc.ScalePathD(solOpen64[i], _invScale));
 
       return true;
     }
@@ -3641,8 +3642,8 @@ namespace Clipper2Lib
       if (oPaths.Count > 0)
       {
         openPaths.Capacity = oPaths.Count;
-        foreach (Path64 t in oPaths)
-          openPaths.Add(ClipperFunc.ScalePathD(t, _invScale));
+        for (int i = 0; i < oPaths.Count; i++)
+          openPaths.Add(ClipperFunc.ScalePathD(oPaths[i], _invScale));
       }
 
       return true;

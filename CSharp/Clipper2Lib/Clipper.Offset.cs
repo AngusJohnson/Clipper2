@@ -123,20 +123,20 @@ namespace Clipper2Lib
 
       if (Math.Abs(delta) < _minLenSqrd)
       {
-        foreach (PathGroup t1 in _pathGroups)
-        foreach (PathD t in t1._inPaths)
-          solution.Add(t);
-
+        for (int i = 0; i < _pathGroups.Count; i++)
+          for (int j = 0; j < _pathGroups[i]._inPaths.Count; j++)
+            solution.Add(_pathGroups[i]._inPaths[j]);
         return solution;
       }
 
       _tmpLimit = (MiterLimit <= 1 ? 2.0 : 2.0 / ClipperFunc.Sqr(MiterLimit));
 
-      foreach (PathGroup group in _pathGroups)
+      for (int i = 0; i < _pathGroups.Count; i++)
       {
+        PathGroup group = _pathGroups[i];
         DoGroupOffset(group, delta);
-        foreach (PathD t in group._outPaths)
-          solution.Add(t);
+        for (int j = 0; j < group._outPaths.Count; j++)
+          solution.Add(group._outPaths[j]);
       }
 
       if (MergeGroups && _pathGroups.Count > 0)
@@ -429,9 +429,9 @@ namespace Clipper2Lib
         _stepsPerRad = Math.PI / Math.Acos(1 - arcTol / absDelta) / TwoPi;
       }
 
-      foreach (PathD t in group._inPaths)
+      for (int i = 0; i < group._inPaths.Count; i++)
       {
-        PathD path = t;
+        PathD path = group._inPaths[i];
         path = ClipperFunc.StripNearDuplicates(path, _minLenSqrd, isClosedPaths);
         int cnt = path.Count;
         if (cnt == 0 || (cnt < 3 && !IsFullyOpenEndType(group._endType))) continue;
