@@ -34,12 +34,9 @@ namespace Clipper2Lib::engine::detail {
 
 	template<typename PointType>
 	struct IntersectNode {
-		PointType pt;
 		Active<PointType>* edge1;
 		Active<PointType>* edge2;
-
-		IntersectNode(Active<PointType>* e1, Active<PointType>* e2, PointType& pt_) :
-			edge1(e1), edge2(e2), pt(pt_) {}
+		PointType pt;
 	};
 
 	template<typename PointType>
@@ -459,16 +456,6 @@ namespace Clipper2Lib::engine::detail {
 		}
 		delete outrec.pts;
 		outrec.pts = nullptr;
-	}
-	//------------------------------------------------------------------------------
-
-	template<typename PointType>
-	inline bool IntersectListSort(IntersectNode<PointType>* a, IntersectNode<PointType>* b)
-	{
-		//note different inequality tests ...
-		return GetY(a->pt) == GetY(b->pt) ? 
-			GetX(a->pt) < GetX(b->pt) : 
-			GetY(a->pt) > GetY(b->pt);
 	}
 	//------------------------------------------------------------------------------
 

@@ -174,7 +174,7 @@ namespace Clipper2Lib {
 		typename std::vector<LocalMinima>::iterator loc_min_iter_;
 		std::vector<std::unique_ptr<Vertex[]>> vertex_lists_;
 		std::priority_queue<int64_t> scanline_list_;
-		std::vector<IntersectNode*> intersect_nodes_;
+		std::vector<IntersectNode> intersect_nodes_;
 		std::vector<Joiner*> joiner_list_;
 		void Reset();
 		void InsertScanline(int64_t y);
@@ -196,7 +196,6 @@ namespace Clipper2Lib {
 		inline void DeleteFromAEL(Active&e);
 		inline void AdjustCurrXAndCopyToSEL(const int64_t top_y);
 		void DoIntersections(const int64_t top_y);
-		void DisposeIntersectNodes();
 		void AddNewIntersectNode(Active&e1, Active&e2, const int64_t top_y);
 		bool BuildIntersectList(const int64_t top_y);
 		void ProcessIntersectList();
@@ -415,7 +414,7 @@ namespace Clipper2Lib {
 	{
 		while (actives_) DeleteFromAEL(*actives_);
 		scanline_list_ = std::priority_queue<int64_t>();
-		DisposeIntersectNodes();
+		intersect_nodes_.clear();
 		DisposeAllOutRecs();
 	}
 	//------------------------------------------------------------------------------
@@ -1770,19 +1769,12 @@ namespace Clipper2Lib {
 	inline void ClipperBase<PointType, ZFillFunc, ClipperFlags>::DoIntersections(const int64_t top_y) {
 		if (BuildIntersectList(top_y)) {
 			ProcessIntersectList();
-			DisposeIntersectNodes();
+			intersect_nodes_.clear();
 		}
 	}
 	//------------------------------------------------------------------------------
 
-	template<typename PointType, typename ZFillFunc, typename ClipperFlags>
-	inline void ClipperBase<PointType, ZFillFunc, ClipperFlags>::DisposeIntersectNodes()
-	{
-		for (auto node : intersect_nodes_) delete node;
-		intersect_nodes_.resize(0);
-	}
-	//------------------------------------------------------------------------------
-
+	// Called from BuildIntersectList()
 	template<typename PointType, typename ZFillFunc, typename ClipperFlags>
 	inline void ClipperBase<PointType, ZFillFunc, ClipperFlags>::AddNewIntersectNode(Active&e1, Active&e2, int64_t top_y)
 	{
@@ -1806,10 +1798,11 @@ namespace Clipper2Lib {
 				abs(e1.dx) < abs(e2.dx) ? e1.curr_x : e2.curr_x);
 		}
 
-		intersect_nodes_.push_back(new IntersectNode(&e1, &e2, pt));
+		intersect_nodes_.push_back({ &e1, &e2, pt });
 	}
 	//------------------------------------------------------------------------------
 
+	// Called by DoIntersections()
 	template<typename PointType, typename ZFillFunc, typename ClipperFlags>
 	inline bool ClipperBase<PointType, ZFillFunc, ClipperFlags>::BuildIntersectList(const int64_t top_y)
 	{
@@ -1869,10 +1862,11 @@ namespace Clipper2Lib {
 			}
 			left = sel_;
 		}
-		return intersect_nodes_.size() > 0;
+		return ! intersect_nodes_.empty();
 	}
 	//------------------------------------------------------------------------------
 
+	// Called by DoIntersections()
 	template<typename PointType, typename ZFillFunc, typename ClipperFlags>
 	inline void ClipperBase<PointType, ZFillFunc, ClipperFlags>::ProcessIntersectList()
 	{
@@ -1884,37 +1878,43 @@ namespace Clipper2Lib {
 		//crucial that intersections only occur between adjacent edges.
 
 		//First we do a quicksort so intersections proceed in a bottom up order ...
-		std::sort(intersect_nodes_.begin(), intersect_nodes_.end(), IntersectListSort<PointType>);
+		std::sort(intersect_nodes_.begin(), intersect_nodes_.end(),
+			[](const IntersectNode& a, const IntersectNode& b) {
+				//note different inequality tests ...
+				return GetY(a.pt) == GetY(b.pt) ? 
+					GetX(a.pt) < GetX(b.pt) : 
+					GetY(a.pt) > GetY(b.pt);
+			});
+
 		//Now as we process these intersections, we must sometimes adjust the order
 		//to ensure that intersecting edges are always adjacent ...
 		
-		std::vector<IntersectNode*>::iterator node_iter, node_iter2;
-		for (node_iter = intersect_nodes_.begin();
+		for (auto node_iter = intersect_nodes_.begin();
 			node_iter != intersect_nodes_.end();  ++node_iter)
 		{
-			if (!EdgesAdjacentInAEL(*(*node_iter)))
+			if (!EdgesAdjacentInAEL(*node_iter))
 			{
-				node_iter2 = node_iter + 1;
+				auto node_iter2 = node_iter + 1;
 				while (node_iter2 != intersect_nodes_.end() && 
-					!EdgesAdjacentInAEL(*(*node_iter2))) ++node_iter2;
+					!EdgesAdjacentInAEL(*node_iter2)) ++node_iter2;
 				if (node_iter2 != intersect_nodes_.end())
 					std::swap(*node_iter, *node_iter2);
 			}
 
-			IntersectNode* node = *node_iter;
-			IntersectEdges(*node->edge1, *node->edge2, node->pt);
-			SwapPositionsInAEL(*node->edge1, *node->edge2);
+			IntersectNode& node = *node_iter;
+			IntersectEdges(*node.edge1, *node.edge2, node.pt);
+			SwapPositionsInAEL(*node.edge1, *node.edge2);
 
-			if (TestJoinWithPrev2(*node->edge2, node->pt))
+			if (TestJoinWithPrev2(*node.edge2, node.pt))
 			{
-				OutPt* op1 = AddOutPt(*node->edge2->prev_in_ael, node->pt);
-				OutPt* op2 = AddOutPt(*node->edge2, node->pt);
+				OutPt* op1 = AddOutPt(*node.edge2->prev_in_ael, node.pt);
+				OutPt* op2 = AddOutPt(*node.edge2, node.pt);
 				if (op1 != op2) AddJoin(op1, op2);
 			}
-			else if (TestJoinWithNext2(*node->edge1, node->pt))
+			else if (TestJoinWithNext2(*node.edge1, node.pt))
 			{
-				OutPt* op1 = AddOutPt(*node->edge1, node->pt);
-				OutPt* op2 = AddOutPt(*node->edge1->next_in_ael, node->pt);
+				OutPt* op1 = AddOutPt(*node.edge1, node.pt);
+				OutPt* op2 = AddOutPt(*node.edge1->next_in_ael, node.pt);
 				if (op1 != op2) AddJoin(op1, op2);
 			}
 		}
