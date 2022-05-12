@@ -1,5 +1,7 @@
 name: C++
-on: push
+on:
+  push:
+  pull_request:
 jobs:
   windows-latest:
     runs-on: 'windows-latest'
