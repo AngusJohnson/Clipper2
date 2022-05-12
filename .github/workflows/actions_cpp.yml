@@ -16,3 +16,5 @@ jobs:
     - name: Run tests
       run: x64\Release\Tests.exe
       working-directory: CPP/Tests/VisualStudio
+    - name: Build console demo program
+      run: msbuild CPP/Examples/ConsoleDemo1/ConsoleDemo1_cpp.sln
