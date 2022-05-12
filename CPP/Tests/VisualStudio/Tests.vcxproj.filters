@@ -22,8 +22,8 @@
     <ClCompile Include="..\googletest\googletest\src\gtest_main.cc">
       <Filter>GoogleTest</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\Examples\ConsoleDemo1\TextFileLoader.cpp">
-      <Filter>TextFileLoader</Filter>
+    <ClCompile Include="..\..\Utils\TextFileLoader.cpp">
+      <Filter>Utils</Filter>
     </ClCompile>
     <ClCompile Include="..\Tests\TestFromTextFile.cpp">
       <Filter>Tests</Filter>
@@ -39,7 +39,7 @@
     <Filter Include="Clipper2Lib">
       <UniqueIdentifier>{ac36f960-a009-4011-bb89-354801480f5e}</UniqueIdentifier>
     </Filter>
-    <Filter Include="TextFileLoader">
+    <Filter Include="Utils">
       <UniqueIdentifier>{4a710b17-1097-4d7f-b7b6-e3b0e75a1cb6}</UniqueIdentifier>
     </Filter>
   </ItemGroup>

@@ -1,5 +1,3 @@
-#include "TextFileLoader.h"
-
 #include <cstdlib>
 #include <iostream>
 #include <algorithm> 
@@ -9,6 +7,8 @@
 
 #include "../../Clipper2Lib/clipper.h"
 #include "../clipper.svg.h"
+
+#include "../../Utils/TextFileLoader.h"
 
 using namespace std;
 using namespace Clipper2Lib;

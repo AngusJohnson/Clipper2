@@ -1,6 +1,6 @@
 #include <gtest/gtest.h>
 #include "../../Clipper2Lib/clipper.h"
-#include "../../Examples/ConsoleDemo1/TextFileLoader.h"
+#include "../../Utils/TextFileLoader.h"
 
 TEST(Clipper2Tests, TestFromTextFile) {
     std::ifstream ifs("../../../Tests/Tests.txt");

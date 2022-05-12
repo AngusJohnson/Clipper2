@@ -3,6 +3,8 @@
 //------------------------------------------------------------------------------
 
 #include "TextFileLoader.h"
+#include <string>
+#include <sstream>
 
 using namespace std;
 using namespace Clipper2Lib;
