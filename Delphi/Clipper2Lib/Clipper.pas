@@ -76,9 +76,11 @@ function XOR_(const subjects, clips: TPathsD;
   fillRule: TFillRule; decimalPrec: integer = 2): TPathsD; overload;
 
 function InflatePaths(const paths: TPaths64; delta: Double;
-  jt: TJoinType = jtRound; et: TEndType = etPolygon): TPaths64; overload;
+  jt: TJoinType = jtRound; et: TEndType = etPolygon;
+  MiterLimit: double = 2.0): TPaths64; overload;
 function InflatePaths(const paths: TPathsD; delta: Double;
-  jt: TJoinType = jtRound; et: TEndType = etPolygon): TPathsD; overload;
+jt: TJoinType = jtRound; et: TEndType = etPolygon;
+MiterLimit: double = 2.0): TPathsD; overload;
 
 function MinkowskiSum(const pattern, path: TPath64;
   pathIsClosed: Boolean): TPaths64;
@@ -265,14 +267,14 @@ end;
 //------------------------------------------------------------------------------
 
 function InflatePaths(const paths: TPaths64; delta: Double;
-  jt: TJoinType; et: TEndType): TPaths64;
+  jt: TJoinType; et: TEndType; MiterLimit: double): TPaths64;
 var
   pp: TPathsD;
 const
   scale = 100; invScale = 0.01;
 begin
   pp := ScalePathsD(paths, scale, scale);
-  with TClipperOffset.Create do
+  with TClipperOffset.Create(MiterLimit) do
   try
     AddPaths(pp, jt, et);
     pp := Execute(delta * scale);
@@ -284,11 +286,11 @@ end;
 //------------------------------------------------------------------------------
 
 function InflatePaths(const paths: TPathsD; delta: Double;
-  jt: TJoinType; et: TEndType): TPathsD;
+  jt: TJoinType; et: TEndType; MiterLimit: double): TPathsD;
 var
   co: TClipperOffset;
 begin
-  co := TClipperOffset.Create();
+  co := TClipperOffset.Create(MiterLimit);
   try
     co.AddPaths(paths, jt, et);
     Result := co.Execute(delta);

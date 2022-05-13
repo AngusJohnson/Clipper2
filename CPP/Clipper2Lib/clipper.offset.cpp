@@ -1,7 +1,7 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
 * Version   :  10.0 (beta) - aka Clipper2                                      *
-* Date      :  1 May 2022                                                      *
+* Date      :  13 May 2022                                                     *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  Polygon offsetting                                              *
@@ -9,10 +9,8 @@
 *******************************************************************************/
 
 #include <cmath>
-
-#include "clipper.core.h"
-#include "clipper.engine.h"
 #include "clipper.offset.h"
+#include "clipper.engine.h"
 
 namespace Clipper2Lib {
 
@@ -21,6 +19,11 @@ const double floating_point_tolerance = 1e-12;
 //------------------------------------------------------------------------------
 // Miscellaneous methods
 //------------------------------------------------------------------------------
+
+inline bool IsFullOpenEndType(EndType et)
+{
+	return (et != EndType::Polygon) && (et != EndType::Joined);
+}
 
 int GetLowestPolygonIdx(const PathsD& paths)
 {
@@ -57,11 +60,6 @@ PointD GetUnitNormal(const PointD pt1, const PointD pt2)
 	dx *= inverse_hypot;
 	dy *= inverse_hypot;
 	return PointD(dy, -dx);
-}
-
-inline bool IsFullOpenEndType(EndType et)
-{
-	return (et != EndType::Polygon) && (et != EndType::Joined);
 }
 
 //------------------------------------------------------------------------------
@@ -140,9 +138,10 @@ void ClipperOffset::DoRound(PathGroup& group, const PointD& pt,
 			group.path_.push_back(PointD(pt.x + pt2.x, pt.y + pt2.y));
 		}
 	}
-	pt2.x = norm1.x * delta_;
-	pt2.y = norm1.y * delta_;
-	group.path_.push_back(PointD(pt.x + pt2.x, pt.y + pt2.y));
+	//this seems problematic with circles at least
+	//pt2.x = norm1.x * delta_;
+	//pt2.y = norm1.y * delta_;
+	//group.path_.push_back(PointD(pt.x + pt2.x, pt.y + pt2.y));
 }
 
 void ClipperOffset::OffsetPoint(PathGroup& group, PathD& path, size_t j, size_t& k)
@@ -314,15 +313,16 @@ void ClipperOffset::DoGroupOffset(PathGroup& group, double delta)
 	{
 		PathD path = StripNearEqual(*path_iter, min_len_sqr, is_closed_path);
 		size_t cnt = path.size();
-		if (cnt == 0 || (cnt < 3 && is_closed_path)) continue;
+		if (cnt == 0) continue;
 
 		if (cnt == 1) //single point - only valid with open paths
 		{
 			group.path_ = PathD();
 			//single vertex so build a circle or square ...
-			if (group.end_type == EndType::Round)
+			if (group.join_type == JoinType::Round)
 			{
 				DoRound(group, path[0], PointD(1.0, 0.0), PointD(-1.0, 0.0), PI *2);
+				std::reverse(group.path_.begin(), group.path_.end());
 			}
 			else
 			{
@@ -362,19 +362,14 @@ PathsD ClipperOffset::Execute(double delta)
 	min_len_sqr = default_arc_tolerance;
 	if (std::abs(delta) < min_len_sqr)
 	{
-		//just copy paths since the delta is inconsequential
-		std::vector<PathGroup>::const_iterator groups_citer;
-		for (groups_citer = groups_.cbegin(); groups_citer != groups_.cend(); ++groups_citer)
-		{
-			PathsD::const_iterator paths_iter;
-			for (paths_iter = groups_citer->paths_in_.cbegin();
-				paths_iter != groups_citer->paths_in_.cend(); ++paths_iter)
-				result.push_back(*paths_iter);
-			return result;
-		}
+		for (const PathGroup& group : groups_)
+			result.insert(result.begin(), group.paths_in_.cbegin(), group.paths_in_.cend());
+		return result;
 	}
 
-	temp_lim_ = miter_limit_ <= 1 ? 2.0 : 2.0 / (miter_limit_ * miter_limit_);
+	temp_lim_ = (miter_limit_ <= 1) ? 
+		2.0 : 
+		2.0 / (miter_limit_ * miter_limit_);
 
 	std::vector<PathGroup>::iterator groups_iter;
 	for (groups_iter = groups_.begin(); groups_iter != groups_.end(); ++groups_iter)
@@ -398,24 +393,6 @@ PathsD ClipperOffset::Execute(double delta)
 			c.Execute(ClipType::Union, FillRule::Positive, result);
 	}
 	return result;
-}
-
-Paths64 InflatePaths(const Paths64& paths, double delta, JoinType jt, EndType et)
-{
-	const int precision = 2;
-	const double scale = std::pow(10, precision);
-	ClipperOffset clip_offset;
-	clip_offset.AddPaths(Paths64ToPathsD(paths, scale), jt, et);
-	PathsD tmp = clip_offset.Execute(delta * scale);
-	tmp = StripNearEqual(tmp, Sqr(scale), !IsFullOpenEndType(et));
-	return PathsDToPaths64(tmp, 1 / scale);
-}
-
-PathsD InflatePaths(const PathsD& paths, double delta, JoinType jt, EndType et)
-{
-	ClipperOffset clip_offset;
-	clip_offset.AddPaths(paths, jt, et);
-	return clip_offset.Execute(delta);
 }
 
 } //namespace
