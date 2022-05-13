@@ -13,6 +13,7 @@
 #include <stdexcept>
 #include <vector>
 #include <numeric>
+#include <assert.h>
 #include "clipper.engine.h"
 
 namespace Clipper2Lib {
@@ -1362,6 +1363,9 @@ namespace Clipper2Lib {
 
 	OutPt* ClipperBase::AddLocalMaxPoly(Active &e1, Active &e2, const Point64& pt)
 	{
+		assert(e1.outrec != nullptr);
+		assert(e2.outrec != nullptr);
+
 		if (IsFront(e1) == IsFront(e2))
 		{
 			if (IsOpen(e1))
