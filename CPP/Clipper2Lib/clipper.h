@@ -119,20 +119,22 @@ namespace Clipper2Lib
     return (et != EndType::Polygon) && (et != EndType::Joined);
   }
 
-  static Paths64 InflatePaths(const Paths64& paths, double delta, JoinType jt, EndType et)
+  static Paths64 InflatePaths(const Paths64& paths, double delta, 
+    JoinType jt, EndType et, double miter_limit = 2.0)
   {
     const int precision = 2;
     const double scale = std::pow(10, precision);
-    ClipperOffset clip_offset;
+    ClipperOffset clip_offset(miter_limit);
     clip_offset.AddPaths(Paths64ToPathsD(paths, scale), jt, et);
     PathsD tmp = clip_offset.Execute(delta * scale);
     tmp = StripNearEqual(tmp, Sqr(scale), !IsFullOpenEndType(et));
     return PathsDToPaths64(tmp, 1 / scale);
   }
 
-  static PathsD InflatePaths(const PathsD& paths, double delta, JoinType jt, EndType et)
+  static PathsD InflatePaths(const PathsD& paths, double delta, 
+    JoinType jt, EndType et, double miter_limit = 2.0)
   {
-    ClipperOffset clip_offset;
+    ClipperOffset clip_offset(miter_limit);
     clip_offset.AddPaths(paths, jt, et);
     return clip_offset.Execute(delta);
   }
