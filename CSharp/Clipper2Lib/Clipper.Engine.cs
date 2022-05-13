@@ -1,7 +1,7 @@
 ﻿/*******************************************************************************
 * Author    :  Angus Johnson                                                   *
 * Version   :  10.0 (beta) - also known as Clipper2                            *
-* Date      :  10 May 2022                                                     *
+* Date      :  13 May 2022                                                     *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  This is the main polygon clipping module                        *
@@ -2086,8 +2086,9 @@ namespace Clipper2Lib
       bool result = false;
       Point64 pt = NextVertex(horzEdge).pt;
       //trim 180 deg. spikes in closed paths
-      while ((pt.Y == horzEdge.top.Y) && (!preserveCollinear ||
-                                          ((pt.X < horzEdge.top.X) == (horzEdge.bot.X < horzEdge.top.X))))
+      while ((pt.Y == horzEdge.top.Y) && 
+        (!preserveCollinear ||
+        ((pt.X < horzEdge.top.X) == (horzEdge.bot.X < horzEdge.top.X))))
       {
         horzEdge.vertexTop = NextVertex(horzEdge);
         horzEdge.top = pt;
@@ -2233,9 +2234,6 @@ namespace Clipper2Lib
           AddOutPt(horz, horz.top);
         UpdateEdgeIntoAEL(horz);
         isMax = IsMaxima(horz);
-
-        if (!horzIsOpen && !isMax && TrimHorz(horz, PreserveCollinear))
-          isMax = IsMaxima(horz); //i.e. update after TrimHorz
 
         isLeftToRight = ResetHorzDirection(horz, maxPair, out leftX, out rightX);
 

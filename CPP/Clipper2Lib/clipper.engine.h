@@ -1,7 +1,7 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
 * Version   :  10.0 (beta) - aka Clipper2                                      *
-* Date      :  3 May 2022                                                      *
+* Date      :  13 May 2022                                                     *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  This is the main polygon clipping module                        *
@@ -293,7 +293,7 @@ namespace Clipper2Lib {
 		const std::vector<Point<T>>& Path() const { return polygon; };
 
 		bool IsHole() const {
-			PolyPath* pp = parent_;
+			const PolyPath* pp = parent_;
 			bool is_hole = pp;
 			while (pp) {
 				is_hole = !is_hole;

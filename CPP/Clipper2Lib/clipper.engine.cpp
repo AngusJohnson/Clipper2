@@ -1,7 +1,7 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
 * Version   :  10.0 (beta) - aka Clipper2                                      *
-* Date      :  4 May 2022                                                      *
+* Date      :  13 May 2022                                                     *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  This is the main polygon clipping module                        *
@@ -13,7 +13,6 @@
 #include <stdexcept>
 #include <vector>
 #include <numeric>
-#include "clipper.core.h"
 #include "clipper.engine.h"
 
 namespace Clipper2Lib {
@@ -733,6 +732,8 @@ namespace Clipper2Lib {
 		{
 			//for each path create a circular double linked list of vertices
 			Vertex* v0 = v, * curr_v = v, * prev_v = NULL;
+			
+			v->prev = NULL;
 			int cnt = 0;
 			for (const Point64 pt : path)
 			{
@@ -2377,9 +2378,6 @@ namespace Clipper2Lib {
 				AddOutPt(horz, horz.top);
 			UpdateEdgeIntoAEL(&horz);
 			isMax = IsMaxima(horz);
-
-			if (!horzIsOpen && !isMax && TrimHorz(horz, PreserveCollinear))
-				isMax = IsMaxima(horz); //i.e. update after TrimHorz
 
 			is_left_to_right = ResetHorzDiRect64on(horz, max_pair, horz_left, horz_right);
 

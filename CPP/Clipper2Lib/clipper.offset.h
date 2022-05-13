@@ -1,7 +1,7 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
 * Version   :  10.0 (beta) - aka Clipper2                                      *
-* Date      :  28 April 2022                                                   *
+* Date      :  13 May 2022                                                     *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  Polygon offsetting                                              *
@@ -82,10 +82,6 @@ public:
 	//merged (via a clipping union operation) to remove overlaps.
 	void MergeGroups(bool merge_groups) { merge_groups_ = merge_groups; }
 };
-
-Paths64 InflatePaths(const Paths64& paths, double delta, JoinType jt, EndType et);
-
-PathsD InflatePaths(const PathsD& paths, double delta, JoinType jt, EndType et);
 
 }
 #endif /* CLIPPER_OFFSET_H_ */

@@ -1,7 +1,7 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
 * Version   :  10.0 (beta) - aka Clipper2                                      *
-* Date      :  28 April 2022                                                   *
+* Date      :  13 May 2022                                                     *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  Minkowski Sum and Difference                                    *
@@ -14,10 +14,7 @@
 #include <cstdlib>
 #include <vector>
 #include <string>
-
-#include "clipper.core.h"
-#include "clipper.engine.h"
-#include "clipper.offset.h"
+#include "clipper.h"
 
 namespace Clipper2Lib 
 {

@@ -1,7 +1,7 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
 * Version   :  10.0 (beta) - aka Clipper2                                      *
-* Date      :  1 May 2022                                                      *
+* Date      :  13 May 2022                                                     *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  Core Clipper Library structures and functions                   *
@@ -161,7 +161,7 @@ static PathD StripNearEqual(const PathD& path, double max_dist_sqrd, bool is_clo
 		}
 	}
 	if (!is_closed_path) return result;
-	while (!result.empty() &&
+	while (!result.empty() && result.back() != result.front() &&
 		NearEqual(result.back(), first_pt, max_dist_sqrd)) result.pop_back();
 	return result;
 }
@@ -395,9 +395,6 @@ inline bool IsClockwise(const PathD& poly)
 {
 	return Area(poly) >= 0;
 }
-
-Path64 MakePath(const std::string& s);
-PathD MakePathD(const std::string& s);
 
 }  //namespace
 

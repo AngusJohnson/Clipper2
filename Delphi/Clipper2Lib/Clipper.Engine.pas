@@ -3,7 +3,7 @@ unit Clipper.Engine;
 (*******************************************************************************
 * Author    :  Angus Johnson                                                   *
 * Version   :  10.0 (beta) - aka Clipper2                                      *
-* Date      :  7 May 2022                                                      *
+* Date      :  13 May 2022                                                     *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  This is the main polygon clipping module                        *
@@ -1319,6 +1319,7 @@ begin
     p := @paths[i][0];
     va0 := v; vaCurr := v;
     vaCurr.Pt := p^;
+    vaCurr.Prev := nil;
     inc(p);
     vaCurr.Flags := [];
     vaPrev := vaCurr;
@@ -3574,10 +3575,6 @@ begin
       AddOutPt(horzEdge, horzEdge.Top);
     UpdateEdgeIntoAEL(horzEdge);
     isMax := IsMaxima(horzEdge);
-
-    if not horzIsOpen and not isMax and
-      TrimHorz(horzEdge, FPreserveCollinear) then
-        isMax := IsMaxima(horzEdge); //ie update after TrimHorz
 
     isLeftToRight := ResetHorzDirection;
     if isMax then maxPair := GetMaximaPair(horzEdge);
