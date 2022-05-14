@@ -12,6 +12,8 @@
 #include "clipper.offset.h"
 #include "clipper.engine.h"
 
+#include <algorithm> // for std::reverse
+
 namespace Clipper2Lib {
 
 const double default_arc_tolerance = 0.25;
@@ -29,7 +31,7 @@ int GetLowestPolygonIdx(const PathsD& paths)
 {
 	int lp_idx = -1;
 	PointD lp;
-	for (size_t i = 0; i < static_cast<int>(paths.size()); ++i)
+	for (size_t i = 0; i < paths.size(); ++i)
 		if (paths[i].size() > 0) {
 			lp_idx = (int)i;
 			lp = paths[i][0];
