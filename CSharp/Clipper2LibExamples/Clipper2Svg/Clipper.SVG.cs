@@ -186,16 +186,17 @@ namespace Clipper2Lib
       return ((float) (clr >> 24) / 255);
     }
 
-    public bool SaveToFile(string filename, int maxWidth = 0, int maxHeight = 0, int margin = 20)
+    public bool SaveToFile(string filename, int maxWidth = 0, int maxHeight = 0, int margin = -1)
     {
-      if (margin < 20) margin = 20;
+      if (margin < 0) margin = 20;
       RectD bounds = GetBounds();
       if (bounds.IsEmpty()) return false;
 
       double scale = 1.0;
       if (maxWidth > 0 && maxHeight > 0)
-        scale = 1.0 / Math.Max((double) (bounds.right - bounds.left) / (maxWidth - margin * 2),
-          (double) (bounds.bottom - bounds.top) / (maxHeight - margin * 2));
+        scale = Math.Min(
+           (maxWidth - margin * 2) / (double)bounds.Width,
+            (maxHeight - margin * 2) / (double) bounds.Height);
 
       long offsetX = margin - (long) (bounds.left * scale);
       long offsetY = margin - (long) (bounds.top * scale);

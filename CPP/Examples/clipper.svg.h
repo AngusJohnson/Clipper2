@@ -1,10 +1,9 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  21 November 2020                                                *
+* Date      :  16 May 2022                                                     *
 * Website   :  http://www.angusj.com                                           *
-* Copyright :  Angus Johnson 2010-2020                                         *
-*                                                                              *
-* License   : http://www.boost.org/LICENSE_1_0.txt                             *
+* Copyright :  Angus Johnson 2010-2022                                         *
+* License   :  http://www.boost.org/LICENSE_1_0.txt                            *
 *******************************************************************************/
 
 #ifndef svglib_h
@@ -12,9 +11,7 @@
 
 #include <cstdlib>
 #include <string>
-
-#include "../Clipper2Lib/clipper.engine.h"
-#include "../Clipper2Lib/clipper.core.h"
+#include "../Clipper2Lib/clipper.h"
 
 namespace Clipper2Lib {
 
@@ -59,7 +56,7 @@ namespace Clipper2Lib {
         unsigned font_size = 11;
         int x = 0;
         int y = 0;
-    public:
+
         TextInfo(const std::string &txt, const std::string &fnt_name, unsigned color,
             unsigned weight, unsigned size, int coord_x, int coord_y) :
             text(txt), font_name(fnt_name), font_color(color), font_weight(weight), font_size(size),
@@ -70,16 +67,26 @@ namespace Clipper2Lib {
     typedef std::vector< TextInfo* > TextInfoList;
 
   private:
-      int precision;
+      double scale_;
       CoordsStyle coords_style;
       TextInfoList text_infos;
       PathInfoList path_infos;
+
+      void DrawCircle(std::ofstream& file, double x, double y, double radius);
   public:
-    SvgWriter(int precision_ = 2): precision(precision_) 
-      { fill_rule = FillRule::EvenOdd; coords_style.font_name = "Verdana";
-      coords_style.font_color = 0xFF000000; coords_style.font_size = 11; };
+    SvgWriter(int precision = 0)
+    { 
+      fill_rule = FillRule::EvenOdd; 
+      coords_style.font_name = "Verdana";
+      coords_style.font_color = 0xFF000000; 
+      coords_style.font_size = 11; 
+      scale_ = std::pow(10, precision);
+    };
+
     ~SvgWriter() { Clear(); };
+    
     FillRule fill_rule;
+    
     void Clear();
     void SetCoordsStyle(const std::string &font_name, unsigned font_color, unsigned font_size);
     void AddText(const std::string &text, unsigned font_color, unsigned font_size, int x, int y);
@@ -100,12 +107,13 @@ namespace Clipper2Lib {
   {
   private:
       PathInfoList path_infos;
-      bool LoadPath(const std::string& path);
+      bool LoadPath(std::string::iterator& p,
+        const std::string::iterator& pe);
   public:
       std::string xml;
       bool LoadFromFile(const std::string &filename);
       void Clear() { path_infos.clear(); };
-      void GetPaths(PathsD& paths);
+      PathsD GetPaths();
   };
 
 }

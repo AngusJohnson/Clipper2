@@ -1,7 +1,7 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
 * Version   :  10.0 (beta) - aka Clipper2                                      *
-* Date      :  13 May 2022                                                     *
+* Date      :  16 May 2022                                                     *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  Minkowski Sum and Difference                                    *
@@ -33,12 +33,9 @@ namespace Clipper2Lib
       {
         for (Point64 pt : path)
         {
-          //Path64 path2(pattern.size());
-          //std::transform(pattern.cbegin(), pattern.cend(),
-          //  path2.begin(), [pt](const Point64& pt2) {return pt + pt2; });
-          Path64 path2;
-          path2.reserve(pattern.size());
-          for (const Point64& pt2 : pattern) path2.push_back(pt + pt2);
+          Path64 path2(pattern.size());
+          std::transform(pattern.cbegin(), pattern.cend(),
+            path2.begin(), [pt](const Point64& pt2) {return pt + pt2; });
           tmp.push_back(path2);
         }
       }
@@ -46,9 +43,9 @@ namespace Clipper2Lib
       {
         for (Point64 pt : path)
         {
-          Path64 path2;
-          path2.reserve(pattern.size());
-          for (const Point64& pt2 : pattern) path2.push_back(pt - pt2);
+          Path64 path2(pattern.size());
+          std::transform(pattern.cbegin(), pattern.cend(),
+            path2.begin(), [pt](const Point64& pt2) {return pt - pt2; });
           tmp.push_back(path2);
         }
       }
@@ -97,9 +94,9 @@ namespace Clipper2Lib
   static PathsD MinkowskiSum(const PathD& pattern, const PathD& path, bool isClosed, int decimalPlaces = 2)
   {
     double scale = pow(10, decimalPlaces);
-    Path64 pat64 = PathDToPath64(pattern, scale), path64 = PathDToPath64(path, scale);
+    Path64 pat64 = ScalePath64(pattern, scale), path64 = ScalePath64(path, scale);
     Paths64 tmp = detail::Union(detail::Minkowski(pat64, path64, true, isClosed), FillRule::NonZero);
-    return Paths64ToPathsD(tmp, 1 / scale);
+    return ScalePathsD(tmp, 1 / scale);
   }
 
   static Paths64 MinkowskiDiff(const Path64& pattern, const Path64& path, bool isClosed)
@@ -110,9 +107,9 @@ namespace Clipper2Lib
   static PathsD MinkowskiDiff(const PathD& pattern, const PathD& path, bool isClosed, int decimalPlaces = 2)
   {
     double scale = pow(10, decimalPlaces);
-    Path64 pat64 = PathDToPath64(pattern, scale), path64 = PathDToPath64(path, scale);
+    Path64 pat64 = ScalePath64(pattern, scale), path64 = ScalePath64(path, scale);
     Paths64 tmp = detail::Union(detail::Minkowski(pat64, path64, false, isClosed), FillRule::NonZero);
-    return Paths64ToPathsD(tmp, 1 / scale);
+    return ScalePathsD(tmp, 1 / scale);
   }
 
 } //Clipper2Lib namespace

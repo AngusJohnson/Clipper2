@@ -3,7 +3,7 @@ unit Clipper.Offset;
 (*******************************************************************************
 * Author    :  Angus Johnson                                                   *
 * Version   :  10.0 (beta) - aka Clipper2                                      *
-* Date      :  7 May 2022                                                      *
+* Date      :  16 May 2022                                                     *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  Offset paths and clipping solutions                             *
@@ -28,7 +28,7 @@ type
   //etPolygon: offsets only one side of a closed path
 
   TPathGroup = class
-	  paths     : TPathsD;
+	  paths     : TPaths64;
     reversed  : Boolean;
 	  joinType  : TJoinType;
 	  endType   : TEndType;
@@ -38,7 +38,6 @@ type
   TClipperOffset = class
   private
     fDelta       : Double;
-    fPrecision   : integer;
     fMinLenSqrd  : double;
     fJoinType    : TJoinType;
     fTmpLimit    : Double;
@@ -48,14 +47,15 @@ type
     fNorms       : TPathD;
     fInGroups    : TList;
     fMergeGroups : Boolean;
-    fInPath      : TPathD;
-    fOutPath     : TPathD;
-    fOutPaths    : TPathsD;
+    fInPath      : TPath64;
+    fOutPath     : TPath64;
+    fOutPaths    : TPaths64;
     fOutPathLen  : Integer;
-    fSolution    : TPathsD;
+    fSolution    : TPaths64;
 
     procedure AddPoint(x,y: double); overload;
-    procedure AddPoint(const pt: TPointD); overload;
+    procedure AddPoint(const pt: TPoint64); overload;
+      {$IFDEF INLINING} inline; {$ENDIF}
     procedure DoSquare(j, k: Integer);
     procedure DoMiter(j, k: Integer; cosAplus1: Double);
     procedure DoRound(j, k: integer; angle: double);
@@ -67,15 +67,14 @@ type
     procedure OffsetOpenJoined;
     procedure OffsetOpenPath(endType: TEndType);
   public
-    constructor Create(miterLimit: double = 2.0;
-      arcTolerance: double = 0.0; roundingDecimalPrecision: integer = 2);
+    constructor Create(miterLimit: double = 2.0; arcTolerance: double = 0.0);
     destructor Destroy; override;
-    procedure AddPath(const path: TPathD;
+    procedure AddPath(const path: TPath64;
       joinType: TJoinType; endType: TEndType);
-    procedure AddPaths(const paths: TPathsD;
+    procedure AddPaths(const paths: TPaths64;
       joinType: TJoinType; endType: TEndType);
     procedure Clear;
-    function Execute(delta: Double): TPathsD;
+    function Execute(delta: Double): TPaths64;
 
     //MiterLimit: needed for mitered offsets (see offset_triginometry3.svg)
     property MiterLimit: Double read fMiterLimit write fMiterLimit;
@@ -87,7 +86,6 @@ type
     //However, when MergeGroups is enabled, any overlapping offsets will be
     //merged (via a clipping union operation) to remove overlaps.
     property MergeGroups: Boolean read fMergeGroups write fMergeGroups;
-    property RoundingDecimalPrecision: integer read fPrecision write fPrecision;
   end;
 
 implementation
@@ -96,7 +94,6 @@ uses
   Math, Clipper.Engine;
 
 const
-  Tolerance           : Double = 1.0E-15;
   Two_Pi              : Double = 2 * PI;
 
 //------------------------------------------------------------------------------
@@ -110,7 +107,7 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-function GetUnitNormal(const pt1, pt2: TPointD): TPointD;
+function GetUnitNormal(const pt1, pt2: TPoint64): TPointD;
 var
   dx, dy, inverseHypot: Double;
 begin
@@ -131,14 +128,14 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-function GetLowestPolygonIdx(const paths: TPathsD): integer;
+function GetLowestPolygonIdx(const paths: TPaths64): integer;
 var
   i,j: integer;
-  lp: TPointD;
-  p: TPathD;
+  lp: TPoint64;
+  p: TPath64;
 begin
 	Result := -1;
-  lp := PointD(0, -MaxDouble);
+  lp := Point64(0, -MaxInt64);
 	for i := 0 to High(paths) do
 	begin
 		p := paths[i];
@@ -177,13 +174,11 @@ end;
 // TClipperOffset methods
 //------------------------------------------------------------------------------
 
-constructor TClipperOffset.Create(miterLimit: double;
-  arcTolerance: double; roundingDecimalPrecision: integer);
+constructor TClipperOffset.Create(miterLimit: double; arcTolerance: double);
 begin
   fMiterLimit   := MiterLimit;
   fArcTolerance := ArcTolerance;
   fInGroups     := TList.Create;
-  fPrecision    := roundingDecimalPrecision;
 end;
 //------------------------------------------------------------------------------
 
@@ -206,10 +201,10 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-procedure TClipperOffset.AddPath(const path: TPathD;
+procedure TClipperOffset.AddPath(const path: TPath64;
   joinType: TJoinType; endType: TEndType);
 var
-  paths: TPathsD;
+  paths: TPaths64;
 begin
   if not assigned(path) then Exit;
   SetLength(paths, 1);
@@ -218,7 +213,7 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-procedure TClipperOffset.AddPaths(const paths: TPathsD;
+procedure TClipperOffset.AddPaths(const paths: TPaths64;
   joinType: TJoinType; endType: TEndType);
 var
   group: TPathGroup;
@@ -277,7 +272,7 @@ begin
   fOutPaths := nil;
   for i := 0 to High(pathgroup.paths) do
   begin
-    fInPath := StripNearDuplicates(pathgroup.paths[i], fMinLenSqrd, IsClosedPaths);
+    fInPath := StripDuplicates(pathgroup.paths[i], IsClosedPaths);
     len := Length(fInPath);
     if (fInPath = nil) or
       ((pathGroup.endType in [etPolygon, etJoined]) and (len < 3)) then Continue;
@@ -303,10 +298,10 @@ begin
         SetLength(fOutPath, fOutPathLen);
         with fInPath[0] do
         begin
-          fOutPath[0] := PointD(X-fDelta,Y-fDelta);
-          fOutPath[1] := PointD(X+fDelta,Y-fDelta);
-          fOutPath[2] := PointD(X+fDelta,Y+fDelta);
-          fOutPath[3] := PointD(X-fDelta,Y+fDelta);
+          fOutPath[0] := Point64(X-fDelta,Y-fDelta);
+          fOutPath[1] := Point64(X+fDelta,Y-fDelta);
+          fOutPath[2] := Point64(X+fDelta,Y+fDelta);
+          fOutPath[3] := Point64(X-fDelta,Y+fDelta);
         end;
       end;
     end else
@@ -331,7 +326,7 @@ begin
   if not fMergeGroups then
   begin
     //clean up self-intersections ...
-    with TClipperD.Create(fPrecision) do
+    with TClipper.Create do
     try
       PreserveCollinear := false;
       AddSubject(fOutPaths);
@@ -449,7 +444,7 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-function TClipperOffset.Execute(delta: Double): TPathsD;
+function TClipperOffset.Execute(delta: Double): TPaths64;
 var
   i: integer;
   scale: double;
@@ -459,8 +454,7 @@ begin
   Result := nil;
   if fInGroups.Count = 0 then Exit;
 
-  scale := Math.Power(10, fPrecision);
-  fMinLenSqrd := 1/Sqr(scale);
+  fMinLenSqrd := 1;//Sqr(scale);
 
   if abs(delta) < Tolerance then
   begin
@@ -474,7 +468,7 @@ begin
 
   //Miter Limit: see offset_triginometry3.svg
   if fMiterLimit > 1 then
-    fTmpLimit := 2 / Sqr(fMiterLimit) else
+    fTmpLimit := 2 / System.Sqr(fMiterLimit) else
     fTmpLimit := 2.0;
 
   //nb: delta will depend on whether paths are polygons or open
@@ -487,7 +481,7 @@ begin
   if fMergeGroups and (fInGroups.Count > 0) then
   begin
     //clean up self-intersections ...
-    with TClipperD.Create(fPrecision) do
+    with TClipper.Create do
     try
       PreserveCollinear := false;
       AddSubject(fSolution);
@@ -506,28 +500,21 @@ procedure TClipperOffset.AddPoint(x,y: double);
 const
   BuffLength = 32;
 var
-  pt: TPointD;
+  pt: TPoint64;
 begin
-  pt := PointD(x,y);
+  pt := Point64(Round(x),Round(y));
   if fOutPathLen = length(fOutPath) then
     SetLength(fOutPath, fOutPathLen + BuffLength);
   if (fOutPathLen > 0) and
-    PointsNearEqual(fOutPath[fOutPathLen-1], pt, fMinLenSqrd) then Exit;
+    PointsEqual(fOutPath[fOutPathLen-1], pt) then Exit;
   fOutPath[fOutPathLen] := pt;
   Inc(fOutPathLen);
 end;
 //------------------------------------------------------------------------------
 
-procedure TClipperOffset.AddPoint(const pt: TPointD);
-const
-  BuffLength = 32;
+procedure TClipperOffset.AddPoint(const pt: TPoint64);
 begin
-  if fOutPathLen = length(fOutPath) then
-    SetLength(fOutPath, fOutPathLen + BuffLength);
-  if (fOutPathLen > 0) and
-    PointsNearEqual(fOutPath[fOutPathLen-1], pt, fMinLenSqrd) then Exit;
-  fOutPath[fOutPathLen] := pt;
-  Inc(fOutPathLen);
+  AddPoint(pt.X, pt.Y);
 end;
 //------------------------------------------------------------------------------
 
@@ -572,28 +559,23 @@ procedure TClipperOffset.DoRound(j, k: Integer; angle: double);
 var
   i, steps: Integer;
   stepSin, stepCos: Extended;
-  pt, pt2: TPointD;
+  pt: TPoint64;
+  pt2: TPointD;
 begin
 	//even though angle may be negative this is a convex join
   pt := fInPath[j];
-  pt2.X := fNorms[k].X * fDelta;
-  pt2.Y := fNorms[k].Y * fDelta;
+  pt2 := PointD(fNorms[k].X * fDelta, fNorms[k].Y * fDelta);
   AddPoint(pt.X + pt2.X, pt.Y + pt2.Y);
 
-  steps := Ceil(fStepsPerRad * abs(angle));
-  if steps > 0 then
+  steps := Round(fStepsPerRad * abs(angle) + 0.501);
+  Math.SinCos(angle / steps, stepSin, stepCos);
+  for i := 0 to steps -1 do
   begin
-    Math.SinCos(angle / steps, stepSin, stepCos);
-    for i := 1 to steps -1 do
-    begin
-      pt2 := PointD(pt2.X * stepCos - stepSin * pt2.Y,
-        pt2.X * stepSin + pt2.Y * stepCos);
-      AddPoint(pt.X + pt2.X, pt.Y + pt2.Y);
-    end;
+    pt2 := PointD(pt2.X * stepCos - stepSin * pt2.Y,
+      pt2.X * stepSin + pt2.Y * stepCos);
+    AddPoint(pt.X + pt2.X, pt.Y + pt2.Y);
   end;
-
-  pt2.X := fNorms[j].X * fDelta;
-  pt2.Y := fNorms[j].Y * fDelta;
+  pt2 := PointD(fNorms[j].X * fDelta, fNorms[j].Y * fDelta);
   AddPoint(pt.X + pt2.X, pt.Y + pt2.Y);
 end;
 //------------------------------------------------------------------------------
@@ -601,7 +583,7 @@ end;
 procedure TClipperOffset.OffsetPoint(j: Integer; var k: integer);
 var
   sinA, cosA: Double;
-  p1, p2: TPointD;
+  p1, p2: TPoint64;
 begin
   //A: angle between adjoining edges (on left side WRT winding direction).
   //A == 0 deg (or A == 360 deg): collinear edges heading in same direction
@@ -615,12 +597,14 @@ begin
 
   if sinA * fDelta < 0 then //ie a concave offset
   begin
-    p1.X := fInPath[j].X + fNorms[k].X * fDelta;
-    p1.Y := fInPath[j].Y + fNorms[k].Y * fDelta;
-    p2.X := fInPath[j].X + fNorms[j].X * fDelta;
-    p2.Y := fInPath[j].Y + fNorms[j].Y * fDelta;
+    p1 := Point64(
+      fInPath[j].X + fNorms[k].X * fDelta,
+      fInPath[j].Y + fNorms[k].Y * fDelta);
+    p2:= Point64(
+      fInPath[j].X + fNorms[j].X * fDelta,
+      fInPath[j].Y + fNorms[j].Y * fDelta);
     AddPoint(p1);
-    if not PointsNearEqual(p1, p2, FMinLenSqrd) then
+    if not PointsEqual(p1, p2) then
     begin
       AddPoint(fInPath[j]); //this aids with clipping removal later
       AddPoint(p2);

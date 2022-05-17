@@ -1,7 +1,7 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
 * Version   :  10.0 (beta) - aka Clipper2                                      *
-* Date      :  13 May 2022                                                     *
+* Date      :  16 May 2022                                                     *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  This module provides a simple interface to the Clipper Library  *
@@ -122,21 +122,20 @@ namespace Clipper2Lib
   static Paths64 InflatePaths(const Paths64& paths, double delta, 
     JoinType jt, EndType et, double miter_limit = 2.0)
   {
-    const int precision = 2;
-    const double scale = std::pow(10, precision);
     ClipperOffset clip_offset(miter_limit);
-    clip_offset.AddPaths(Paths64ToPathsD(paths, scale), jt, et);
-    PathsD tmp = clip_offset.Execute(delta * scale);
-    tmp = StripNearEqual(tmp, Sqr(scale), !IsFullOpenEndType(et));
-    return PathsDToPaths64(tmp, 1 / scale);
+    clip_offset.AddPaths(paths, jt, et);
+    return clip_offset.Execute(delta);
   }
 
   static PathsD InflatePaths(const PathsD& paths, double delta, 
     JoinType jt, EndType et, double miter_limit = 2.0)
   {
+    const int precision = 2;
+    const double scale = std::pow(10, precision);
     ClipperOffset clip_offset(miter_limit);
-    clip_offset.AddPaths(paths, jt, et);
-    return clip_offset.Execute(delta);
+    clip_offset.AddPaths(ScalePaths64(paths, scale), jt, et);
+    Paths64 tmp = clip_offset.Execute(delta * scale);
+    return ScalePathsD(tmp, 1 / scale);
   }
 
   inline Path64 OffsetPath(const Path64& path, int64_t dx, int64_t dy)
@@ -144,7 +143,7 @@ namespace Clipper2Lib
     Path64 result;
     result.reserve(path.size());
     for (const Point64 pt : path)
-      result.push_back(Point64(pt.x * dx, pt.y * dy));
+      result.push_back(Point64(pt.x + dx, pt.y + dy));
     return result;
   }
 
@@ -153,7 +152,7 @@ namespace Clipper2Lib
     PathD result;
     result.reserve(path.size());
     for (const PointD pt : path)
-      result.push_back(PointD(pt.x * dx, pt.y * dy));
+      result.push_back(PointD(pt.x + dx, pt.y + dy));
     return result;
   }
 
@@ -173,94 +172,6 @@ namespace Clipper2Lib
     for (const PathD path : paths)
       result.push_back(OffsetPath(path, dx, dy));
     return result;
-  }
-
-
-  inline Path64 ScalePath(const Path64& path, double scale)
-  {
-    Path64 result;
-    result.reserve(path.size());
-    for (const Point64 pt : path)
-      result.push_back(pt * scale);
-    return result;
-  }
-
-  inline Path64 ScalePath(const PathD& path, double scale)
-  {
-    Path64 result;
-    result.reserve(path.size());
-    for (const PointD pt : path)
-      result.push_back(Point64(pt * scale));
-    return result;
-  }
-
-  inline Paths64 ScalePaths(const Paths64& paths, double scale)
-  {
-    Paths64 result;
-    result.reserve(paths.size());
-    for (const Path64 path : paths)
-      result.push_back(ScalePath(path, scale));
-    return result;
-  }
-
-  inline Paths64 ScalePaths(const PathsD& paths, double scale)
-  {
-    Paths64 result;
-    result.reserve(paths.size());
-    for (const PathD path : paths)
-      result.push_back(ScalePath(path, scale));
-    return result;
-  }
-
-  inline Path64 ScalePath64(const PathD& path, double scale)
-  {
-    Path64 result;
-    result.reserve(path.size());
-    for (const PointD pt : path)
-      result.push_back(Point64(pt * scale));
-    return result;
-  }
-
-  inline PathD ScalePathD(const Path64& path, double scale)
-  {
-    PathD result;
-    result.reserve(path.size());
-    for (const Point64 pt : path)
-      result.push_back(PointD(pt * scale));
-    return result;
-  }
-
-  inline Paths64 ScalePaths64(const PathsD& paths, double scale)
-  {
-    Paths64 result;
-    result.reserve(paths.size());
-    for (const PathD path : paths)
-      result.push_back(ScalePath64(path, scale));
-    return result;
-  }
-
-  inline PathsD ScalePathsD(const Paths64& paths, double scale)
-  {
-    PathsD result;
-    result.reserve(paths.size());
-    for (const Path64 path : paths)
-      result.push_back(ScalePathD(path, scale));
-    return result;
-  }
-
-
-  static Rect64 Bounds(const Path64& path)
-  {
-    Rect64 rec = MaxInvalidRect64;
-    for (const Point64 pt : path)
-    {
-      if (pt.x < rec.left) rec.left = pt.x;
-      if (pt.x > rec.right) rec.right = pt.x;
-      if (pt.y < rec.top) rec.top = pt.y;
-      if (pt.y > rec.bottom) rec.bottom = pt.y;
-    }
-    if (rec.IsEmpty()) return Rect64();
-    return rec;
   }
 
   static Rect64 Bounds(const Paths64& paths)

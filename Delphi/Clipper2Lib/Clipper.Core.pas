@@ -116,6 +116,7 @@ function CrossProduct(vec1x, vec1y, vec2x, vec2y: double): double; overload;
 function DotProduct(const pt1, pt2, pt3: TPoint64): double;
   {$IFDEF INLINING} inline; {$ENDIF}
 
+function Sqr(value: Int64): double; overload;
 function DistanceSqr(const pt1, pt2: TPoint64): double; overload;
   {$IFDEF INLINING} inline; {$ENDIF}
 function DistanceSqr(const pt1, pt2: TPointD): double; overload;
@@ -235,10 +236,14 @@ procedure AppendPaths(var paths: TPathsD; const extra: TPathsD); overload;
 function ArrayOfPathsToPaths(const ap: TArrayOfPaths): TPaths64;
 function GetIntersectPoint(const ln1a, ln1b, ln2a, ln2b: TPoint64): TPointD;
 
+function RamerDouglasPeucker(const path: TPath64; epsilon: double): TPath64; overload;
+function RamerDouglasPeucker(const paths: TPaths64; epsilon: double): TPaths64; overload;
+
 const
-  MaxInt64 = 9223372036854775807;
-  NullRect64: TRect64 = (left: 0; top: 0; right: 0; Bottom: 0);
-  NullRectD: TRectD = (left: 0; top: 0; right: 0; Bottom: 0);
+  MaxInt64    = 9223372036854775807;
+  NullRect64  : TRect64 = (left: 0; top: 0; right: 0; Bottom: 0);
+  NullRectD   : TRectD = (left: 0; top: 0; right: 0; Bottom: 0);
+  Tolerance   : Double = 1.0E-15;
 
 implementation
 
@@ -300,9 +305,15 @@ begin
 end;
 //------------------------------------------------------------------------------
 
+function Sqr(value: Int64): double; overload;
+begin
+  Result := double(value) * value;
+end;
+//------------------------------------------------------------------------------
+
 function PointsNearEqual(const pt1, pt2: TPointD; distanceSqrd: double): Boolean;
 begin
-  Result := Sqr(pt1.X - pt2.X) + Sqr(pt1.Y - pt2.Y) < distanceSqrd;
+  Result := System.Sqr(pt1.X - pt2.X) + System.Sqr(pt1.Y - pt2.Y) < distanceSqrd;
 end;
 //------------------------------------------------------------------------------
 
@@ -1391,7 +1402,7 @@ end;
 
 function DistanceSqr(const pt1, pt2: TPointD): double;
 begin
-  Result := Sqr(pt1.X - pt2.X) + Sqr(pt1.Y - pt2.Y);
+  Result := System.Sqr(pt1.X - pt2.X) + System.Sqr(pt1.Y - pt2.Y);
 end;
 //------------------------------------------------------------------------------
 
@@ -1399,8 +1410,9 @@ function DistanceFromLineSqrd(const pt, linePt1, linePt2: TPoint64): double;
 var
   a,b,c: double;
 begin
-	//perpendicular distance of point (x0,y0) = (a*x0 + b*y0 + c)/Sqrt(a^2 + b^2)
-	//see http://en.wikipedia.org/wiki/Perpendicular_distance
+  //perpendicular distance of point (x0,y0) = (a*x0 + b*y0 + C)/Sqrt(a*a + b*b)
+  //where ax + by +c = 0 is the equation of the line
+  //see https://en.wikipedia.org/wiki/Distance_from_a_point_to_a_line
 	a := (linePt1.Y - linePt2.Y);
 	b := (linePt2.X - linePt1.X);
 	c := a * linePt1.X + b * linePt1.Y;
@@ -1492,5 +1504,86 @@ begin
 end;
 //------------------------------------------------------------------------------
 
+function PerpendicDistFromLineSqrd(const pt, line1, line2: TPoint64): double;
+var
+  a,b,c,d: double;
+begin
+  a := pt.X - line1.X;
+  b := pt.Y - line1.Y;
+  c := line2.X - line1.X;
+  d := line2.Y - line1.Y;
+  if (c = 0) and (d = 0) then
+    result := 0 else
+    result := System.Sqr(a * d - c * b) / (c * c + d * d);
+end;
+//------------------------------------------------------------------------------
+
+procedure RDP(const path: TPath64; startIdx, endIdx: integer;
+  epsilonSqrd: double; var flags: TArrayOfInteger); overload;
+var
+  i, idx: integer;
+  d, maxD: double;
+begin
+  idx := 0;
+  maxD := 0;
+	while (endIdx > startIdx) and
+    PointsEqual(path[startIdx], path[endIdx]) do
+    begin
+      flags[endIdx] := 0;
+      dec(endIdx);
+    end;
+  for i := startIdx +1 to endIdx -1 do
+  begin
+    //PerpendicDistFromLineSqrd - avoids expensive Sqrt()
+    d := PerpendicDistFromLineSqrd(path[i], path[startIdx], path[endIdx]);
+    if d <= maxD then Continue;
+    maxD := d;
+    idx := i;
+  end;
+  if maxD < epsilonSqrd then Exit;
+  flags[idx] := 1;
+  if idx > startIdx + 1 then RDP(path, startIdx, idx, epsilonSqrd, flags);
+  if endIdx > idx + 1 then RDP(path, idx, endIdx, epsilonSqrd, flags);
+end;
+//------------------------------------------------------------------------------
+
+function RamerDouglasPeucker(const path: TPath64;
+  epsilon: double): TPath64;
+var
+  i,j, len: integer;
+  buffer: TArrayOfInteger;
+begin
+  len := length(path);
+  if len < 5 then
+  begin
+    result := Copy(path, 0, len);
+    Exit;
+  end;
+  SetLength(buffer, len); //buffer is zero initialized
+  buffer[0] := 1;
+  buffer[len -1] := 1;
+  RDP(path, 0, len -1, System.Sqr(epsilon), buffer);
+  j := 0;
+  SetLength(Result, len);
+  for i := 0 to len -1 do
+    if buffer[i] = 1 then
+    begin
+      Result[j] := path[i];
+      inc(j);
+    end;
+  SetLength(Result, j);
+end;
+//------------------------------------------------------------------------------
+
+function RamerDouglasPeucker(const paths: TPaths64; epsilon: double): TPaths64;
+var
+  i, len: integer;
+begin
+  len := Length(paths);
+  SetLength(Result, len);
+  for i := 0 to len -1 do
+    Result[i] := RamerDouglasPeucker(paths[i], epsilon);
+end;
+//------------------------------------------------------------------------------
 end.
 

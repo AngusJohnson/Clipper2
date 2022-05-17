@@ -1,7 +1,7 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
 * Version   :  10.0 (beta) - aka Clipper2                                      *
-* Date      :  13 May 2022                                                     *
+* Date      :  16 May 2022                                                     *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  This is the main polygon clipping module                        *
@@ -13,8 +13,7 @@
 #include <stdexcept>
 #include <vector>
 #include <numeric>
-#include <algorithm> // for std::sort
-#include <assert.h>
+#include < algorithm >
 #include "clipper.engine.h"
 
 namespace Clipper2Lib {
@@ -195,13 +194,13 @@ namespace Clipper2Lib {
 
 	inline bool IsHeadingRightHorz(const Active& e)
 	{
-		return (e.dx == -std::numeric_limits<double>::max());
+		return e.dx == -std::numeric_limits<double>::max();
 	}
 	//------------------------------------------------------------------------------
 
 	inline bool IsHeadingLeftHorz(const Active& e)
 	{
-		return (e.dx == std::numeric_limits<double>::max());
+		return e.dx == std::numeric_limits<double>::max();
 	}
 	//------------------------------------------------------------------------------
 
@@ -1363,9 +1362,6 @@ namespace Clipper2Lib {
 
 	OutPt* ClipperBase::AddLocalMaxPoly(Active &e1, Active &e2, const Point64& pt)
 	{
-		assert(e1.outrec != nullptr);
-		assert(e2.outrec != nullptr);
-
 		if (IsFront(e1) == IsFront(e2))
 		{
 			if (IsOpen(e1))
@@ -1873,15 +1869,14 @@ namespace Clipper2Lib {
 			{
 				resultOp = AddOutPt(e1, pt);
 #ifdef USINGZ
-				OutPt* op2 = 
-#endif
-				AddOutPt(e2, pt);
-#ifdef USINGZ
+				OutPt* op2 = AddOutPt(e2, pt);
 				if (zfill_func_)
 				{
 					SetZ(e1, e2, resultOp->pt);
 					SetZ(e1, e2, op2->pt);
 				}
+#else
+				AddOutPt(e2, pt);
 #endif
 				SwapOutrecs(e1, e2);
 			}
@@ -3201,12 +3196,13 @@ namespace Clipper2Lib {
 	void ClipperBase::BuildPaths(Paths64& solutionClosed, Paths64* solutionOpen)
 	{
 		solutionClosed.resize(0);
-		//solutionClosed.reserve(outrec_list_.size());
+		solutionClosed.reserve(outrec_list_.size());
 		if (solutionOpen)
 		{
 			solutionOpen->resize(0);
 			solutionOpen->reserve(outrec_list_.size());
 		}
+		
 		for(OutRec* outrec : outrec_list_)
 		{
 			if (outrec->pts == NULL) continue;
@@ -3222,8 +3218,7 @@ namespace Clipper2Lib {
 				if (BuildPath(*outrec->pts, false, path))
 					solutionClosed.emplace_back(std::move(path));
 				path.resize(0);
-			}
-				 
+			}				 
 		}
 	}
 	//------------------------------------------------------------------------------
@@ -3284,9 +3279,8 @@ namespace Clipper2Lib {
 
 	static void Polypath64ToPolypathD(const PolyPath64& polypath, PolyPathD& result)
 	{
-		for (size_t i = 0; i < polypath.ChildCount(); ++i)
+		for (const PolyPath64* child : polypath.childs)
 		{
-			const PolyPath64 *child = polypath[i];
 			PolyPathD* res_child = result.AddChild(Path64ToPathD(child->Path()));
 			Polypath64ToPolypathD(*child, *res_child);
 		}

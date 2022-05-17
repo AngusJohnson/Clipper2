@@ -111,19 +111,21 @@ namespace Clipper2Lib
       return solution;
     }
 
-    public static Paths64 InflatePaths(Paths64 paths, double delta, JoinType joinType, EndType endType)
+    public static Paths64 InflatePaths(Paths64 paths, double delta, JoinType joinType, 
+      EndType endType, double miterLimit = 2.0)
     {
-      ClipperOffset co = new ClipperOffset();
-      co.AddPaths(paths, joinType, endType);
-      PathsD tmp = co.Execute(delta);
-      return Paths64(tmp);
-    }
-
-    public static PathsD InflatePaths(PathsD paths, double delta, JoinType joinType, EndType endType)
-    {
-      ClipperOffset co = new ClipperOffset();
+      ClipperOffset co = new ClipperOffset(miterLimit);
       co.AddPaths(paths, joinType, endType);
       return co.Execute(delta);
+    }
+
+    public static PathsD InflatePaths(PathsD paths, double delta, JoinType joinType, 
+      EndType endType, double miterLimit = 2.0)
+    {
+      ClipperOffset co = new ClipperOffset(miterLimit);
+      co.AddPaths(paths, joinType, endType);
+      Paths64 tmp = co.Execute(delta);
+      return PathsD(tmp);
     }
 
     public static double Area(Path64 path)
@@ -214,7 +216,7 @@ namespace Clipper2Lib
       if (scale == 1) return path;
       Path64 result = new Path64(path.Count);
       foreach (Point64 pt in path)
-        result.Add(new Point64(pt, scale));
+        result.Add(new Point64(pt.X * scale, pt.Y * scale));
       return result;
     }
 
@@ -457,6 +459,24 @@ namespace Clipper2Lib
         result.RemoveAt(result.Count - 1);
       }
 
+      return result;
+    }
+
+    public static Path64 StripDuplicates(Path64 path, bool isClosedPath)
+    {
+      int cnt = path.Count;
+      Path64 result = new Path64(cnt);
+      if (cnt == 0) return result;
+      Point64 lastPt = path[0];
+      result.Add(lastPt);
+      for (int i = 1; i < cnt; i++)
+        if (lastPt != path[i])
+        {
+          lastPt = path[i];
+          result.Add(lastPt);
+        }
+      if (isClosedPath && lastPt == result[0])
+        result.RemoveAt(result.Count - 1);
       return result;
     }
 

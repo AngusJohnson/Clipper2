@@ -1,7 +1,7 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
 * Version   :  10.0 (beta) - aka Clipper2                                      *
-* Date      :  13 May 2022                                                     *
+* Date      :  16 May 2022                                                     *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  This is the main polygon clipping module                        *
@@ -20,8 +20,6 @@
 #include "clipper.core.h"
 
 namespace Clipper2Lib {
-
-	static double const PI = 3.141592653589793238;
 
 	struct Scanline;
 	struct IntersectNode;
@@ -47,11 +45,11 @@ namespace Clipper2Lib {
 
 	constexpr enum VertexFlags operator &(enum VertexFlags a, enum VertexFlags b) {
 		return (enum VertexFlags)(uint32_t(a) & uint32_t(b));
-	}
+	};
 
 	constexpr enum VertexFlags operator |(enum VertexFlags a, enum VertexFlags b) {
 		return (enum VertexFlags)(uint32_t(a) | uint32_t(b));
-	}
+	};
 
 	struct Vertex {
 		Point64 pt;
@@ -231,12 +229,14 @@ namespace Clipper2Lib {
 		virtual bool Execute(ClipType clip_type,
 			FillRule fill_rule, PolyTree64& polytree, Paths64& open_paths);
 	public:
-		ClipperBase(){};
 		virtual ~ClipperBase();
 		bool PreserveCollinear = true;
 		void Clear();
 #ifdef USINGZ
+		ClipperBase() { zfill_func_ = NULL; };
 		void ZFillFunction(ZFillCallback zFillFunc);
+#else
+		ClipperBase() {};
 #endif
 	};
 
@@ -255,7 +255,7 @@ namespace Clipper2Lib {
 		const PolyPath<T>* parent_;
 		PolyPath(const PolyPath<T>* parent, 
 			const std::vector<Point<T>>& path) : 
-			scale_(parent->scale_), parent_(parent), polygon(path) {};
+			parent_(parent), polygon(path), scale_(parent->scale_) {}
 	public:
 		std::vector<Point<T>> polygon;
 		std::vector<PolyPath*> childs;
@@ -303,7 +303,7 @@ namespace Clipper2Lib {
 		}
 	};
 
-	void Polytree64ToPolytreeD(const PolyPath64& polytree, PolyPathD& result);
+	inline void Polytree64ToPolytreeD(const PolyPath64& polytree, PolyPathD& result);
 
 	class Clipper64 : public ClipperBase
 	{
@@ -349,24 +349,24 @@ namespace Clipper2Lib {
 
 		void AddSubject(const PathsD& subjects)
 		{
-			AddPaths(PathsDToPaths64(subjects, scale_), PathType::Subject, false);
+			AddPaths(ScalePaths64(subjects, scale_), PathType::Subject, false);
 		}
 
 		void AddOpenSubject(const PathsD& open_subjects)
 		{
-			AddPaths(PathsDToPaths64(open_subjects, scale_), PathType::Subject, true);
+			AddPaths(ScalePaths64(open_subjects, scale_), PathType::Subject, true);
 		}
 
 		void AddClip(const PathsD& clips)
 		{
-			AddPaths(PathsDToPaths64(clips, scale_), PathType::Clip, false);
+			AddPaths(ScalePaths64(clips, scale_), PathType::Clip, false);
 		}
 
 		bool Execute(ClipType clip_type, FillRule fill_rule, PathsD& closed_paths)
 		{
 			Paths64 closed_paths64;
 			if (!ClipperBase::Execute(clip_type, fill_rule, closed_paths64)) return false;
-			closed_paths = Paths64ToPathsD(closed_paths64, 1 / scale_);
+			closed_paths = ScalePathsD(closed_paths64, 1 / scale_);
 			return true;
 		}
 
@@ -377,8 +377,8 @@ namespace Clipper2Lib {
 			Paths64 open_paths64;
 			if (!ClipperBase::Execute(clip_type,
 				fill_rule, closed_paths64, open_paths64)) return false;
-			closed_paths = Paths64ToPathsD(closed_paths64, 1 / scale_);
-			open_paths = Paths64ToPathsD(open_paths64, 1 / scale_);
+			closed_paths = ScalePathsD(closed_paths64, 1 / scale_);
+			open_paths = ScalePathsD(open_paths64, 1 / scale_);
 			return true;
 		}
 

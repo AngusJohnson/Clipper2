@@ -269,25 +269,6 @@ end;
 function InflatePaths(const paths: TPaths64; delta: Double;
   jt: TJoinType; et: TEndType; MiterLimit: double): TPaths64;
 var
-  pp: TPathsD;
-const
-  scale = 100; invScale = 0.01;
-begin
-  pp := ScalePathsD(paths, scale, scale);
-  with TClipperOffset.Create(MiterLimit) do
-  try
-    AddPaths(pp, jt, et);
-    pp := Execute(delta * scale);
-  finally
-    free;
-  end;
-  Result := ScalePaths(pp, invScale, invScale);
-end;
-//------------------------------------------------------------------------------
-
-function InflatePaths(const paths: TPathsD; delta: Double;
-  jt: TJoinType; et: TEndType; MiterLimit: double): TPathsD;
-var
   co: TClipperOffset;
 begin
   co := TClipperOffset.Create(MiterLimit);
@@ -297,6 +278,26 @@ begin
   finally
     co.free;
   end;
+end;
+//------------------------------------------------------------------------------
+
+function InflatePaths(const paths: TPathsD; delta: Double;
+  jt: TJoinType; et: TEndType; MiterLimit: double): TPathsD;
+var
+  pp: TPaths64;
+  co: TClipperOffset;
+const
+  scale = 100; invScale = 0.01;
+begin
+  pp := ScalePaths(paths, scale, scale);
+  with TClipperOffset.Create(MiterLimit) do
+  try
+    AddPaths(pp, jt, et);
+    pp := Execute(delta * scale);
+  finally
+    free;
+  end;
+  Result := ScalePathsD(pp, invScale, invScale);
 end;
 //------------------------------------------------------------------------------
 
