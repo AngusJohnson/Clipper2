@@ -1,7 +1,7 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
 * Version   :  10.0 (beta) - aka Clipper2                                      *
-* Date      :  16 May 2022                                                     *
+* Date      :  18 May 2022                                                     *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  This is the main polygon clipping module                        *
@@ -254,10 +254,10 @@ namespace Clipper2Lib {
 	protected:
 		const PolyPath<T>* parent_;
 		PolyPath(const PolyPath<T>* parent, 
-			const std::vector<Point<T>>& path) : 
+			const Path<T>& path) : 
 			parent_(parent), polygon(path), scale_(parent->scale_) {}
 	public:
-		std::vector<Point<T>> polygon;
+		Path<T> polygon;
 		std::vector<PolyPath*> childs;
 
 		explicit PolyPath(int precision = 0) //NB only for root node
@@ -278,7 +278,7 @@ namespace Clipper2Lib {
 			if (size > childs.size()) childs.reserve(size);
 		}
 
-		PolyPath<T>* AddChild(const std::vector<Point<T>>& path)
+		PolyPath<T>* AddChild(const Path<T>& path)
 		{
 			childs.push_back(new PolyPath<T>(this, path));
 			return childs.back();
@@ -290,7 +290,7 @@ namespace Clipper2Lib {
 
 		const PolyPath<T>* Parent() const { return parent_; };
 
-		const std::vector<Point<T>>& Path() const { return polygon; };
+		const Path<T>& Path() const { return polygon; };
 
 		bool IsHole() const {
 			const PolyPath* pp = parent_;
@@ -301,6 +301,14 @@ namespace Clipper2Lib {
 			}
 			return is_hole;
 		}
+
+		double Area() const
+		{
+			double result = Clipper2Lib::Area<T>(polygon);
+			for (PolyPath<T> child : childs)
+				result += child.Area();
+		}
+
 	};
 
 	inline void Polytree64ToPolytreeD(const PolyPath64& polytree, PolyPathD& result);
