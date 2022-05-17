@@ -4,9 +4,6 @@
     <ClCompile Include="..\googletest\googletest\src\gtest-all.cc">
       <Filter>GoogleTest</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\Clipper2Lib\clipper.core.cpp">
-      <Filter>Clipper2Lib</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\Clipper2Lib\clipper.engine.cpp">
       <Filter>Clipper2Lib</Filter>
     </ClCompile>

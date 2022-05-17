@@ -127,7 +127,6 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="..\..\Clipper2Lib\clipper.core.cpp" />
     <ClCompile Include="..\..\Clipper2Lib\clipper.engine.cpp" />
     <ClCompile Include="..\..\Clipper2Lib\clipper.offset.cpp" />
     <ClCompile Include="..\..\Utils\TextFileLoader.cpp" />
