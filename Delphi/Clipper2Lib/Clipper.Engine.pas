@@ -766,14 +766,22 @@ end;
 
 function LocMinListSort(item1, item2: Pointer): Integer;
 var
-  dy: Int64;
+  q: Int64;
   lm1: PLocalMinima absolute item1;
   lm2: PLocalMinima absolute item2;
 begin
-  dy := lm2.Vertex.Pt.Y - lm1.Vertex.Pt.Y;
-  if dy < 0 then Result := -1
-  else if dy > 0 then Result := 1
-  else Result := lm2.Vertex.Pt.X - lm1.Vertex.Pt.X;
+  q := lm2.Vertex.Pt.Y - lm1.Vertex.Pt.Y;
+  if q < 0 then
+    Result := -1
+  else if q > 0 then
+    Result := 1
+  else
+  begin
+    q := lm2.Vertex.Pt.X - lm1.Vertex.Pt.X;
+    if q < 0 then Result := 1
+    else if q > 0 then Result := -1
+    else Result := 0;
+  end;
 end;
 //------------------------------------------------------------------------------
 
