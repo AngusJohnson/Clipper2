@@ -132,8 +132,8 @@ namespace Clipper2Lib {
     if (max_width < 100) max_width = 100;
     if (max_height < 100) max_height = 100;
     double  scale = std::min(
-      (double)(max_width - margin * 2) / (rec.right - rec.left),
-      (double)(max_height - margin * 2) / (rec.bottom - rec.top));
+      (double)(max_width - margin * 2) / rec.Width(),
+      (double)(max_height - margin * 2) / rec.Height());
     
     rec.Scale(scale);
     double offsetX = margin -rec.left;
