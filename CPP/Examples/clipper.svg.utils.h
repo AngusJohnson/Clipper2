@@ -28,7 +28,7 @@ namespace Clipper2Lib {
   }
   //---------------------------------------------------------------------------
 
-  inline void SvgAddSubject(SvgWriter& svg, PathsD& path,
+  inline void SvgAddSubject(SvgWriter& svg, const PathsD& path,
     bool is_closed = true, bool is_joined = true)
   {
     if (!is_closed)
@@ -38,7 +38,7 @@ namespace Clipper2Lib {
   }
   //---------------------------------------------------------------------------
 
-  inline void SvgAddSubject(SvgWriter& svg, Paths64& path,
+  inline void SvgAddSubject(SvgWriter& svg, const Paths64& path,
     bool is_closed = true, bool is_joined = true)
   {
     if (!is_closed)
@@ -50,20 +50,20 @@ namespace Clipper2Lib {
   }
   //---------------------------------------------------------------------------
 
-  inline void SvgAddClip(SvgWriter& svg, PathsD& path)
+  inline void SvgAddClip(SvgWriter& svg, const PathsD& path)
   {
     svg.AddPaths(path, false, 0x129C0000, 0xCCFFA07A, 0.8, false);
   }
   //---------------------------------------------------------------------------
 
-  inline void SvgAddClip(SvgWriter& svg, Paths64& path)
+  inline void SvgAddClip(SvgWriter& svg, const Paths64& path)
   {
     svg.AddPaths(TransformPaths<double, int64_t>(path), 
       false, 0x129C0000, 0xCCFFA07A, 0.8, false);
   }
   //---------------------------------------------------------------------------
 
-  inline void SvgAddSolution(SvgWriter& svg, PathsD& path,
+  inline void SvgAddSolution(SvgWriter& svg, const PathsD& path,
     bool show_coords, bool is_closed = true, bool is_joined = true)
   {
     if (!is_closed)
@@ -73,7 +73,7 @@ namespace Clipper2Lib {
   }
   //---------------------------------------------------------------------------
 
-  inline void SvgAddSolution(SvgWriter& svg, Paths64& path,
+  inline void SvgAddSolution(SvgWriter& svg, const Paths64& path,
     bool show_coords, bool is_closed = true, bool is_joined = true)
   {
     if (!is_closed)

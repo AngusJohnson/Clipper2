@@ -307,6 +307,7 @@ namespace Clipper2Lib {
 			double result = Clipper2Lib::Area<T>(polygon);
 			for (PolyPath<T> child : childs)
 				result += child.Area();
+			return result;
 		}
 
 	};

@@ -2,9 +2,8 @@
 // Functions load clipping operations from text files
 //------------------------------------------------------------------------------
 
-#include "TextFileLoad.h"
 #include "TextFileSave.h"
-#include <string>
+#include "TextFileLoad.h"
 #include <sstream>
 
 using namespace std;
@@ -19,18 +18,21 @@ class BMH_Search
 
 private:
   int  jump_;
-  int  needle_len_, needle_len_less1, haystack_len;
-  int  shift[255];
-  char case_table[255];
-  char *needle_ {};
-  char *haystack_ {};
+  int  needle_len_, needle_len_less1;
+  size_t haystack_len;
+  uint8_t shift[256];
+  uint8_t case_table[256];
+  char* needle_;
+  char* needle_ic_;
+  char *haystack_;
   char *cur, *end, *last_found;
+  bool ignore_case_;
 
   void SetHayStack(std::ifstream& stream)
   {
     ClearHaystack();
     stream.seekg(0, ios::end);
-    haystack_len = (int)stream.tellg();
+    haystack_len = stream.tellg();
     stream.seekg(0, ios::beg);
     haystack_ = new char[haystack_len];
     stream.read(haystack_, haystack_len);
@@ -48,72 +50,24 @@ private:
     end = cur + buff_len;
   }
 
-public:
-
-  BMH_Search(std::ifstream& textfile, const std::string pattern = "")
-  {
-    SetHayStack(textfile);
-    if (pattern.size() > 0) SetNeedle(pattern);
+  void Init()
+  {    
+    cur = nullptr; end = nullptr; last_found = nullptr;
+    //case blind table
+    for (int c = 0; c < 0x61; ++c) case_table[c] = c;
+    for (int c = 0x61; c < 0x7B; ++c) case_table[c] = c - 0x20;
+    for (int c = 0x7B; c < 256; ++c) case_table[c] = c;
   }
 
-  BMH_Search(const char* haystack, size_t length, const std::string needle = "")
-  {
-    SetHayStack(haystack, length);
-    if (needle.size() > 0) SetNeedle(needle);
-  }
-
-  ~BMH_Search()
-  {
-    ClearHaystack();
-    ClearNeedle();
-  }
-
-  void Reset()
-  {
-    cur = haystack_; 
-    last_found = NULL;
-  }
-
-  void SetNeedle(const std::string& pattern)
-  {
-    ClearNeedle();
-    needle_len_ = (int)pattern.size();
-    if (!needle_len_) return;
-    needle_len_less1 = needle_len_ - 1;
-    needle_ = new char[needle_len_];
-    pattern.copy(needle_, needle_len_);
-
-    for (int &i : shift) i = needle_len_;
-    for (size_t j = 0; j < needle_len_less1; ++j)
-      shift[(int)pattern[j]] = needle_len_less1 - j;
-    jump_ = shift[(int)pattern[needle_len_less1]];
-    shift[(int)pattern[needle_len_less1]] = 0;
-  }
-
-  inline void ClearNeedle()
-  {
-    if (needle_) delete[] needle_;
-    needle_ = {};
-  }
-
-  inline void ClearHaystack()
-  {
-    if (haystack_) delete[] haystack_;
-    haystack_ = {};
-  }
-
-  bool FindNext()
+  bool FindNext_CaseSensitive()
   {
     while (cur < end)
     {
-      int i = shift[(int)*cur];        //compare last byte first
+      int i = shift[*cur]; //compare last byte first
       if (!i)                          //last byte matches
       {
         char* j = cur - needle_len_less1;
-        
-        while (i < needle_len_less1 && 
-          needle_[i] == *(j + i)) ++i;
-
+        while (i < needle_len_less1 && needle_[i] == *(j + i)) ++i;
         if (i == needle_len_less1)
         {
           ++cur;
@@ -127,6 +81,110 @@ public:
         cur += i;
     }
     return false;
+  }
+
+  bool FindNext_IgnoreCase()
+  {
+    while (cur < end)
+    {
+      int i = shift[case_table[*cur]]; 
+      if (!i)                          
+      {
+        char* j = cur - needle_len_less1;
+        while (i < needle_len_less1 &&
+          needle_ic_[i] == case_table[*(j + i)]) ++i;
+        if (i == needle_len_less1)
+        {
+          ++cur;
+          last_found = j;
+          return true;
+        }
+        else
+          cur += jump_;
+      }
+      else
+        cur += i;
+    }
+    return false;
+  }
+
+public:
+
+  explicit BMH_Search(std::ifstream& stream, 
+    const std::string& needle = "", bool ignore_case = true)
+  {
+    Init();
+    ignore_case_ = ignore_case;
+    SetHayStack(stream);
+    if (needle.size() > 0) SetNeedle(needle);
+  }
+
+  BMH_Search(const char* haystack, size_t length, 
+    const std::string& needle = "", bool ignore_case = true)
+  {
+    Init();
+    ignore_case_ = ignore_case;
+    SetHayStack(haystack, length);
+    if (needle.size() > 0) SetNeedle(needle);
+  }
+
+  ~BMH_Search()
+  {
+    ClearHaystack();
+    ClearNeedle();
+  }
+
+  void Reset()
+  {
+    cur = haystack_; 
+    last_found = nullptr;
+  }
+
+  void SetNeedle(const std::string& needle)
+  {
+    ClearNeedle();
+    needle_len_ = (int)needle.size();
+    if (!needle_len_) return;
+
+    //case sensitive needle
+    needle_len_less1 = needle_len_ - 1;
+    needle_ = new char[needle_len_];
+    needle.copy(needle_, needle_len_);
+    
+    //case insensitive needle
+    needle_ic_ = new char[needle_len_];
+    needle.copy(needle_ic_, needle_len_);
+    char* c = needle_ic_;
+    for (int i = 0; i < needle_len_; ++i)
+      *c = case_table[uint8_t(*c++)];
+
+    for (uint8_t &i : shift) i = needle_len_;
+    for (int j = 0; j < needle_len_less1; ++j)
+      shift[(int)needle_[j]] = needle_len_less1 - j;
+    jump_ = shift[(uint8_t)needle_[needle_len_less1]];
+    shift[(int)needle_[needle_len_less1]] = 0;
+  }
+
+  inline void ClearNeedle()
+  {
+    if (needle_) delete[] needle_;
+    if (needle_ic_) delete[] needle_ic_;
+    needle_ = nullptr;
+    needle_ic_ = nullptr;
+  }
+
+  inline void ClearHaystack()
+  {
+    if (haystack_) delete[] haystack_;
+    haystack_ = nullptr;
+  }
+
+  bool FindNext()
+  {
+    if (ignore_case_)
+      return FindNext_IgnoreCase();
+    else
+      return FindNext_CaseSensitive();
   }
 
   inline char* LastFound() { return last_found; }

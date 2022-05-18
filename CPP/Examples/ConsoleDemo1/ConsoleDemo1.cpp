@@ -126,7 +126,7 @@ void DoSimpleTest(bool show_solution_coords = false)
   Path64 path = MakePath("0, 0, 100, 200, 200, 0 ");
   Path64 pattern = Ellipse<int64_t>(Point64(), 20, 20);
   solution = Paths64(MinkowskiSum(pattern, path, false));
-  
+
   SvgWriter svg;
   SvgAddSolution(svg, solution, false);
   SvgSaveToFile(svg, "solution1.svg", fr, display_width, display_height, 20);
@@ -275,7 +275,7 @@ void DoMemoryLeakTest()
 {
   int edge_cnt = 1000;
 
-  Paths64 subject, clip, solution, empty_path;
+  Paths64 subject, clip, solution;
   subject.push_back(MakeRandomPoly(800, 600, edge_cnt));
   clip.push_back(MakeRandomPoly(800, 600, edge_cnt));
 
