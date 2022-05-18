@@ -14,7 +14,7 @@ TEST(Clipper2Tests, TestFromTextFile2) {
     int64_t area, count;
 
     bool success = false;
-    if (LoadTestNum(ifs, test_number, false, subject, subject_open, clip, area, count, ct, fr)) 
+    if (LoadTestNum(ifs, 1, false, subject, subject_open, clip, area, count, ct, fr)) 
     {
         Clipper2Lib::Clipper64 c;
         c.AddSubject(subject);
