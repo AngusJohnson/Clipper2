@@ -139,83 +139,53 @@ using PathD = Path<double>;
 using Paths64 = std::vector< Path64>;
 using PathsD = std::vector< PathD>;
 
-inline Path64 ScalePath(const Path64& path, double scale)
+template <typename T1, typename T2>
+inline Path<T1> ScalePath(const Path<T2>& path, double scale)
 {
-	Path64 result;
+	Path<T1> result;
 	result.reserve(path.size());
-	for (const Point64 pt : path)
-		result.push_back(pt * scale);
+	for (const Point<T2> pt : path)
+		result.push_back(Point<T1>(pt.x * scale, pt.y * scale));
 	return result;
 }
 
-inline Paths64 ScalePaths(const Paths64& paths, double scale)
+template <typename T1, typename T2>
+inline Paths<T1> ScalePaths(const Paths<T2>& paths, double scale)
 {
-	Paths64 result;
+	Paths<T1> result;
 	result.reserve(paths.size());
-	for (const Path64 path : paths)
-		result.push_back(ScalePath(path, scale));
+	for (const Path<T2> path : paths)
+		result.push_back(ScalePath<T1, T2>(path, scale));
 	return result;
 }
 
-inline PathD ScalePath(const PathD& path, double scale)
+template <typename T1, typename T2>
+inline Path<T1> TransformPath(const Path<T2>& path)
 {
-	PathD result;
-	result.reserve(path.size());
-	for (const PointD pt : path)
-		result.push_back(pt * scale);
-	return result;
-}
-
-inline PathsD ScalePaths(const PathsD& paths, double scale)
-{
-	PathsD result;
-	result.reserve(paths.size());
-	for (const PathD path : paths)
-		result.push_back(ScalePath(path, scale));
-	return result;
-}
-
-inline Path64 ScalePath64(const PathD& path, double scale)
-{
-	Path64 result;
-	result.reserve(path.size());
-	for (const PointD pt : path)
-		result.push_back(Point64(pt * scale));
-	return result;
-}
-
-inline Paths64 ScalePaths64(const PathsD& paths, double scale)
-{
-	Paths64 result;
-	result.reserve(paths.size());
-	for (const PathD path : paths)
-		result.push_back(ScalePath64(path, scale));
-	return result;
-}
-
-inline PathD ScalePathD(const Path64& path, double scale)
-{
-	PathD result;
-	result.reserve(path.size());
-	for (const Point64 pt : path)
-		result.push_back(PointD(pt.x * scale, pt.y * scale));
-	return result;
-}
-
-inline PathsD ScalePathsD(const Paths64& paths, double scale)
-{
-	PathsD result;
-	result.reserve(paths.size());
-	for (const Path64 path : paths)
-		result.push_back(ScalePathD(path, scale));
-	return result;
-}
-
-static PathD Path64ToPathD(const Path64& path)
-{
-	PathD result;
+	Path<T1> result;
 	std::transform(path.cbegin(), path.cend(), std::back_inserter(result),
-		[](const Point64& pt) {return PointD(pt); });
+		[](const Point<T2>& pt) {return Point<T1>(pt); });
+	return result;
+}
+
+inline PathD Path64ToPathD(const Path64& path)
+{
+	PathD result = TransformPath<double, int64_t>(path);
+	return result;
+}
+
+inline Path64 Path64ToPathD(const PathD& path)
+{
+	Path64 result = TransformPath<int64_t, double>(path);
+	return result;
+}
+
+template <typename T1, typename T2>
+static Paths<T1> TransformPaths(const Paths<T2>& paths)
+{
+	Paths<T1> result;
+	std::transform(paths.cbegin(), paths.cend(), std::back_inserter(result),
+		[](const Path<T2>& path) {return TransformPath<T1, T2>(path); });
 	return result;
 }
 

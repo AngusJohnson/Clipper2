@@ -1,6 +1,6 @@
 #include <gtest/gtest.h>
 #include "../../Clipper2Lib/clipper.h"
-#include "../../Utils/TextFileLoader.h"
+#include "../../Utils/TextFileLoad.h"
 
 TEST(Clipper2Tests, TestFromTextFile) {
     std::ifstream ifs("../../../Tests/Tests.txt");
@@ -16,7 +16,8 @@ TEST(Clipper2Tests, TestFromTextFile) {
         Clipper2Lib::FillRule fr;
         int64_t area, count;
 
-        if (GetTestNum(ifs, test_number, false, subject, subject_open, clip, area, count, ct, fr)) {
+        if (LoadTestNum(ifs, test_number, false, subject, subject_open, clip, area, count, ct, fr)) 
+        {
             Clipper2Lib::Clipper64 c;
             c.AddSubject(subject);
             c.AddOpenSubject(subject_open);

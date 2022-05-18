@@ -6,9 +6,13 @@
 #include "windows.h"
 
 #include "../../Clipper2Lib/clipper.h"
-#include "../clipper.svg.h"
+#include "../../Clipper2Lib/clipper.core.h"
 
-#include "../../Utils/TextFileLoader.h"
+#include "../clipper.svg.h"
+#include "../clipper.svg.utils.h"
+
+#include "../../Utils/TextFileLoad.h"
+#include "../../Utils/TextFileSave.h"
 
 using namespace std;
 using namespace Clipper2Lib;
@@ -17,10 +21,10 @@ const int display_width = 800, display_height = 600;
 enum class TestType { All, Simple, TestFile, Benchmark, MemoryLeak, ErrorFile};
 
 //------------------------------------------------------------------------------
-// Timer
+// Windows Timer
 //------------------------------------------------------------------------------
 
-struct Timer {
+struct WinTimer {
 private:
   _LARGE_INTEGER qpf = { 0,0 }, qpc1 = { 0,0 }, qpc2 = { 0,0 };
   string _time_text = "";
@@ -32,16 +36,16 @@ private:
   }
 
 public:
-  explicit Timer() { init(); }
+  explicit WinTimer() { init(); }
   
-  explicit Timer(const string& caption, const string& time_text = "") :
+  explicit WinTimer(const string& caption, const string& time_text = "") :
      _time_text(time_text)
   {
     init();
     if (caption != "") std::cout << caption << endl;
   }
 
-  ~Timer()
+  ~WinTimer()
   {
     QueryPerformanceCounter(&qpc2);
     std::cout << _time_text <<
@@ -51,85 +55,8 @@ public:
 };
 
 //------------------------------------------------------------------------------
-// Functions save clipping operations to text files
-//------------------------------------------------------------------------------
-
-void PathsToOstream(Paths64& paths, std::ostream &stream)
-{
-  for (Paths64::iterator paths_it = paths.begin(); paths_it != paths.end(); ++paths_it)
-  {
-    //watch out for empty paths
-    if (paths_it->begin() == paths_it->end()) continue;
-    Path64::iterator path_it, path_it_last;
-    for (path_it = paths_it->begin(), path_it_last = --paths_it->end(); 
-      path_it != path_it_last; ++path_it)
-        stream << *path_it << ", ";
-    stream << *path_it_last << endl;
-  }
-}
-//------------------------------------------------------------------------------
-
-void SaveToFile(const string &filename, 
-  Paths64 &subj, Paths64 &clip, 
-  ClipType ct, FillRule fr)
-{
-  string cliptype;
-  string fillrule;
-
-  switch (ct) 
-  {
-  case ClipType::None: cliptype = "NONE"; break;
-  case ClipType::Intersection: cliptype = "INTERSECTION"; break;
-  case ClipType::Union: cliptype = "UNION"; break;
-  case ClipType::Difference: cliptype = "DIFFERENCE"; break;
-  case ClipType::Xor: cliptype = "XOR"; break;
-  }
-
-  switch (fr) 
-  {
-  case FillRule::EvenOdd: fillrule = "EVENODD"; break;
-  case FillRule::NonZero : fillrule = "NONZERO"; break;
-  }
-
-  std::ofstream file;
-  file.open(filename);
-  file << "CAPTION: " << cliptype << " " << fillrule << endl;
-  file << "CLIPTYPE: " << cliptype << endl;
-  file << "FILLRULE: " << fillrule << endl;
-  file << "SUBJECTS" << endl;
-  PathsToOstream(subj, file);
-  file << "CLIPS" << endl;
-  PathsToOstream(clip, file);
-  file.close();
-}
-
-//------------------------------------------------------------------------------
 // Miscellaneous functions ...
 //------------------------------------------------------------------------------
-
-Path64 Ellipse(const Rect64& rec)
-{
-  if (rec.IsEmpty()) return Path64();
-  Point64 centre = Point64((rec.right + rec.left) / 2, (rec.bottom + rec.top) / 2);
-  Point64 radii = Point64(rec.Width() /2, rec.Height() /2);
-  int steps = static_cast<int>(PI * sqrt((radii.x + radii.y)/2));
-  double si = std::sin(2 * PI / steps);
-  double co = std::cos(2 * PI / steps);
-  double dx = co, dy = si;
-  Path64 result;
-  result.reserve(steps);
-  result.push_back(Point64(centre.x + radii.x, centre.y));
-  for (int i = 1; i < steps; ++i)
-  {
-    result.push_back(Point64(centre.x + static_cast<int64_t>(radii.x * dx), 
-      centre.y + static_cast<int64_t>(radii.y * dy)));
-    double x = dx * co - dy * si;
-    dy = dy * co + dx * si;
-    dx = x;
-  }
-  return result;
-}
-//---------------------------------------------------------------------------
 
 inline Path64 MakeRandomPoly(int width, int height, unsigned vertCnt)
 {
@@ -153,12 +80,6 @@ inline Path64 MakeRectangle(int boxWidth, int boxHeight)
 }
 //---------------------------------------------------------------------------
 
-inline Path64 MakeEllipse(int boxWidth, int boxHeight)
-{
-  return Ellipse(Rect64(0, 0, boxWidth, boxHeight));
-}
-//---------------------------------------------------------------------------
-
 Path64 RandomOffset(const Path64& path, int maxWidth, int maxHeight)
 {
   int dx = rand() % (maxWidth);
@@ -171,34 +92,6 @@ Path64 RandomOffset(const Path64& path, int maxWidth, int maxHeight)
 }
 //---------------------------------------------------------------------------
 
-inline void SaveToSVG(const string &filename, int max_width, int max_height,
-  const Paths64* subj, const Paths64* subj_open, const Paths64* clip, 
-  const Paths64* solution, const Paths64* solution_open,
-  FillRule fill_rule, bool show_coords = false)
-{
-  SvgWriter svg;
-  svg.fill_rule = fill_rule;
-  svg.SetCoordsStyle("Verdana", 0xFF0000AA, 9);
-  //svg.AddCaption("Clipper demo ...", 0xFF000000, 14, 20, 20);
-
-  if (subj)
-    svg.AddPaths(*subj, false, 0x1800009C, 0xCCB3B3DA, 0.8, show_coords);
-  if (subj_open)
-    svg.AddPaths(*subj_open, true, 0x0, 0xFFD3D3DA, 1.0, show_coords);
-  if (clip)
-    svg.AddPaths(*clip, false, 0x129C0000, 0xCCFFA07A, 0.8, show_coords);
-  if (solution)
-  {
-    svg.AddPaths(*solution, false, 0xFF80ff9C, 0xFF003300, 0.8, show_coords);
-    //for (Paths::const_iterator i = solution.cbegin(); i != solution.cend(); ++i)
-    //  if (Area(*i) < 0) svg.AddPath((*i), false, 0x0, 0xFFFF0000, 0.8, show_coords);
-  }
-  if (solution_open)
-    svg.AddPaths(*solution_open, true, 0x0, 0xFF000000, 1.0, show_coords);
-  svg.SaveToFile(filename, max_width, max_height, 80);
-}
-//------------------------------------------------------------------------------
-
 void DoErrorFile(const string& filename)
 {
   Paths64 subject, clip, ignored, solution;
@@ -208,15 +101,17 @@ void DoErrorFile(const string& filename)
 
   ifstream ifs(filename);
   if (!ifs) return;
-  GetTestNum(ifs, 0, true, subject, ignored, 
-    clip, area, count, ct, fr);
+  LoadTest(ifs, subject, ignored, clip, area, count, ct, fr);
   ifs.close();
 
   solution = BooleanOp(ct, fr, subject, clip);
+  SvgWriter svg;
+  SvgAddSubject(svg, subject);
+  SvgAddClip(svg, clip);
+  SvgAddSolution(svg, solution, false);
+  SvgSaveToFile(svg, "error.svg", fr, display_width, display_height, 20);
+  system("error.svg");
 
-  SaveToSVG("solution.svg", display_width, display_height,
-    &subject, NULL, &clip, &solution, NULL, fr, false);
-  system("solution.svg");
   return;
 }
 //------------------------------------------------------------------------------
@@ -229,22 +124,27 @@ void DoSimpleTest(bool show_solution_coords = false)
 
   //Minkowski
   Path64 path = MakePath("0, 0, 100, 200, 200, 0 ");
-  Path64 pattern = Ellipse(Rect64(-20, -20, 20, 20));
+  Path64 pattern = Ellipse<int64_t>(Point64(), 20, 20);
   solution = Paths64(MinkowskiSum(pattern, path, false));
-  SaveToFile("temp.txt", solution, clip, ClipType::Union, fr);
-  SaveToSVG("solution1.svg", display_width, display_height,
-    NULL, NULL, NULL, &solution, NULL, fr, show_solution_coords);
+  
+  SvgWriter svg;
+  SvgAddSolution(svg, solution, false);
+  SvgSaveToFile(svg, "solution1.svg", fr, display_width, display_height, 20);
   system("solution1.svg");
   solution.clear();
 
   //Intersection plus inflating
   subject.push_back(MakePath("500, 250, 50, 395, 325, 10, 325, 490, 50, 105"));
-  clip.push_back(Ellipse(Rect64(100, 100, 400, 400)));
-  SaveToFile("simple.txt", subject, clip, ct, fr);
+  clip.push_back(Ellipse<int64_t>(Point64(250,250), 150, 150));
+  //SaveToFile("simple.txt", subject, clip, ct, fr);
   solution = Intersect(subject, clip, fr);
   solution = InflatePaths(solution, -10, JoinType::Round, EndType::Polygon);
-  SaveToSVG("solution2.svg", display_width, display_height,
-    &subject, NULL, &clip, &solution, NULL, fr, show_solution_coords);
+
+  SvgWriter svg2;
+  SvgAddSubject(svg2, subject);
+  SvgAddClip(svg2, clip);
+  SvgAddSolution(svg2, solution, false);
+  SvgSaveToFile(svg2, "solution2.svg", fr, display_width, display_height, 20);
   system("solution2.svg");
 }
 //------------------------------------------------------------------------------
@@ -267,7 +167,7 @@ void DoTestsFromFile(const string& filename,
     FillRule fr;
     int64_t area, count;
 
-    if (GetTestNum(ifs, i, false, subject, subject_open, clip, 
+    if (LoadTestNum(ifs, i, false, subject, subject_open, clip, 
       area, count, ct, fr)) 
     {
       Clipper64 c;
@@ -288,9 +188,14 @@ void DoTestsFromFile(const string& filename,
       if (svg_draw)
       {
         string filename2 = "test_" + to_string(i) + ".svg";
-        SaveToSVG(filename2, display_width, display_height,
-          &subject, &subject_open, &clip, &solution, &solution_open, 
-          fr, show_solution_coords);
+
+        SvgWriter svg;
+        SvgAddSubject(svg, subject);
+        SvgAddSubject(svg, subject_open, false);
+        SvgAddClip(svg, clip);
+        SvgAddSolution(svg, solution, show_solution_coords);
+        SvgAddSolution(svg, solution_open, show_solution_coords, false);
+        SvgSaveToFile(svg, filename2, fr, display_width, display_height, 20);
         system(filename2.c_str());
       }
     }
@@ -318,13 +223,18 @@ void DoBenchmark1(int edge_cnt_start, int edge_cnt_end, int increment = 1000)
 
     cout << "Edge Count: " << i << " = ";
     {
-      Timer t("");
+      WinTimer t("");
       solution = BooleanOp(ct_benchmark, fr_benchmark, subject, clip);
       if (solution.empty()) break;
     }
   }
-  SaveToSVG("solution3.svg", display_width, display_height,
-    &subject, NULL, &clip, &solution, NULL, fr_benchmark, false);
+  
+  SvgWriter svg;
+  SvgAddSubject(svg, subject);
+  SvgAddClip(svg, clip);
+  SvgAddSolution(svg, solution, false);
+  SvgSaveToFile(svg, "solution3.svg", 
+    fr_benchmark, display_width, display_height, 20);
   system("solution3.svg");
 }
 //------------------------------------------------------------------------------
@@ -347,49 +257,17 @@ void DoBenchmark2(int edge_cnt_start, int edge_cnt_end, int increment = 1000)
     //SaveToFile("benchmark_test2.txt", subject, clip, ClipType::Union, fr_benchmark);    
     cout << "Rectangle count: " << i << " = ";
     {
-      Timer t;
+      WinTimer t;
       solution = Union(subject, fr_benchmark);
       if (solution.empty()) break;
     }
   }
   //nb: chrome struggles with very large SVG files (>50MB) 
-  SaveToSVG("solution4.svg", display_width, display_height,
-    NULL, NULL, NULL, &solution, NULL, fr_benchmark, false);
+  SvgWriter svg;
+  SvgAddSolution(svg, solution, false);
+  SvgSaveToFile(svg, "solution4.svg",
+    fr_benchmark, display_width, display_height, 20);
   system("solution4.svg");
-}
-//------------------------------------------------------------------------------
-
-void DoBenchmark3(int ellipse_cnt_start, int ellipse_cnt_end, int increment = 1000)
-{
-  FillRule fr_benchmark = FillRule::NonZero;//EvenOdd;//
-
-  Paths64 subject, solution;
-
-  cout << endl << "Starting Circles Benchmark:  " << endl;
-  const int test_width = 7680, test_height = 4320;
-
-  Path64 ellipse = MakeEllipse(60, 60);
-
-  for (int i = ellipse_cnt_start; i <= ellipse_cnt_end; i += increment)
-  {
-    solution.clear();
-    subject.reserve(i);
-
-    for (int j = 0; j < i; ++j)
-      subject.push_back(RandomOffset(ellipse, test_width - 100, test_height - 100));
-    //SaveToFile("benchmark_test3.txt", subject, clip, ClipType::Union, fr_benchmark);
-
-    cout << "Ellipse count: " << i << " = ";
-    {
-      Timer t;
-      solution = Union(subject, fr_benchmark);
-      if (solution.empty()) break;
-    }
-  }
-  SaveToSVG("solution5.svg", display_width, display_height,
-    NULL, NULL, NULL, &solution, NULL, fr_benchmark, false);
-  system("solution5.svg");
-
 }
 //------------------------------------------------------------------------------
 
@@ -406,8 +284,10 @@ void DoMemoryLeakTest()
 
   solution = Intersect(subject, clip, FillRule::NonZero);
   //display the intersection
-  SaveToSVG("solution.svg", display_width, display_height,
-    &subject, NULL, &clip, &solution, NULL, FillRule::NonZero, false);
+  SvgWriter svg;
+  SvgAddSolution(svg, solution, false);
+  SvgSaveToFile(svg, "solution.svg",
+    FillRule::NonZero, display_width, display_height, 20);
   system("solution.svg");
 
   //clean up ready for memory check 
@@ -434,7 +314,7 @@ void DoMemoryLeakTest()
 int main(int argc, char* argv[])
 {
   //////////////////////////////////////////////////////////////////////////
-  TestType test_type = TestType::Simple;//All;//TestFile;//Benchmark;//MemoryLeak;//ErrorFile;//
+  TestType test_type = TestType::Simple;//TestFile;//All;//Benchmark;//MemoryLeak;//ErrorFile;//
   //////////////////////////////////////////////////////////////////////////
 
   srand((unsigned)time(0));
@@ -466,7 +346,6 @@ int main(int argc, char* argv[])
     cout          << "==========" << endl;
     DoBenchmark1(1000, 5000);
     DoBenchmark2(10000, 30000, 10000);
-    DoBenchmark3(10000, 30000, 10000);
     break;
   }
 

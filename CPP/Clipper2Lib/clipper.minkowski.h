@@ -94,9 +94,10 @@ namespace Clipper2Lib
   static PathsD MinkowskiSum(const PathD& pattern, const PathD& path, bool isClosed, int decimalPlaces = 2)
   {
     double scale = pow(10, decimalPlaces);
-    Path64 pat64 = ScalePath64(pattern, scale), path64 = ScalePath64(path, scale);
+    Path64 pat64 = ScalePath<int64_t, double>(pattern, scale);
+    Path64 path64 = ScalePath<int64_t, double>(path, scale);
     Paths64 tmp = detail::Union(detail::Minkowski(pat64, path64, true, isClosed), FillRule::NonZero);
-    return ScalePathsD(tmp, 1 / scale);
+    return ScalePaths<double, int64_t>(tmp, 1 / scale);
   }
 
   static Paths64 MinkowskiDiff(const Path64& pattern, const Path64& path, bool isClosed)
@@ -107,9 +108,10 @@ namespace Clipper2Lib
   static PathsD MinkowskiDiff(const PathD& pattern, const PathD& path, bool isClosed, int decimalPlaces = 2)
   {
     double scale = pow(10, decimalPlaces);
-    Path64 pat64 = ScalePath64(pattern, scale), path64 = ScalePath64(path, scale);
+    Path64 pat64 = ScalePath<int64_t, double>(pattern, scale); 
+    Path64 path64 = ScalePath<int64_t, double>(path, scale);
     Paths64 tmp = detail::Union(detail::Minkowski(pat64, path64, false, isClosed), FillRule::NonZero);
-    return ScalePathsD(tmp, 1 / scale);
+    return ScalePaths<double, int64_t>(tmp, 1 / scale);
   }
 
 } //Clipper2Lib namespace

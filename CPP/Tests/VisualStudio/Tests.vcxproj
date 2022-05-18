@@ -129,7 +129,7 @@
   <ItemGroup>
     <ClCompile Include="..\..\Clipper2Lib\clipper.engine.cpp" />
     <ClCompile Include="..\..\Clipper2Lib\clipper.offset.cpp" />
-    <ClCompile Include="..\..\Utils\TextFileLoader.cpp" />
+    <ClCompile Include="..\..\Utils\TextFileLoad.cpp" />
     <ClCompile Include="..\googletest\googletest\src\gtest-all.cc">
       <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">../googletest/googletest/include;../googletest/googletest</AdditionalIncludeDirectories>
       <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">../googletest/googletest/include;../googletest/googletest</AdditionalIncludeDirectories>

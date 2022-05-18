@@ -133,9 +133,9 @@ namespace Clipper2Lib
     const int precision = 2;
     const double scale = std::pow(10, precision);
     ClipperOffset clip_offset(miter_limit);
-    clip_offset.AddPaths(ScalePaths64(paths, scale), jt, et);
+    clip_offset.AddPaths(ScalePaths<int64_t,double>(paths, scale), jt, et);
     Paths64 tmp = clip_offset.Execute(delta * scale);
-    return ScalePathsD(tmp, 1 / scale);
+    return ScalePaths<double, int64_t>(tmp, 1 / scale);
   }
 
   inline Path64 OffsetPath(const Path64& path, int64_t dx, int64_t dy)

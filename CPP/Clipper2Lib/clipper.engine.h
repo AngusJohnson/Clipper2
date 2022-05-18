@@ -357,24 +357,24 @@ namespace Clipper2Lib {
 
 		void AddSubject(const PathsD& subjects)
 		{
-			AddPaths(ScalePaths64(subjects, scale_), PathType::Subject, false);
+			AddPaths(ScalePaths<int64_t, double>(subjects, scale_), PathType::Subject, false);
 		}
 
 		void AddOpenSubject(const PathsD& open_subjects)
 		{
-			AddPaths(ScalePaths64(open_subjects, scale_), PathType::Subject, true);
+			AddPaths(ScalePaths<int64_t, double>(open_subjects, scale_), PathType::Subject, true);
 		}
 
 		void AddClip(const PathsD& clips)
 		{
-			AddPaths(ScalePaths64(clips, scale_), PathType::Clip, false);
+			AddPaths(ScalePaths<int64_t, double>(clips, scale_), PathType::Clip, false);
 		}
 
 		bool Execute(ClipType clip_type, FillRule fill_rule, PathsD& closed_paths)
 		{
 			Paths64 closed_paths64;
 			if (!ClipperBase::Execute(clip_type, fill_rule, closed_paths64)) return false;
-			closed_paths = ScalePathsD(closed_paths64, 1 / scale_);
+			closed_paths = ScalePaths<double, int64_t>(closed_paths64, 1 / scale_);
 			return true;
 		}
 
@@ -385,8 +385,8 @@ namespace Clipper2Lib {
 			Paths64 open_paths64;
 			if (!ClipperBase::Execute(clip_type,
 				fill_rule, closed_paths64, open_paths64)) return false;
-			closed_paths = ScalePathsD(closed_paths64, 1 / scale_);
-			open_paths = ScalePathsD(open_paths64, 1 / scale_);
+			closed_paths = ScalePaths<double, int64_t>(closed_paths64, 1 / scale_);
+			open_paths = ScalePaths<double, int64_t>(open_paths64, 1 / scale_);
 			return true;
 		}
 

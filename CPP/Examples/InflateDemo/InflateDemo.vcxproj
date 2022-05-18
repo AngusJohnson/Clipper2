@@ -163,6 +163,7 @@
     <ClInclude Include="..\..\Clipper2Lib\clipper.minkowski.h" />
     <ClInclude Include="..\..\Clipper2Lib\clipper.offset.h" />
     <ClInclude Include="..\clipper.svg.h" />
+    <ClInclude Include="..\clipper.svg.utils.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

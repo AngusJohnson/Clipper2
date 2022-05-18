@@ -86,7 +86,7 @@ namespace Clipper2Lib {
     unsigned brush_color, unsigned pen_color, double pen_width, bool show_coords)
   {
     if (paths.size() == 0) return;
-    PathsD tmp = ScalePathsD(paths, scale_);
+    PathsD tmp = ScalePaths<double, int64_t>(paths, scale_);
     PathInfo* pi = new PathInfo(tmp, is_open,
       brush_color, pen_color, pen_width, show_coords);
     path_infos.push_back(pi);
