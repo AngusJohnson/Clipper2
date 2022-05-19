@@ -280,7 +280,6 @@ void ClipperOffset::DoGroupOffset(PathGroup& group, double delta)
 		//the lowermost polygon must be an outer polygon. So we can use that as the
 		//designated orientation for outer polygons (needed for tidy-up clipping)
 		Paths64::size_type lowestIdx = GetLowestPolygonIdx(group.paths_in_);
-		if (lowestIdx < 0) return;
 		if (Area(group.paths_in_[lowestIdx]) < 0)
 		{
 			//this is more efficient than literally reversing paths

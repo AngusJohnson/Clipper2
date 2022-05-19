@@ -45,11 +45,11 @@ namespace Clipper2Lib {
 
 	constexpr enum VertexFlags operator &(enum VertexFlags a, enum VertexFlags b) {
 		return (enum VertexFlags)(uint32_t(a) & uint32_t(b));
-	};
+	}
 
 	constexpr enum VertexFlags operator |(enum VertexFlags a, enum VertexFlags b) {
 		return (enum VertexFlags)(uint32_t(a) | uint32_t(b));
-	};
+	}
 
 	struct Vertex {
 		Point64 pt;
@@ -255,7 +255,7 @@ namespace Clipper2Lib {
 		const PolyPath<T>* parent_;
 		PolyPath(const PolyPath<T>* parent, 
 			const Path<T>& path) : 
-			parent_(parent), polygon(path), scale_(parent->scale_) {}
+			scale_(parent->scale_), parent_(parent), polygon(path) {}
 	public:
 		Path<T> polygon;
 		std::vector<PolyPath*> childs;
@@ -288,9 +288,9 @@ namespace Clipper2Lib {
 
 		const PolyPath<T>* operator [] (size_t index) const { return childs[index]; }
 
-		const PolyPath<T>* Parent() const { return parent_; };
+		const PolyPath<T>* Parent() const { return parent_; }
 
-		const Path<T>& Path() const { return polygon; };
+		const Path<T>& Polygon() const { return polygon; }
 
 		bool IsHole() const {
 			const PolyPath* pp = parent_;
@@ -312,7 +312,7 @@ namespace Clipper2Lib {
 
 	};
 
-	inline void Polytree64ToPolytreeD(const PolyPath64& polytree, PolyPathD& result);
+	void Polytree64ToPolytreeD(const PolyPath64& polytree, PolyPathD& result);
 
 	class Clipper64 : public ClipperBase
 	{

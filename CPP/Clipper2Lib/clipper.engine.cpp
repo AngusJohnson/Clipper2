@@ -13,7 +13,7 @@
 #include <stdexcept>
 #include <vector>
 #include <numeric>
-#include < algorithm >
+#include <algorithm>
 #include "clipper.engine.h"
 
 namespace Clipper2Lib {
@@ -3281,7 +3281,7 @@ namespace Clipper2Lib {
 	{
 		for (const PolyPath64* child : polypath.childs)
 		{
-			PolyPathD* res_child = result.AddChild(Path64ToPathD(child->Path()));
+			PolyPathD* res_child = result.AddChild(Path64ToPathD(child->Polygon()));
 			Polypath64ToPolypathD(*child, *res_child);
 		}
 	}

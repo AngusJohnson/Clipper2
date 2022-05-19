@@ -27,5 +27,5 @@ TEST(Clipper2Tests, TestBasicUnion) {
 
     EXPECT_EQ(open_paths.size(), 0);
     ASSERT_EQ(solution.ChildCount(), 1);
-    EXPECT_EQ(solution.childs.front()->Path().size(), 8);
+    EXPECT_EQ(solution.childs.front()->Polygon().size(), 8);
 }

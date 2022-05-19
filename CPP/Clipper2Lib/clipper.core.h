@@ -16,7 +16,7 @@
 #include <vector>
 #include <string>
 #include <iostream>
-#include < algorithm >
+#include <algorithm>
 
 namespace Clipper2Lib 
 {
@@ -189,7 +189,7 @@ static Paths<T1> TransformPaths(const Paths<T2>& paths)
 	return result;
 }
 
-static PathsD Paths64ToPathsD(const Paths64& paths)
+inline PathsD Paths64ToPathsD(const Paths64& paths)
 {
 	PathsD result;
 	std::transform(paths.cbegin(), paths.cend(), std::back_inserter(result),
@@ -197,7 +197,7 @@ static PathsD Paths64ToPathsD(const Paths64& paths)
 	return result;
 }
 
-static Path64 PathDToPath64(const PathD& path)
+inline Path64 PathDToPath64(const PathD& path)
 {
 	Path64 result;
 	result.reserve(path.size());
@@ -206,7 +206,7 @@ static Path64 PathDToPath64(const PathD& path)
 	return result;
 }
 
-static Paths64 PathsDToPaths64(const PathsD& paths)
+inline Paths64 PathsDToPaths64(const PathsD& paths)
 {
 	Paths64 result;
 	std::transform(paths.cbegin(), paths.cend(), std::back_inserter(result),
@@ -226,7 +226,7 @@ inline bool NearEqual(const Point<double>& p1,
 	return Sqr(p1.x - p2.x) + Sqr(p1.y - p2.y) < max_dist_sqrd;
 }
 
-static PathD StripNearEqual(const PathD& path, 
+inline PathD StripNearEqual(const PathD& path, 
 	double max_dist_sqrd, bool is_closed_path)
 {
 	if (path.size() == 0) return PathD();
@@ -249,7 +249,7 @@ static PathD StripNearEqual(const PathD& path,
 	return result;
 }
 
-static PathsD StripNearEqual(const PathsD& paths, 
+inline PathsD StripNearEqual(const PathsD& paths, 
 	double max_dist_sqrd, bool is_closed_path)
 {
 	PathsD result;
@@ -268,7 +268,7 @@ static Path<T> StripDuplicates(const Path<T>& path, bool is_closed_path)
 	if (path.size() == 0) return Path<T>();
 	Path<T> result;
 	result.reserve(path.size());
-	Path<T>::const_iterator path_iter = path.cbegin();
+	typename Path<T>::const_iterator path_iter = path.cbegin();
 	Point<T> first_pt = *path_iter++, last_pt = first_pt;
 	result.push_back(first_pt);
 	for (; path_iter != path.cend(); ++path_iter)
@@ -289,7 +289,7 @@ static Paths<T> StripDuplicates(const Paths<T>& paths, bool is_closed_path)
 {
 	Paths<T> result;
 	result.reserve(paths.size());
-	for (Paths<T>::const_iterator paths_citer = paths.cbegin();
+	for (typename Paths<T>::const_iterator paths_citer = paths.cbegin();
 		paths_citer != paths.cend(); ++paths_citer)
 	{
 		result.push_back(StripDuplicates(*paths_citer, is_closed_path));
@@ -418,7 +418,7 @@ inline double Area(const Path<T>& path)
 {
 	if (path.size() == 0) return 0.0;
 	double a = 0.0;
-	Path<T>::const_iterator path_iter, path_iter_last = --path.cend();
+	typename Path<T>::const_iterator path_iter, path_iter_last = --path.cend();
 	for (path_iter = path.cbegin(); path_iter != path.cend();
 		path_iter_last = path_iter, ++path_iter)
 	{
@@ -436,7 +436,7 @@ template <typename T>
 inline double Area(const Paths<T>& paths)
 {
 	double a = 0.0;
-	for (Paths<T>::const_iterator paths_iter = paths.cbegin();
+	for (typename Paths<T>::const_iterator paths_iter = paths.cbegin();
 		paths_iter != paths.cend(); ++paths_iter)
 	{
 		a += Area<T>(*paths_iter);
@@ -494,10 +494,10 @@ template <typename T>
 static void RDP(const Path<T> path, std::size_t begin,
 	std::size_t end, double epsSqrd, std::vector<int>& flags)
 {
-	Path<T>::size_type idx = 0;
+	typename Path<T>::size_type idx = 0;
 	double max_d = 0;
 	while (end > begin && path[begin] == path[end]) flags[end--] = 0;
-	for (Path<T>::size_type i = begin + 1; i < end; ++i)
+	for (typename Path<T>::size_type i = begin + 1; i < end; ++i)
 	{
 		//PerpendicDistFromLineSqrd - avoids expensive Sqrt()
 		double d = PerpendicDistFromLineSqrd(path[i], path[begin], path[end]);
@@ -514,7 +514,7 @@ static void RDP(const Path<T> path, std::size_t begin,
 template <typename T>
 static Path<T> RamerDouglasPeucker(const Path<T>& path, double epsilon)
 {
-	Path<T>::size_type len = path.size();
+	const typename Path<T>::size_type len = path.size();
 	if (len < 5) return Path<T>(path);
 	std::vector<int> flags(len);
 	flags[0] = 1;
@@ -522,7 +522,7 @@ static Path<T> RamerDouglasPeucker(const Path<T>& path, double epsilon)
 	RDP(path, 0, len - 1, Sqr(epsilon), flags);
 	Path<T> result;
 	result.reserve(len);
-	for (Path<T>::size_type i = 0; i < len; ++i)
+	for (typename Path<T>::size_type i = 0; i < len; ++i)
 		if (flags[i] == 1)
 			result.push_back(path[i]);
 	return result;

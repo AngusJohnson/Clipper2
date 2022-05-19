@@ -223,8 +223,8 @@ namespace Clipper2Lib
 
     static void AddPolyNodeToPaths(const PolyPath64& polytree, Paths64& paths)
     {
-      if (!polytree.Path().empty())
-        paths.push_back(polytree.Path());
+      if (!polytree.Polygon().empty())
+        paths.push_back(polytree.Polygon());
       for (PolyPath64* child : polytree.childs)
         AddPolyNodeToPaths(*child, paths);
     }
