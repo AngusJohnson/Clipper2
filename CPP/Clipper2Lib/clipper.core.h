@@ -154,7 +154,7 @@ inline Paths<T1> ScalePaths(const Paths<T2>& paths, double scale)
 {
 	Paths<T1> result;
 	result.reserve(paths.size());
-	for (const Path<T2> path : paths)
+	for (const Path<T2>& path : paths)
 		result.push_back(ScalePath<T1, T2>(path, scale));
 	return result;
 }
