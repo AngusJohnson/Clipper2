@@ -10,23 +10,21 @@ using namespace std;
 using namespace Clipper2Lib;
 
 //------------------------------------------------------------------------------
-// Quick and Dirty BMH Search
+// Boyer Moore Horspool Search
 //------------------------------------------------------------------------------
 
 class BMH_Search 
 {
-
 private:
-  int  jump_;
-  int  needle_len_, needle_len_less1;
+  uint8_t case_table[256];
+  unsigned needle_len_, needle_len_less1;
   size_t haystack_len;
   uint8_t shift[256];
-  uint8_t case_table[256];
-  char* needle_;
-  char* needle_ic_;
+  uint8_t jump_;
+  uint8_t* needle_;
+  uint8_t* needle_ic_;
   char *haystack_;
   char *cur, *end, *last_found;
-  bool ignore_case_;
 
   void SetHayStack(std::ifstream& stream)
   {
@@ -63,8 +61,8 @@ private:
   {
     while (cur < end)
     {
-      int i = shift[*cur]; //compare last byte first
-      if (!i)                          //last byte matches
+      uint8_t i = shift[*cur];  //compare last byte first
+      if (!i)                   //last byte matches if i == 0
       {
         char* j = cur - needle_len_less1;
         while (i < needle_len_less1 && needle_[i] == *(j + i)) ++i;
@@ -87,7 +85,7 @@ private:
   {
     while (cur < end)
     {
-      int i = shift[case_table[*cur]]; 
+      uint8_t i = shift[case_table[*cur]];
       if (!i)                          
       {
         char* j = cur - needle_len_less1;
@@ -114,7 +112,7 @@ public:
     const std::string& needle = "", bool ignore_case = true)
   {
     Init();
-    ignore_case_ = ignore_case;
+    IgnoreCase = ignore_case;
     SetHayStack(stream);
     if (needle.size() > 0) SetNeedle(needle);
   }
@@ -123,7 +121,7 @@ public:
     const std::string& needle = "", bool ignore_case = true)
   {
     Init();
-    ignore_case_ = ignore_case;
+    IgnoreCase = ignore_case;
     SetHayStack(haystack, length);
     if (needle.size() > 0) SetNeedle(needle);
   }
@@ -140,6 +138,13 @@ public:
     last_found = nullptr;
   }
 
+  class {
+    bool value = true;
+  public:
+    bool& operator = (const bool& val) { return value = val; }
+    operator bool() const { return value; }
+  } IgnoreCase;
+
   void SetNeedle(const std::string& needle)
   {
     ClearNeedle();
@@ -148,21 +153,21 @@ public:
 
     //case sensitive needle
     needle_len_less1 = needle_len_ - 1;
-    needle_ = new char[needle_len_];
-    needle.copy(needle_, needle_len_);
+    needle_ = new uint8_t[needle_len_];
+    needle.copy(reinterpret_cast<char*>(needle_), needle_len_);
     
     //case insensitive needle
-    needle_ic_ = new char[needle_len_];
-    needle.copy(needle_ic_, needle_len_);
-    char* c = needle_ic_;
-    for (int i = 0; i < needle_len_; ++i)
-      *c = case_table[uint8_t(*c++)];
+    needle_ic_ = new uint8_t[needle_len_];
+    std::memcpy(needle_ic_, needle_, needle_len_);
+    uint8_t* c = needle_ic_;
+    for (uint8_t i = 0; i < needle_len_; ++i)
+      *c = case_table[*c++];
 
-    for (uint8_t &i : shift) i = needle_len_;
-    for (int j = 0; j < needle_len_less1; ++j)
-      shift[(int)needle_[j]] = needle_len_less1 - j;
-    jump_ = shift[(uint8_t)needle_[needle_len_less1]];
-    shift[(int)needle_[needle_len_less1]] = 0;
+    std::fill(std::begin(shift), std::begin(shift) + 256, needle_len_);
+    for (uint8_t j = 0; j < needle_len_less1; ++j)
+      shift[needle_[j]] = needle_len_less1 - j;
+    jump_ = shift[needle_[needle_len_less1]];
+    shift[needle_[needle_len_less1]] = 0;
   }
 
   inline void ClearNeedle()
@@ -181,7 +186,7 @@ public:
 
   bool FindNext()
   {
-    if (ignore_case_)
+    if (IgnoreCase)
       return FindNext_IgnoreCase();
     else
       return FindNext_CaseSensitive();
@@ -215,7 +220,7 @@ void PathsToStream(Paths64& paths, std::ostream& stream)
 
 bool SaveTest(const std::string& filename, bool append,
   Clipper2Lib::Paths64& subj, Clipper2Lib::Paths64& subj_open, Clipper2Lib::Paths64& clip,
-  int64_t area, int64_t count, Clipper2Lib::ClipType& ct, Clipper2Lib::FillRule& fr)
+  int64_t area, int64_t count, Clipper2Lib::ClipType ct, Clipper2Lib::FillRule fr)
 {
   string line;
   bool found = false;
