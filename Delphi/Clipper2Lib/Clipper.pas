@@ -15,7 +15,7 @@ interface
 {$I Clipper.inc}
 
 uses
-  Math, Clipper.Core, Clipper.Engine, Clipper.Offset;
+  Clipper.Core, Clipper.Engine, Clipper.Offset;
 
 //Redeclare here a number of structures defined in
 //other units so those units won't need to be declared
@@ -285,7 +285,6 @@ function InflatePaths(const paths: TPathsD; delta: Double;
   jt: TJoinType; et: TEndType; MiterLimit: double): TPathsD;
 var
   pp: TPaths64;
-  co: TClipperOffset;
 const
   scale = 100; invScale = 0.01;
 begin

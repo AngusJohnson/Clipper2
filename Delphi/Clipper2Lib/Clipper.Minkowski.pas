@@ -14,7 +14,7 @@ unit Clipper.Minkowski;
 interface
 
 uses
-  Classes, SysUtils, Math, Clipper.Core, Clipper.Engine;
+  Classes, Math, Clipper.Core;
 
 function MinkowskiSum(const Pattern, Path: TPath64;
   PathIsClosed: Boolean): TPaths64; overload;

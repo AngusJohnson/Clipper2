@@ -111,12 +111,6 @@ namespace Clipper2Lib {
 
   bool SvgWriter::SaveToFile(const std::string &filename, int max_width, int max_height, int margin)
   {
-    static const RectD MaxInvalidRectD = RectD(
-      (std::numeric_limits<double>::max)(),
-      (std::numeric_limits<double>::max)(),
-      (std::numeric_limits<double>::lowest)(),
-      (std::numeric_limits<double>::lowest)());
-
     RectD rec = MaxInvalidRectD;
     for (const PathInfo* pi : path_infos)
       for (const PathD& path : pi->paths_)
@@ -132,8 +126,8 @@ namespace Clipper2Lib {
     if (max_width < 100) max_width = 100;
     if (max_height < 100) max_height = 100;
     double  scale = std::min(
-      (double)(max_width - margin * 2) / rec.Width(),
-      (double)(max_height - margin * 2) / rec.Height());
+      static_cast<double>(max_width - margin * 2) / rec.Width(),
+      static_cast<double>(max_height - margin * 2) / rec.Height());
     
     rec.Scale(scale);
     double offsetX = margin -rec.left;
@@ -296,7 +290,7 @@ namespace Clipper2Lib {
     int vals_needed = 2;
     //nb: M == absolute move, m == relative move 
     if (!GetCommand(p, command, is_relative) || command != 'M') return false;
-    double vals[2] = { 0,0 };
+    double vals[2] { 0, 0 };
     double x = 0, y = 0;
     ++p;
     if (!GetNum(p, pe, x) || !GetNum(p, pe, y)) return false;

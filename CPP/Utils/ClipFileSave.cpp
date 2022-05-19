@@ -2,8 +2,8 @@
 // Functions load clipping operations from text files
 //------------------------------------------------------------------------------
 
-#include "TextFileSave.h"
-#include "TextFileLoad.h"
+#include "ClipFileSave.h"
+#include "ClipFileLoad.h"
 #include <sstream>
 
 using namespace std;
@@ -141,7 +141,7 @@ public:
   void SetNeedle(const std::string& needle)
   {
     ClearNeedle();
-    needle_len_ = (int)needle.size();
+    needle_len_ = static_cast<int>(needle.size());
     if (!needle_len_) return;
 
     //case sensitive needle

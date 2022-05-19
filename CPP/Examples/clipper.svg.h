@@ -71,7 +71,6 @@ namespace Clipper2Lib {
       CoordsStyle coords_style;
       TextInfoList text_infos;
       PathInfoList path_infos;
-
       void DrawCircle(std::ofstream& file, double x, double y, double radius);
   public:
     SvgWriter(int precision = 0)

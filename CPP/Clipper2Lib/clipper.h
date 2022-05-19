@@ -223,8 +223,8 @@ namespace Clipper2Lib
 
     static void AddPolyNodeToPaths(const PolyPath64& polytree, Paths64& paths)
     {
-      if (!polytree.Path().empty())
-        paths.push_back(polytree.Path());
+      if (!polytree.polygon.empty())
+        paths.push_back(polytree.polygon);
       for (PolyPath64* child : polytree.childs)
         AddPolyNodeToPaths(*child, paths);
     }
@@ -239,7 +239,7 @@ namespace Clipper2Lib
       while (iter != end_iter &&
         ((*iter >= '0') && (*iter <= '9')))
       {
-        val = val * 10 + ((int64_t)(*iter++) - '0');
+        val = val * 10 + (static_cast<int64_t>(*iter++) - '0');
       }
       if (is_neg) val = -val;
       return (iter != start_iter);

@@ -15,7 +15,7 @@ interface
 {$I Clipper.inc}
 
 uses
-  Classes, SysUtils, Math, Clipper.Core;
+  Classes, Math, Clipper.Core;
 
 type
 
@@ -353,7 +353,6 @@ implementation
 {$OVERFLOWCHECKS OFF}
 
 resourcestring
-  rsClipper_OpenPathErr = 'Only subject paths can be open.';
   rsClipper_PolyTreeErr = 'The TPolyTree parameter must be assigned.';
   rsClipper_ClippingErr = 'Undefined clipping error';
   rsClipper_RoundingErr = 'The decimal rounding value is invalid';

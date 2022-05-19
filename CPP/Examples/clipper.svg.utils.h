@@ -12,6 +12,7 @@
 #include <cstdlib>
 #include <string>
 #include "../Clipper2Lib/clipper.h"
+#include "./clipper.svg.h"
 
 namespace Clipper2Lib {
 
@@ -95,8 +96,6 @@ namespace Clipper2Lib {
     svg.SaveToFile(filename, max_width, max_height, margin);
   }
   //---------------------------------------------------------------------------
-
-
 
 }
 

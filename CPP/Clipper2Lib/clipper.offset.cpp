@@ -23,8 +23,9 @@ const double floating_point_tolerance = 1e-12;
 
 Paths64::size_type GetLowestPolygonIdx(const Paths64& paths)
 {
-	Paths64::size_type result = -1;
-	Point64 lp = Point64((int64_t)0, std::numeric_limits<int64_t>::min());
+	Paths64::size_type result = 0;
+	Point64 lp = Point64(static_cast<int64_t>(0), 
+		std::numeric_limits<int64_t>::min());
 
 	for (Paths64::size_type i = 0 ; i < paths.size(); ++i)
 		for (Point64 p : paths[i])
@@ -40,8 +41,8 @@ PointD GetUnitNormal(const Point64 pt1, const Point64 pt2)
 {
 	double dx, dy, inverse_hypot;
 	if (pt1 == pt2) return PointD(0.0, 0.0);
-	dx = (double)pt2.x - pt1.x;
-	dy = (double)pt2.y - pt1.y;
+	dx = static_cast<double>(pt2.x - pt1.x);
+	dy = static_cast<double>(pt2.y - pt1.y);
 	inverse_hypot = 1.0 / hypot(dx, dy);
 	dx *= inverse_hypot;
 	dy *= inverse_hypot;
@@ -280,8 +281,9 @@ void ClipperOffset::DoGroupOffset(PathGroup& group, double delta)
 		//the lowermost polygon must be an outer polygon. So we can use that as the
 		//designated orientation for outer polygons (needed for tidy-up clipping)
 		Paths64::size_type lowestIdx = GetLowestPolygonIdx(group.paths_in_);
-		if (lowestIdx < 0) return;
-		if (Area(group.paths_in_[lowestIdx]) < 0)
+		if (Area(group.paths_in_[lowestIdx]) == 0) 
+			return;
+		else if (Area(group.paths_in_[lowestIdx]) < 0)
 		{
 			//this is more efficient than literally reversing paths
 			group.is_reversed = true;
@@ -323,7 +325,6 @@ void ClipperOffset::DoGroupOffset(PathGroup& group, double delta)
 				double radius = std::abs(delta_);
 				if (group.end_type == EndType::Polygon) radius *= 0.5;
 				group.path_ = Ellipse(path[0], radius, radius);
-				std::reverse(group.path_.begin(), group.path_.end());
 			}
 			else
 			{

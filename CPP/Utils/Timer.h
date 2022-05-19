@@ -62,10 +62,10 @@ public:
   {
     std::chrono::steady_clock::time_point 
       time_ended = std::chrono::high_resolution_clock::now();
-    int nsecs = (int)std::log10(std::chrono::duration_cast<std::chrono::nanoseconds>
-      (time_ended - time_started).count());
+    int nsecs = static_cast<int>(std::log10(std::chrono::duration_cast<std::chrono::nanoseconds>
+      (time_ended - time_started).count()));
 
-    std::cout << std::fixed << std::setprecision((uint8_t)(2 -(nsecs % 3))) << _time_text;
+    std::cout << std::fixed << std::setprecision(static_cast<uint8_t>(2 -(nsecs % 3))) << _time_text;
     if (nsecs < 6) 
       std::cout << std::chrono::duration_cast<std::chrono::nanoseconds>
       (time_ended - time_started).count() * 1.0e-3 << " microsecs" << std::endl;

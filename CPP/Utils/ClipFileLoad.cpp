@@ -2,7 +2,7 @@
 // Functions load clipping operations from text files
 //------------------------------------------------------------------------------
 
-#include "TextFileLoad.h"
+#include "ClipFileLoad.h"
 #include <sstream>
 
 using namespace std;
@@ -19,7 +19,7 @@ bool GetInt(string::const_iterator& s_it,
   string::const_iterator s_it2 = s_it;
   while (s_it != it_end && *s_it >= '0' && *s_it <= '9')
   {
-    value = value * 10 + (int64_t)(*s_it++) - 48;
+    value = value * 10 + static_cast<int64_t>(*s_it++) - 48;
   }
 
   if (s_it == s_it2) return false; //no value

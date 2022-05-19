@@ -15,7 +15,7 @@ unit Clipper.Offset;
 interface
 
 uses
-  SysUtils, Classes, Clipper.Core;
+  Classes, Clipper.Core;
 
 type
 
@@ -447,15 +447,13 @@ end;
 function TClipperOffset.Execute(delta: Double): TPaths64;
 var
   i: integer;
-  scale: double;
   group: TPathGroup;
 begin
   fSolution := nil;
   Result := nil;
   if fInGroups.Count = 0 then Exit;
 
-  fMinLenSqrd := 1;//Sqr(scale);
-
+  fMinLenSqrd := 1;
   if abs(delta) < Tolerance then
   begin
     //if delta ~= 0, just copy paths to Result

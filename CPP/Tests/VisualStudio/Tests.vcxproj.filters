@@ -19,7 +19,7 @@
     <ClCompile Include="..\googletest\googletest\src\gtest_main.cc">
       <Filter>GoogleTest</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\Utils\TextFileLoad.cpp">
+    <ClCompile Include="..\..\Utils\ClipFileLoad.cpp">
       <Filter>Utils</Filter>
     </ClCompile>
     <ClCompile Include="..\Tests\TestFromTextFile.cpp">

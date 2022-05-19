@@ -182,7 +182,7 @@ namespace Clipper2Lib {
 	{
 		if ((currentY == ae.top.y) || (ae.top.x == ae.bot.x)) return ae.top.x;
 		else if (currentY == ae.bot.y) return ae.bot.x;
-		else return ae.bot.x + (int64_t)std::round(ae.dx * (currentY - ae.bot.y));
+		else return ae.bot.x + static_cast<int64_t>(std::round(ae.dx * (currentY - ae.bot.y)));
 	}
 	//------------------------------------------------------------------------------
 
@@ -233,13 +233,15 @@ namespace Clipper2Lib {
 		{
 			if (IsHorizontal(e2)) return Point64(e1.bot.x, e2.bot.y);
 			b2 = e2.bot.y - (e2.bot.x / e2.dx);
-			return Point64(e1.bot.x, (int64_t)std::round(e1.bot.x / e2.dx + b2));
+			return Point64(e1.bot.x, 
+				static_cast<int64_t>(std::round(e1.bot.x / e2.dx + b2)));
 		}
 		else if (e2.dx == 0)
 		{
 			if (IsHorizontal(e1)) return Point64(e2.bot.x, e1.bot.y);
 			b1 = e1.bot.y - (e1.bot.x / e1.dx);
-			return Point64(e2.bot.x, (int64_t)std::round(e2.bot.x / e1.dx + b1));
+			return Point64(e2.bot.x, 
+				static_cast<int64_t>(std::round(e2.bot.x / e1.dx + b1)));
 		}
 		else
 		{
@@ -247,8 +249,10 @@ namespace Clipper2Lib {
 			b2 = e2.bot.x - e2.bot.y * e2.dx;
 			double q = (b2 - b1) / (e1.dx - e2.dx);
 			return (abs(e1.dx) < abs(e2.dx)) ?
-				Point64((int64_t)std::round(e1.dx * q + b1), (int64_t)std::round(q)) :
-				Point64((int64_t)std::round(e2.dx * q + b2), (int64_t)std::round(q));
+				Point64(static_cast<int64_t>(std::round(e1.dx * q + b1)), 
+					static_cast<int64_t>(std::round(q))) :
+				Point64(static_cast<int64_t>(std::round(e2.dx * q + b2)), 
+					static_cast<int64_t>(std::round(q)));
 		}
 	}
 	//------------------------------------------------------------------------------
@@ -290,8 +294,8 @@ namespace Clipper2Lib {
 			}
 			else
 			{
-				ip.x = (double)(ln1a.x + ln1b.x) / 2;
-				ip.y = (double)(ln1a.y + ln1b.y) / 2;
+				ip.x = static_cast<double>(ln1a.x + ln1b.x) / 2;
+				ip.y = static_cast<double>(ln1a.y + ln1b.y) / 2;
 			}
 		}
 		return true;
@@ -3277,19 +3281,19 @@ namespace Clipper2Lib {
 		}
 	}
 
-	static void Polypath64ToPolypathD(const PolyPath64& polypath, PolyPathD& result)
+	static void PolyPath64ToPolyPathD(const PolyPath64& polypath, PolyPathD& result)
 	{
 		for (const PolyPath64* child : polypath.childs)
 		{
-			PolyPathD* res_child = result.AddChild(Path64ToPathD(child->Path()));
-			Polypath64ToPolypathD(*child, *res_child);
+			PolyPathD* res_child = result.AddChild(Path64ToPathD(child->polygon));
+			PolyPath64ToPolyPathD(*child, *res_child);
 		}
 	}
 
 	inline void Polytree64ToPolytreeD(const PolyPath64& polytree, PolyPathD& result)
 	{
 		result.Clear();
-		Polypath64ToPolypathD(polytree, result);
+		PolyPath64ToPolyPathD(polytree, result);
 	}
 
 }  // namespace clipper2lib
