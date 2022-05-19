@@ -58,8 +58,8 @@ int main(int argc, char* argv[])
 
   std::cout << std::endl;
 #ifdef _DEBUG
-  std::cout << "Press any key to continue" << std::endl;
-  const char c = _getch();
+  //std::cout << "Press any key to continue" << std::endl;
+  //const char c = _getch();
 #endif
   return 0;
 }
