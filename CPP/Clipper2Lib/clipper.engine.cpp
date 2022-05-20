@@ -13,7 +13,7 @@
 #include <stdexcept>
 #include <vector>
 #include <numeric>
-#include < algorithm >
+#include <algorithm>
 #include "clipper.engine.h"
 
 namespace Clipper2Lib {
