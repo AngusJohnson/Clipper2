@@ -494,10 +494,10 @@ template <typename T>
 static void RDP(const Path<T> path, std::size_t begin,
 	std::size_t end, double epsSqrd, std::vector<int>& flags)
 {
-	Path<T>::size_type idx = 0;
+	typename Path<T>::size_type idx = 0;
 	double max_d = 0;
 	while (end > begin && path[begin] == path[end]) flags[end--] = 0;
-	for (Path<T>::size_type i = begin + 1; i < end; ++i)
+	for (typename Path<T>::size_type i = begin + 1; i < end; ++i)
 	{
 		//PerpendicDistFromLineSqrd - avoids expensive Sqrt()
 		double d = PerpendicDistFromLineSqrd(path[i], path[begin], path[end]);
