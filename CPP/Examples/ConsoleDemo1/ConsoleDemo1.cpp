@@ -3,7 +3,7 @@
 #include <chrono> 
 
 #include "../../Clipper2Lib/clipper.h"
-#include "../clipper.svg.utils.h"
+#include "../../Utils/clipper.svg.utils.h"
 #include "../../Utils/ClipFileLoad.h"
 #include "../../Utils/Timer.h"
 

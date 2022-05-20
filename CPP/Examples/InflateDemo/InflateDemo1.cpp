@@ -1,8 +1,8 @@
 
 #include <cstdlib>
 #include "../../Clipper2Lib/clipper.h"
-#include "../clipper.svg.h"
-#include "../clipper.svg.utils.h"
+#include "../../Utils/clipper.svg.h"
+#include "../../Utils/clipper.svg.utils.h"
 
 using namespace std;
 using namespace Clipper2Lib;

@@ -150,7 +150,7 @@
   <ItemGroup>
     <ClCompile Include="..\..\Clipper2Lib\clipper.engine.cpp" />
     <ClCompile Include="..\..\Clipper2Lib\clipper.offset.cpp" />
-    <ClCompile Include="..\clipper.svg.cpp" />
+    <ClCompile Include="..\..\Utils\clipper.svg.cpp" />
     <ClCompile Include="InflateDemo1.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">NotUsing</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">NotUsing</PrecompiledHeader>
@@ -162,8 +162,8 @@
     <ClInclude Include="..\..\Clipper2Lib\clipper.h" />
     <ClInclude Include="..\..\Clipper2Lib\clipper.minkowski.h" />
     <ClInclude Include="..\..\Clipper2Lib\clipper.offset.h" />
-    <ClInclude Include="..\clipper.svg.h" />
-    <ClInclude Include="..\clipper.svg.utils.h" />
+    <ClInclude Include="..\..\Utils\clipper.svg.h" />
+    <ClInclude Include="..\..\Utils\clipper.svg.utils.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
