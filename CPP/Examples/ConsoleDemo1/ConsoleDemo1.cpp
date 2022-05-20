@@ -10,25 +10,25 @@
 using namespace Clipper2Lib;
 
 const int display_width = 800, display_height = 600;
-enum class TestType { All, Simple, TestFile, Benchmark, MemoryLeak};
+enum class TestType { All, Simple, SavedTests, Benchmark, MemoryLeak};
 
-inline Path64 MakeRandomPoly(int width, int height, unsigned vertCnt);
+Path64 MakeRandomPoly(int width, int height, unsigned vertCnt);
 void DoSimpleTest(bool show_solution_coords = false);
-void DoTestsFromFile(const std::string& filename,
+void RunSavedTests(const std::string& filename,
   const int start_num, const int end_num,
-  bool svg_draw, bool show_solution_coords = false);
-void DoBenchmark(int edge_cnt_start, int edge_cnt_end, int increment = 1000);
+  bool svg_draw, bool show_solution_coords);
+void DoBenchmark(int edge_cnt_start, int edge_cnt_end, int increment);
 void DoMemoryLeakTest();
 
-int main(int argc, char* argv[])
+int main()
 {
   std::cout.imbue(std::locale(""));
-
-  //////////////////////////////////////////////////////////////////////////
-  TestType test_type = TestType::Simple;//Benchmark;//All;//MemoryLeak;//TestFile;//
-  //////////////////////////////////////////////////////////////////////////
-
   srand((unsigned)time(0));
+
+  //////////////////////////////////////////////////////////////////////////
+  //test_type options:  Simple; Benchmark; All; MemoryLeak; SavedTests;
+  TestType test_type = TestType::Simple;
+  //////////////////////////////////////////////////////////////////////////
 
   switch (test_type)
   {
@@ -37,17 +37,17 @@ int main(int argc, char* argv[])
     DoSimpleTest();
     if (test_type == TestType::Simple) break;
 
-  case TestType::TestFile:
-    DoTestsFromFile("../../../Tests/tests.txt", 1, 200, false);
+  case TestType::SavedTests:
+    RunSavedTests("../../../Tests/tests.txt", 1, 200, false, false);
     //or test just one of the samples in tests.txt 
     //DoTestsFromFile("../../Tests/tests.txt", 16, 16, true, true);
-    if (test_type == TestType::TestFile) break;
+    if (test_type == TestType::SavedTests) break;
 
   case TestType::Benchmark:
     std::cout << std::endl << "==========" << std::endl;
     std::cout << "Benchmarks" << std::endl;
     std::cout << "==========" << std::endl;
-    DoBenchmark(1000, 3000);
+    DoBenchmark(1000, 3000, 1000);
     if (test_type == TestType::Benchmark) break;
 
   case TestType::MemoryLeak:
@@ -74,26 +74,66 @@ inline Path64 MakeRandomPoly(int width, int height, unsigned vertCnt)
   return result;
 }
 
+inline Path64 MakeStar(const Point64& center, int radius, int points)
+{
+  if (!(points % 2)) --points;
+  if (points < 5) points = 5;
+  Path64 tmp = Ellipse<int64_t>(center, radius, radius, points);
+  Path64 result; 
+  result.reserve(points);
+  result.push_back(tmp[0]);
+  for (int i = points -1, j = i / 2; j;)
+  {
+    result.push_back(tmp[j--]);
+    result.push_back(tmp[i--]);
+  }
+  return result;
+}
+
 void DoSimpleTest(bool show_solution_coords)
 {
-  Paths64 subject, clip, ignored, solution;
+  Paths64 tmp, solution;
   FillRule fr = FillRule::NonZero;
 
-  //Minkowski
-  Path64 path = MakePath("0,0, 200,0, 200 100, 0,100, 0,200, 200,200 ");
-  Path64 pattern = Ellipse<int64_t>(Point64(), 20, 20);
-  solution = Paths64(MinkowskiSum(pattern, path, false));
-
+  //SVG IMAGE #1
+  //Use Minkowski to draw a stylised "C2"
+  
   SvgWriter svg;
-  SvgAddSolution(svg, solution, false);
-  SvgSaveToFile(svg, "solution1.svg", fr, display_width, display_height, 20);
-  system("solution1.svg");
-  solution.clear();
+  //create a circular shape to use as the 'paint brush' shape
+  //Path64 pattern = Ellipse<int64_t>(Point64(), 25, 25);
+  //or alternatively create a diagonal brush shape
+  Path64 pattern = MakePath("-13,20,  -11,26, 13,-20  11,-26");
 
-  //Intersection plus inflating
-  subject.push_back(MakePath("500, 250, 50, 395, 325, 10, 325, 490, 50, 105"));
-  clip.push_back(Ellipse<int64_t>(Point64(250,250), 150, 150));
-  //SaveToFile("simple.txt", subject, clip, ct, fr);
+  //design "C2" as the drawing path
+  //first design "C" 
+  Path64 path = Ellipse<int64_t>(Point64(240,225), 200, 200);
+  path.erase(path.begin(), path.begin() + 4);
+  path.erase(path.end() - 4, path.end());
+  //use MinkowskiSum to 'draw' the "C" using the pattern
+  solution = MinkowskiSum(pattern, path, false);
+  SvgAddSolution(svg, solution, false);
+  //and design "2"
+  path = Ellipse<int64_t>(Point64(240, 180), 75, 65);
+  std::reverse(path.begin(), path.end());
+  std::rotate(path.begin(), path.begin() + 6, path.end());
+  path.erase(path.begin(), path.begin() +9);
+  path.push_back(Point64(190, 249));
+  path.push_back(Point64(190, 325));
+  path.push_back(Point64(315, 325));
+  //use MinkowskiSum to 'draw' the "2" using the pattern
+  solution = MinkowskiSum(pattern, path, false);
+  //save and display
+  SvgAddSolution(svg, solution, false);
+  SvgSaveToFile(svg, "solution1.svg", fr, 450, 450, 10);
+  system("solution1.svg");
+
+  //SVG IMAGE #2
+  //intersect a 9 point star with a circle
+
+  Paths64 subject, clip;
+  subject.push_back(MakeStar(Point64(225, 225), 220, 9));
+  clip.push_back(Ellipse<int64_t>(Point64(225,225), 150, 150));
+  //Intersect both shapes and then 'inflate' result -10 (ie deflate)
   solution = Intersect(subject, clip, fr);
   solution = InflatePaths(solution, -10, JoinType::Round, EndType::Polygon);
 
@@ -101,18 +141,18 @@ void DoSimpleTest(bool show_solution_coords)
   SvgAddSubject(svg2, subject);
   SvgAddClip(svg2, clip);
   SvgAddSolution(svg2, solution, false);
-  SvgSaveToFile(svg2, "solution2.svg", fr, display_width, display_height, 20);
+  SvgSaveToFile(svg2, "solution2.svg", fr, 450, 450, 10);
   system("solution2.svg");
 }
 
-void DoTestsFromFile(const std::string& filename,
+void RunSavedTests(const std::string& filename,
   const int start_num, const int end_num, bool svg_draw, bool show_solution_coords)
 {
   std::ifstream ifs(filename);
   if (!ifs) return;
 
   svg_draw = svg_draw && (end_num - start_num <= 50);
-  std::cout << std::endl << "Processing stored tests (from " << start_num <<
+  std::cout << std::endl << "Running stored tests (from " << start_num <<
     " to " << end_num << ")" << std::endl << std::endl;
 
   for (int i = start_num; i <= end_num; ++i)

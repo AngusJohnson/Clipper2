@@ -32,6 +32,10 @@ Segments are considered **touching** when they are collinear and at least partia
 Polygons are touching when they contain touching edges.<br>
 **Clipping** initially referred to the process of removing or "cutting away" those parts of an image that were outside a rectangular *clipping* window. However, this process has been generalized to include *clipping* with non-rectangular windows, and also to include union, difference and XOR boolean operations. In this library, *images* are defined by one or more **subject** vector paths, where these paths may be open or closed. **Clip** paths, as opposed to subject paths, must be closed as the library doesn't support clipping with open paths.<br><br>
 
+### Coordinate Range:
+
+The base Clipper class performs all clipping operations using signed 64bit integer coordinates. This is necessary to ensure numerical robustnesss. While the derived **Clipper64** class accommodates these integer coordinates directly, the **ClipperD** class does not. Floating point coordinates accepted by ClipperD objects will be scaled and converted into integers internally (using the scale specified in the ClipperD constructor). However, coordinates still can't use quite the full 64bit integer range. The library assumes that coordinate addition and subtraction can be performed without requiring type conversion, so coordinates must be limited to 62 bits (plus the signed bit) -> +/-0x3FFFFFFFFFFFFFFF (~ 4.6 x 10^18). Nevertheless, this range should more that adequate to achieve any sensible degree of geometric precision.
+
 
 ### Clipped Solutions:
 
