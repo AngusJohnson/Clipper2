@@ -2364,7 +2364,6 @@ namespace Clipper2Lib {
 		int64_t y = horz.bot.y;
 		Vertex* vertex_max = nullptr;
 		Active* max_pair = nullptr;
-		bool isMax = false;
 
 		if (!horzIsOpen)
 		{
