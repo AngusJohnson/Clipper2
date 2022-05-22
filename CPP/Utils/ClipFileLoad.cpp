@@ -64,6 +64,7 @@ bool LoadTestNum(ifstream &source, int test_num, bool seek_from_start,
   int64_t& area, int64_t& count, ClipType &ct, FillRule &fr)
 {
   string line;
+  area = 0; count = 0;
   bool found = false;
   if (seek_from_start) source.seekg(0, ios_base::beg);
   stringstream::pos_type last_read_line_pos = source.tellg();

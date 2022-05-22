@@ -12,7 +12,11 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 		.editorconfig = .editorconfig
 	EndProjectSection
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ConsoleDemo", "Clipper2LibExamples\ConsoleDemo\ConsoleDemo.csproj", "{9D72A42C-E1B0-4E7A-B3B4-62C0AA02E5A7}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ConsoleDemo", "Clipper2LibExamples\ConsoleDemo\ConsoleDemo.csproj", "{9D72A42C-E1B0-4E7A-B3B4-62C0AA02E5A7}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Clipper2.SVG", "Utils\SVG\Clipper2.SVG.csproj", "{BC8E75BA-24E1-4D6A-AE54-0B1019C18EFE}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Clipper.FileIO.", "Utils\ClipFileIO\Clipper.FileIO..csproj", "{2EF8FB02-E3F6-46CE-954F-5E1B0AD64DB7}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -32,6 +36,14 @@ Global
 		{9D72A42C-E1B0-4E7A-B3B4-62C0AA02E5A7}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{9D72A42C-E1B0-4E7A-B3B4-62C0AA02E5A7}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{9D72A42C-E1B0-4E7A-B3B4-62C0AA02E5A7}.Release|Any CPU.Build.0 = Release|Any CPU
+		{BC8E75BA-24E1-4D6A-AE54-0B1019C18EFE}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{BC8E75BA-24E1-4D6A-AE54-0B1019C18EFE}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{BC8E75BA-24E1-4D6A-AE54-0B1019C18EFE}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{BC8E75BA-24E1-4D6A-AE54-0B1019C18EFE}.Release|Any CPU.Build.0 = Release|Any CPU
+		{2EF8FB02-E3F6-46CE-954F-5E1B0AD64DB7}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{2EF8FB02-E3F6-46CE-954F-5E1B0AD64DB7}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{2EF8FB02-E3F6-46CE-954F-5E1B0AD64DB7}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{2EF8FB02-E3F6-46CE-954F-5E1B0AD64DB7}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

@@ -61,7 +61,6 @@ namespace Clipper2Lib
     private readonly PathD _normals = new PathD();
     private double _delta, _tmpLimit, _stepsPerRad;
     private JoinType _joinType;
-    private double _minLenSqrd;
     public double ArcTolerance { get; set; }
     public bool MergeGroups { get; set; }
     public double MiterLimit { get; set; }
@@ -135,8 +134,7 @@ namespace Clipper2Lib
       if (MergeGroups && _pathGroups.Count > 0)
       {
         //clean up self-intersections ...
-        Clipper c = new Clipper();
-        c.PreserveCollinear = false;
+        Clipper c = new Clipper() { PreserveCollinear = false };
         c.AddSubject(solution);
         if (_pathGroups[0]._pathsReversed)
           c.Execute(ClipType.Union, FillRule.Negative, solution);
@@ -217,24 +215,18 @@ namespace Clipper2Lib
     {
       //even though angle may be negative this is a convex join
       PointD pt2 = new PointD(normal2.x * _delta, normal2.y * _delta);
-      int steps = (int) Math.Round(_stepsPerRad * Math.Abs(angle) + 0.5);
-
+      int steps = (int) Math.Round(_stepsPerRad * Math.Abs(angle) + 0.501);
       group._outPath.Add(new Point64(pt.X + pt2.x, pt.Y + pt2.y));
-      if (steps > 0)
+      double stepSin = Math.Sin(angle / steps);
+      double stepCos = Math.Cos(angle / steps);
+      for (int i = 0; i < steps; i++)
       {
-        double stepSin = Math.Sin(angle / steps);
-        double stepCos = Math.Cos(angle / steps);
-        for (int i = 0; i < steps; i++)
-        {
-          pt2 = new PointD(pt2.x * stepCos - stepSin * pt2.y,
-              pt2.x * stepSin + pt2.y * stepCos);
-          group._outPath.Add(new Point64(pt.X + pt2.x, pt.Y + pt2.y));
-        }
+        pt2 = new PointD(pt2.x * stepCos - stepSin * pt2.y,
+            pt2.x * stepSin + pt2.y * stepCos);
+        group._outPath.Add(new Point64(pt.X + pt2.x, pt.Y + pt2.y));
       }
-
-      pt2.x = normal1.x * _delta;
-      pt2.y = normal1.y * _delta;
-      group._outPath.Add(new Point64(pt.X + pt2.x, pt.Y + pt2.y));
+      group._outPath.Add(
+        new Point64(pt.X + normal1.x * _delta, pt.Y + normal1.y * _delta));
     }
 
     private void BuildNormals(Path64 path)
@@ -460,8 +452,7 @@ namespace Clipper2Lib
       if (!MergeGroups)
       {
         //clean up self-intersections ...
-        Clipper c = new Clipper();
-        c.PreserveCollinear = false;
+        Clipper c = new Clipper() { PreserveCollinear = false };
         c.AddSubject(group._outPaths);
         if (group._pathsReversed)
           c.Execute(ClipType.Union, FillRule.Negative, group._outPaths);

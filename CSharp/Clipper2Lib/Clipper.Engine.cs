@@ -462,44 +462,65 @@ namespace Clipper2Lib
         return ae.vertexTop!.next!.next!;
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static bool IsMaxima(Vertex vertex)
+    {
+      return ((vertex!.flags & VertexFlags.LocalMax) != VertexFlags.None);
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static bool IsMaxima(Active ae)
     {
-      return ((ae.vertexTop!.flags & VertexFlags.LocalMax) != VertexFlags.None);
+      return IsMaxima(ae.vertexTop!);
     }
 
     private Active? GetMaximaPair(Active ae)
     {
       Active? ae2;
-      if (IsHorizontal(ae))
+      ae2 = ae.nextInAEL;
+      while (ae2 != null)
       {
-        //we can't be sure whether the MaximaPair is on the left or right, so ...
-        ae2 = ae.prevInAEL;
-        while (ae2 != null && ae2.curX >= ae.top.X)
-        {
-          if (ae2.vertexTop == ae.vertexTop) return ae2; //Found!
-          ae2 = ae2.prevInAEL;
-        }
-
-        ae2 = ae.nextInAEL;
-        while (ae2 != null && (TopX(ae2, ae.top.Y) <= ae.top.X))
-        {
-          if (ae2.vertexTop == ae.vertexTop) return ae2; //Found!
-          ae2 = ae2.nextInAEL;
-        }
+        if (ae2.vertexTop == ae.vertexTop) return ae2; //Found!
+        ae2 = ae2.nextInAEL;
       }
-      else
-      {
-        ae2 = ae.nextInAEL;
-        while (ae2 != null)
-        {
-          if (ae2.vertexTop == ae.vertexTop) return ae2; //Found!
-          ae2 = ae2.nextInAEL;
-        }
-      }
-
       return null;
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static Vertex? GetCurrYMaximaVertex(Active ae)
+    {
+      Vertex? result = ae.vertexTop;
+#if REVERSE_ORIENTATION
+      if (ae.windDx > 0)
+#else
+      if (ae.windDx < 0)
+#endif
+        while (result!.next!.pt.Y == result.pt.Y) result = result.next;
+      else
+        while (result!.prev!.pt.Y == result.pt.Y) result = result.prev;
+      if (!IsMaxima(result)) result = null; //not a maxima
+      return result;
+    }
+
+    private static Active? GetHorzMaximaPair(Active horz, Vertex maxVert)
+    {
+      //we can't be sure whether the MaximaPair is on the left or right, so ...
+      Active? result = horz.prevInAEL;
+      while (result != null && result.curX >= maxVert.pt.X)
+      {
+        if (result.vertexTop == maxVert) return result;  //Found!
+        result = result.prevInAEL;
+      }
+      result = horz.nextInAEL;
+      while (result != null && TopX(result, horz.top.Y) <= maxVert.pt.X)
+      {
+        if (result.vertexTop == maxVert) return result;  //Found!
+        result = result.nextInAEL;
+      }
+      return null;
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static int PointCount(OutPt op)
     {
       OutPt p = op;
@@ -860,7 +881,7 @@ namespace Clipper2Lib
         if (!isOpen && prev_v.pt == v0!.pt) prev_v = prev_v.prev;
         prev_v.next = v0;
         v0!.prev = prev_v;
-        if (!isOpen && prev_v.next == prev_v.prev) continue;
+        if (!isOpen && prev_v.next == prev_v) continue;
 
         //OK, we have a valid path
         bool going_up, going_up0;
@@ -895,7 +916,7 @@ namespace Clipper2Lib
         {
           if (curr_v!.pt.Y > prev_v.pt.Y && going_up)
           {
-            prev_v.flags = (prev_v.flags | VertexFlags.LocalMax);
+            prev_v.flags |= VertexFlags.LocalMax;
             going_up = false;
           }
           else if (curr_v.pt.Y < prev_v.pt.Y && !going_up)
@@ -909,16 +930,16 @@ namespace Clipper2Lib
 
         if (isOpen)
         {
-          prev_v.flags = prev_v.flags | VertexFlags.OpenEnd;
+          prev_v.flags |= VertexFlags.OpenEnd;
           if (going_up)
-            prev_v.flags = prev_v.flags | VertexFlags.LocalMax;
+            prev_v.flags |= VertexFlags.LocalMax;
           else
             AddLocMin(prev_v, polytype, isOpen);
         }
         else if (going_up != going_up0)
         {
           if (going_up0) AddLocMin(prev_v, polytype, false);
-          else prev_v.flags = prev_v.flags | VertexFlags.LocalMax;
+          else prev_v.flags |= VertexFlags.LocalMax;
         }
       }
     }
@@ -940,8 +961,7 @@ namespace Clipper2Lib
 
     protected void AddPath(Path64 path, PathType polytype, bool isOpen = false)
     {
-      Paths64 tmp = new Paths64(1);
-      tmp.Add(path);
+      Paths64 tmp = new Paths64(1) { path };
       AddPaths(tmp, polytype, isOpen);
     }
 
@@ -2081,22 +2101,31 @@ namespace Clipper2Lib
       }
     }
 
+    private bool HorzIsSpike(Active horz)
+    {
+      Point64 nextPt = NextVertex(horz).pt;
+      return (horz.bot.X < horz.top.X) != (horz.top.X < nextPt.X);
+    }
+
     private bool TrimHorz(Active horzEdge, bool preserveCollinear)
     {
       bool result = false;
       Point64 pt = NextVertex(horzEdge).pt;
-      //trim 180 deg. spikes in closed paths
-      while ((pt.Y == horzEdge.top.Y) && 
-        (!preserveCollinear ||
-        ((pt.X < horzEdge.top.X) == (horzEdge.bot.X < horzEdge.top.X))))
+
+      while (pt.Y == horzEdge.top.Y)
       {
+        //always trim 180 deg. spikes (in closed paths)
+        //but otherwise break if preserveCollinear = true
+        if (preserveCollinear &&
+        (pt.X < horzEdge.top.X) != (horzEdge.bot.X < horzEdge.top.X))
+          break;
+
         horzEdge.vertexTop = NextVertex(horzEdge);
         horzEdge.top = pt;
         result = true;
         if (IsMaxima(horzEdge)) break;
         pt = NextVertex(horzEdge).pt;
       }
-
       if (result) SetDx(horzEdge); // +/-infinity
       return result;
     }
@@ -2121,16 +2150,21 @@ namespace Clipper2Lib
       bool horzIsOpen = IsOpen(horz);
       long Y = horz.bot.Y;
 
+      Vertex? vertex_max = null;
       Active? maxPair = null;
-      bool isMax = IsMaxima(horz);
 
-      //remove 180 deg.spikes and also with closed paths and not PreserveCollinear
-      //simplify consecutive horizontals into a 'single' edge ...
-      if (!horzIsOpen && !isMax && TrimHorz(horz, PreserveCollinear))
-        isMax = IsMaxima(horz);
-
-      if (isMax && !IsOpenEnd(horz))
-        maxPair = GetMaximaPair(horz);
+      if (!horzIsOpen)
+      {
+        vertex_max = GetCurrYMaximaVertex(horz);
+        if (vertex_max != null)
+        {
+          maxPair = GetHorzMaximaPair(horz, vertex_max);
+          //remove 180 deg.spikes and also simplify
+          //consecutive horizontals when PreserveCollinear = true
+          if (vertex_max != horz.vertexTop)
+            TrimHorz(horz, PreserveCollinear);
+        }
+      }
 
       bool isLeftToRight =
         ResetHorzDirection(horz, maxPair, out long leftX, out long rightX);
@@ -2141,6 +2175,13 @@ namespace Clipper2Lib
       OutPt? op;
       for (; ; )
       {
+        if (horzIsOpen && IsMaxima(horz) && !IsOpenEnd(horz))
+        {
+          vertex_max = GetCurrYMaximaVertex(horz);
+          if (vertex_max != null)
+            maxPair = GetHorzMaximaPair(horz, vertex_max);
+        }
+
         //loops through consec. horizontal edges (if open)
         Active? ae;
         if (isLeftToRight) ae = horz.nextInAEL;
@@ -2168,7 +2209,7 @@ namespace Clipper2Lib
 
           //if horzEdge is a maxima, keep going until we reach
           //its maxima pair, otherwise check for break conditions
-          if (!isMax || IsOpenEnd(horz))
+          if (vertex_max != horz.vertexTop || IsOpenEnd(horz))
           {
             //otherwise stop when 'ae' is beyond the end of the horizontal line
             if ((isLeftToRight && ae.curX > rightX) ||
@@ -2227,17 +2268,27 @@ namespace Clipper2Lib
         } //we've reached the end of this horizontal
 
         //check if we've finished looping through consecutive horizontals
-        if (isMax || NextVertex(horz).pt.Y != horz.top.Y) break;
+        if (NextVertex(horz).pt.Y != horz.top.Y) break;
+
+        if (horzIsOpen && IsOpenEnd(horz)) //ie open at top
+        {
+          if (IsHotEdge(horz)) AddOutPt(horz, horz.top);
+          DeleteFromAEL(horz);
+          return;
+        }
+        else if (NextVertex(horz).pt.Y != horz.top.Y)
+          break;
 
         //there must be a following (consecutive) horizontal
         if (IsHotEdge(horz))
           AddOutPt(horz, horz.top);
         UpdateEdgeIntoAEL(horz);
-        isMax = IsMaxima(horz);
+
+        if (PreserveCollinear && HorzIsSpike(horz))
+          TrimHorz(horz, true);
 
         isLeftToRight = ResetHorzDirection(horz, maxPair, out leftX, out rightX);
 
-        if (isMax) maxPair = GetMaximaPair(horz);
       } // end for loop and end of (possible consecutive) horizontals
 
       if (IsHotEdge(horz))
@@ -2249,7 +2300,8 @@ namespace Clipper2Lib
       else
         op = null;
 
-      if (!isMax)
+      if ((horzIsOpen && !IsOpenEnd(horz)) ||
+        (!horzIsOpen && vertex_max != horz.vertexTop))
       {
         UpdateEdgeIntoAEL(horz); //this is the end of an intermediate horiz.
         if (IsOpen(horz)) return;
@@ -2265,11 +2317,11 @@ namespace Clipper2Lib
           AddJoin(op2, op!);
         }
       }
-      else if (maxPair == null) DeleteFromAEL(horz); //i.e. open at top
-      else if (IsHotEdge(horz)) AddLocalMaxPoly(horz, maxPair, horz.top);
+      else if (IsHotEdge(horz)) 
+        AddLocalMaxPoly(horz, maxPair!, horz.top);
       else
       {
-        DeleteFromAEL(maxPair);
+        DeleteFromAEL(maxPair!);
         DeleteFromAEL(horz);
       }
     }
@@ -3259,7 +3311,7 @@ namespace Clipper2Lib
       try
       {
         int cnt = PointCount(op);
-        if (cnt < 2) return false;
+        if (cnt < 3 && (!isOpen || cnt < 2)) return false;
         path.Clear();
 #if REVERSE_ORIENTATION
         op = op.next;

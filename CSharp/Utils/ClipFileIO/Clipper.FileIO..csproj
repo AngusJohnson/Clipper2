@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netcoreapp3.1</TargetFramework>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\Clipper2Lib\Clipper2Lib.csproj" />
+    <ProjectReference Include="..\SVG\Clipper2.SVG.csproj" />
+  </ItemGroup>
+
+</Project>

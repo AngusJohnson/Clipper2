@@ -1,7 +1,7 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
 * Version   :  10.0 (beta) - aka Clipper2                                      *
-* Date      :  18 May 2022                                                     *
+* Date      :  22 May 2022                                                     *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  This is the main polygon clipping module                        *
@@ -55,17 +55,17 @@ namespace Clipper2Lib {
 
 	struct Vertex {
 		Point64 pt;
-		Vertex* next = NULL;
-		Vertex* prev = NULL;
+		Vertex* next = nullptr;
+		Vertex* prev = nullptr;
 		VertexFlags flags = VertexFlags::None;
 	};
 
 	struct OutPt {
 		Point64 pt;
-		OutPt*	next = NULL;
-		OutPt*	prev = NULL;
+		OutPt*	next = nullptr;
+		OutPt*	prev = nullptr;
 		OutRec* outrec;
-		Joiner* joiner = NULL;
+		Joiner* joiner = nullptr;
 
 		OutPt(const Point64& pt_, OutRec* outrec_): pt(pt_), outrec(outrec_) {
 			next = this;
@@ -86,12 +86,12 @@ namespace Clipper2Lib {
 	//OutRec: contains a path in the clipping solution. Edges in the AEL will
 	//have OutRec pointers assigned when they form part of the clipping solution.
 	struct OutRec {
-		size_t idx;
-		OutRec* owner;
-		Active* front_edge;
-		Active* back_edge;
-		OutPt* pts;
-		PolyPath64* polypath = NULL;
+		size_t idx = 0;
+		OutRec* owner = nullptr;
+		Active* front_edge = nullptr;
+		Active* back_edge = nullptr;
+		OutPt* pts = nullptr;
+		PolyPath64* polypath = nullptr;
 		OutRecState state = OutRecState::Undefined;
 	};
 
@@ -103,21 +103,21 @@ namespace Clipper2Lib {
 		int wind_dx = 1;			//1 or -1 depending on winding diRect64on
 		int wind_cnt = 0;
 		int wind_cnt2 = 0;		//winding count of the opposite polytype
-		OutRec* outrec = NULL;
+		OutRec* outrec = nullptr;
 		//AEL: 'active edge list' (Vatti's AET - active edge table)
 		//     a linked list of all edges (from left to right) that are present
 		//     (or 'active') within the current scanbeam (a horizontal 'beam' that
 		//     sweeps from bottom to top over the paths in the clipping operation).
-		Active* prev_in_ael = NULL;
-		Active* next_in_ael = NULL;
+		Active* prev_in_ael = nullptr;
+		Active* next_in_ael = nullptr;
 		//SEL: 'sorted edge list' (Vatti's ST - sorted table)
 		//     linked list used when sorting edges into their new positions at the
 		//     top of scanbeams, but also (re)used to process horizontals.
-		Active* prev_in_sel = NULL;
-		Active* next_in_sel = NULL;
-		Active* jump = NULL;
-		Vertex* vertex_top = NULL;
-		LocalMinima* local_min = NULL;  //the bottom of an edge 'bound' (also Vatti)
+		Active* prev_in_sel = nullptr;
+		Active* next_in_sel = nullptr;
+		Active* jump = nullptr;
+		Vertex* vertex_top = nullptr;
+		LocalMinima* local_min = nullptr;  //the bottom of an edge 'bound' (also Vatti)
 		bool is_left_bound = false;
 	};
 
@@ -144,9 +144,9 @@ namespace Clipper2Lib {
 		bool error_found_ = false;
 		bool has_open_paths_ = false;
 		bool minima_list_sorted_ = false;
-		Active *actives_ = NULL;
-		Active *sel_ = NULL;
-		Joiner *horz_joiners_ = NULL;
+		Active *actives_ = nullptr;
+		Active *sel_ = nullptr;
+		Joiner *horz_joiners_ = nullptr;
 		std::vector<LocalMinima*> minima_list_;
 		std::vector<LocalMinima*>::iterator loc_min_iter_;
 		std::vector<Vertex*> vertex_lists_;
@@ -235,7 +235,7 @@ namespace Clipper2Lib {
 		bool PreserveCollinear = true;
 		void Clear();
 #ifdef USINGZ
-		ClipperBase() { zfill_func_ = NULL; };
+		ClipperBase() { zfill_func_ = nullptr; };
 		void ZFillFunction(ZFillCallback zFillFunc);
 #else
 		ClipperBase() {};
@@ -265,7 +265,7 @@ namespace Clipper2Lib {
 		explicit PolyPath(int precision = 0) //NB only for root node
 		{  
 			scale_ = std::pow(10, precision);
-			parent_ = NULL;
+			parent_ = nullptr;
 		}
 
 		virtual ~PolyPath() { Clear(); };

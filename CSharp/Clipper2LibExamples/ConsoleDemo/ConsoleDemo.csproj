@@ -18,13 +18,20 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <None Remove="*.svg" />
+    <None Remove="*.txt" />
+    <None Remove="*.ico" />
+  </ItemGroup>
+
+  <ItemGroup>
     <EmbeddedResource Include="clip.bin" />
     <EmbeddedResource Include="subj.bin" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\..\Clipper2Lib\Clipper2Lib.csproj" />
-    <ProjectReference Include="..\Clipper2Svg\Clipper2Svg.csproj" />
+    <ProjectReference Include="..\..\Utils\ClipFileIO\Clipper.FileIO..csproj" />
+    <ProjectReference Include="..\..\Utils\SVG\Clipper2.SVG.csproj" />
   </ItemGroup>
 
   <ItemGroup>

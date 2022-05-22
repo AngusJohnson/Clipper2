@@ -224,7 +224,7 @@ void PathsToStream(Paths64& paths, std::ostream& stream)
 }
 
 bool SaveTest(const std::string& filename, bool append,
-  Clipper2Lib::Paths64& subj, Clipper2Lib::Paths64& subj_open, Clipper2Lib::Paths64& clip,
+  Clipper2Lib::Paths64* subj, Clipper2Lib::Paths64* subj_open, Clipper2Lib::Paths64* clip,
   int64_t area, int64_t count, Clipper2Lib::ClipType ct, Clipper2Lib::FillRule fr)
 {
   string line;
@@ -280,12 +280,20 @@ bool SaveTest(const std::string& filename, bool append,
   source << "FILLRULE: " << fillrule_string << endl;
   source << "SOL_AREA: " << area << endl;
   source << "SOL_COUNT: " << count << endl;
-  source << "SUBJECTS" << endl;
-  PathsToStream(subj, source);
-  if (clip.size())
+  if (subj)
+  {
+    source << "SUBJECTS" << endl;
+    PathsToStream(*subj, source);
+  }
+  if (subj_open)
+  {
+    source << "SUBJECTS_OPEN" << endl;
+    PathsToStream(*subj_open, source);
+  }
+  if (clip && clip->size())
   {
     source << "CLIPS" << endl;
-    PathsToStream(clip, source);
+    PathsToStream(*clip, source);
   }
   source << endl;
   source.close();

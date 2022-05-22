@@ -23,7 +23,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\Clipper2Lib\Clipper2Lib.csproj" />
-    <ProjectReference Include="..\Clipper2Svg\Clipper2Svg.csproj" />
+    <ProjectReference Include="..\..\Utils\SVG\Clipper2.SVG.csproj" />
   </ItemGroup>
 
   <ItemGroup>

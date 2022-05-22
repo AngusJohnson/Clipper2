@@ -5,6 +5,7 @@
 #include "../../Clipper2Lib/clipper.h"
 #include "../../Utils/clipper.svg.utils.h"
 #include "../../Utils/ClipFileLoad.h"
+#include "../../Utils/ClipFileSave.h"
 #include "../../Utils/Timer.h"
 
 using namespace Clipper2Lib;
@@ -38,7 +39,7 @@ int main()
     if (test_type == TestType::Simple) break;
 
   case TestType::SavedTests:
-    RunSavedTests("../../../Tests/tests.txt", 1, 200, false, false);
+    RunSavedTests("../../../Tests/tests.txt", 1, 0xFFFF, false, false);
     //or test just one of the samples in tests.txt 
     //DoTestsFromFile("../../Tests/tests.txt", 16, 16, true, true);
     if (test_type == TestType::SavedTests) break;
@@ -58,8 +59,9 @@ int main()
 
   std::cout << std::endl;
 #ifdef _DEBUG
-  //std::cout << "Press any key to continue" << std::endl;
-  //const char c = _getch();
+  std::string s;
+  std::cout << "Press Enter to continue" << std::endl;
+  std::getline(std::cin, s);
 #endif
   return 0;
 }
@@ -132,7 +134,9 @@ void DoSimpleTest(bool show_solution_coords)
 
   Paths64 subject, clip;
   subject.push_back(MakeStar(Point64(225, 225), 220, 9));
-  clip.push_back(Ellipse<int64_t>(Point64(225,225), 150, 150));
+  clip.push_back(Ellipse<int64_t>(Point64(225,225), 150, 150));  
+  //SaveTest("debug.txt", false, &subject, NULL, &clip, 0, 0, ClipType::Intersection, fr);
+  
   //Intersect both shapes and then 'inflate' result -10 (ie deflate)
   solution = Intersect(subject, clip, fr);
   solution = InflatePaths(solution, -10, JoinType::Round, EndType::Polygon);
@@ -175,11 +179,11 @@ void RunSavedTests(const std::string& filename,
       int64_t count2 = solution.size();
       int64_t count_diff = abs(count2 - count);
       if (count && count_diff > 2 && count_diff/ static_cast<double>(count) > 0.02)
-        std::cout << "  Test " << i << " counts differ: Saved val= " <<
+        std::cout << "  Test " << i << " path counts differ: Saved val= " <<
         count << "; New val=" << count2 << std::endl;
       int64_t area_diff = std::abs(area2 - area);
       if (area && (area_diff > 2) && (area_diff/static_cast<double>(area)) > 0.02)
-        std::cout << "  Test " << i << " areas differ: Saved val= " <<
+        std::cout << "  Test " << i << " path areas differ: Saved val= " <<
         area << "; New val=" << area2 << std::endl;
       if (svg_draw)
       {
