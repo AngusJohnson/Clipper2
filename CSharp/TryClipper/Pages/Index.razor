@@ -1,14 +1,32 @@
 ﻿@page "/{TestId:int}"
 
-<PageTitle>Index</PageTitle>
+<PageTitle>Clipper2 Test Explorer</PageTitle>
 
-<MudText Typo="Typo.h3" GutterBottom="true">Clipper2 Test Explorer</MudText>
-<MudSwitch T="bool" Label="Display Solution Coords" CheckedChanged="OnCheckedChanged" Checked="@displaySolutionCoords" />
-<MudText>Caption: @caption</MudText>
-<MudText>Area: @area2</MudText>
-<MudText>Fill Rule: @fillrule</MudText>
-<MudText>Clip Type: @clipType</MudText>
-<MudText>Elapsed Milliseconds: @elapsedMilliseconds</MudText>
+<MudText Typo="Typo.h5" GutterBottom="true">Clipper2 Test Explorer</MudText>
+<MudText Typo="Typo.h6">Test @TestId</MudText>
+
+<MudToolBar>
+    <MudText Class="ma-2">Caption: @caption</MudText>
+    <MudSwitch Class="ma-2" T="bool" Label="Display Solution Coords" CheckedChanged="OnCheckedChanged" Checked="@displaySolutionCoords" />
+    <MudText Typo="Typo.subtitle2">Elapsed: @elapsedMilliseconds ms</MudText>
+
+    <MudSpacer />
+
+    <MudSelect T="FillRule" Value="fillrule" ValueChanged="OnFillRuleChanged" Label="Fill Rule" Class="mx-2">
+        <MudSelectItem Value="FillRule.EvenOdd" />
+        <MudSelectItem Value="FillRule.Negative" />
+        <MudSelectItem Value="FillRule.NonZero" />
+        <MudSelectItem Value="FillRule.Positive" />
+    </MudSelect>
+
+    <MudSelect T="ClipType" Value="clipType" ValueChanged="OnClipTypeChanged" Label="Clip Type" Class="mx-2">
+        <MudSelectItem Value="ClipType.None" />
+        <MudSelectItem Value="ClipType.Union" />
+        <MudSelectItem Value="ClipType.Intersection" />
+        <MudSelectItem Value="ClipType.Difference" />
+        <MudSelectItem Value="ClipType.Xor" />
+    </MudSelect>
+</MudToolBar>
 
 @if (clipperA is not null)
 {
@@ -30,8 +48,8 @@
     Paths64 sol_open = new();
     long area2;
     string caption = "";
-    ClipType clipType = ClipType.Intersection;
-    FillRule fillrule = FillRule.EvenOdd;
+    ClipType clipType;
+    FillRule fillrule;
     bool displaySolutionCoords = false;
 
     const int margin = 20;
@@ -44,17 +62,24 @@
     protected override void OnParametersSet()
     {
         LoadData();
+
+        Process();
     }
 
     void LoadData()
     {
-        if (!ClipperFileIO.LoadTestNum(@"..\..\Tests\Tests.txt", TestId, subj, subj_open, clip, out clipType, out fillrule, out area2, out caption)) return;
-        Clipper c3 = new Clipper();
+        if (!ClipperFileIO.LoadTestNum(@"..\..\Tests\Tests.txt", TestId, subj, subj_open, clip, out clipType, out fillrule, out area2, out caption))
+            return;
+    }
+
+    void Process()
+    {
+        var sw = System.Diagnostics.Stopwatch.StartNew();
+
+        Clipper c3 = new();
         c3.AddPaths(subj, PathType.Subject);
         c3.AddPaths(subj_open, PathType.Subject, true);
         c3.AddPaths(clip, PathType.Clip);
-
-        var sw = System.Diagnostics.Stopwatch.StartNew();
 
         c3.Execute(clipType, fillrule, sol, sol_open);
 
@@ -83,11 +108,29 @@
         return svg.SaveToString(displayWidth, displayHeight, margin);
     }
 
-    void OnCheckedChanged(bool display)
+    void OnCheckedChanged(bool newDisplay)
     {
-        displaySolutionCoords = display;
+        displaySolutionCoords = newDisplay;
 
-        LoadData();
+        Process();
+
+        StateHasChanged();
+    }
+
+    void OnFillRuleChanged(FillRule newFillRule)
+    {
+        fillrule = newFillRule;
+
+        Process();
+
+        StateHasChanged();
+    }
+
+    void OnClipTypeChanged(ClipType newClipType)
+    {
+        clipType = newClipType;
+
+        Process();
 
         StateHasChanged();
     }
