@@ -76,6 +76,10 @@ TEST(Clipper2Tests, TestFromTextFile) {
                 EXPECT_LE(count_diff, 1);
                 EXPECT_EQ(area, area2);
             }
+            else if (test_number == 202) {
+                EXPECT_EQ(count, count2);
+                EXPECT_EQ(area, area2);
+            }
             else {
                 EXPECT_LE(count_diff, 8);
                 EXPECT_LE(relative_count_diff, 0.1);
