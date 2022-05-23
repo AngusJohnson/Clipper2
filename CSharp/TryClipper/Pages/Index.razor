@@ -38,7 +38,7 @@
 
     protected override void OnParametersSet()
     {
-        if (!ClipperFileIO.LoadTestNum(@"..\..\..\Tests\Tests.txt", TestId, subj, subj_open, clip, out clipType, out fillrule, out area2, out caption)) return;
+        if (!ClipperFileIO.LoadTestNum(@"..\..\Tests\Tests.txt", TestId, subj, subj_open, clip, out clipType, out fillrule, out area2, out caption)) return;
         Clipper c3 = new Clipper();
         c3.AddPaths(subj, PathType.Subject);
         c3.AddPaths(subj_open, PathType.Subject, true);
