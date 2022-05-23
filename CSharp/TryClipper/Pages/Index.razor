@@ -2,9 +2,13 @@
 
 <PageTitle>Index</PageTitle>
 
-<MudText Typo="Typo.h3" GutterBottom="true">Hello, world!</MudText>
-<MudText Class="mb-8">Welcome to your new app, powered by MudBlazor!</MudText>
-<MudAlert Severity="Severity.Normal">You can find documentation and examples on our website here: <MudLink Href="https://mudblazor.com" Typo="Typo.body2" Color="Color.Inherit"><b>www.mudblazor.com</b></MudLink></MudAlert>
+<MudText Typo="Typo.h3" GutterBottom="true">Clipper2 Test Explorer</MudText>
+<MudSwitch T="bool" Label="Display Solution Coords" CheckedChanged="OnCheckedChanged" Checked="@displaySolutionCoords" />
+<div>Caption: @caption</div>
+<div>Area: @area2</div>
+<div>Fill Rule: @fillrule</div>
+<div>Clip Type: @clipType</div>
+<div>Elapsed Milliseconds: @elapsedMilliseconds</div>
 
 @if (clipperA is not null)
 {
@@ -29,21 +33,34 @@
     Random rand = new Random();
     ClipType clipType = ClipType.Intersection;
     FillRule fillrule = FillRule.EvenOdd;
-    bool displaySolutionCoords = false;//true;//
+    bool displaySolutionCoords = false;
 
     const int margin = 20;
     const int displayWidth = 800;
     const int displayHeight = 600;
     string clipperA, clipperB;
 
+    long elapsedMilliseconds;
+
     protected override void OnParametersSet()
+    {
+        LoadData();
+    }
+
+    void LoadData()
     {
         if (!ClipperFileIO.LoadTestNum(@"..\..\Tests\Tests.txt", TestId, subj, subj_open, clip, out clipType, out fillrule, out area2, out caption)) return;
         Clipper c3 = new Clipper();
         c3.AddPaths(subj, PathType.Subject);
         c3.AddPaths(subj_open, PathType.Subject, true);
         c3.AddPaths(clip, PathType.Clip);
+
+        var sw = System.Diagnostics.Stopwatch.StartNew();
+
         c3.Execute(clipType, fillrule, sol, sol_open);
+
+        sw.Stop();
+        elapsedMilliseconds = sw.ElapsedMilliseconds;
 
         clipperA = CreateDisplaySvg(caption, subj, subj_open, clip, null, null, fillrule, displaySolutionCoords);
         clipperB = CreateDisplaySvg(caption, subj, subj_open, clip, sol, sol_open, fillrule, displaySolutionCoords);
@@ -63,10 +80,19 @@
             svg.AddPaths(clip, false, 0x11996600, 0x55993300, 0.8);
         if (sol != null)
             svg.AddPaths(sol, false, 0x4000FF00, 0x80000000, 1.2,
-              displaySolutionCoords && sol.Count < 100);
+            displaySolutionCoords && sol.Count < 100);
         if (sol_open != null)
             svg.AddPaths(sol_open, true, 0, 0xFF00AAAA, 3.0);
         return svg.SaveToFile1(displayWidth, displayHeight, margin);
         //OpenFile(afilename);
+    }
+
+    void OnCheckedChanged(bool display)
+    {
+        displaySolutionCoords = display;
+
+        LoadData();
+
+        StateHasChanged();
     }
 }
