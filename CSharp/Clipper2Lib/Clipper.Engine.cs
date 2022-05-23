@@ -2193,6 +2193,11 @@ namespace Clipper2Lib
           {
             if (IsHotEdge(horz))
             {
+              while (horz.vertexTop != ae.vertexTop)
+              {
+                AddOutPt(horz, horz.top);
+                UpdateEdgeIntoAEL(horz);
+              }
               if (isLeftToRight)
                 op = AddLocalMaxPoly(horz, ae, horz.top);
               else

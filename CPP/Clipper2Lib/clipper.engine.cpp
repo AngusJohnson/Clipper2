@@ -1,7 +1,7 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
 * Version   :  10.0 (beta) - aka Clipper2                                      *
-* Date      :  22 May 2022                                                     *
+* Date      :  24 May 2022                                                     *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  This is the main polygon clipping module                        *
@@ -2407,6 +2407,11 @@ namespace Clipper2Lib {
 				{
 					if (IsHotEdge(horz))
 					{
+						while (horz.vertex_top != e->vertex_top)
+						{
+							AddOutPt(horz, horz.top);
+							UpdateEdgeIntoAEL(&horz);
+						}
 						if (is_left_to_right)
 							op = AddLocalMaxPoly(horz, *e, horz.top);
 						else

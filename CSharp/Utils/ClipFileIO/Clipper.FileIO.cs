@@ -124,6 +124,8 @@ namespace Clipper2Lib
           s.IndexOf("FILLRULE: ") == 0)
         {
           if (s.IndexOf("EVENODD") > 0) fillRule = FillRule.EvenOdd;
+          else if (s.IndexOf("POSITIVE") > 0) fillRule = FillRule.Positive;
+          else if (s.IndexOf("NEGATIVE") > 0) fillRule = FillRule.Negative;
           else fillRule = FillRule.NonZero;
           continue;
         }

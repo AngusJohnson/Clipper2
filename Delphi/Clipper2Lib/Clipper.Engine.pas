@@ -3,7 +3,7 @@ unit Clipper.Engine;
 (*******************************************************************************
 * Author    :  Angus Johnson                                                   *
 * Version   :  10.0 (beta) - aka Clipper2                                      *
-* Date      :  13 May 2022                                                     *
+* Date      :  24 May 2022                                                     *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  This is the main polygon clipping module                        *
@@ -3550,8 +3550,13 @@ begin
     begin
       if (e = maxPair) then
       begin
-        if IsHotEdge(horzEdge)  then
+        if IsHotEdge(horzEdge) then
         begin
+          while horzEdge.VertTop <> e.VertTop do
+          begin
+            AddOutPt(horzEdge, horzEdge.Top);
+            UpdateEdgeIntoAEL(horzEdge);
+          end;
           if isLeftToRight then
             op := AddLocalMaxPoly(horzEdge, e, horzEdge.Top) else
             op := AddLocalMaxPoly(e, horzEdge, horzEdge.Top);
