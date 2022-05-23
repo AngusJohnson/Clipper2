@@ -12,6 +12,7 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
+using System.Text;
 
 namespace Clipper2Lib
 {
@@ -106,6 +107,7 @@ namespace Clipper2Lib
       "\"http://www.w3.org/TR/2001/REC-SVG-20010904/DTD/svg10.dtd\">\n\n" +
       "<svg width=\"{0}px\" height=\"{1}px\" viewBox=\"0 0 {0} {1}\"" +
       " version=\"1.1\" xmlns=\"http://www.w3.org/2000/svg\">\n\n";
+    private const string svg_header1 = "<svg width=\"{0}px\" height=\"{1}px\" viewBox=\"0 0 {0} {1}\" >\n\n";
     private const string svg_path_format = "\"\n style=\"fill:{0};" +
         " fill-opacity:{1:f2}; fill-rule:{2}; stroke:{3};" +
         " stroke-opacity:{4:f2}; stroke-width:{5:f2};\"/>\n\n";
@@ -195,7 +197,7 @@ namespace Clipper2Lib
       double scale = 1.0;
       if (maxWidth > 0 && maxHeight > 0)
         scale = Math.Min(
-           (maxWidth - margin * 2) / (double)bounds.Width,
+           (maxWidth - margin * 2) / (double) bounds.Width,
             (maxHeight - margin * 2) / (double) bounds.Height);
 
       long offsetX = margin - (long) (bounds.left * scale);
@@ -278,6 +280,101 @@ namespace Clipper2Lib
       writer.Close();
       return true;
     }
+
+    public string SaveToFile1(int maxWidth = 0, int maxHeight = 0, int margin = -1)
+    {
+      if (margin < 0) margin = 20;
+      RectD bounds = GetBounds();
+      if (bounds.IsEmpty()) return string.Empty;
+
+      double scale = 1.0;
+      if (maxWidth > 0 && maxHeight > 0)
+        scale = Math.Min(
+           (maxWidth - margin * 2) / (double) bounds.Width,
+            (maxHeight - margin * 2) / (double) bounds.Height);
+
+      long offsetX = margin - (long) (bounds.left * scale);
+      long offsetY = margin - (long) (bounds.top * scale);
+
+      using var ms = new MemoryStream();
+      using var writer = new StreamWriter(ms);
+      if (writer == null) return string.Empty;
+
+      if (maxWidth <= 0 || maxHeight <= 0)
+        writer.Write(svg_header1, (bounds.right - bounds.left) + margin * 2,
+          (bounds.bottom - bounds.top) + margin * 2);
+      else
+        writer.Write(svg_header1, maxWidth, maxHeight);
+
+      foreach (PolyInfo pi in PolyInfoList)
+      {
+        writer.Write(" <path d=\"");
+        foreach (PathD path in pi.paths)
+        {
+          if (path.Count < 2) continue;
+          if (!pi.IsOpen && path.Count < 3) continue;
+          writer.Write(string.Format(NumberFormatInfo.InvariantInfo, " M {0:f2} {1:f2}",
+              (path[0].x * scale + offsetX),
+              (path[0].y * scale + offsetY)));
+          for (int j = 1; j < path.Count; j++)
+          {
+            writer.Write(string.Format(NumberFormatInfo.InvariantInfo, " L {0:f2} {1:f2}",
+            (path[j].x * scale + offsetX),
+            (path[j].y * scale + offsetY)));
+          }
+          if (!pi.IsOpen) writer.Write(" z");
+        }
+
+        if (!pi.IsOpen)
+          writer.Write(string.Format(NumberFormatInfo.InvariantInfo, svg_path_format,
+              ColorToHtml(pi.BrushClr), GetAlpha(pi.BrushClr),
+              (FillRule == FillRule.EvenOdd ? "evenodd" : "nonzero"),
+              ColorToHtml(pi.PenClr), GetAlpha(pi.PenClr), pi.PenWidth));
+        else
+          writer.Write(string.Format(NumberFormatInfo.InvariantInfo, svg_path_format2,
+              ColorToHtml(pi.PenClr), GetAlpha(pi.PenClr), pi.PenWidth));
+
+        if (pi.ShowCoords)
+        {
+          writer.Write(string.Format("<g font-family=\"{0}\" font-size=\"{1}\" fill=\"{2}\">\n",
+            coordStyle.FontName, coordStyle.FontSize, ColorToHtml(coordStyle.FontColor)));
+          foreach (PathD path in pi.paths)
+          {
+            foreach (PointD pt in path)
+            {
+#if USINGZ
+              writer.Write(string.Format(
+                  "<text x=\"{0}\" y=\"{1}\">{2},{3},{4}</text>\n",
+                  (int)(pt.x * scale + offsetX), (int)(pt.y * scale + offsetY), pt.x, pt.y, pt.z));
+#else
+              writer.Write(string.Format(
+                  "<text x=\"{0:f2}\" y=\"{1:f2}\">{2},{3}</text>\n",
+                  (pt.x * scale + offsetX), (pt.y * scale + offsetY), pt.x, pt.y));
+#endif
+            }
+          }
+          writer.Write("</g>\n\n");
+        }
+      }
+
+      foreach (TextInfo captionInfo in textInfos)
+      {
+        writer.Write(string.Format(
+            "<g font-family=\"Verdana\" font-style=\"normal\" " +
+            "font-weight=\"normal\" font-size=\"{0}\" fill=\"{1}\">\n",
+            captionInfo.fontSize, ColorToHtml(captionInfo.fontColor)));
+        writer.Write(string.Format(
+            "<text x=\"{0}\" y=\"{1}\">{2}</text>\n</g>\n",
+            (int) (captionInfo.posX + margin),
+            (int) (captionInfo.posY + margin),
+            captionInfo.text));
+      }
+
+      writer.Write("</svg>\n");
+      writer.Close();
+      return Encoding.Default.GetString(ms.ToArray());
+    }
+
   }
 
 }

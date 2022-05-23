@@ -1,7 +1,72 @@
-﻿@page "/"
+﻿@page "/{TestId:int}"
 
 <PageTitle>Index</PageTitle>
 
 <MudText Typo="Typo.h3" GutterBottom="true">Hello, world!</MudText>
 <MudText Class="mb-8">Welcome to your new app, powered by MudBlazor!</MudText>
 <MudAlert Severity="Severity.Normal">You can find documentation and examples on our website here: <MudLink Href="https://mudblazor.com" Typo="Typo.body2" Color="Color.Inherit"><b>www.mudblazor.com</b></MudLink></MudAlert>
+
+@if (clipperA is not null)
+{
+    @((MarkupString)clipperA)
+}
+
+@if (clipperB is not null)
+{
+    @((MarkupString)clipperB)
+}
+
+@code {
+    [Parameter] public int TestId { get; set; }
+
+    Paths64 subj = new();
+    Paths64 subj_open = new();
+    Paths64 clip = new();
+    Paths64 sol = new();
+    Paths64 sol_open = new();
+    long area2;
+    string caption = "";
+    Random rand = new Random();
+    ClipType clipType = ClipType.Intersection;
+    FillRule fillrule = FillRule.EvenOdd;
+    bool displaySolutionCoords = false;//true;//
+
+    const int margin = 20;
+    const int displayWidth = 800;
+    const int displayHeight = 600;
+    string clipperA, clipperB;
+
+    protected override void OnParametersSet()
+    {
+        if (!ClipperFileIO.LoadTestNum(@"..\..\..\Tests\Tests.txt", TestId, subj, subj_open, clip, out clipType, out fillrule, out area2, out caption)) return;
+        Clipper c3 = new Clipper();
+        c3.AddPaths(subj, PathType.Subject);
+        c3.AddPaths(subj_open, PathType.Subject, true);
+        c3.AddPaths(clip, PathType.Clip);
+        c3.Execute(clipType, fillrule, sol, sol_open);
+
+        clipperA = CreateDisplaySvg(caption, subj, subj_open, clip, null, null, fillrule, displaySolutionCoords);
+        clipperB = CreateDisplaySvg(caption, subj, subj_open, clip, sol, sol_open, fillrule, displaySolutionCoords);
+    }
+
+
+    public static string CreateDisplaySvg(string caption, Paths64 subj, Paths64 subj_open, Paths64 clip, Paths64 sol, Paths64 sol_open, FillRule fillrule, bool displaySolutionCoords)
+    {
+        SimpleClipperSvgWriter svg = new SimpleClipperSvgWriter(fillrule);
+        if (caption != "")
+            svg.AddText(caption, margin, margin, 14, SimpleClipperSvgWriter.navy);
+        if (subj != null)
+            svg.AddPaths(subj, false, 0x110066FF, 0x33000099, 0.8);
+        if (subj_open != null)
+            svg.AddPaths(subj_open, true, 0, 0x66AA0000, 1.2);
+        if (clip != null)
+            svg.AddPaths(clip, false, 0x11996600, 0x55993300, 0.8);
+        if (sol != null)
+            svg.AddPaths(sol, false, 0x4000FF00, 0x80000000, 1.2,
+              displaySolutionCoords && sol.Count < 100);
+        if (sol_open != null)
+            svg.AddPaths(sol_open, true, 0, 0xFF00AAAA, 3.0);
+        return svg.SaveToFile1(displayWidth, displayHeight, margin);
+        //OpenFile(afilename);
+    }
+}

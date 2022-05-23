@@ -2,4 +2,8 @@
     <MudNavLink Href="" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Home">Home</MudNavLink>
     <MudNavLink Href="counter" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.Add">Counter</MudNavLink>
     <MudNavLink Href="fetchdata" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.List">Fetch data</MudNavLink>
-</MudNavMenu>
+    @foreach (var test in Enumerable.Range(1, 201))
+    {
+        <MudNavLink Href="@($"/{test}")" Icon="@Icons.Material.Filled.List">Test @test</MudNavLink>
+    }
+    </MudNavMenu>
