@@ -140,6 +140,7 @@
     <ClCompile Include="..\Tests\TestFromTextFile.cpp" />
     <ClCompile Include="..\Tests\TestFromTextFile2.cpp" />
     <ClCompile Include="..\Tests\TestIntersection.cpp" />
+    <ClCompile Include="..\Tests\TestIssue62.cpp" />
     <ClCompile Include="..\Tests\TestUnion.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
