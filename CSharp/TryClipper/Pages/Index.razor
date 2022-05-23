@@ -4,11 +4,11 @@
 
 <MudText Typo="Typo.h3" GutterBottom="true">Clipper2 Test Explorer</MudText>
 <MudSwitch T="bool" Label="Display Solution Coords" CheckedChanged="OnCheckedChanged" Checked="@displaySolutionCoords" />
-<div>Caption: @caption</div>
-<div>Area: @area2</div>
-<div>Fill Rule: @fillrule</div>
-<div>Clip Type: @clipType</div>
-<div>Elapsed Milliseconds: @elapsedMilliseconds</div>
+<MudText>Caption: @caption</MudText>
+<MudText>Area: @area2</MudText>
+<MudText>Fill Rule: @fillrule</MudText>
+<MudText>Clip Type: @clipType</MudText>
+<MudText>Elapsed Milliseconds: @elapsedMilliseconds</MudText>
 
 @if (clipperA is not null)
 {
@@ -30,7 +30,6 @@
     Paths64 sol_open = new();
     long area2;
     string caption = "";
-    Random rand = new Random();
     ClipType clipType = ClipType.Intersection;
     FillRule fillrule = FillRule.EvenOdd;
     bool displaySolutionCoords = false;
@@ -66,10 +65,9 @@
         clipperB = CreateDisplaySvg(caption, subj, subj_open, clip, sol, sol_open, fillrule, displaySolutionCoords);
     }
 
-
     public static string CreateDisplaySvg(string caption, Paths64 subj, Paths64 subj_open, Paths64 clip, Paths64 sol, Paths64 sol_open, FillRule fillrule, bool displaySolutionCoords)
     {
-        SimpleClipperSvgWriter svg = new SimpleClipperSvgWriter(fillrule);
+        SimpleClipperSvgWriter svg = new(fillrule);
         if (caption != "")
             svg.AddText(caption, margin, margin, 14, SimpleClipperSvgWriter.navy);
         if (subj != null)
@@ -79,12 +77,10 @@
         if (clip != null)
             svg.AddPaths(clip, false, 0x11996600, 0x55993300, 0.8);
         if (sol != null)
-            svg.AddPaths(sol, false, 0x4000FF00, 0x80000000, 1.2,
-            displaySolutionCoords && sol.Count < 100);
+            svg.AddPaths(sol, false, 0x4000FF00, 0x80000000, 1.2, displaySolutionCoords && sol.Count < 100);
         if (sol_open != null)
             svg.AddPaths(sol_open, true, 0, 0xFF00AAAA, 3.0);
-        return svg.SaveToFile1(displayWidth, displayHeight, margin);
-        //OpenFile(afilename);
+        return svg.SaveToString(displayWidth, displayHeight, margin);
     }
 
     void OnCheckedChanged(bool display)

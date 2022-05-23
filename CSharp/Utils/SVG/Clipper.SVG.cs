@@ -281,7 +281,7 @@ namespace Clipper2Lib
       return true;
     }
 
-    public string SaveToFile1(int maxWidth = 0, int maxHeight = 0, int margin = -1)
+    public string SaveToString(int maxWidth = 0, int maxHeight = 0, int margin = -1)
     {
       if (margin < 0) margin = 20;
       RectD bounds = GetBounds();
@@ -343,11 +343,11 @@ namespace Clipper2Lib
             foreach (PointD pt in path)
             {
 #if USINGZ
-              writer.Write(string.Format(
+              writer.Write(string.Format(NumberFormatInfo.InvariantInfo,
                   "<text x=\"{0}\" y=\"{1}\">{2},{3},{4}</text>\n",
                   (int)(pt.x * scale + offsetX), (int)(pt.y * scale + offsetY), pt.x, pt.y, pt.z));
 #else
-              writer.Write(string.Format(
+              writer.Write(string.Format(NumberFormatInfo.InvariantInfo,
                   "<text x=\"{0:f2}\" y=\"{1:f2}\">{2},{3}</text>\n",
                   (pt.x * scale + offsetX), (pt.y * scale + offsetY), pt.x, pt.y));
 #endif
@@ -363,7 +363,7 @@ namespace Clipper2Lib
             "<g font-family=\"Verdana\" font-style=\"normal\" " +
             "font-weight=\"normal\" font-size=\"{0}\" fill=\"{1}\">\n",
             captionInfo.fontSize, ColorToHtml(captionInfo.fontColor)));
-        writer.Write(string.Format(
+        writer.Write(string.Format(NumberFormatInfo.InvariantInfo,
             "<text x=\"{0}\" y=\"{1}\">{2}</text>\n</g>\n",
             (int) (captionInfo.posX + margin),
             (int) (captionInfo.posY + margin),
