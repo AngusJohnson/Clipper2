@@ -13,11 +13,7 @@ TEST(Clipper2Tests, TestIssue62) {
 
     const Clipper2Lib::Path64 subject = {
         Clipper2Lib::Point64(0, 3),
-        Clipper2Lib::Point64(1, 3),
-        Clipper2Lib::Point64(2, 3),
         Clipper2Lib::Point64(3, 3),
-        Clipper2Lib::Point64(3, 2),
-        Clipper2Lib::Point64(3, 1),
         Clipper2Lib::Point64(3, 0),
         Clipper2Lib::Point64(2, 0),
         Clipper2Lib::Point64(1, 0),
