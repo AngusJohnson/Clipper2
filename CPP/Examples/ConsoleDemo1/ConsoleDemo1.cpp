@@ -191,10 +191,10 @@ void RunSavedTests(const std::string& filename,
 
         SvgWriter svg;
         SvgAddSubject(svg, subject);
-        SvgAddSubject(svg, subject_open, false);
+        SvgAddOpenSubject(svg, subject_open);
         SvgAddClip(svg, clip);
         SvgAddSolution(svg, solution, show_solution_coords);
-        SvgAddSolution(svg, solution_open, show_solution_coords, false);
+        SvgAddOpenSolution(svg, solution_open, show_solution_coords);
         SvgSaveToFile(svg, filename2, fr, display_width, display_height, 20);
         system(filename2.c_str());
       }

@@ -2273,16 +2273,15 @@ namespace Clipper2Lib
         } //we've reached the end of this horizontal
 
         //check if we've finished looping through consecutive horizontals
-        if (NextVertex(horz).pt.Y != horz.top.Y) break;
-
-        if (horzIsOpen && IsOpenEnd(horz)) //ie open at top
+        if (horzIsOpen && IsOpenEnd(horz))
         {
-          if (IsHotEdge(horz)) AddOutPt(horz, horz.top);
-          DeleteFromAEL(horz);
+          if (IsHotEdge(horz))
+            AddOutPt(horz, horz.top);
+          DeleteFromAEL(horz); //ie open at top
           return;
         }
-        else if (NextVertex(horz).pt.Y != horz.top.Y)
-          break;
+        else if (NextVertex(horz).pt.Y != horz.top.Y) break;
+
 
         //there must be a following (consecutive) horizontal
         if (IsHotEdge(horz))

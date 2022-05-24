@@ -2485,8 +2485,6 @@ namespace Clipper2Lib {
 			}
 
 			//check if we've finished with (consecutive) horizontals ...
-			if (NextVertex(horz)->pt.y != horz.top.y) break;
-
 			if (horzIsOpen && IsOpenEnd(horz)) //ie open at top
 			{
 				if (IsHotEdge(horz))  AddOutPt(horz, horz.top);
