@@ -269,7 +269,7 @@ namespace Clipper2Lib
 
     public override string ToString()
     {
-      return $"{x:F},{y:F} ";
+      return $"({x:F},{y:F})";
     }
 
     public override int GetHashCode() { return 0; }
