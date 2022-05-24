@@ -25,7 +25,7 @@ TEST(Clipper2Tests, TestFromTextFile) {
             c.Execute(ct, fr, solution, solution_open);
 
             const int64_t area2 = static_cast<int64_t>(Area(solution));
-            const int64_t count2 = solution.size();
+            const int64_t count2 = solution.size() + solution_open.size();
             const int64_t count_diff = std::abs(count2 - count);
             const int64_t area_diff = std::abs(area2 - area);
             const double relative_count_diff = count ? count_diff / static_cast<double>(count): 0;
