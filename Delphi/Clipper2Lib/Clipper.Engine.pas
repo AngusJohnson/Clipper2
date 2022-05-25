@@ -3,7 +3,7 @@ unit Clipper.Engine;
 (*******************************************************************************
 * Author    :  Angus Johnson                                                   *
 * Version   :  10.0 (beta) - aka Clipper2                                      *
-* Date      :  24 May 2022                                                     *
+* Date      :  25 May 2022                                                     *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  This is the main polygon clipping module                        *
@@ -362,12 +362,6 @@ const
 
 //------------------------------------------------------------------------------
 // Miscellaneous Functions ...
-//------------------------------------------------------------------------------
-
-procedure RaiseError(const msg: string); {$IFDEF INLINING} inline; {$ENDIF}
-begin
-  raise EClipperLibException.Create(msg);
-end;
 //------------------------------------------------------------------------------
 
 function IsOpen(e: PActive): Boolean; overload; {$IFDEF INLINING} inline; {$ENDIF}
@@ -989,12 +983,25 @@ function IntersectListSort(node1, node2: Pointer): Integer;
 var
   i1: PIntersectNode absolute node1;
   i2: PIntersectNode absolute node2;
+  i: Int64;
 begin
-  result := i2.Pt.Y - i1.Pt.Y;
-  //Sort by X too. While not essential, this significantly speed up the
-  //secondary sort in ProcessIntersectList (which ensures edge adjacency).
-  if (result = 0) and (i1 <> i2) then
-    result := i1.Pt.X - i2.Pt.X;
+  //note to self - can't return int64 values :)
+  i := i2.Pt.Y - i1.Pt.Y;
+  if (i = 0) then
+  begin
+    if (i1 = i2) then
+    begin
+      Result := 0;
+      Exit;
+    end;
+    //Sort by X too. Not essential, but it significantly
+    //speeds up the secondary sort in ProcessIntersectList .
+    i := i1.Pt.X - i2.Pt.X;
+  end;
+
+  if i > 0 then Result := 1
+  else if i < 0 then Result := -1
+  else result := 0;
 end;
 //------------------------------------------------------------------------------
 
@@ -1922,7 +1929,6 @@ begin
   while true do
   begin
     if Assigned(op2.Joiner) then Exit;
-
     if (CrossProduct(op2.Prev.Pt, op2.Pt, op2.Next.Pt) = 0) and
       (PointsEqual(op2.Pt,op2.Prev.Pt) or
       PointsEqual(op2.Pt,op2.Next.Pt) or
@@ -2932,19 +2938,19 @@ begin
       (IsOuter(e2.OutRec) <> IsFront(e2)) then
       SwapFrontBackSides(e2.OutRec)
     else
-      RaiseError(rsClipper_ClippingErr);
+      Raise EClipperLibException(rsClipper_ClippingErr);
   end
   else if not Assigned(e1.OutRec.Pts) then
   begin
     if Assigned(e2.OutRec.Pts) and
       ValidateClosedPathEx(e2.OutRec.Pts) then
-        RaiseError(rsClipper_ClippingErr); //e2 can't join onto nothing!
+        Raise EClipperLibException(rsClipper_ClippingErr); //e2 can't join onto nothing!
     UncoupleOutRec(e1);
     UncoupleOutRec(e2);
     Result := false;
   end
   else
-    RaiseError(rsClipper_ClippingErr); //e1 can't join onto nothing!
+    Raise EClipperLibException(rsClipper_ClippingErr); //e1 can't join onto nothing!
 end;
 //------------------------------------------------------------------------------
 
@@ -3981,7 +3987,8 @@ end;
 function TClipper.Execute(clipType: TClipType; fillRule: TFillRule;
   var solutionTree: TPolyTree; out openSolutions: TPaths64): Boolean;
 begin
-  if not assigned(solutionTree) then RaiseError(rsClipper_PolyTreeErr);
+  if not assigned(solutionTree) then
+    Raise EClipperLibException(rsClipper_PolyTreeErr);
   solutionTree.Clear;
   openSolutions := nil;
   Result := true;
@@ -4073,7 +4080,7 @@ begin
   inherited Create;
   if (roundingDecimalPrecision < -8) or
     (roundingDecimalPrecision > 8) then
-      RaiseError(rsClipper_RoundingErr);
+      Raise EClipperLibException(rsClipper_RoundingErr);
   FScale := Math.Power(10, roundingDecimalPrecision);
   FInvScale := 1/FScale;
 end;
@@ -4256,7 +4263,7 @@ var
   open_Paths: TPaths64;
 begin
   if not assigned(solutionsTree) then
-    RaiseError(rsClipper_PolyTreeErr);
+    Raise EClipperLibException(rsClipper_PolyTreeErr);
 
   solutionsTree.Clear;
   solutionsTree.SetScale(FScale);
