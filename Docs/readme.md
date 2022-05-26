@@ -34,12 +34,12 @@ Originally **clipping** referred to the process of removing or "cutting away" pa
 
 ### Coordinate Range:
 
-In *Clipper2* there are now two *Clipper* classes - **Clipper64** and **ClipperD**. *Clipper64*, as it's name implies, supports 64bit integer coordinates, whereas *ClipperD* supports type double floating point coordinates. Nevertheless, to ensure numerical robustnesss, *Clipper2* still performs all clipping operations on signed 64bit integer coordinates internally. Hence the floating point coordinates accepted by *ClipperD* objects will be converted into integers using the floating point precision specified in *ClipperD*'s constructor. It's important to note that path coordinates can't use quite the full 64bit integer range. The library assumes it's safe to perform addition and subtraction on all coordinates. Because of this  **coordinates must be limited to 63 bit signed integers (ie +/- 4.6 x 10<sup>18</sup>)**. Nevertheless this is surely more that adequate to achieve any sensible degree of geometric precision.
+In *Clipper2* there are now two *Clipper* classes - **Clipper64** and **ClipperD**. *Clipper64*, as it's name implies, supports 64bit integer coordinates, whereas *ClipperD* supports type double floating point coordinates. Nevertheless, to ensure numerical robustnesss, *Clipper2* still performs all clipping operations on signed 64bit integer coordinates internally. Because of this, the floating point coordinates accepted by *ClipperD* objects will be converted into integers using the floating point precision specified in *ClipperD*'s constructor. It's also important to note that path coordinates can't use quite the full 64bit integer range because library will perform addition and subtraction operations on coordinate values. Consequently, **coordinate values must be limited to 63 bit signed integers (ie +/- 4.6 x 10<sup>18</sup>)**, but surely this is more that adequate to achieve any sensible degree of geometric precision.
 
 
 ### Clipped Solutions:
 
-Clipped solutions are not guaranteed to be in their simplest forms. For example, solutions may on occasions have "touching" edges, possibly within the same polygon.<br><br>
+A lot of effort has gone into returning clipping solutions in their simplest forms without significantly compromising performance. Ultimately however compromises have to be made since performance is given priority, and solutions may not be a simple as expected. If this is problematic, then performing a *union* operation on the solution is very likely to further tidy the solution.<br><br>
 
 
 ### Clipping open paths:
