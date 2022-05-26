@@ -197,7 +197,7 @@ namespace Clipper2Lib
         foreach (Path64 p in clip)
         {
           foreach (Point64 ip in p)
-            writer.Write("{0},{1} ", ip.X, ip.Y);
+            writer.Write(ip.ToString());
           writer.Write("\r\n");
         }
       }

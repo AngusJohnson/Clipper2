@@ -1,7 +1,7 @@
 ﻿/*******************************************************************************
 * Author    :  Angus Johnson                                                   *
 * Version   :  10.0 (beta) - also known as Clipper2                            *
-* Date      :  10 May 2022                                                     *
+* Date      :  27 May 2022                                                     *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  Core structures and functions for the Clipper Library           *
@@ -82,6 +82,11 @@ namespace Clipper2Lib
       return new Point64(lhs.X - rhs.X, lhs.Y - rhs.Y, lhs.Z - rhs.Z);
     }
 
+    public override string ToString()
+    {
+      return $"{X},{Y},{Z} "; //nb: trailing space
+    }
+
 #else
     public Point64(Point64 pt)
     {
@@ -138,6 +143,11 @@ namespace Clipper2Lib
     {
       return new Point64(lhs.X - rhs.X, lhs.Y - rhs.Y);
     }
+    public override string ToString()
+    {
+      return $"{X},{Y} "; //nb: trailing space
+    }
+
 #endif
     public override bool Equals(object obj)
     {
@@ -145,11 +155,6 @@ namespace Clipper2Lib
         return this == p;
       else
         return false;
-    }
-
-    public override string ToString()
-    {
-      return $"({X},{Y})";
     }
 
     public override int GetHashCode() { return 0; }
@@ -205,6 +210,11 @@ namespace Clipper2Lib
       this.z = z;
     }
 
+    public override string ToString()
+    {
+      return $"{x:F},{y:F},{z:F} ";
+    }
+
 #else
     public PointD(PointD pt)
     {
@@ -242,6 +252,11 @@ namespace Clipper2Lib
       this.y = y;
     }
 
+    public override string ToString()
+    {
+      return $"{x:F},{y:F} ";
+    }
+
 #endif
 
     private static bool IsAlmostZero(double value)
@@ -265,11 +280,6 @@ namespace Clipper2Lib
         return this == p;
       else
         return false;
-    }
-
-    public override string ToString()
-    {
-      return $"{x:F},{y:F} ";
     }
 
     public override int GetHashCode() { return 0; }
