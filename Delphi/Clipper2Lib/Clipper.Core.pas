@@ -3,7 +3,7 @@ unit Clipper.Core;
 (*******************************************************************************
 * Author    :  Angus Johnson                                                   *
 * Version   :  10.0 (beta) - aka Clipper2                                      *
-* Date      :  7 May 2022                                                      *
+* Date      :  26 May 2022                                                     *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  Core Clipper Library module                                     *
 *              Contains structures and functions used throughout the library   *
@@ -228,6 +228,9 @@ procedure AppendPoint(var path: TPath64; const pt: TPoint64); overload;
 procedure AppendPoint(var path: TPathD; const pt: TPointD); overload;
   {$IFDEF INLINING} inline; {$ENDIF}
 
+function AppendPoints(const path, extra: TPath64): TPath64;
+  {$IFDEF INLINING} inline; {$ENDIF}
+
 procedure AppendPath(var paths: TPaths64; const extra: TPath64); overload;
 procedure AppendPath(var paths: TPathsD; const extra: TPathD); overload;
 procedure AppendPaths(var paths: TPaths64; const extra: TPaths64); overload;
@@ -306,8 +309,16 @@ end;
 //------------------------------------------------------------------------------
 
 function Sqr(value: Int64): double; overload;
+{$IFDEF FPC}
+var
+  v: double;
+begin
+  v := value;
+  Result := v *v; //Lazarus performs a cast instead of a conversion
+{$ELSE}
 begin
   Result := double(value) * value;
+{$ENDIF}
 end;
 //------------------------------------------------------------------------------
 
@@ -839,6 +850,20 @@ begin
   len := length(path);
   SetLength(path, len +1);
   path[len] := pt;
+end;
+//------------------------------------------------------------------------------
+
+function AppendPoints(const path, extra: TPath64): TPath64;
+var
+  i, len1, len2: Integer;
+begin
+  len1 := length(path);
+  len2 := length(extra);
+  SetLength(Result, len1 + len2);
+  if len1 > 0 then
+    Move(path[0], Result[0], len1 * sizeOf(TPoint64));
+  if len2 > 0 then
+    Move(extra[0], Result[len1], len2 * sizeOf(TPoint64));
 end;
 //------------------------------------------------------------------------------
 
