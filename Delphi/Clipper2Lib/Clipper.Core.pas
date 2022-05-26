@@ -313,8 +313,9 @@ function Sqr(value: Int64): double; overload;
 var
   v: double;
 begin
+  //double(value) => Lazarus performs a cast, not of a conversion
   v := value;
-  Result := v *v; //Lazarus performs a cast instead of a conversion
+  Result := v *v;
 {$ELSE}
 begin
   Result := double(value) * value;
