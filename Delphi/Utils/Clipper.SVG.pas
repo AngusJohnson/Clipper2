@@ -12,7 +12,7 @@ unit Clipper.SVG;
 
 interface
 
-{$I Clipper.inc}
+{$I ..\Clipper2Lib\Clipper.inc}
 
 uses
   Classes, SysUtils, Math, Clipper.Core, Clipper;
@@ -32,22 +32,30 @@ const
 
 type
 
+{$IFDEF RECORD_METHODS}
   TCoordStyle = record
+{$ELSE}
+  TCoordStyle = object
+{$ENDIF}
     FontName: string;
     FontSize: integer;
     FontColor: cardinal;
-    constructor Create(const fontname: string;
-      fontsize: integer; fontcolor: Cardinal);
+    constructor Create(const afontname: string;
+      afontsize: integer; afontcolor: Cardinal);
   end;
 
   PTextInfo = ^TTextInfo;
+{$IFDEF RECORD_METHODS}
   TTextInfo = record
+{$ELSE}
+  TTextInfo = object
+{$ENDIF}
     x,y : integer;
     text: string;
     fontSize: integer;
     fontColor: Cardinal;
-    constructor Create(text: string; x, y: integer;
-      fontsize: integer = 12; fontcolor: Cardinal = black);
+    constructor Create(atext: string; _x, _y: integer;
+      afontsize: integer = 12; afontcolor: Cardinal = black);
   end;
 
   PPolyInfo = ^TPolyInfo;
@@ -94,7 +102,6 @@ implementation
 const
   MaxRect: TRectD  = (left: MaxDouble;
     Top: MaxDouble; Right: -MaxDouble; Bottom: -MaxDouble);
-  EmptyRect: TRectD  = (left: 0; Top: 0; Right: 0; Bottom: 0);
 
   svg_header: string = '<?xml version="1.0" standalone="no"?>'#10 +
       '<!DOCTYPE svg PUBLIC "-/W3C/DTD SVG 1.0/EN"'#10 +
@@ -117,22 +124,22 @@ begin
   Result := (clr shr 24) / 255;
 end;
 
-constructor TCoordStyle.Create(const fontname: string;
-  fontsize: integer; fontcolor: Cardinal);
+constructor TCoordStyle.Create(const afontname: string;
+  afontsize: integer; afontcolor: Cardinal);
 begin
-  Self.FontName := fontname;
-  Self.FontSize := fontsize;
-  Self.FontColor := fontcolor;
+  Self.FontName := afontname;
+  Self.FontSize := afontsize;
+  Self.FontColor := afontcolor;
 end;
 
-constructor TTextInfo.Create(text: string; x, y: integer;
-  fontsize: integer = 12; fontcolor: Cardinal = black);
+constructor TTextInfo.Create(atext: string; _x, _y: integer;
+  afontsize: integer = 12; afontcolor: Cardinal = black);
 begin
-  self.x := x;
-  self.y := y;
+  self.x := _x;
+  self.y := _y;
   self.text := text;
-  self.fontSize := fontsize;
-  self.fontColor := fontcolor;
+  self.fontSize := afontsize;
+  self.fontColor := afontcolor;
 end;
 
 constructor SimpleClipperSvgWriter.Create(fillRule: TFillRule;
@@ -162,6 +169,7 @@ procedure SimpleClipperSvgWriter.AddPaths(const paths: TPaths64;
 var
   pi: PPolyInfo;
 begin
+  if Length(paths) = 0 then Exit;
   new(pi);
   pi.paths := PathsD(paths);
   pi.BrushClr := brushColor;

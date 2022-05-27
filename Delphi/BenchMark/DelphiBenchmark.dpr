@@ -8,27 +8,10 @@ uses
   ShellAPI,
   SysUtils,
   Classes,
-  Math,
-  Diagnostics,
-  Clipper in '..\Clipper.pas',
-  Clipper.SVG in '..\Clipper.SVG.pas';
-
-//------------------------------------------------------------------------------
-//------------------------------------------------------------------------------
-
-function MakeRandomPath(maxWidth, maxHeight, count: Integer): TPath64;
-var
-  i: Integer;
-begin
-  setlength(Result, count);
-  for i := 0 to count -1 do
-    with Result[i] do
-    begin
-      X := Random(maxWidth);
-      Y := Random(maxHeight);
-    end;
-end;
-//------------------------------------------------------------------------------
+  Clipper in '..\Clipper2Lib\Clipper.pas',
+  Clipper.SVG in '..\Utils\Clipper.SVG.pas',
+  ClipMisc in '..\Utils\ClipMisc.pas',
+  Timer in '..\Utils\Timer.pas';
 
 var
   s         : string;
@@ -36,19 +19,20 @@ var
   subj,clip : TPaths64;
   solution  : TPaths64;
   edgeCount : integer;
-  msecs     : Int64;
+  timerResult   : double;
+  timeTotal   : double;
   /////////////////////////////
   maxWidth  : integer   = 800;
   maxHeight : integer   = 600;
   minEdges  : integer   = 1000;
-  maxEdges  : integer   = 5000;
+  maxEdges  : integer   = 3000;
   loopCount : integer   = 3;
   /////////////////////////////
 begin
   Randomize;
   for j := (minEdges div 1000) to (maxEdges div 1000) do
   begin
-    msecs := 0;
+    timeTotal := 0;
     edgeCount := j * 1000;
     for i := 1 to loopCount do
     begin
@@ -65,17 +49,14 @@ begin
       setLength(clip, 1);
       clip[0] := MakeRandomPath(maxWidth, maxHeight, edgeCount);
 
-      //time their intersection
-      with TStopWatch.StartNew do
       begin
+        DoTimer(@timerResult);
         solution := Intersect(subj, clip, frNonZero);
-        if Length(solution) = 0 then
-          raise Exception.Create('Error in loop count ' + inttostr(i));
-        Inc(msecs, ElapsedMilliseconds);
       end;
+      timeTotal := timeTotal + timerResult;
 
     end; //bottom of loop;
-    WriteLn(Format('Average time: %1.0f msecs', [msecs/loopCount]));
+    WriteLn(Format('Average time: %1.0n msecs', [timeTotal*1000/loopCount]));
     WriteLn('');
   end; //bottom of edgecount loop
 

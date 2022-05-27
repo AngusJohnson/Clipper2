@@ -309,7 +309,7 @@ end;
 
 function PointsNearEqual(const pt1, pt2: TPointD; distanceSqrd: double): Boolean;
 begin
-  Result := System.Sqr(pt1.X - pt2.X) + System.Sqr(pt1.Y - pt2.Y) < distanceSqrd;
+  Result := Sqr(pt1.X - pt2.X) + Sqr(pt1.Y - pt2.Y) < distanceSqrd;
 end;
 //------------------------------------------------------------------------------
 
@@ -1404,15 +1404,22 @@ begin
 end;
 //------------------------------------------------------------------------------
 
+function SqrInt64(val: Int64): double; {$IFDEF INLINING} inline; {$ENDIF}
+begin
+  Result := val; //force conversion
+  Result := Result * Result;
+end;
+//------------------------------------------------------------------------------
+
 function DistanceSqr(const pt1, pt2: TPoint64): double;
 begin
-  Result := Sqr(pt1.X - pt2.X) + Sqr(pt1.Y - pt2.Y);
+  Result := SqrInt64(pt1.X - pt2.X) + SqrInt64(pt1.Y - pt2.Y);
 end;
 //------------------------------------------------------------------------------
 
 function DistanceSqr(const pt1, pt2: TPointD): double;
 begin
-  Result := System.Sqr(pt1.X - pt2.X) + System.Sqr(pt1.Y - pt2.Y);
+  Result := Sqr(pt1.X - pt2.X) + Sqr(pt1.Y - pt2.Y);
 end;
 //------------------------------------------------------------------------------
 
@@ -1524,7 +1531,7 @@ begin
   d := line2.Y - line1.Y;
   if (c = 0) and (d = 0) then
     result := 0 else
-    result := System.Sqr(a * d - c * b) / (c * c + d * d);
+    result := Sqr(a * d - c * b) / (c * c + d * d);
 end;
 //------------------------------------------------------------------------------
 
@@ -1572,7 +1579,7 @@ begin
   SetLength(buffer, len); //buffer is zero initialized
   buffer[0] := 1;
   buffer[len -1] := 1;
-  RDP(path, 0, len -1, System.Sqr(epsilon), buffer);
+  RDP(path, 0, len -1, Sqr(epsilon), buffer);
   j := 0;
   SetLength(Result, len);
   for i := 0 to len -1 do

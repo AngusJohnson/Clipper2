@@ -466,7 +466,7 @@ begin
 
   //Miter Limit: see offset_triginometry3.svg
   if fMiterLimit > 1 then
-    fTmpLimit := 2 / System.Sqr(fMiterLimit) else
+    fTmpLimit := 2 / Sqr(fMiterLimit) else
     fTmpLimit := 2.0;
 
   //nb: delta will depend on whether paths are polygons or open
