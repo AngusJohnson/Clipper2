@@ -3,7 +3,7 @@ unit Clipper.Core;
 (*******************************************************************************
 * Author    :  Angus Johnson                                                   *
 * Version   :  10.0 (beta) - aka Clipper2                                      *
-* Date      :  26 May 2022                                                     *
+* Date      :  27 May 2022                                                     *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  Core Clipper Library module                                     *
 *              Contains structures and functions used throughout the library   *
@@ -116,7 +116,6 @@ function CrossProduct(vec1x, vec1y, vec2x, vec2y: double): double; overload;
 function DotProduct(const pt1, pt2, pt3: TPoint64): double;
   {$IFDEF INLINING} inline; {$ENDIF}
 
-function Sqr(value: Int64): double; overload;
 function DistanceSqr(const pt1, pt2: TPoint64): double; overload;
   {$IFDEF INLINING} inline; {$ENDIF}
 function DistanceSqr(const pt1, pt2: TPointD): double; overload;
@@ -305,21 +304,6 @@ end;
 function PointsEqual(const pt1, pt2: TPoint64): Boolean;
 begin
   Result := (pt1.X = pt2.X) and (pt1.Y = pt2.Y);
-end;
-//------------------------------------------------------------------------------
-
-function Sqr(value: Int64): double; overload;
-{$IFDEF FPC}
-var
-  v: double;
-begin
-  //double(value) => Lazarus performs a cast, not of a conversion
-  v := value;
-  Result := v *v;
-{$ELSE}
-begin
-  Result := double(value) * value;
-{$ENDIF}
 end;
 //------------------------------------------------------------------------------
 
@@ -856,7 +840,7 @@ end;
 
 function AppendPoints(const path, extra: TPath64): TPath64;
 var
-  i, len1, len2: Integer;
+  len1, len2: Integer;
 begin
   len1 := length(path);
   len2 := length(extra);
