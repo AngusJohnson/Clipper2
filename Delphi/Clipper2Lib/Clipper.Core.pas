@@ -15,7 +15,7 @@ unit Clipper.Core;
 interface
 
 uses
-  Classes, SysUtils, Math;
+  SysUtils, Math;
 
 type
   PPoint64  = ^TPoint64;
@@ -202,7 +202,9 @@ function OffsetPath(const path: TPathD; dx, dy: double): TPathD; overload;
 function OffsetPaths(const paths: TPaths64; dx, dy: Int64): TPaths64; overload;
 function OffsetPaths(const paths: TPathsD; dx, dy: double): TPathsD; overload;
 
-function Paths(const pathsD: TPathsD): TPaths64;
+function Path64(const pathD: TPathD): TPath64;
+function PathD(const path: TPath64): TPathD;
+function Paths64(const pathsD: TPathsD): TPaths64;
 function PathsD(const paths: TPaths64): TPathsD;
 
 function StripDuplicates(const path: TPath64; isClosedPath: Boolean = false): TPath64;
@@ -736,41 +738,53 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-function Paths(const pathsD: TPathsD): TPaths64;
+function Path64(const pathD: TPathD): TPath64;
 var
-  i,j,len,len2: integer;
+  i, len: integer;
+begin
+  len := Length(pathD);
+  setLength(Result, len);
+  for i := 0 to len -1 do
+  begin
+    Result[i].X := Round(pathD[i].X);
+    Result[i].Y := Round(pathD[i].Y);
+  end;
+end;
+//------------------------------------------------------------------------------
+
+function PathD(const path: TPath64): TPathD;
+var
+  i, len: integer;
+begin
+  len := Length(path);
+  setLength(Result, len);
+  for i := 0 to len -1 do
+  begin
+    Result[i].X := path[i].X;
+    Result[i].Y := path[i].Y;
+  end;
+end;
+//------------------------------------------------------------------------------
+
+function Paths64(const pathsD: TPathsD): TPaths64;
+var
+  i, len: integer;
 begin
   len := Length(pathsD);
   setLength(Result, len);
   for i := 0 to len -1 do
-  begin
-    len2 := Length(pathsD[i]);
-    setLength(Result[i], len2);
-    for j := 0 to len2 -1 do
-    begin
-      Result[i][j].X := Round(pathsD[i][j].X);
-      Result[i][j].Y := Round(pathsD[i][j].Y);
-    end;
-  end;
+    Result[i] := Path64(pathsD[i]);
 end;
 //------------------------------------------------------------------------------
 
 function PathsD(const paths: TPaths64): TPathsD;
 var
-  i,j,len,len2: integer;
+  i, len: integer;
 begin
   len := Length(paths);
   setLength(Result, len);
   for i := 0 to len -1 do
-  begin
-    len2 := Length(paths[i]);
-    setLength(Result[i], len2);
-    for j := 0 to len2 -1 do
-    begin
-      Result[i][j].X := paths[i][j].X;
-      Result[i][j].Y := paths[i][j].Y;
-    end;
-  end;
+    Result[i] := PathD(paths[i]);
 end;
 //------------------------------------------------------------------------------
 

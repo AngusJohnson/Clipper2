@@ -25,7 +25,7 @@ var
   maxWidth  : integer   = 800;
   maxHeight : integer   = 600;
   minEdges  : integer   = 1000;
-  maxEdges  : integer   = 3000;
+  maxEdges  : integer   = 4000;
   loopCount : integer   = 3;
   /////////////////////////////
 begin
