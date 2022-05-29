@@ -100,7 +100,7 @@ namespace Clipper2Lib {
 		Point64 top;
 		int64_t curr_x = 0;		//current (updated at every new scanline)
 		double dx = 0.0;
-		int wind_dx = 1;			//1 or -1 depending on winding diRect64on
+		int wind_dx = 1;			//1 or -1 depending on winding direction
 		int wind_cnt = 0;
 		int wind_cnt2 = 0;		//winding count of the opposite polytype
 		OutRec* outrec = nullptr;
@@ -189,7 +189,7 @@ namespace Clipper2Lib {
 			const Point64& pt, bool is_new = false);
 		OutPt* AddLocalMaxPoly(Active &e1, Active &e2, const Point64& pt);
 		void DoHorizontal(Active &horz);
-		bool ResetHorzDiRect64on(const Active &horz, const Active *max_pair,
+		bool ResetHorzDirection(const Active &horz, const Active *max_pair,
 			int64_t &horz_left, int64_t &horz_right);
 		void DoTopOfScanbeam(const int64_t top_y);
 		Active *DoMaxima(Active &e);
