@@ -29,7 +29,9 @@ std::vector<ResultRegion> ExtractResults(
         }
     }
     else {
-        result.emplace_back(&node);
+        if (!node.polygon.empty()) {
+            result.emplace_back(&node);
+        }
     }
 
     for (const auto* child : node.childs) {
