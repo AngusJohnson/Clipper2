@@ -28,6 +28,9 @@
     <ClCompile Include="..\Tests\TestFromTextFile2.cpp">
       <Filter>Tests</Filter>
     </ClCompile>
+    <ClCompile Include="..\Tests\TestFromTextFile3.cpp">
+      <Filter>Tests</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="Tests">
