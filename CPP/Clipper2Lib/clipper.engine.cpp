@@ -623,7 +623,7 @@ namespace Clipper2Lib {
 		//set owner ...
 		if (IsHeadingLeftHorz(e))
 		{
-			e2 = e.next_in_ael;  //ie assess state from opposite diRect64on
+			e2 = e.next_in_ael;  //ie assess state from opposite direction
 			while (e2 && (!IsHotEdge(*e2) || IsOpen(*e2)))
 				e2 = e2->next_in_ael;
 			if (!e2)
@@ -1006,12 +1006,12 @@ namespace Clipper2Lib {
 			//NB neither e2.WindCnt nor e2.WindDx should ever be 0.
 			if (e2->wind_cnt * e2->wind_dx < 0)
 			{
-				//opposite diRect64ons so 'e' is outside 'e2' ...
+				//opposite directions so 'e' is outside 'e2' ...
 				if (abs(e2->wind_cnt) > 1)
 				{
 					//outside prev poly but still inside another.
 					if (e2->wind_dx * e.wind_dx < 0)
-						//reversing diRect64on so use the same WC
+						//reversing direction so use the same WC
 						e.wind_cnt = e2->wind_cnt;
 					else
 						//otherwise keep 'reducing' the WC by 1 (ie towards 0) ...
@@ -1025,7 +1025,7 @@ namespace Clipper2Lib {
 			{
 				//'e' must be inside 'e2'
 				if (e2->wind_dx * e.wind_dx < 0)
-					//reversing diRect64on so use the same WC
+					//reversing direction so use the same WC
 					e.wind_cnt = e2->wind_cnt;
 				else
 					//otherwise keep 'increasing' the WC by 1 (ie away from 0) ...
@@ -2287,7 +2287,7 @@ namespace Clipper2Lib {
 	}
 
 
-	bool ClipperBase::ResetHorzDiRect64on(const Active& horz,
+	bool ClipperBase::ResetHorzDirection(const Active& horz,
 		const Active* max_pair, int64_t& horz_left, int64_t& horz_right)
 	{
 		if (horz.bot.x == horz.top.x)
@@ -2380,7 +2380,7 @@ namespace Clipper2Lib {
 
 		int64_t horz_left, horz_right;
 		bool is_left_to_right =
-			ResetHorzDiRect64on(horz, max_pair, horz_left, horz_right);
+			ResetHorzDirection(horz, max_pair, horz_left, horz_right);
 
 		if (IsHotEdge(horz))
 			AddOutPt(horz, Point64(horz.curr_x, y));
@@ -2503,7 +2503,7 @@ namespace Clipper2Lib {
 				TrimHorz(horz, true);
 
 			is_left_to_right = 
-				ResetHorzDiRect64on(horz, max_pair, horz_left, horz_right);
+				ResetHorzDirection(horz, max_pair, horz_left, horz_right);
 		}
 
 		if (IsHotEdge(horz))
