@@ -134,7 +134,7 @@ namespace Clipper2Lib
       if (MergeGroups && _pathGroups.Count > 0)
       {
         //clean up self-intersections ...
-        Clipper c = new Clipper() { PreserveCollinear = false };
+        Clipper c = new Clipper() { PreserveCollinear = true };
         c.AddSubject(solution);
         if (_pathGroups[0]._pathsReversed)
           c.Execute(ClipType.Union, FillRule.Negative, solution);
@@ -452,7 +452,7 @@ namespace Clipper2Lib
       if (!MergeGroups)
       {
         //clean up self-intersections ...
-        Clipper c = new Clipper() { PreserveCollinear = false };
+        Clipper c = new Clipper() { PreserveCollinear = true };
         c.AddSubject(group._outPaths);
         if (group._pathsReversed)
           c.Execute(ClipType.Union, FillRule.Negative, group._outPaths);
