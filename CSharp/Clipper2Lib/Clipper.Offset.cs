@@ -84,7 +84,7 @@ namespace Clipper2Lib
     {
       int cnt = path.Count;
       if (cnt == 0) return;
-      PathsD pp = new PathsD(1) { ClipperFunc.PathD(path) };
+      Paths64 pp = new Paths64(1) { path };
       AddPaths(pp, joinType, endType);
     }
 
