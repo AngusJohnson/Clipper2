@@ -273,6 +273,9 @@ namespace Clipper2Lib {
 		PolyPath(const PolyPath&) = delete;
 		PolyPath& operator=(const PolyPath& other) = delete;
 
+		PolyPath(PolyPath&&) = default;
+		PolyPath& operator=(PolyPath&& other) = default;
+
 		void Clear() { 
 			for (PolyPath<T>* child : childs) delete child;
 			childs.resize(0); 
