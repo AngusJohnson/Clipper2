@@ -270,6 +270,9 @@ namespace Clipper2Lib {
 
 		virtual ~PolyPath() { Clear(); };
 
+		PolyPath(const PolyPath&) = delete;
+		PolyPath& operator=(const PolyPath& other) = delete;
+
 		void Clear() { 
 			for (PolyPath<T>* child : childs) delete child;
 			childs.resize(0); 
