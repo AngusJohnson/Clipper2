@@ -103,6 +103,7 @@ function IsClockwise(const path: TPath64): Boolean; overload;
   {$IFDEF INLINING} inline; {$ENDIF}
 function IsClockwise(const path: TPathD): Boolean; overload;
   {$IFDEF INLINING} inline; {$ENDIF}
+
 function PointInPolygon(const pt: TPoint64;
   const path: TPath64): TPointInPolygonResult;
 

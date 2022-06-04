@@ -67,11 +67,13 @@ type
   end;
 
   TOutRecState = (osUndefined, osOpen, osOuter, osInner);
+  TOutRecArray = array of POutRec;
 
   //OutRec: path data structure for clipping solutions
   TOutRec = record
     Idx      : Integer;
     Owner    : POutRec;
+    Split    : TOutRecArray;
     FrontE   : PActive;
     BackE    : PActive;
     Pts      : POutPt;
@@ -1126,7 +1128,7 @@ begin
   Clear;
   FLocMinList.Free;
   FOutRecList.Free;
-  FJoinerList.Free;;
+  FJoinerList.Free;
   FIntersectList.Free;
   FVertexArrayList.Free;
   inherited;
@@ -1891,6 +1893,7 @@ begin
   new(newOr);
   newOr.Idx := FOutRecList.Add(newOr);
   newOr.Pts := nil;
+  newOr.Split := nil;
   newOr.PolyPath := nil;
   newOr.State := osUndefined;
 
@@ -2010,6 +2013,7 @@ procedure TClipperBase.FixSelfIntersects(var op: POutPt);
       newOutRec.Owner := prevOp.OutRec.Owner;
       newOutRec.State := prevOp.OutRec.State;
       newOutRec.PolyPath := nil;
+      newOutRec.Split := nil;
       splitOp.OutRec := newOutRec;
       splitOp.Next.OutRec := newOutRec;
       new(newOp);
@@ -2309,6 +2313,7 @@ end;
 
 procedure TClipperBase.CompleteSplit(op1, op2: POutPt; OutRec: POutRec);
 var
+  i: integer;
   area1, area2: double;
   newOr: POutRec;
 begin
@@ -2334,6 +2339,12 @@ begin
     FillChar(newOr^, SizeOf(TOutRec), 0);
     newOr.Idx := FOutRecList.Add(newOr);
     newOr.PolyPath := nil;
+    newOr.Split := nil;
+
+    i := Length(OutRec.Split);
+    SetLength(OutRec.Split, i +1);
+    OutRec.Split[i] := newOr;
+
     if Abs(area1) >= Abs(area2) then
     begin
       OutRec.Pts := op1;
@@ -2676,6 +2687,7 @@ begin
   newOr.Owner := nil;
   newOr.State := osOpen;
   newOr.Pts := nil;
+  newOr.Split := nil;
   newOr.PolyPath := nil;
   newOr.FrontE := nil;
   newOr.BackE := nil;
@@ -3823,6 +3835,82 @@ begin
 end;
 //------------------------------------------------------------------------------
 
+function PointInPolygon(const pt: TPoint64; ops: POutPt): TPointInPolygonResult;
+var
+  val: Integer;
+  d, d2, d3: Double; //used to avoid integer overflow
+  ptCurr, ptPrev: POutPt;
+begin
+  if (ops.Next = ops) or (ops.Next = ops.Prev) then
+  begin
+    result := pipOutside;
+    Exit;
+  end;
+
+  Result := pipOn;
+  val := 0;
+  ptPrev := ops.Prev;
+  ptCurr := ops;
+  repeat
+    if (ptPrev.Pt.Y = ptCurr.Pt.Y) then //a horizontal edge
+    begin
+      if (pt.Y = ptCurr.Pt.Y) and
+        ((pt.X = ptPrev.Pt.X) or (pt.X = ptCurr.Pt.X) or
+          ((pt.X < ptPrev.Pt.X) <> (pt.X < ptCurr.Pt.X))) then Exit;
+    end
+    else if (ptPrev.Pt.Y < ptCurr.Pt.Y) then
+    begin
+      if (pt.Y >= ptPrev.Pt.Y) and (pt.Y <= ptCurr.Pt.Y) and
+        ((pt.X >= ptPrev.Pt.X) or (pt.X >= ptCurr.Pt.X)) then
+      begin
+        if((pt.X > ptPrev.Pt.X) and (pt.X > ptCurr.Pt.X)) then
+          val := 1 - val //toggles val between 0 and 1
+        else
+        begin
+          d := CrossProduct(ptPrev.Pt, ptCurr.Pt, pt);
+          if d = 0 then Exit
+          else if d > 0 then val := 1 - val;
+        end;
+      end;
+    end else
+    begin
+      if (pt.Y >= ptCurr.Pt.Y) and (pt.Y <= ptPrev.Pt.Y) and
+        ((pt.X >= ptCurr.Pt.X) or (pt.X >= ptPrev.Pt.X)) then
+      begin
+        if((pt.X > ptPrev.Pt.X) and (pt.X > ptCurr.Pt.X)) then
+          val := 1 - val //toggles val between 0 and 1
+        else
+        begin
+          d := CrossProduct(ptCurr.Pt, ptPrev.Pt, pt);
+          if d = 0 then Exit
+          else if d > 0 then val := 1 - val;
+        end;
+      end;
+    end;
+    ptPrev := ptCurr;
+    ptCurr := ptCurr.Next;
+  until ptCurr = ops;
+  if val = 0 then
+     result := pipOutside else
+     result := pipInside;
+end;
+//------------------------------------------------------------------------------
+
+function Path1InsidePath2(const op1, op2: POutPt): Boolean;
+var
+  op: POutPt;
+  pipResult: TPointInPolygonResult;
+begin
+  op := op1;
+  repeat
+    pipResult := PointInPolygon(op.Pt, op2);
+    if pipResult <> pipOn then Break;
+    op := op.Next;
+  until op = op1;
+  Result := pipResult = pipInside;
+end;
+//------------------------------------------------------------------------------
+
 procedure TClipperBase.BuildTree(polytree: TPolyPathBase; out openPaths: TPaths64);
 var
   i,j         : Integer;
@@ -3840,20 +3928,35 @@ begin
     for i := 0 to FOutRecList.Count -1 do
     begin
       outRec := FOutRecList[i];
-      if not Assigned(outRec) then Continue;
+      if not Assigned(outRec) or
+        not assigned(outRec.Pts) then Continue;
 
-      //make sure outer/owner paths preceed their inner paths ...
-      if assigned(outRec.Owner) and (outRec.Owner.Idx > outRec.Idx) then
+      outRec.Owner := GetRealOutRec(outRec.Owner);
+      if assigned(outRec.Owner) then
       begin
-        j := outRec.Owner.Idx;
-        outRec.idx := j;
-        FOutRecList[i] := FOutRecList[j];
-        FOutRecList[j] := outRec;
-        outRec := FOutRecList[i];
-        outRec.Idx := i;
+        if assigned(outRec.Owner.Split) then
+        begin
+          for j := 0 to High(outRec.Owner.Split) do
+            if Path1InsidePath2(OutRec.Pts,
+              outRec.Owner.Split[j].Pts) then
+            begin
+              outRec.Owner := outRec.Owner.Split[j];
+              break;
+            end;
+        end;
+
+        //swap order if outer/owner paths are preceeded by their inner paths
+        if (outRec.Owner.Idx > outRec.Idx) then
+        begin
+          j := outRec.Owner.Idx;
+          outRec.idx := j;
+          FOutRecList[i] := FOutRecList[j];
+          FOutRecList[j] := outRec;
+          outRec := FOutRecList[i];
+          outRec.Idx := i;
+        end;
       end;
 
-      if not assigned(outRec.Pts) then Continue;
       isOpenPath := IsOpen(outRec);
       if not BuildPath(outRec.Pts, isOpenPath, path) then
         Continue;
