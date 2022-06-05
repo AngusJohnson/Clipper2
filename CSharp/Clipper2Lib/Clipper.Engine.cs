@@ -1,7 +1,7 @@
 ﻿/*******************************************************************************
 * Author    :  Angus Johnson                                                   *
 * Version   :  10.0 (beta) - also known as Clipper2                            *
-* Date      :  24 May 2022                                                     *
+* Date      :  5 June 2022                                                     *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  This is the main polygon clipping module                        *
@@ -27,6 +27,14 @@ namespace Clipper2Lib
   //into ascending and descending 'bounds' (or sides) that start at local
   //minima and ascend to a local maxima, before descending again.
   [Flags]
+
+  public enum PointInPolygonResult
+  {
+    IsOn = 0,
+    IsInside = 1,
+    IsOutside = 2
+  };
+
   internal enum VertexFlags
   {
     None = 0,
@@ -115,6 +123,7 @@ namespace Clipper2Lib
   {
     public int idx;
     public OutRec? owner;
+    public List<OutRec>? splits;
     public Active? frontEdge;
     public Active? backEdge;
     public OutPt? pts;
@@ -202,8 +211,9 @@ namespace Clipper2Lib
     private readonly List<long> _scanlineList;
     private int _currentLocMin;
     private long _currentBotY;
-    protected bool _isSortedMinimaList;
-    protected bool _hasOpenPaths;
+    private bool _isSortedMinimaList;
+    private bool _hasOpenPaths;
+    internal bool _using_polytree;
     public bool PreserveCollinear { get; set; }
 
 #if USINGZ
@@ -3164,10 +3174,16 @@ namespace Clipper2Lib
         outrec.pts = op1;
       else
       {
-        OutRec newOr = new OutRec()
-        { idx = _outrecList.Count };
+        OutRec newOr = new OutRec() { idx = _outrecList.Count };
         _outrecList.Add(newOr);
         newOr.polypath = null;
+
+        if (_using_polytree)
+        {
+          if (outrec.splits == null)
+            outrec.splits = new List<OutRec>();
+          outrec.splits.Add(newOr);
+        }
 
         if (Math.Abs(area1) >= Math.Abs(area2))
         {
@@ -3383,6 +3399,79 @@ namespace Clipper2Lib
       return true;
     }
 
+    private PointInPolygonResult PointInPolygon(Point64 pt, OutPt ops)
+	  {
+		  if (ops.next == ops || ops.next == ops.prev)
+			  return PointInPolygonResult.IsOutside;
+
+		  int val = 0;
+      OutPt prev = ops.prev!, curr = ops;
+		  do
+		  {
+			  if (prev.pt.Y == curr!.pt.Y) //a horizontal edge
+			  {
+				  if (pt.Y == curr.pt.Y &&
+					  (pt.X == prev.pt.X || pt.X == curr.pt.X ||
+					  (pt.X < prev.pt.X) != (pt.X < curr.pt.X)))
+						  return PointInPolygonResult.IsOn;
+			  }
+			  else if (prev.pt.Y < curr.pt.Y)
+			  {
+				  //nb: only allow one equality with Y to avoid 
+				  //double counting when pt.Y == ptCurr.Pt.Y
+				  if (pt.Y > prev.pt.Y && pt.Y <= curr.pt.Y &&
+					  (pt.X >= prev.pt.X || pt.X >= curr.pt.X))
+				  {
+					  if (pt.X > prev.pt.X && pt.X > curr.pt.X)
+						  val = 1 - val; //toggles val between 0 and 1
+					  else
+					  {
+						  double d = InternalClipperFunc.CrossProduct(
+                prev.pt, curr.pt, pt);
+						  if (d == 0) return PointInPolygonResult.IsOn;
+						  else if (d > 0) val = 1 - val;
+					  }
+				  }
+			  }
+
+        else
+        {
+          if (pt.Y > curr.pt.Y && pt.Y <= prev.pt.Y &&
+            (pt.X >= curr.pt.X || pt.X >= prev.pt.X))
+          {
+            if (pt.X > prev.pt.X && pt.X > curr.pt.X)
+              val = 1 - val; //toggles val between 0 and 1
+            else
+            {
+              double d = InternalClipperFunc.CrossProduct(
+                curr.pt, prev.pt, pt);
+              if (d == 0) return PointInPolygonResult.IsOn;
+              else if (d > 0) val = 1 - val;
+            }
+          }
+        }
+        prev = curr;
+        curr = curr.next!;
+		  } while (curr != ops) ;
+
+      return val == 0 ? 
+        PointInPolygonResult.IsOutside : 
+        PointInPolygonResult.IsInside;
+	  }
+
+	  private bool Path1InsidePath2(OutPt op1, OutPt op2)
+    {
+      PointInPolygonResult result;
+      OutPt op = op1;
+      do
+      {
+        result = PointInPolygon(op.pt, op2);
+        if (result != PointInPolygonResult.IsOn) break;
+        op = op.next!;
+      } while (op != op1);
+      return result == PointInPolygonResult.IsInside;
+    }
+
     protected bool BuildTree(PolyPathBase polytree, Paths64 solutionOpen)
     {
       polytree.Clear();
@@ -3393,18 +3482,36 @@ namespace Clipper2Lib
         for (int i = 0; i < _outrecList.Count; i++)
         {
           OutRec outrec = _outrecList[i];
-          //make sure outer/owner paths preceed their inner paths ...
-          if (outrec.owner != null && outrec.owner.idx > outrec.idx)
+          if (outrec.pts == null) continue;
+
+          outrec.owner = GetRealOutRec(outrec.owner);
+          if (outrec.owner != null)
           {
-            int j = outrec.owner.idx;
-            outrec.owner.idx = i;
-            outrec.idx = j;
-            _outrecList[i] = _outrecList[j];
-            _outrecList[j] = outrec;
-            outrec = _outrecList[i];
+            if (outrec.owner.splits != null)
+            {
+              foreach (OutRec split in outrec.owner.splits)
+              {
+                if (Path1InsidePath2(outrec.pts, split.pts!))
+                {
+                  outrec.owner = split;
+                  break;
+                }
+              }
+            }
+
+            //make sure outer/owner paths preceed their inner paths ...
+            if (outrec.owner.idx > outrec.idx)
+            {
+              int j = outrec.owner.idx;
+              outrec.owner.idx = i;
+              outrec.idx = j;
+              _outrecList[i] = _outrecList[j];
+              _outrecList[j] = outrec;
+              outrec = _outrecList[i];
+            }
+
           }
 
-          if (outrec.pts == null) continue;
           bool isOpenPath = outrec.state == OutRecState.Open;
 
           Path64 path = new Path64();
@@ -3465,12 +3572,12 @@ namespace Clipper2Lib
 
   public class Clipper : ClipperBase
   {
-    public new void AddPath(Path64 path, PathType polytype, bool isOpen = false)
+    internal new void AddPath(Path64 path, PathType polytype, bool isOpen = false)
     {
       base.AddPath(path, polytype, isOpen);
     }
 
-    public new void AddPaths(Paths64 paths, PathType polytype, bool isOpen = false)
+    internal new void AddPaths(Paths64 paths, PathType polytype, bool isOpen = false)
     {
       base.AddPaths(paths, polytype, isOpen);
     }
@@ -3520,6 +3627,7 @@ namespace Clipper2Lib
       polytree.Clear();
       openPaths.Clear();
       bool success = true;
+      _using_polytree = true;
       try
       {
         ExecuteInternal(clipType, fillRule);

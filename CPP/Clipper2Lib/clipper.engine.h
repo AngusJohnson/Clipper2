@@ -85,7 +85,7 @@ namespace Clipper2Lib {
 	using PolyTree64 = PolyPath<int64_t>;
 	using PolyTreeD = PolyPath<double>;
 
-	class OutRec;
+	struct OutRec;
 	typedef std::vector<OutRec*> OutRecList;
 
 	//OutRec: contains a path in the clipping solution. Edges in the AEL will
