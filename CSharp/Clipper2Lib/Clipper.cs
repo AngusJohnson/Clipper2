@@ -1,7 +1,7 @@
 ﻿/*******************************************************************************
 * Author    :  Angus Johnson                                                   *
 * Version   :  10.0 (beta) - also known as Clipper2                            *
-* Date      :  10 May 2022                                                     *
+* Date      :  5 June 2022                                                     *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  This module contains simple functions that will likely cover    *
@@ -511,5 +511,110 @@ namespace Clipper2Lib
         AddPolyNodeToPathsD((PolyPathD) polyTree._childs[i], result);
       return result;
     }
+
+    public static double PerpendicDistFromLineSqrd(PointD pt, PointD line1, PointD line2)
+    {
+      double a = pt.x - line1.x;
+      double b = pt.y - line1.y;
+      double c = line2.x - line1.x;
+      double d = line2.y - line1.y;
+      if (c == 0 && d == 0) return 0;
+      return Sqr(a * d - c * b) / (c * c + d * d);
+    }
+
+    public static double PerpendicDistFromLineSqrd(Point64 pt, Point64 line1, Point64 line2)
+    {
+      double a = (double) pt.X - line1.X;
+      double b = (double) pt.Y - line1.Y;
+      double c = (double) line2.X - line1.X;
+      double d = (double) line2.Y - line1.Y;
+      if (c == 0 && d == 0) return 0;
+      return Sqr(a * d - c * b) / (c * c + d * d);
+    }
+
+    public static void RDP(Path64 path, int begin, int end, double epsSqrd, List<int> flags)
+    {
+      int idx = 0;
+      double max_d = 0;
+      while (end > begin && path[begin] == path[end]) flags[end--] = 0;
+      for (int i = begin + 1; i < end; ++i)
+      {
+        //PerpendicDistFromLineSqrd - avoids expensive Sqrt()
+        double d = PerpendicDistFromLineSqrd(path[i], path[begin], path[end]);
+        if (d <= max_d) continue;
+        max_d = d;
+        idx = i;
+      }
+      if (max_d <= epsSqrd) return;
+      flags[idx] = 1;
+      if (idx > begin + 1) RDP(path, begin, idx, epsSqrd, flags);
+      if (idx < end - 1) RDP(path, idx, end, epsSqrd, flags);
+    }
+
+    public static Path64 RamerDouglasPeucker(Path64 path, double epsilon)
+    {
+      int len = path.Count;
+      if (len < 5) return path;
+      List<int> flags = new List<int>(new int[len]);
+      flags[0] = 1;
+      flags[len - 1] = 1;
+      RDP(path, 0, len - 1, Sqr(epsilon), flags);
+      Path64 result = new Path64(len);
+      for (int i = 0; i < len; ++i)
+        if (flags[i] == 1)
+          result.Add(path[i]);
+      return result;
+    }
+
+    public static Paths64 RamerDouglasPeucker(Paths64 paths, double epsilon)
+    {
+      Paths64 result = new Paths64(paths.Count);
+      foreach (Path64 path in paths)
+        result.Add(RamerDouglasPeucker(path, epsilon));
+      return result;
+    }
+
+    public static void RDP(PathD path, int begin, int end, double epsSqrd, List<int> flags)
+    {
+      int idx = 0;
+      double max_d = 0;
+      while (end > begin && path[begin] == path[end]) flags[end--] = 0;
+      for (int i = begin + 1; i < end; ++i)
+      {
+        //PerpendicDistFromLineSqrd - avoids expensive Sqrt()
+        double d = PerpendicDistFromLineSqrd(path[i], path[begin], path[end]);
+        if (d <= max_d) continue;
+        max_d = d;
+        idx = i;
+      }
+      if (max_d <= epsSqrd) return;
+      flags[idx] = 1;
+      if (idx > begin + 1) RDP(path, begin, idx, epsSqrd, flags);
+      if (idx < end - 1) RDP(path, idx, end, epsSqrd, flags);
+    }
+
+    public static PathD RamerDouglasPeucker(PathD path, double epsilon)
+    {
+      int len = path.Count;
+      if (len < 5) return path;
+      List<int> flags = new List<int>(new int[len]);
+      flags[0] = 1;
+      flags[len - 1] = 1;
+      RDP(path, 0, len - 1, Sqr(epsilon), flags);
+      PathD result = new PathD(len);
+      for (int i = 0; i < len; ++i)
+        if (flags[i] == 1)
+          result.Add(path[i]);
+      return result;
+    }
+
+    public static PathsD RamerDouglasPeucker(PathsD paths, double epsilon)
+    {
+      PathsD result = new PathsD(paths.Count);
+      foreach (PathD path in paths)
+        result.Add(RamerDouglasPeucker(path, epsilon));
+      return result;
+    }
+
   }
 } //namespace
