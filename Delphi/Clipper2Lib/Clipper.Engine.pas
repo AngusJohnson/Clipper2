@@ -3,7 +3,7 @@ unit Clipper.Engine;
 (*******************************************************************************
 * Author    :  Angus Johnson                                                   *
 * Version   :  10.0 (beta) - aka Clipper2                                      *
-* Date      :  25 May 2022                                                     *
+* Date      :  5 June 2022                                                     *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  This is the main polygon clipping module                        *
@@ -3860,7 +3860,9 @@ begin
     end
     else if (ptPrev.Pt.Y < ptCurr.Pt.Y) then
     begin
-      if (pt.Y >= ptPrev.Pt.Y) and (pt.Y <= ptCurr.Pt.Y) and
+      //nb: only allow one equality with Y to avoid
+      //double counting when pt.Y == ptCurr.Pt.Y
+      if (pt.Y > ptPrev.Pt.Y) and (pt.Y <= ptCurr.Pt.Y) and
         ((pt.X >= ptPrev.Pt.X) or (pt.X >= ptCurr.Pt.X)) then
       begin
         if((pt.X > ptPrev.Pt.X) and (pt.X > ptCurr.Pt.X)) then
@@ -3874,7 +3876,7 @@ begin
       end;
     end else
     begin
-      if (pt.Y >= ptCurr.Pt.Y) and (pt.Y <= ptPrev.Pt.Y) and
+      if (pt.Y > ptCurr.Pt.Y) and (pt.Y <= ptPrev.Pt.Y) and
         ((pt.X >= ptCurr.Pt.X) or (pt.X >= ptPrev.Pt.X)) then
       begin
         if((pt.X > ptPrev.Pt.X) and (pt.X > ptCurr.Pt.X)) then
@@ -3934,6 +3936,7 @@ begin
       outRec.Owner := GetRealOutRec(outRec.Owner);
       if assigned(outRec.Owner) then
       begin
+
         if assigned(outRec.Owner.Split) then
         begin
           for j := 0 to High(outRec.Owner.Split) do

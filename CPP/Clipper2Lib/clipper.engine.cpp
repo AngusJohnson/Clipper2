@@ -1,7 +1,7 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
 * Version   :  10.0 (beta) - aka Clipper2                                      *
-* Date      :  24 May 2022                                                     *
+* Date      :  5 June 2022                                                     *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  This is the main polygon clipping module                        *
@@ -1479,6 +1479,7 @@ namespace Clipper2Lib {
 				e1.outrec->back_edge->outrec = e1.outrec;
 			}
 		}
+
 		//after joining, the e2.OutRec must contains no vertices ...
 		e2.outrec->front_edge = nullptr;
 		e2.outrec->back_edge = nullptr;
@@ -1728,6 +1729,12 @@ namespace Clipper2Lib {
 			newOr->idx = outrec_list_.size();
 			outrec_list_.push_back(newOr);
 			newOr->polypath = nullptr;
+
+			if (using_polytree)
+			{
+				if (!outrec.splits) outrec.splits = new OutRecList();
+				outrec.splits->push_back(newOr);
+			}
 
 			if (std::abs(area1) >= std::abs(area2))
 			{
@@ -2107,6 +2114,7 @@ namespace Clipper2Lib {
 	bool ClipperBase::Execute(ClipType clip_type,
 		FillRule fill_rule, PolyTree64& polytree, Paths64& solution_open)
 	{
+		using_polytree = true;
 		polytree.Clear();
 		solution_open.clear();
 		if (ExecuteInternal(clip_type, fill_rule))
@@ -3348,6 +3356,73 @@ namespace Clipper2Lib {
 		}
 	}
 
+	PointInPolyResult PointInPolygon(const Point64 pt, OutPt* ops)
+	{
+		if (ops->next == ops || ops->next == ops->prev)
+			return PointInPolyResult::IsOutside;
+
+		int val = 0;
+		OutPt* prev = ops->prev, *curr = ops;
+		do
+		{
+			if (prev->pt.y == curr->pt.y) //a horizontal edge
+			{
+				if (pt.y == curr->pt.y &&
+					(pt.x == prev->pt.x || pt.x == curr->pt.x ||
+					(pt.x < prev->pt.x) != (pt.x < curr->pt.x)))
+						return PointInPolyResult::IsOn;
+			}
+			else if (prev->pt.y < curr->pt.y)
+			{
+				//nb: only allow one equality with Y to avoid 
+				//double counting when pt.Y == ptCurr.Pt.Y
+				if (pt.y > prev->pt.y && pt.y <= curr->pt.y &&
+					((pt.x >= prev->pt.x || pt.x >= curr->pt.x)))
+				{
+					if (pt.x > prev->pt.x && pt.x > curr->pt.x)
+						val = 1 - val; //toggles val between 0 and 1
+					else
+					{
+						double d = CrossProduct(prev->pt, curr->pt, pt);
+						if (d == 0) return PointInPolyResult::IsOn;
+						else if (d > 0) val = 1 - val;
+					}
+				}
+			}
+			else
+			{
+				if (pt.y > curr->pt.y && pt.y <= prev->pt.y &&
+					(pt.x >= curr->pt.x || pt.x >= prev->pt.x))
+				{
+					if (pt.x > prev->pt.x && pt.x > curr->pt.x)
+						val = 1 - val; //toggles val between 0 and 1
+					else
+					{
+						double d = CrossProduct(curr->pt, prev->pt, pt);
+						if (d == 0) return PointInPolyResult::IsOn;
+						else if (d > 0) val = 1 - val;
+					}
+				}
+			}
+			prev = curr;
+			curr = curr->next;
+		} while (curr != ops);
+
+		return val == 0 ? PointInPolyResult::IsOutside : PointInPolyResult::IsInside;
+	}
+
+	bool Path1InsidePath2(OutPt* op1, OutPt* op2)
+	{
+		PointInPolyResult result = PointInPolyResult::IsOn;
+		OutPt* op = op1;
+		do
+		{
+			result = PointInPolygon(op->pt, op2);
+			if (result != PointInPolyResult::IsOn) break;
+			op = op->next;
+		} while (op != op1);
+		return result == PointInPolyResult::IsInside;
+	}
 
 	void ClipperBase::BuildTree(PolyPath64& polytree, Paths64& open_paths)
 	{
@@ -3357,25 +3432,36 @@ namespace Clipper2Lib {
 			open_paths.reserve(outrec_list_.size());
 		for (OutRec* outrec : outrec_list_)
 		{
-			if (!outrec) continue;
+			if (!outrec || !outrec->pts) continue;
 
-			//make sure outer/owner paths are processed before their inner paths
-			//and swap OutRec order if necessary
-			while (outrec->owner && outrec->owner->idx > outrec->idx)
+			outrec->owner = GetRealOutRec(outrec->owner);
+			if (outrec->owner)
 			{
-				OutRec* tmp = outrec->owner;
-				outrec_list_[outrec->owner->idx] = outrec;
-				outrec_list_[outrec->idx] = tmp;
-				size_t tmp_idx = outrec->idx;
-				outrec->idx = tmp->idx;
-				tmp->idx = tmp_idx;
-				outrec = tmp;
+				if (outrec->owner->splits)
+				{
+					for (OutRec* splitOr : *outrec->owner->splits)
+						if (Path1InsidePath2(outrec->pts, splitOr->pts))
+						{
+							outrec->owner = splitOr;
+							break;
+						}
+				}
+
+				//swap order if outer/owner paths are preceeded by their inner paths
+				if (outrec->owner->idx > outrec->idx)
+				{
+					OutRec* tmp = outrec->owner;
+					outrec_list_[outrec->owner->idx] = outrec;
+					outrec_list_[outrec->idx] = tmp;
+					size_t tmp_idx = outrec->idx;
+					outrec->idx = tmp->idx;
+					tmp->idx = tmp_idx;
+					outrec = tmp;
+				}
 			}
-
-			if (!outrec->pts) continue;
-
-			Path64 path;
+		
 			bool is_open_path = IsOpen(*outrec);
+			Path64 path;
 			if (!BuildPath(*outrec->pts, is_open_path, path)) continue;
 
 			if (is_open_path)

@@ -1,7 +1,7 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
 * Version   :  10.0 (beta) - aka Clipper2                                      *
-* Date      :  22 May 2022                                                     *
+* Date      :  5 June 2022                                                     *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  This is the main polygon clipping module                        *
@@ -31,6 +31,8 @@ namespace Clipper2Lib {
 
 	//Note: all clipping operations except for Difference are commutative.
 	enum class ClipType { None, Intersection, Union, Difference, Xor };
+	
+	enum class PointInPolyResult { IsOn, IsInside, IsOutside };
 
 	enum class PathType { Subject, Clip };
 
@@ -83,16 +85,21 @@ namespace Clipper2Lib {
 	using PolyTree64 = PolyPath<int64_t>;
 	using PolyTreeD = PolyPath<double>;
 
+	class OutRec;
+	typedef std::vector<OutRec*> OutRecList;
+
 	//OutRec: contains a path in the clipping solution. Edges in the AEL will
 	//have OutRec pointers assigned when they form part of the clipping solution.
 	struct OutRec {
 		size_t idx = 0;
 		OutRec* owner = nullptr;
+		OutRecList* splits = nullptr;
 		Active* front_edge = nullptr;
 		Active* back_edge = nullptr;
 		OutPt* pts = nullptr;
 		PolyPath64* polypath = nullptr;
 		OutRecState state = OutRecState::Undefined;
+		~OutRec() { if (splits) delete splits; };
 	};
 
 	struct Active {
@@ -144,6 +151,7 @@ namespace Clipper2Lib {
 		bool error_found_ = false;
 		bool has_open_paths_ = false;
 		bool minima_list_sorted_ = false;
+		bool using_polytree = false;
 		Active *actives_ = nullptr;
 		Active *sel_ = nullptr;
 		Joiner *horz_joiners_ = nullptr;
