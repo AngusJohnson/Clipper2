@@ -82,8 +82,12 @@ namespace Clipper2Lib {
 
 	using PolyPath64 = PolyPath<int64_t>;
 	using PolyPathD = PolyPath<double>;
-	using PolyTree64 = PolyPath<int64_t>;
-	using PolyTreeD = PolyPath<double>;
+
+	template <typename T>
+	using PolyTree = PolyPath<T>;
+
+	using PolyTree64 = PolyTree<int64_t>;
+	using PolyTreeD = PolyTree<double>;
 
 	struct OutRec;
 	typedef std::vector<OutRec*> OutRecList;

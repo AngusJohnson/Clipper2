@@ -73,13 +73,17 @@ public:
 	
 	Paths64 Execute(double delta);
 
+	double MiterLimit() const { return miter_limit_; }
+	void MiterLimit(double miter_limit) { miter_limit_ = miter_limit; }
 	//ArcTolerance: needed for rounded offsets (See offset_triginometry2.svg)
+	double ArcTolerance() const { return arc_tolerance_; }
 	void ArcTolerance(double arc_tolerance) { arc_tolerance_ = arc_tolerance; }
 	//MergeGroups: A path group is one or more paths added via the AddPath or
 	//AddPaths methods. By default these path groups will be offset
 	//independently of other groups and this may cause overlaps (intersections).
 	//However, when MergeGroups is enabled, any overlapping offsets will be
 	//merged (via a clipping union operation) to remove overlaps.
+	bool MergeGroups() const { return merge_groups_; }
 	void MergeGroups(bool merge_groups) { merge_groups_ = merge_groups; }
 };
 

@@ -750,7 +750,7 @@ namespace Clipper2Lib {
 		for (const Path64& path : paths) total_vertex_count += path.size();
 		if (total_vertex_count == 0) return;
 		Vertex* vertices = new Vertex[total_vertex_count], *v = vertices;
-		for (const Path64 path : paths)
+		for (const Path64& path : paths)
 		{
 			//for each path create a circular double linked list of vertices
 			Vertex *v0 = v, *curr_v = v, *prev_v = nullptr;
