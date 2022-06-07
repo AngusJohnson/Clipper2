@@ -521,7 +521,7 @@ static Paths<T> RamerDouglasPeucker(const Paths<T>& paths, double epsilon)
 {
 	Paths<T> result;
 	result.reserve(paths.size());
-	for (const Path<T> path& : paths)
+	for (const Path<T>& path : paths)
 		result.push_back(RamerDouglasPeucker<T>(path, epsilon));
 	return result;
 }
