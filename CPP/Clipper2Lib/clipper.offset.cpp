@@ -1,7 +1,7 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
 * Version   :  10.0 (beta) - aka Clipper2                                      *
-* Date      :  7 June 2022                                                     *
+* Date      :  8 June 2022                                                     *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  Polygon offsetting                                              *
@@ -377,10 +377,7 @@ Paths64 ClipperOffset::Execute(double delta)
 	for (groups_iter = groups_.begin(); groups_iter != groups_.end(); ++groups_iter)
 	{
 		DoGroupOffset(*groups_iter, delta);
-		Paths64::const_iterator paths_citer;
-		for (paths_citer = groups_iter->paths_out_.cbegin();
-			paths_citer != groups_iter->paths_out_.cend(); ++paths_citer)
-			result.push_back(*paths_citer);
+		result.swap(groups_iter->paths_out_);
 	}
 
 	if (merge_groups_ && groups_.size() > 0)

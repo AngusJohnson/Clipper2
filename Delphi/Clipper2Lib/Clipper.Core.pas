@@ -1249,18 +1249,21 @@ end;
 //corresponds with the display's orientation).
 function Area(const path: TPath64): Double;
 var
-  i, j, highI: Integer;
+  i, highI: Integer;
   d: double;
+  p1,p2: PPoint64;
 begin
   //shoelace formula
   Result := 0.0;
   highI := High(path);
-  j := highI;
+  if highI < 2 then Exit;
+  p1 := @path[highI];
+  p2 := @path[0];
   for i := 0 to highI do
   begin
-    d := (path[j].Y + path[i].Y); //needed for Delphi7
-    Result := Result + d * (path[j].X - path[i].X);
-    j := i;
+    d := (p1.Y + p2.Y); //needed for Delphi7
+    Result := Result + d * (p1.X - p2.X);
+    p1 := p2; inc(p2);
   end;
   Result := Result * 0.5;
 end;
@@ -1279,16 +1282,18 @@ end;
 function Area(const path: TPathD): Double;
 var
   i, j, highI: Integer;
+  p1,p2: PPoint64;
 begin
   //https://en.wikipedia.org/wiki/Shoelace_formula
   Result := 0.0;
   highI := High(path);
-  j := highI;
+  if highI < 2 then Exit;
+  p1 := @path[highI];
+  p2 := @path[0];
   for i := 0 to highI do
   begin
-    Result := Result +
-      (path[j].X + path[i].X) * (path[j].Y - path[i].Y);
-    j := i;
+    Result := Result + (p1.Y + p2.Y) * (p1.X - p2.X);
+    p1 := p2; inc(p2);
   end;
   Result := Result * 0.5;
 end;

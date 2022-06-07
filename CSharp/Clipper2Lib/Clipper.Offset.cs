@@ -130,8 +130,8 @@ namespace Clipper2Lib
       foreach (PathGroup group in _pathGroups)
       {
         DoGroupOffset(group, delta);
-        foreach (Path64 path in group._outPaths)
-          solution.Add(path);
+        solution.AddRange(group._outPaths);
+        group._outPaths.Clear();
       }
 
       if (MergeGroups && _pathGroups.Count > 0)
