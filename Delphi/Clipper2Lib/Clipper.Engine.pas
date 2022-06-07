@@ -1950,10 +1950,16 @@ end;
 //------------------------------------------------------------------------------
 
 function AreaTriangle(const pt1, pt2, pt3: TPoint64): double;
+var
+  d1,d2,d3,d4,d5,d6: double;
 begin
-  result := double(pt3.y + pt1.y) * double(pt3.x - pt1.x) +
-    double(pt1.y + pt2.y) * double(pt1.x - pt2.x) +
-    double(pt2.y + pt3.y) * double(pt2.x - pt3.x);
+  d1 := (pt3.y + pt1.y);
+  d2 := (pt3.x - pt1.x);
+  d3 := (pt1.y + pt2.y);
+  d4 := (pt1.x - pt2.x);
+  d5 := (pt2.y + pt3.y);
+  d6 := (pt2.x - pt3.x);
+  result := d1 * d2 + d3 *d4 + d5 *d6;
 end;
 //------------------------------------------------------------------------------
 

@@ -32,7 +32,7 @@ begin
   //solution := Union(subj, clip, fillRule);
   //solution := Difference(subj, clip, fillRule);
 
-  with SimpleClipperSvgWriter.Create(fillRule) do
+  with TSimpleClipperSvgWriter.Create(fillRule) do
   try
     AddPaths(subj, false, $1000BBFF, $800099FF, 0.8);
     AddPaths(clip, false, $12F99F00, $80FF9900, 0.8);
