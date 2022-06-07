@@ -77,8 +77,13 @@ TEST(Clipper2Tests, TestFromTextFile) {
                 EXPECT_EQ(area, area2);
             }
             else if (test_number == 202) {
-                EXPECT_EQ(count, count2);
-                EXPECT_EQ(area, area2);
+#ifndef REVERSE_ORIENTATION
+              // with REVERSE_ORIENTATION, both 
+              // polygons will appear to have negative 
+              // orientation and will be ignored
+              EXPECT_EQ(count, count2);
+              EXPECT_EQ(area, area2);
+#endif 
             }
             else {
                 EXPECT_LE(count_diff, 8);

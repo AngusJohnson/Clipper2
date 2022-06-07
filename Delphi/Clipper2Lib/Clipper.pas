@@ -15,12 +15,13 @@ interface
 {$I Clipper.inc}
 
 uses
-  Clipper.Core, Clipper.Engine, Clipper.Offset;
+  Math, SysUtils, Clipper.Core, Clipper.Engine, Clipper.Offset;
 
 //Redeclare here a number of structures defined in
 //other units so those units won't need to be declared
 //just to use the following functions.
 type
+  TClipper    = Clipper.Engine.TClipper64;
   TPoint64    = Clipper.Core.TPoint64;
   TRect64     = Clipper.Core.TRect64;
   TPath64     = Clipper.Core.TPath64;
@@ -80,7 +81,7 @@ function InflatePaths(const paths: TPaths64; delta: Double;
   MiterLimit: double = 2.0): TPaths64; overload;
 function InflatePaths(const paths: TPathsD; delta: Double;
 jt: TJoinType = jtRound; et: TEndType = etPolygon;
-MiterLimit: double = 2.0): TPathsD; overload;
+miterLimit: double = 2.0; precision: integer = 2): TPathsD; overload;
 
 function MinkowskiSum(const pattern, path: TPath64;
   pathIsClosed: Boolean): TPaths64;
@@ -90,6 +91,9 @@ function PolyTreeDToPathsD(PolyTree: TPolyTreeD): TPathsD;
 
 function MakePath(const ints: TArrayOfInteger): TPath64; overload;
 function MakePath(const dbls: TArrayOfDouble): TPathD; overload;
+
+resourcestring
+  rsPrecisionRangeError = 'Error: Precision is out of range (-8..8).';
 
 implementation
 
@@ -175,7 +179,7 @@ end;
 function BooleanOp(clipType: TClipType; fillRule: TFillRule;
   const subjects, clips: TPaths64): TPaths64;
 begin
-  with TClipper.Create do
+  with TClipper64.Create do
   try
     AddSubject(subjects);
     AddClip(clips);
@@ -282,14 +286,19 @@ end;
 //------------------------------------------------------------------------------
 
 function InflatePaths(const paths: TPathsD; delta: Double;
-  jt: TJoinType; et: TEndType; MiterLimit: double): TPathsD;
+  jt: TJoinType; et: TEndType; miterLimit: double;
+  precision: integer): TPathsD;
 var
   pp: TPaths64;
-const
-  scale = 100; invScale = 0.01;
+  scale, invScale: double;
 begin
+  if (precision < -8) or (precision > 8) then
+    raise Exception.Create(rsPrecisionRangeError);
+  scale := Power(10, precision);
+  invScale := 1/scale;
   pp := ScalePaths(paths, scale, scale);
-  with TClipperOffset.Create(MiterLimit) do
+
+  with TClipperOffset.Create(miterLimit) do
   try
     AddPaths(pp, jt, et);
     pp := Execute(delta * scale);

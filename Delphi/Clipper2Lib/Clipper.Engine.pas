@@ -3,7 +3,7 @@ unit Clipper.Engine;
 (*******************************************************************************
 * Author    :  Angus Johnson                                                   *
 * Version   :  10.0 (beta) - aka Clipper2                                      *
-* Date      :  5 June 2022                                                     *
+* Date      :  7 June 2022                                                     *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  This is the main polygon clipping module                        *
@@ -242,7 +242,7 @@ type
       FPreserveCollinear write FPreserveCollinear;
   end;
 
-  TClipper = class(TClipperBase) //for integer coordinates
+  TClipper64 = class(TClipperBase) //for integer coordinates
   public
     procedure AddSubject(const subject: TPath64); overload;
     procedure AddSubject(const subjects: TPaths64); overload;
@@ -610,17 +610,14 @@ end;
 //------------------------------------------------------------------------------
 
 function GetCurrYMaximaVertex(e: PActive): PVertex;
-var
-  goForward: boolean;
 begin
   //nb: function not safe with open paths
   Result := e.VertTop;
 {$IFDEF REVERSE_ORIENTATION}
-    goForward := e.WindDx > 0;
+  if e.WindDx > 0 then
 {$ELSE}
-    goForward := e.WindDx < 0;
+  if e.WindDx < 0 then
 {$ENDIF}
-  if goForward then
     while Result.Next.Pt.Y = Result.Pt.Y do  Result := Result.Next
   else
     while Result.Prev.Pt.Y = Result.Pt.Y do  Result := Result.Prev;
@@ -695,7 +692,7 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-function BuildPath(op: POutPt; isOpen: Boolean;
+function BuildPath(op: POutPt; reverse, isOpen: Boolean;
   out path: TPath64): Boolean;
 var
   i,j, cnt: integer;
@@ -708,14 +705,16 @@ begin
   end;
 
   setLength(path, cnt);
-{$IFDEF REVERSE_ORIENTATION}
-  op := op.Next;
-  path[0] := op.Pt;
-  op := op.Next;
-{$ELSE}
-  path[0] := op.Pt;
-  op := op.Prev;
-{$ENDIF}
+  if reverse then
+  begin
+    path[0] := op.Pt;
+    op := op.Prev;
+  end else
+  begin
+    op := op.Next;
+    path[0] := op.Pt;
+    op := op.Next;
+  end;
   j := 0;
   for i := 0 to cnt -2 do
   begin
@@ -724,11 +723,7 @@ begin
       inc(j);
       path[j] := op.Pt;
     end;
-{$IFDEF REVERSE_ORIENTATION}
-    op := op.Next;
-{$ELSE}
-    op := op.Prev;
-{$ENDIF}
+    if reverse then op := op.Prev else op := op.Next;
   end;
 
   setLength(path, j+1);
@@ -847,19 +842,18 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-//Areas with clockwise orientation will be positive, assuming
-//the REVERSE_ORIENTATION preprocessor switch has been set correctly.
 function Area(op: POutPt): Double;
 var
   op2: POutPt;
   d: double;
 begin
+  //https://en.wikipedia.org/wiki/Shoelace_formula
   Result := 0;
   if not Assigned(op) then Exit;
   op2 := op;
   repeat
-    d := (op2.Pt.Y - op2.Prev.Pt.Y);
-    Result := Result + d * (op2.Pt.X + op2.Prev.Pt.X);
+    d := (op2.Prev.Pt.Y + op2.Pt.Y);
+    Result := Result + d * (op2.Prev.Pt.X - op2.Pt.X);
     op2 := op2.Next;
   until op2 = op;
   Result := Result * 0.5;
@@ -1957,8 +1951,9 @@ end;
 
 function AreaTriangle(const pt1, pt2, pt3: TPoint64): double;
 begin
-  Result := 0.5 * (pt1.X * (pt2.Y - pt3.Y) +
-    pt2.X * (pt3.Y - pt1.Y) + pt3.X * (pt1.Y - pt2.Y) );
+  result := double(pt3.y + pt1.y) * double(pt3.x - pt1.x) +
+    double(pt1.y + pt2.y) * double(pt1.x - pt2.x) +
+    double(pt2.y + pt3.y) * double(pt2.x - pt3.x);
 end;
 //------------------------------------------------------------------------------
 
@@ -3666,8 +3661,9 @@ begin
       AddOutPt(horzEdge, horzEdge.Top);
     UpdateEdgeIntoAEL(horzEdge);
 
-    if PreserveCollinear and HorzIsSpike(horzEdge) then
-      TrimHorz(horzEdge, true);
+    if PreserveCollinear and not horzIsOpen and
+      HorzIsSpike(horzEdge) then
+       TrimHorz(horzEdge, true);
 
     isLeftToRight := ResetHorzDirection;
   end; //end while horizontal
@@ -3816,12 +3812,12 @@ begin
 
       if IsOpen(outRec) then
       begin
-        if BuildPath(outRec.Pts,
+        if BuildPath(outRec.Pts, FFillRule = frNegative,
           true, openPaths[cntOpen]) then
             inc(cntOpen);
       end else
       begin
-        if BuildPath(outRec.Pts,
+        if BuildPath(outRec.Pts, FFillRule = frNegative,
           false, closedPaths[cntClosed]) then
             inc(cntClosed);
       end;
@@ -3838,7 +3834,7 @@ end;
 function PointInPolygon(const pt: TPoint64; ops: POutPt): TPointInPolygonResult;
 var
   val: Integer;
-  d, d2, d3: Double; //used to avoid integer overflow
+  d: Double; //used to avoid integer overflow
   ptCurr, ptPrev: POutPt;
 begin
   if (ops.Next = ops) or (ops.Next = ops.Prev) then
@@ -3930,8 +3926,7 @@ begin
     for i := 0 to FOutRecList.Count -1 do
     begin
       outRec := FOutRecList[i];
-      if not Assigned(outRec) or
-        not assigned(outRec.Pts) then Continue;
+      if not assigned(outRec.Pts) then Continue;
 
       outRec.Owner := GetRealOutRec(outRec.Owner);
       if assigned(outRec.Owner) then
@@ -3940,8 +3935,9 @@ begin
         if assigned(outRec.Owner.Split) then
         begin
           for j := 0 to High(outRec.Owner.Split) do
-            if Path1InsidePath2(OutRec.Pts,
-              outRec.Owner.Split[j].Pts) then
+            if Assigned(outRec.Owner.Split[j].Pts) and
+              Path1InsidePath2(OutRec.Pts,
+                outRec.Owner.Split[j].Pts) then
             begin
               outRec.Owner := outRec.Owner.Split[j];
               break;
@@ -3961,8 +3957,9 @@ begin
       end;
 
       isOpenPath := IsOpen(outRec);
-      if not BuildPath(outRec.Pts, isOpenPath, path) then
-        Continue;
+      if not BuildPath(outRec.Pts,
+        FFillRule = frNegative, isOpenPath, path) then
+          Continue;
 
       if isOpenPath then
       begin
@@ -3971,13 +3968,16 @@ begin
         Continue;
       end;
 
-      //update ownership ...
-      while assigned(outRec.Owner) and not assigned(outRec.Owner.Pts) do
-        outRec.Owner := outRec.Owner.Owner;
       if assigned(outRec.Owner) and (outRec.Owner.State = outRec.State) then
       begin
-        if IsOuter(outRec) then outRec.Owner := nil
-        else outRec.Owner := outRec.Owner.Owner;
+        //inner/outer state needs fixing
+        while Assigned(outRec.Owner) and
+          not Path1InsidePath2(outRec.Pts, outRec.Owner.Pts) do
+            outRec.Owner := outRec.Owner.Owner;
+
+        if not Assigned(outRec.Owner) or IsInner(outRec.Owner) then
+          outRec.State := osOuter else
+          outRec.State := osInner;
       end;
 
       if assigned(outRec.Owner) and assigned(outRec.Owner.PolyPath) then
@@ -4017,43 +4017,43 @@ end;
 // TClipper methods
 //------------------------------------------------------------------------------
 
-procedure TClipper.AddSubject(const subject: TPath64);
+procedure TClipper64.AddSubject(const subject: TPath64);
 begin
   AddPath(subject, ptSubject, false);
 end;
 //------------------------------------------------------------------------------
 
-procedure TClipper.AddSubject(const subjects: TPaths64);
+procedure TClipper64.AddSubject(const subjects: TPaths64);
 begin
   AddPaths(subjects, ptSubject, false);
 end;
 //------------------------------------------------------------------------------
 
-procedure TClipper.AddOpenSubject(const subject: TPath64);
+procedure TClipper64.AddOpenSubject(const subject: TPath64);
 begin
   AddPath(subject, ptSubject, true);
 end;
 //------------------------------------------------------------------------------
 
-procedure TClipper.AddOpenSubject(const subjects: TPaths64);
+procedure TClipper64.AddOpenSubject(const subjects: TPaths64);
 begin
   AddPaths(subjects, ptSubject, true);
 end;
 //------------------------------------------------------------------------------
 
-procedure TClipper.AddClip(const clip: TPath64);
+procedure TClipper64.AddClip(const clip: TPath64);
 begin
   AddPath(clip, ptClip, false);
 end;
 //------------------------------------------------------------------------------
 
-procedure TClipper.AddClip(const clips: TPaths64);
+procedure TClipper64.AddClip(const clips: TPaths64);
 begin
   AddPaths(clips, ptClip, false);
 end;
 //------------------------------------------------------------------------------
 
-function TClipper.Execute(clipType: TClipType;
+function TClipper64.Execute(clipType: TClipType;
   fillRule: TFillRule; out closedSolutions: TPaths64): Boolean;
 var
   dummy: TPaths64;
@@ -4072,7 +4072,7 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-function TClipper.Execute(clipType: TClipType; fillRule: TFillRule;
+function TClipper64.Execute(clipType: TClipType; fillRule: TFillRule;
   out closedSolutions, openSolutions: TPaths64): Boolean;
 begin
   Result := true;
@@ -4090,7 +4090,7 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-function TClipper.Execute(clipType: TClipType; fillRule: TFillRule;
+function TClipper64.Execute(clipType: TClipType; fillRule: TFillRule;
   var solutionTree: TPolyTree; out openSolutions: TPaths64): Boolean;
 begin
   if not assigned(solutionTree) then

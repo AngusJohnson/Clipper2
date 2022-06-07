@@ -1,7 +1,7 @@
 ﻿/*******************************************************************************
 * Author    :  Angus Johnson                                                   *
 * Version   :  10.0 (beta) - also known as Clipper2                            *
-* Date      :  5 June 2022                                                     *
+* Date      :  7 June 2022                                                     *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  This module contains simple functions that will likely cover    *
@@ -13,6 +13,7 @@
 *******************************************************************************/
 
 #nullable enable
+using System;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 
@@ -120,30 +121,31 @@ namespace Clipper2Lib
     }
 
     public static PathsD InflatePaths(PathsD paths, double delta, JoinType joinType, 
-      EndType endType, double miterLimit = 2.0)
+      EndType endType, double miterLimit = 2.0, int precision = 2)
     {
+      if (precision < -8 || precision > 8)
+        throw new Exception("Error: Precision is out of range.");
+      double scale = Math.Pow(10, precision);
+      Paths64 tmp = ScalePaths64(paths, scale);
       ClipperOffset co = new ClipperOffset(miterLimit);
-      co.AddPaths(paths, joinType, endType);
-      Paths64 tmp = co.Execute(delta);
-      return PathsD(tmp);
+      co.AddPaths(tmp, joinType, endType);
+      tmp = co.Execute(delta * scale);
+      return ScalePathsD(tmp, 1/scale);
     }
 
     public static double Area(Path64 path)
     {
+      //https://en.wikipedia.org/wiki/Shoelace_formula
       double a = 0.0;
       int cnt = path.Count;
       if (cnt < 3) return 0.0;
       Point64 prevPt = path[cnt - 1];
       foreach (Point64 pt in path)
       {
-        a += (double) (prevPt.Y - pt.Y) * (prevPt.X + pt.X);
+        a += (double) (prevPt.Y + pt.Y) * (prevPt.X - pt.X);
         prevPt = pt;
       }
-#if REVERSE_ORIENTATION
-      return a * -0.5;
-#else
       return a * 0.5;
-#endif
     }
 
     public static double Area(Paths64 paths)
@@ -162,14 +164,10 @@ namespace Clipper2Lib
       PointD prevPt = path[cnt - 1];
       foreach (PointD pt in path)
       {
-        a += (prevPt.y - pt.y) * (prevPt.x + pt.x);
+        a += (prevPt.y + pt.y) * (prevPt.x - pt.x);
         prevPt = pt;
       }
-#if REVERSE_ORIENTATION
-      return a * -0.5;
-#else
       return a * 0.5;
-#endif
     }
 
     public static double Area(PathsD paths)
@@ -183,13 +181,21 @@ namespace Clipper2Lib
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static bool IsClockwise(Path64 poly)
     {
-      return Area(poly) >= 0;
+#if REVERSE_ORIENTATION
+        return Area(poly) >= 0;
+#else
+      return Area(poly) <= 0;
+#endif
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static bool IsClockwise(PathD poly)
     {
-      return Area(poly) >= 0;
+#if REVERSE_ORIENTATION
+        return Area(poly) >= 0;
+#else
+      return Area(poly) <= 0;
+#endif
     }
 
     public static Path64 OffsetPath(Path64 path, long dx, long dy)
@@ -532,11 +538,11 @@ namespace Clipper2Lib
       return Sqr(a * d - c * b) / (c * c + d * d);
     }
 
-    public static void RDP(Path64 path, int begin, int end, double epsSqrd, List<int> flags)
+    public static void RDP(Path64 path, int begin, int end, double epsSqrd, List<bool> flags)
     {
       int idx = 0;
       double max_d = 0;
-      while (end > begin && path[begin] == path[end]) flags[end--] = 0;
+      while (end > begin && path[begin] == path[end]) flags[end--] = false;
       for (int i = begin + 1; i < end; ++i)
       {
         //PerpendicDistFromLineSqrd - avoids expensive Sqrt()
@@ -546,7 +552,7 @@ namespace Clipper2Lib
         idx = i;
       }
       if (max_d <= epsSqrd) return;
-      flags[idx] = 1;
+      flags[idx] = true;
       if (idx > begin + 1) RDP(path, begin, idx, epsSqrd, flags);
       if (idx < end - 1) RDP(path, idx, end, epsSqrd, flags);
     }
@@ -555,14 +561,13 @@ namespace Clipper2Lib
     {
       int len = path.Count;
       if (len < 5) return path;
-      List<int> flags = new List<int>(new int[len]);
-      flags[0] = 1;
-      flags[len - 1] = 1;
+      List<bool> flags = new List<bool>(new bool[len]);
+      flags[0] = true;
+      flags[len - 1] = true;
       RDP(path, 0, len - 1, Sqr(epsilon), flags);
       Path64 result = new Path64(len);
       for (int i = 0; i < len; ++i)
-        if (flags[i] == 1)
-          result.Add(path[i]);
+        if (flags[i]) result.Add(path[i]);
       return result;
     }
 
@@ -574,11 +579,11 @@ namespace Clipper2Lib
       return result;
     }
 
-    public static void RDP(PathD path, int begin, int end, double epsSqrd, List<int> flags)
+    public static void RDP(PathD path, int begin, int end, double epsSqrd, List<bool> flags)
     {
       int idx = 0;
       double max_d = 0;
-      while (end > begin && path[begin] == path[end]) flags[end--] = 0;
+      while (end > begin && path[begin] == path[end]) flags[end--] = false;
       for (int i = begin + 1; i < end; ++i)
       {
         //PerpendicDistFromLineSqrd - avoids expensive Sqrt()
@@ -588,7 +593,7 @@ namespace Clipper2Lib
         idx = i;
       }
       if (max_d <= epsSqrd) return;
-      flags[idx] = 1;
+      flags[idx] = true;
       if (idx > begin + 1) RDP(path, begin, idx, epsSqrd, flags);
       if (idx < end - 1) RDP(path, idx, end, epsSqrd, flags);
     }
@@ -597,14 +602,13 @@ namespace Clipper2Lib
     {
       int len = path.Count;
       if (len < 5) return path;
-      List<int> flags = new List<int>(new int[len]);
-      flags[0] = 1;
-      flags[len - 1] = 1;
+      List<bool> flags = new List<bool>(new bool[len]);
+      flags[0] = true;
+      flags[len - 1] = true;
       RDP(path, 0, len - 1, Sqr(epsilon), flags);
       PathD result = new PathD(len);
       for (int i = 0; i < len; ++i)
-        if (flags[i] == 1)
-          result.Add(path[i]);
+        if (flags[i]) result.Add(path[i]);
       return result;
     }
 

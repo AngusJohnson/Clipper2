@@ -1,7 +1,7 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
 * Version   :  10.0 (beta) - aka Clipper2                                      *
-* Date      :  5 June 2022                                                     *
+* Date      :  6 June 2022                                                     *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  This is the main polygon clipping module                        *
@@ -82,8 +82,11 @@ namespace Clipper2Lib {
 
 	using PolyPath64 = PolyPath<int64_t>;
 	using PolyPathD = PolyPath<double>;
-	using PolyTree64 = PolyPath<int64_t>;
-	using PolyTreeD = PolyPath<double>;
+
+	template <typename T>
+	using PolyTree = PolyPath<T>;
+	using PolyTree64 = PolyTree<int64_t>;
+	using PolyTreeD = PolyTree<double>;
 
 	struct OutRec;
 	typedef std::vector<OutRec*> OutRecList;
@@ -277,6 +280,10 @@ namespace Clipper2Lib {
 		}
 
 		virtual ~PolyPath() { Clear(); };
+		
+		//https://en.cppreference.com/w/cpp/language/rule_of_three
+		PolyPath(const PolyPath&) = delete;
+		PolyPath& operator=(const PolyPath&) = delete;
 
 		void Clear() { 
 			for (PolyPath<T>* child : childs) delete child;

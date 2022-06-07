@@ -34,7 +34,7 @@ begin
   clip[0] := MakeRandomPath(maxWidth, maxHeight, edgeCount);
   sol := Intersect(subj, clip, fillRule);
 
-  with SimpleClipperSvgWriter.Create(fillRule) do
+  with TSimpleClipperSvgWriter.Create(fillRule) do
   try
     AddPaths(subj, false, $1000BBFF, $800099FF, 0.8);
     AddPaths(clip, false, $12F99F00, $80FF9900, 0.8);
@@ -54,7 +54,7 @@ begin
   subj[0] := MakeNPointedStar(Rect64(0,0,500,500), 5);
   sol := Union(subj, frEvenOdd);
 
-  with SimpleClipperSvgWriter.Create(frEvenOdd) do
+  with TSimpleClipperSvgWriter.Create(frEvenOdd) do
   try
     AddPaths(sol, false, $2000FF00, $FF006600, 0.8);
     SaveToFile('.\SVG\Star5EvenOdd.svg');
@@ -72,7 +72,7 @@ begin
   subj[0] := MakeNPointedStar(Rect64(0,0,500,500), 5);
   sol := Union(subj, frNonZero);
 
-  with SimpleClipperSvgWriter.Create(frNonZero) do
+  with TSimpleClipperSvgWriter.Create(frNonZero) do
   try
     AddPaths(sol, false, $2000FF00, $FF006600, 0.8);
     SaveToFile('.\SVG\Star5NonZero.svg');
@@ -92,7 +92,7 @@ begin
   clip[0] := Ellipse(Rect64(100,100,400,400));
   sol := Union(subj, clip, frNonZero);
 
-  with SimpleClipperSvgWriter.Create(frNonZero) do
+  with TSimpleClipperSvgWriter.Create(frNonZero) do
   try
     AddPaths(subj, false, $1000BBFF, $800099FF, 0.8);
     AddPaths(clip, false, $12F99F00, $80FF9900, 0.8);
@@ -114,7 +114,7 @@ begin
   clip[0] := Ellipse(Rect64(100,100,400,400));
   sol := Intersect(subj, clip, frEvenOdd);
 
-  with SimpleClipperSvgWriter.Create(frEvenOdd) do
+  with TSimpleClipperSvgWriter.Create(frEvenOdd) do
   try
     AddPaths(subj, false, $1000BBFF, $800099FF, 0.8);
     AddPaths(clip, false, $12F99F00, $80FF9900, 0.8);
@@ -134,7 +134,7 @@ begin
   subj[0] := Ellipse(Rect64(0,0,450,450), 7);
   sol := InflatePaths(subj, 25, jtRound, etPolygon);
 
-  with SimpleClipperSvgWriter.Create(frEvenOdd) do
+  with TSimpleClipperSvgWriter.Create(frEvenOdd) do
   try
     AddPaths(subj, false, $1000BBFF, $800099FF, 0.8);
     AddPaths(sol, false, $2000FF00, $FF006600, 0.8);
@@ -153,7 +153,7 @@ begin
   subjOpen[0] := Ellipse(Rect64(0,0,450,450), 7);
   sol := InflatePaths(subjOpen, 25, jtRound, etJoined);
 
-  with SimpleClipperSvgWriter.Create(frEvenOdd) do
+  with TSimpleClipperSvgWriter.Create(frEvenOdd) do
   try
     AddPaths(subjOpen, true, $1000BBFF, $800099FF, 0.8);
     AddPaths(sol, false, $2000FF00, $FF006600, 0.8);
@@ -172,7 +172,7 @@ begin
   subjOpen[0] := Ellipse(Rect64(0,0,450,450), 7);
   sol := InflatePaths(subjOpen, 25, jtRound, etRound);
 
-  with SimpleClipperSvgWriter.Create(frEvenOdd) do
+  with TSimpleClipperSvgWriter.Create(frEvenOdd) do
   try
     AddPaths(subjOpen, true, $1000BBFF, $800099FF, 0.8);
     AddPaths(sol, false, $2000FF00, $FF006600, 0.8);
@@ -196,7 +196,7 @@ begin
   sol := MinkowskiSum(circle[0], paths[0], true);
   AppendPaths(sol, MinkowskiSum(circle[0], paths[1], true));
 
-  with SimpleClipperSvgWriter.Create(frEvenOdd) do
+  with TSimpleClipperSvgWriter.Create(frEvenOdd) do
   try
     AddPaths(paths, false, $1000BBFF, $800099FF, 0.8);
     AddPaths(circle, false, $12F99F00, $80FF9900, 0.8);

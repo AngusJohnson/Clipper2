@@ -1,7 +1,7 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
 * Version   :  10.0 (beta) - aka Clipper2                                      *
-* Date      :  16 May 2022                                                     *
+* Date      :  7 June 2022                                                     *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  Polygon offsetting                                              *
@@ -48,6 +48,7 @@ private:
 	double miter_limit_ = 0.0;
 	double arc_tolerance_ = 0.0;
 	bool merge_groups_ = true;
+	bool preserve_collinear_ = false;
 
 	void DoSquare(PathGroup& group, const Path64& path, size_t j, size_t k);
 	void DoMiter(PathGroup& group, const Path64& path, size_t j, size_t k, double cos_a);
@@ -60,8 +61,9 @@ private:
 	void DoGroupOffset(PathGroup &group, double delta);
 public:
 	ClipperOffset(double miter_limit = 2.0, 
-		double arc_tolerance = 0.0, int precision = 2) :
-		miter_limit_(miter_limit), arc_tolerance_(arc_tolerance) {};
+		double arc_tolerance = 0.0, int precision = 2, bool preserve_collinear = false) :
+		miter_limit_(miter_limit), arc_tolerance_(arc_tolerance),
+		preserve_collinear_(preserve_collinear) { };
 
 	~ClipperOffset() { Clear(); };
 
@@ -73,14 +75,24 @@ public:
 	
 	Paths64 Execute(double delta);
 
+	double MiterLimit() const { return miter_limit_; }
+	void MiterLimit(double miter_limit) { miter_limit_ = miter_limit; }
+
 	//ArcTolerance: needed for rounded offsets (See offset_triginometry2.svg)
+	double ArcTolerance() const { return arc_tolerance_; }
 	void ArcTolerance(double arc_tolerance) { arc_tolerance_ = arc_tolerance; }
 	//MergeGroups: A path group is one or more paths added via the AddPath or
 	//AddPaths methods. By default these path groups will be offset
 	//independently of other groups and this may cause overlaps (intersections).
 	//However, when MergeGroups is enabled, any overlapping offsets will be
 	//merged (via a clipping union operation) to remove overlaps.
+	bool MergeGroups() const { return merge_groups_; }
 	void MergeGroups(bool merge_groups) { merge_groups_ = merge_groups; }
+
+	bool PreserveCollinear() const { return preserve_collinear_; }
+	void PreserveCollinear(bool preserve_collinear) { 
+		preserve_collinear_ = preserve_collinear; 
+	}
 };
 
 }

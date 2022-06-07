@@ -1,7 +1,7 @@
 ﻿/*******************************************************************************
 * Author    :  Angus Johnson                                                   *
 * Version   :  10.0 (beta) - also known as Clipper2                            *
-* Date      :  5 June 2022                                                     *
+* Date      :  7 June 2022                                                     *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  This is the main polygon clipping module                        *
@@ -600,15 +600,15 @@ namespace Clipper2Lib
 
     private static double Area(OutPt op)
     {
+      //https://en.wikipedia.org/wiki/Shoelace_formula
       double area = 0.0;
       OutPt op2 = op;
       do
       {
-        area += (double)(op2.pt.Y - op2.prev.pt.Y) * 
-          (op2.pt.X + op2.prev.pt.X);
+        area += (double)(op2.prev.pt.Y + op2.pt.Y) * 
+          (op2.prev.pt.X - op2.pt.X);
         op2 = op2.next!;
       } while (op2 != op);
-
       return area * 0.5;
     }
 
@@ -2298,7 +2298,7 @@ namespace Clipper2Lib
           AddOutPt(horz, horz.top);
         UpdateEdgeIntoAEL(horz);
 
-        if (PreserveCollinear && HorzIsSpike(horz))
+        if (PreserveCollinear && !horzIsOpen && HorzIsSpike(horz))
           TrimHorz(horz, true);
 
         isLeftToRight = ResetHorzDirection(horz, maxPair, out leftX, out rightX);
@@ -3250,9 +3250,9 @@ namespace Clipper2Lib
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static double AreaTriangle(Point64 pt1, Point64 pt2, Point64 pt3)
     {
-      return 0.5 * (pt1.X * (double)(pt2.Y - pt3.Y) +
-                    pt2.X * (double)(pt3.Y - pt1.Y) + 
-                    pt3.X * (double)(pt1.Y - pt2.Y));
+      return (double)(pt3.Y + pt1.Y) * (double)(pt3.X - pt1.X) +
+              (double)(pt1.Y + pt2.Y) * (double)(pt1.X - pt2.X) +
+              (double)(pt2.Y + pt3.Y) * (double )(pt2.X - pt3.X);
     }
 
     private OutPt DoSplitOp(ref OutPt outRecOp, OutPt splitOp)
@@ -3326,76 +3326,66 @@ namespace Clipper2Lib
       }
     }
 
-    internal bool BuildPath(OutPt op, bool isOpen, Path64 path)
+    internal bool BuildPath(OutPt op, bool reverse, bool isOpen, Path64 path)
     {
-      try
-      {
-        int cnt = PointCount(op);
-        if (cnt < 3 && (!isOpen || cnt < 2)) return false;
-        path.Clear();
-#if REVERSE_ORIENTATION
-        op = op.next;
-        Point64 lastPt = op.pt;
-        path.Add(lastPt);
-        op = op.next;
-#else
-        Point64 lastPt = op.pt;
-        path.Add(lastPt);
-        op = op.prev;
-#endif
-        for (int i = 1; i < cnt; i++)
-        {
-          if (op.pt != lastPt)
-          {
-            lastPt = op.pt;
-            path.Add(lastPt);
-          }
-#if REVERSE_ORIENTATION
-          op = op.next;
-#else
-          op = op.prev;
-#endif
-        }
-      }
-      catch
-      {
-        return false;
-      }
+      if (op.next == op || (!isOpen && op.next == op.prev)) return false;
+      path.Clear();
 
+      Point64 lastPt;
+      OutPt op2;
+      if (reverse)
+      {
+        lastPt = op.pt;
+        op2 = op.prev;
+      }
+      else
+      {
+        op = op.next!;
+        lastPt = op.pt;
+        op2 = op.next!;
+      }
+      path.Add(lastPt);
+        
+      while (op2 != op)
+      {
+        if (op2.pt != lastPt)
+        {
+          lastPt = op2.pt;
+          path.Add(lastPt);
+        }
+        if (reverse)
+          op2 = op2.prev!;
+        else
+          op2 = op2.next;
+      }
       return true;
     }
 
     protected bool BuildPaths(Paths64 solutionClosed, Paths64 solutionOpen)
     {
-      try
+      solutionClosed.Clear();
+      solutionOpen.Clear();
+      solutionClosed.Capacity = _outrecList.Count;
+      solutionOpen.Capacity = _outrecList.Count;
+
+      foreach (OutRec outrec in _outrecList)
       {
-        solutionClosed.Clear();
-        solutionOpen.Clear();
-        solutionClosed.Capacity = _outrecList.Count;
-        solutionOpen.Capacity = _outrecList.Count;
+        if (outrec.pts == null) continue;
 
-        foreach (OutRec outrec in _outrecList)
+        Path64 path = new Path64();
+        if (outrec.state == OutRecState.Open)
         {
-          if (outrec.pts == null) continue;
-
-          Path64 path = new Path64();
-          if (outrec.state == OutRecState.Open)
-          {
-            if (BuildPath(outrec.pts!, true, path))
+          if (BuildPath(outrec.pts!, 
+            _fillrule == FillRule.Negative, true, path))
               solutionOpen.Add(path);
-          }
-          else
-          {
-            if (BuildPath(outrec.pts!, false, path))
+        }
+        else
+        {
+          if (BuildPath(outrec.pts!, 
+            _fillrule == FillRule.Negative, false, path))
               solutionClosed.Add(path);
-          }
         }
       }
-      catch
-      {
-        return false;
-      }
-
       return true;
     }
 
@@ -3477,75 +3467,74 @@ namespace Clipper2Lib
       polytree.Clear();
       solutionOpen.Clear();
       solutionOpen.Capacity = _outrecList.Count;
-      try
-      {
-        for (int i = 0; i < _outrecList.Count; i++)
-        {
-          OutRec outrec = _outrecList[i];
-          if (outrec.pts == null) continue;
 
-          outrec.owner = GetRealOutRec(outrec.owner);
-          if (outrec.owner != null)
+      for (int i = 0; i < _outrecList.Count; i++)
+      {
+        OutRec outrec = _outrecList[i];
+        if (outrec.pts == null) continue;
+
+        outrec.owner = GetRealOutRec(outrec.owner);
+        if (outrec.owner != null)
+        {
+          if (outrec.owner.splits != null)
           {
-            if (outrec.owner.splits != null)
+            foreach (OutRec split in outrec.owner.splits)
             {
-              foreach (OutRec split in outrec.owner.splits)
+              if (split.pts != null &&
+                Path1InsidePath2(outrec.pts, split.pts))
               {
-                if (Path1InsidePath2(outrec.pts, split.pts!))
-                {
-                  outrec.owner = split;
-                  break;
-                }
+                outrec.owner = split;
+                break;
               }
             }
-
-            //make sure outer/owner paths preceed their inner paths ...
-            if (outrec.owner.idx > outrec.idx)
-            {
-              int j = outrec.owner.idx;
-              outrec.owner.idx = i;
-              outrec.idx = j;
-              _outrecList[i] = _outrecList[j];
-              _outrecList[j] = outrec;
-              outrec = _outrecList[i];
-            }
-
           }
 
-          bool isOpenPath = outrec.state == OutRecState.Open;
-
-          Path64 path = new Path64();
-          if (!BuildPath(outrec.pts!, isOpenPath, path)) continue;
-
-          if (isOpenPath)
+          //swap order if outer/owner paths are preceeded by their inner paths
+          if (outrec.owner.idx > outrec.idx)
           {
-            solutionOpen.Add(path);
-            continue;
+            int j = outrec.owner.idx;
+            outrec.owner.idx = i;
+            outrec.idx = j;
+            _outrecList[i] = _outrecList[j];
+            _outrecList[j] = outrec;
+            outrec = _outrecList[i];
           }
 
-          //update ownership ...
-          while (outrec.owner != null && outrec.owner.pts == null)
-            outrec.owner = outrec.owner.owner;
-          if (outrec.owner != null && outrec.owner.state == outrec.state)
-          {
-            if (IsOuter(outrec)) outrec.owner = null;
-            else outrec.owner = outrec.owner.owner;
-          }
-
-          PolyPathBase ownerPP;
-          if (outrec.owner != null && outrec.owner.polypath != null)
-            ownerPP = outrec.owner.polypath;
-          else
-            ownerPP = polytree;
-
-          outrec.polypath = ownerPP.AddChild(path);
         }
-      }
-      catch
-      {
-        return false;
-      }
 
+        bool isOpenPath = outrec.state == OutRecState.Open;
+
+        Path64 path = new Path64();
+        if (!BuildPath(outrec.pts!, 
+          _fillrule == FillRule.Negative, isOpenPath, path)) continue;
+
+        if (isOpenPath)
+        {
+          solutionOpen.Add(path);
+          continue;
+        }
+
+        if (outrec.owner != null && outrec.owner.state != outrec.state)
+        {
+          //inner/outer state needs fixing
+          while (outrec.owner != null && 
+            !Path1InsidePath2(outrec.pts!, outrec.owner.pts!))
+              outrec.owner = outrec.owner.owner;
+
+          if (outrec.owner == null || IsInner(outrec.owner))
+            outrec.state = OutRecState.Outer;
+          else
+            outrec.state = OutRecState.Inner;
+        }
+
+        PolyPathBase ownerPP;
+        if (outrec.owner != null && outrec.owner.polypath != null)
+          ownerPP = outrec.owner.polypath;
+        else
+          ownerPP = polytree;
+
+        outrec.polypath = ownerPP.AddChild(path);
+      }
       return true;
     }
 

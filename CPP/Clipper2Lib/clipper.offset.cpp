@@ -1,7 +1,7 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
 * Version   :  10.0 (beta) - aka Clipper2                                      *
-* Date      :  16 May 2022                                                     *
+* Date      :  7 June 2022                                                     *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  Polygon offsetting                                              *
@@ -37,7 +37,7 @@ Paths64::size_type GetLowestPolygonIdx(const Paths64& paths)
 	return result;
 }
 
-PointD GetUnitNormal(const Point64 pt1, const Point64 pt2)
+PointD GetUnitNormal(const Point64& pt1, const Point64& pt2)
 {
 	double dx, dy, inverse_hypot;
 	if (pt1 == pt2) return PointD(0.0, 0.0);
@@ -278,6 +278,7 @@ void ClipperOffset::DoGroupOffset(PathGroup& group, double delta)
 
 	if (isClosedPaths)
 	{
+		group.is_reversed = false;
 		//the lowermost polygon must be an outer polygon. So we can use that as the
 		//designated orientation for outer polygons (needed for tidy-up clipping)
 		Paths64::size_type lowestIdx = GetLowestPolygonIdx(group.paths_in_);
@@ -291,11 +292,7 @@ void ClipperOffset::DoGroupOffset(PathGroup& group, double delta)
 		}
 	}
 
-#ifdef REVERSE_ORIENTATION
 	delta_ = delta;
-#else
-	delta_ = -delta;
-#endif
 	double absDelta = std::abs(delta_);
 	join_type_ = group.join_type;
 
@@ -351,10 +348,14 @@ void ClipperOffset::DoGroupOffset(PathGroup& group, double delta)
 		Clipper c;
 		c.PreserveCollinear = false;
 		c.AddSubject(group.paths_out_);
+#ifdef REVERSE_ORIENTATION
+		if (!group.is_reversed)
+#else 
 		if (group.is_reversed)
-			c.Execute(ClipType::Union, FillRule::Negative, group.paths_out_);
-		else
+#endif
 			c.Execute(ClipType::Union, FillRule::Positive, group.paths_out_);
+		else
+			c.Execute(ClipType::Union, FillRule::Negative, group.paths_out_);
 	}
 }
 
@@ -388,10 +389,14 @@ Paths64 ClipperOffset::Execute(double delta)
 		Clipper c;
 		c.PreserveCollinear = false;
 		c.AddSubject(result);
+#ifdef REVERSE_ORIENTATION
+		if (!groups_[0].is_reversed)
+#else 
 		if (groups_[0].is_reversed)
-			c.Execute(ClipType::Union, FillRule::Negative, result);
-		else
+#endif
 			c.Execute(ClipType::Union, FillRule::Positive, result);
+		else
+			c.Execute(ClipType::Union, FillRule::Negative, result);
 	}
 	return result;
 }

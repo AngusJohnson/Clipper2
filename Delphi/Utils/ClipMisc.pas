@@ -3,7 +3,9 @@ unit ClipMisc;
 interface
 
 uses
-  SysUtils, Classes, Math, Clipper, Clipper.Core;
+  SysUtils, Types, Classes, Math, Clipper, Clipper.Core;
+
+function ScaleAndOffset(const paths: TPathsD; scale: single; offset: Clipper.Core.TPointD): TPathsD;
 
 function MakeRandomPath(maxWidth, maxHeight, count: Integer;
   margin: Integer = 0): TPath64; overload;
@@ -16,7 +18,30 @@ function Ellipse(const rec: TRectD; steps: integer = 0): TPathD; overload;
 function MakeNPointedStar(const rec: TRect64;
   points: integer = 5): TPath64; overload;
 
+function PointInPath(const pt: TPointD; const path: TPathD): Boolean;
+
 implementation
+
+function ScaleAndOffset(const paths: TPathsD; scale: single; offset: Clipper.Core.TPointD): TPathsD;
+var
+  i, j, len: Integer;
+begin
+  len := length(paths);
+  if len = 0 then Exit;
+  setlength(Result, len);
+
+  for i := 0 to len -1 do
+  begin
+    len := length(paths[i]);
+    setlength(Result[i], len);
+    for j := 0 to len -1 do
+    begin
+      Result[i][j].X := offset.X + round(paths[i][j].X * scale);
+      Result[i][j].Y := offset.Y + round(paths[i][j].Y * scale);
+    end;
+  end;
+end;
+//------------------------------------------------------------------------------
 
 function MakeRandomPath(maxWidth, maxHeight, count: Integer;
   margin: Integer): TPath64;
@@ -112,6 +137,16 @@ begin
     Result[i] := tmp[j mod len];
     inc(j, jump);
   end;
+end;
+//------------------------------------------------------------------------------
+
+function PointInPath(const pt: TPointD; const path: TPathD): Boolean;
+var
+  i: integer;
+begin
+  for i := 0 to high(path) do
+    if Clipper.Core.PointsNearEqual(pt, path[i], 0.001) then Exit(true);
+  Result := false;
 end;
 //------------------------------------------------------------------------------
 

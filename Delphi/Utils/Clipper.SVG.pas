@@ -68,7 +68,7 @@ type
     IsOpen    : Boolean;
   end;
 
-  SimpleClipperSvgWriter = class
+  TSimpleClipperSvgWriter = class
   private
     fFillRule   : TFillRule;
     fCoordStyle : TCoordStyle;
@@ -142,7 +142,7 @@ begin
   self.fontColor := afontcolor;
 end;
 
-constructor SimpleClipperSvgWriter.Create(fillRule: TFillRule;
+constructor TSimpleClipperSvgWriter.Create(fillRule: TFillRule;
   const coordFontName: string = 'Verdana';
   coordFontSize: integer = 9;
   coordFontColor: Cardinal = black);
@@ -155,7 +155,7 @@ begin
   fTextInfos := TList.Create;
 end;
 
-destructor SimpleClipperSvgWriter.Destroy;
+destructor TSimpleClipperSvgWriter.Destroy;
 begin
   ClearAll;
   fPolyInfos.Free;
@@ -163,7 +163,7 @@ begin
   inherited;
 end;
 
-procedure SimpleClipperSvgWriter.AddPaths(const paths: TPaths64;
+procedure TSimpleClipperSvgWriter.AddPaths(const paths: TPaths64;
   isOpen: Boolean; brushColor, penColor: Cardinal;
   penWidth: double; showCoords: Boolean = false);
 var
@@ -180,7 +180,7 @@ begin
   fPolyInfos.Add(pi);
 end;
 
-procedure SimpleClipperSvgWriter.AddPaths(const paths: TPathsD; isOpen: Boolean;
+procedure TSimpleClipperSvgWriter.AddPaths(const paths: TPathsD; isOpen: Boolean;
   brushColor, penColor: Cardinal;
   penWidth: double; showCoords: Boolean = false);
 var
@@ -196,7 +196,7 @@ begin
   fPolyInfos.Add(pi);
 end;
 
-procedure SimpleClipperSvgWriter.AddText(text: string; x,y: integer;
+procedure TSimpleClipperSvgWriter.AddText(text: string; x,y: integer;
   fontSize: integer; fontClr: Cardinal);
 var
   ti: PTextInfo;
@@ -210,7 +210,7 @@ begin
   fTextInfos.Add(ti);
 end;
 
-function SimpleClipperSvgWriter.GetBounds: TRectD;
+function TSimpleClipperSvgWriter.GetBounds: TRectD;
 var
   i: integer;
   bounds: TRectD;
@@ -227,7 +227,7 @@ begin
     end;
 end;
 
-procedure SimpleClipperSvgWriter.ClearPaths;
+procedure TSimpleClipperSvgWriter.ClearPaths;
 var
   i: integer;
 begin
@@ -236,7 +236,7 @@ begin
   fPolyInfos.Clear;
 end;
 
-procedure SimpleClipperSvgWriter.ClearText;
+procedure TSimpleClipperSvgWriter.ClearText;
 var
   i: integer;
 begin
@@ -245,13 +245,13 @@ begin
   fTextInfos.Clear;
 end;
 
-procedure SimpleClipperSvgWriter.ClearAll;
+procedure TSimpleClipperSvgWriter.ClearAll;
 begin
   ClearText;
   ClearPaths;
 end;
 
-function SimpleClipperSvgWriter.SaveToFile(const filename: string;
+function TSimpleClipperSvgWriter.SaveToFile(const filename: string;
   maxWidth: integer = 0; maxHeight: integer = 0; margin: integer = 20): Boolean;
 var
   i,j,k: integer;

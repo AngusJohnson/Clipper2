@@ -1,7 +1,7 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
 * Version   :  10.0 (beta) - aka Clipper2                                      *
-* Date      :  18 May 2022                                                     *
+* Date      :  7 June 2022                                                     *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  Core Clipper Library structures and functions                   *
@@ -163,20 +163,9 @@ template <typename T1, typename T2>
 inline Path<T1> TransformPath(const Path<T2>& path)
 {
 	Path<T1> result;
+	result.reserve(path.size());
 	std::transform(path.cbegin(), path.cend(), std::back_inserter(result),
 		[](const Point<T2>& pt) {return Point<T1>(pt); });
-	return result;
-}
-
-inline PathD Path64ToPathD(const Path64& path)
-{
-	PathD result = TransformPath<double, int64_t>(path);
-	return result;
-}
-
-inline Path64 Path64ToPathD(const PathD& path)
-{
-	Path64 result = TransformPath<int64_t, double>(path);
 	return result;
 }
 
@@ -189,29 +178,24 @@ static Paths<T1> TransformPaths(const Paths<T2>& paths)
 	return result;
 }
 
+inline PathD Path64ToPathD(const Path64& path)
+{
+	return TransformPath<double, int64_t>(path);
+}
+
 inline PathsD Paths64ToPathsD(const Paths64& paths)
 {
-	PathsD result;
-	std::transform(paths.cbegin(), paths.cend(), std::back_inserter(result),
-		[](const Path64& path) {return Path64ToPathD(path); });
-	return result;
+	return TransformPaths<double, int64_t>(paths);
 }
 
 inline Path64 PathDToPath64(const PathD& path)
 {
-	Path64 result;
-	result.reserve(path.size());
-	std::transform(path.cbegin(), path.cend(), std::back_inserter(result),
-		[] (const PointD& pt) { return Point64(pt); });
-	return result;
+	return TransformPath<int64_t, double>(path);
 }
 
 inline Paths64 PathsDToPaths64(const PathsD& paths)
 {
-	Paths64 result;
-	std::transform(paths.cbegin(), paths.cend(), std::back_inserter(result),
-		[](const PathD& path) { return PathDToPath64(path); });
-	return result;
+	return TransformPaths<int64_t, double>(paths);
 }
 
 template<typename T>
@@ -220,20 +204,22 @@ inline double Sqr(T val)
 	return static_cast<double>(val) * static_cast<double>(val);
 }
 
-inline bool NearEqual(const Point<double>& p1, 
-	const Point<double>& p2, double max_dist_sqrd)
+template<typename T>
+inline bool NearEqual(const Point<T>& p1,
+	const Point<T>& p2, double max_dist_sqrd)
 {
 	return Sqr(p1.x - p2.x) + Sqr(p1.y - p2.y) < max_dist_sqrd;
 }
 
-inline PathD StripNearEqual(const PathD& path,
+template<typename T>
+inline Path<T> StripNearEqual(const Path<T>& path, 
 	double max_dist_sqrd, bool is_closed_path)
 {
-	if (path.size() == 0) return PathD();
-	PathD result;
+	if (path.size() == 0) return Path<T>();
+	Path<T> result;
 	result.reserve(path.size());
-	PathD::const_iterator path_iter = path.cbegin();
-	PointD first_pt = *path_iter++, last_pt = first_pt;
+	typename Path<T>::const_iterator path_iter = path.cbegin();
+	Point<T> first_pt = *path_iter++, last_pt = first_pt;
 	result.push_back(first_pt);
 	for (; path_iter != path.cend(); ++path_iter)
 	{
@@ -249,12 +235,13 @@ inline PathD StripNearEqual(const PathD& path,
 	return result;
 }
 
-inline PathsD StripNearEqual(const PathsD& paths,
+template<typename T>
+inline Paths<T> StripNearEqual(const Paths<T>& paths, 
 	double max_dist_sqrd, bool is_closed_path)
 {
-	PathsD result;
+	Paths<T> result;
 	result.reserve(paths.size());
-	for (PathsD::const_iterator paths_citer = paths.cbegin();
+	for (typename Paths<T>::const_iterator paths_citer = paths.cbegin();
 		paths_citer != paths.cend(); ++paths_citer)
 	{
 		result.push_back(StripNearEqual(*paths_citer, max_dist_sqrd, is_closed_path));
@@ -416,20 +403,17 @@ bool NearCollinear(const Point<T> &pt1, const Point<T> &pt2, const Point<T> &pt3
 template <typename T>
 inline double Area(const Path<T>& path)
 {
+	//https://en.wikipedia.org/wiki/Shoelace_formula
 	if (path.size() == 0) return 0.0;
 	double a = 0.0;
 	typename Path<T>::const_iterator path_iter, path_iter_last = --path.cend();
-	for (path_iter = path.cbegin(); path_iter != path.cend();
-		path_iter_last = path_iter, ++path_iter)
+	for (path_iter = path.cbegin(); 
+		path_iter != path.cend(); path_iter_last = path_iter, ++path_iter)
 	{
-		a += static_cast<double>(path_iter_last->y - path_iter->y) *
-			(path_iter_last->x + path_iter->x);
+		a += static_cast<double>(path_iter_last->y + path_iter->y) *
+			(path_iter_last->x - path_iter->x);
 	}
-#ifdef REVERSE_ORIENTATION
-	return a * -0.5;
-#else
 	return a * 0.5;
-#endif
 }
 
 template <typename T>
@@ -447,7 +431,11 @@ inline double Area(const Paths<T>& paths)
 template <typename T>
 inline bool IsClockwise(const Path<T>& poly)
 {
+#ifdef REVERSE_ORIENTATION
 	return Area<T>(poly) >= 0;
+#else 
+	return Area<T>(poly) <= 0;
+#endif 
 }
 
 template <typename T>
@@ -459,9 +447,9 @@ static Path<T> Ellipse(const Point<T>& center,
 	if (steps <= 2)
 		steps = static_cast<int>(PI * sqrt((radiusX + radiusY) / 2));
 #ifdef REVERSE_ORIENTATION
-	double si = std::sin(2 * PI / steps);
-#else
 	double si = -std::sin(2 * PI / steps);
+#else
+	double si = std::sin(2 * PI / steps);
 #endif
 	double co = std::cos(2 * PI / steps);
 	double dx = co, dy = si;
@@ -492,11 +480,11 @@ inline double PerpendicDistFromLineSqrd(const Point<T>& pt,
 
 template <typename T>
 static void RDP(const Path<T> path, std::size_t begin,
-	std::size_t end, double epsSqrd, std::vector<int>& flags)
+	std::size_t end, double epsSqrd, std::vector<bool>& flags)
 {
 	typename Path<T>::size_type idx = 0;
 	double max_d = 0;
-	while (end > begin && path[begin] == path[end]) flags[end--] = 0;
+	while (end > begin && path[begin] == path[end]) flags[end--] = false;
 	for (typename Path<T>::size_type i = begin + 1; i < end; ++i)
 	{
 		//PerpendicDistFromLineSqrd - avoids expensive Sqrt()
@@ -506,7 +494,7 @@ static void RDP(const Path<T> path, std::size_t begin,
 		idx = i;
 	}
 	if (max_d <= epsSqrd) return;
-	flags[idx] = 1;
+	flags[idx] = true;
 	if (idx > begin + 1) RDP(path, begin, idx, epsSqrd, flags);
 	if (idx < end - 1) RDP(path, idx, end, epsSqrd, flags);
 }
@@ -516,24 +504,24 @@ static Path<T> RamerDouglasPeucker(const Path<T>& path, double epsilon)
 {
 	const typename Path<T>::size_type len = path.size();
 	if (len < 5) return Path<T>(path);
-	std::vector<int> flags(len);
-	flags[0] = 1;
-	flags[len - 1] = 1;
+	std::vector<bool> flags(len);
+	flags[0] = true;
+	flags[len - 1] = true;
 	RDP(path, 0, len - 1, Sqr(epsilon), flags);
 	Path<T> result;
 	result.reserve(len);
 	for (typename Path<T>::size_type i = 0; i < len; ++i)
-		if (flags[i] == 1)
+		if (flags[i])
 			result.push_back(path[i]);
 	return result;
 }
 
 template <typename T>
-static Paths64 RamerDouglasPeucker(const Paths<T>& paths, double epsilon)
+static Paths<T> RamerDouglasPeucker(const Paths<T>& paths, double epsilon)
 {
 	Paths<T> result;
 	result.reserve(paths.size());
-	for (Path<T> path : paths)
+	for (const Path<T> path& : paths)
 		result.push_back(RamerDouglasPeucker<T>(path, epsilon));
 	return result;
 }

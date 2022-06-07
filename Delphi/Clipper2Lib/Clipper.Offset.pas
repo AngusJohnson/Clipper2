@@ -3,7 +3,7 @@ unit Clipper.Offset;
 (*******************************************************************************
 * Author    :  Angus Johnson                                                   *
 * Version   :  10.0 (beta) - aka Clipper2                                      *
-* Date      :  16 May 2022                                                     *
+* Date      :  7 June 2022                                                     *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  Offset paths and clipping solutions                             *
@@ -52,7 +52,7 @@ type
     fOutPaths    : TPaths64;
     fOutPathLen  : Integer;
     fSolution    : TPaths64;
-
+    fPreserveCollinear : Boolean;
     procedure AddPoint(x,y: double); overload;
     procedure AddPoint(const pt: TPoint64); overload;
       {$IFDEF INLINING} inline; {$ENDIF}
@@ -67,7 +67,8 @@ type
     procedure OffsetOpenJoined;
     procedure OffsetOpenPath(endType: TEndType);
   public
-    constructor Create(miterLimit: double = 2.0; arcTolerance: double = 0.0);
+    constructor Create(miterLimit: double = 2.0;
+      arcTolerance: double = 0.0; PreserveCollinear: Boolean = False);
     destructor Destroy; override;
     procedure AddPath(const path: TPath64;
       joinType: TJoinType; endType: TEndType);
@@ -86,6 +87,8 @@ type
     //However, when MergeGroups is enabled, any overlapping offsets will be
     //merged (via a clipping union operation) to remove overlaps.
     property MergeGroups: Boolean read fMergeGroups write fMergeGroups;
+    property PreserveCollinear: Boolean
+      read fPreserveCollinear write fPreserveCollinear;
   end;
 
 implementation
@@ -174,11 +177,13 @@ end;
 // TClipperOffset methods
 //------------------------------------------------------------------------------
 
-constructor TClipperOffset.Create(miterLimit: double; arcTolerance: double);
+constructor TClipperOffset.Create(miterLimit: double;
+  arcTolerance: double; preserveCollinear: Boolean);
 begin
   fMiterLimit   := MiterLimit;
   fArcTolerance := ArcTolerance;
   fInGroups     := TList.Create;
+  fPreserveCollinear := preserveCollinear;
 end;
 //------------------------------------------------------------------------------
 
@@ -248,12 +253,7 @@ begin
     end;
   end;
 
-{$IFDEF REVERSE_ORIENTATION}
   fDelta := delta;
-{$ELSE}
-  fDelta := -delta;
-{$ENDIF}
-
   absDelta := Abs(fDelta);
   fJoinType := pathGroup.joinType;
 
@@ -326,13 +326,17 @@ begin
   if not fMergeGroups then
   begin
     //clean up self-intersections ...
-    with TClipper.Create do
+    with TClipper64.Create do
     try
-      PreserveCollinear := false;
+      PreserveCollinear := fPreserveCollinear;
       AddSubject(fOutPaths);
+{$IFDEF REVERSE_ORIENTATION}
+      if not pathgroup.reversed then
+{$ELSE}
       if pathgroup.reversed then
-        Execute(ctUnion, frNegative, fOutPaths) else
-        Execute(ctUnion, frPositive, fOutPaths);
+{$ENDIF}
+        Execute(ctUnion, frPositive, fOutPaths) else
+        Execute(ctUnion, frNegative, fOutPaths);
     finally
       free;
     end;
@@ -479,13 +483,17 @@ begin
   if fMergeGroups and (fInGroups.Count > 0) then
   begin
     //clean up self-intersections ...
-    with TClipper.Create do
+    with TClipper64.Create do
     try
-      PreserveCollinear := false;
+      PreserveCollinear := fPreserveCollinear;
       AddSubject(fSolution);
+{$IFDEF REVERSE_ORIENTATION}
+      if not TPathGroup(fInGroups[0]).reversed then
+{$ELSE}
       if TPathGroup(fInGroups[0]).reversed then
-        Execute(ctUnion, frNegative, fSolution) else
-        Execute(ctUnion, frPositive, fSolution);
+{$ENDIF}
+        Execute(ctUnion, frPositive, fSolution) else
+        Execute(ctUnion, frNegative, fSolution);
     finally
       free;
     end;

@@ -1,7 +1,7 @@
 ﻿/*******************************************************************************
 * Author    :  Angus Johnson                                                   *
 * Version   :  10.0 (beta) - also known as Clipper2                            *
-* Date      :  5 June 2022                                                     *
+* Date      :  7 June 2022                                                     *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  Offsets both open and closed paths (i.e. polylines & polygons). *
@@ -64,15 +64,18 @@ namespace Clipper2Lib
     public double ArcTolerance { get; set; }
     public bool MergeGroups { get; set; }
     public double MiterLimit { get; set; }
+    public bool PreserveCollinear { get; set; }
 
     private const double TwoPi = Math.PI * 2;
     private const double DefaultArcTolerance = 0.25;
 
-    public ClipperOffset(double miterLimit = 2.0, double arcTolerance = 0.0)
+    public ClipperOffset(double miterLimit = 2.0, 
+      double arcTolerance = 0.0, bool preserveCollinear = false)
     {
       MiterLimit = miterLimit;
       ArcTolerance = arcTolerance;
       MergeGroups = true;
+      PreserveCollinear = preserveCollinear;
     }
 
     public void Clear()
@@ -134,12 +137,17 @@ namespace Clipper2Lib
       if (MergeGroups && _pathGroups.Count > 0)
       {
         //clean up self-intersections ...
-        Clipper c = new Clipper() { PreserveCollinear = false };
+        Clipper c = new Clipper(); 
+        c.PreserveCollinear = PreserveCollinear;
         c.AddSubject(solution);
+#if REVERSE_ORIENTATION
+          if (!_pathGroups[0]._pathsReversed)
+#else
         if (_pathGroups[0]._pathsReversed)
-          c.Execute(ClipType.Union, FillRule.Negative, solution);
-        else
+#endif
           c.Execute(ClipType.Union, FillRule.Positive, solution);
+        else
+          c.Execute(ClipType.Union, FillRule.Negative, solution);
       }
 
       return solution;
@@ -396,11 +404,7 @@ namespace Clipper2Lib
         }
       }
 
-#if REVERSE_ORIENTATION
       _delta = delta;
-#else
-      _delta = -delta;
-#endif
       double absDelta = Math.Abs(_delta);
       _joinType = group._joinType;
 
@@ -452,12 +456,18 @@ namespace Clipper2Lib
       if (!MergeGroups)
       {
         //clean up self-intersections ...
-        Clipper c = new Clipper() { PreserveCollinear = false };
+        Clipper c = new Clipper();
+        c.PreserveCollinear = PreserveCollinear;
         c.AddSubject(group._outPaths);
+
+#if REVERSE_ORIENTATION
+          if (!group._pathsReversed)
+#else
         if (group._pathsReversed)
-          c.Execute(ClipType.Union, FillRule.Negative, group._outPaths);
-        else
+#endif
           c.Execute(ClipType.Union, FillRule.Positive, group._outPaths);
+        else
+          c.Execute(ClipType.Union, FillRule.Negative, group._outPaths);
       }
     }
   }

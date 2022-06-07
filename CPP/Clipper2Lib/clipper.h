@@ -127,10 +127,11 @@ namespace Clipper2Lib
     return clip_offset.Execute(delta);
   }
 
-  static PathsD InflatePaths(const PathsD& paths, double delta, 
-    JoinType jt, EndType et, double miter_limit = 2.0)
+  static PathsD InflatePaths(const PathsD& paths, double delta,
+    JoinType jt, EndType et, double miter_limit = 2.0, double precision = 2)
   {
-    const int precision = 2;
+    if (precision < -8 || precision > 8)
+      throw new Clipper2Exception("Error: Precision exceeds the allowed range.");
     const double scale = std::pow(10, precision);
     ClipperOffset clip_offset(miter_limit);
     clip_offset.AddPaths(ScalePaths<int64_t,double>(paths, scale), jt, et);
@@ -160,7 +161,7 @@ namespace Clipper2Lib
   {
     Paths64 result;
     result.reserve(paths.size());
-    for (const Path64 path : paths)
+    for (const Path64& path : paths)
       result.push_back(OffsetPath(path, dx, dy));
     return result;
   }
@@ -169,16 +170,30 @@ namespace Clipper2Lib
   {
     PathsD result;
     result.reserve(paths.size());
-    for (const PathD path : paths)
+    for (const PathD& path : paths)
       result.push_back(OffsetPath(path, dx, dy));
     return result;
   }
 
+  static Rect64 Bounds(const Path64& path)
+  {
+    Rect64 rec = MaxInvalidRect64;
+    for (const Point64& pt : path)
+    {
+      if (pt.x < rec.left) rec.left = pt.x;
+      if (pt.x > rec.right) rec.right = pt.x;
+      if (pt.y < rec.top) rec.top = pt.y;
+      if (pt.y > rec.bottom) rec.bottom = pt.y;
+    }
+    if (rec.IsEmpty()) return Rect64();
+    return rec;
+  }
+  
   static Rect64 Bounds(const Paths64& paths)
   {
     Rect64 rec = MaxInvalidRect64;
-    for (const Path64 path : paths)
-      for (const Point64 pt : path)
+    for (const Path64& path : paths)
+      for (const Point64& pt : path)
       {
         if (pt.x < rec.left) rec.left = pt.x;
         if (pt.x > rec.right) rec.right = pt.x;
@@ -192,7 +207,7 @@ namespace Clipper2Lib
   static RectD Bounds(const PathD& path)
   {
     RectD rec = MaxInvalidRectD;
-    for (const PointD pt : path)
+    for (const PointD& pt : path)
     {
       if (pt.x < rec.left) rec.left = pt.x;
       if (pt.x > rec.right) rec.right = pt.x;
@@ -206,8 +221,8 @@ namespace Clipper2Lib
   static RectD Bounds(const PathsD& paths)
   {
     RectD rec = MaxInvalidRectD;
-    for (const PathD path : paths)
-      for (const PointD pt : path)
+    for (const PathD& path : paths)
+      for (const PointD& pt : path)
       {
         if (pt.x < rec.left) rec.left = pt.x;
         if (pt.x > rec.right) rec.right = pt.x;
@@ -221,11 +236,12 @@ namespace Clipper2Lib
   namespace details 
   {
 
-    static void AddPolyNodeToPaths(const PolyPath64& polytree, Paths64& paths)
+    template <typename T>
+    static void AddPolyNodeToPaths(const PolyPath<T>& polytree, Paths<T>& paths)
     {
       if (!polytree.polygon.empty())
         paths.push_back(polytree.polygon);
-      for (PolyPath64* child : polytree.childs)
+      for (PolyPath<T>* child : polytree.childs)
         AddPolyNodeToPaths(*child, paths);
     }
 
@@ -298,9 +314,10 @@ namespace Clipper2Lib
 
   } //end details namespace 
 
-  inline Paths64 PolyTreeToPaths(const PolyTree64& polytree)
+  template <typename T>
+  inline Paths<T> PolyTreeToPaths(const PolyTree<T>& polytree)
   {
-    Paths64 result;
+    Paths<T> result;
     details::AddPolyNodeToPaths(polytree, result);
     return result;
   }

@@ -1,7 +1,7 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
 * Version   :  10.0 (beta) - aka Clipper2                                      *
-* Date      :  5 June 2022                                                     *
+* Date      :  7 June 2022                                                     *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  This is the main polygon clipping module                        *
@@ -504,12 +504,13 @@ namespace Clipper2Lib {
 
 	double Area(OutPt* op)
 	{
+		//https://en.wikipedia.org/wiki/Shoelace_formula
 		double area = 0.0;
 		OutPt* op2 = op;
 		do
 		{
-			area += static_cast<double>(op2->pt.y - op2->prev->pt.y) *
-				static_cast<double>(op2->pt.x + op2->prev->pt.x);
+			area += static_cast<double>(op2->prev->pt.y + op2->pt.y) *
+				static_cast<double>(op2->prev->pt.x - op2->pt.x);
 			op2 = op2->next;
 		} while (op2 != op);
 		return area * 0.5;
@@ -750,7 +751,7 @@ namespace Clipper2Lib {
 		for (const Path64& path : paths) total_vertex_count += path.size();
 		if (total_vertex_count == 0) return;
 		Vertex* vertices = new Vertex[total_vertex_count], *v = vertices;
-		for (const Path64 path : paths)
+		for (const Path64& path : paths)
 		{
 			//for each path create a circular double linked list of vertices
 			Vertex *v0 = v, *curr_v = v, *prev_v = nullptr;
@@ -1585,8 +1586,9 @@ namespace Clipper2Lib {
 
 	inline double AreaTriangle(const Point64& pt1, const Point64& pt2, const Point64& pt3)
 	{
-		return 0.5 * (pt1.x * (pt2.y - pt3.y) +
-			pt2.x * (pt3.y - pt1.y) + pt3.x * (pt1.y - pt2.y));
+		return static_cast<double>(pt3.y + pt1.y) * static_cast<double>(pt3.x - pt1.x) +
+			static_cast<double>(pt1.y + pt2.y) * static_cast<double>(pt1.x - pt2.x) +
+			static_cast<double>(pt2.y + pt3.y) * static_cast<double>(pt2.x - pt3.x);
 	}
 
 
@@ -2507,7 +2509,7 @@ namespace Clipper2Lib {
 				AddOutPt(horz, horz.top);
 			UpdateEdgeIntoAEL(&horz);
 
-			if (PreserveCollinear && HorzIsSpike(horz))
+			if (PreserveCollinear && !horzIsOpen && HorzIsSpike(horz))
 				TrimHorz(horz, true);
 
 			is_left_to_right = 
@@ -3294,34 +3296,36 @@ namespace Clipper2Lib {
 	}
 
 
-	bool BuildPath(OutPt& op, bool isOpen, Path64& path)
+	bool BuildPath(OutPt* op, bool reverse, bool isOpen, Path64& path)
 	{
-		int cnt = PointCount(&op);
-		if ((cnt < 3) && (!isOpen || cnt < 2)) return false;
+    if (op->next == op || (!isOpen && op->next == op->prev)) return false;
 		path.resize(0);
-		path.reserve(cnt);
-#ifdef REVERSE_ORIENTATION
-		op = op.next;
-		Point64 lastPt = op.pt;
+		Point64 lastPt;
+		OutPt* op2;
+		if (reverse)
+		{
+			lastPt = op->pt;
+			op2 = op->prev;
+		}
+		else
+		{
+			op = op->next;
+			lastPt = op->pt;
+			op2 = op->next;
+		}
 		path.push_back(lastPt);
-		OutPt* op2 = op.next;
-#else
-		Point64 lastPt = op.pt;
-		path.push_back(lastPt);
-		OutPt* op2 = op.prev;
-#endif
-		while (op2 != &op)
+
+		while (op2 != op)
 		{
 			if (op2->pt != lastPt)
 			{
 				lastPt = op2->pt;
 				path.push_back(lastPt);
 			}
-#ifdef REVERSE_ORIENTATION
-			op2 = op2->next;
-#else
-			op2 = op2->prev;
-#endif
+			if (reverse) 
+				op2 = op2->prev;
+			else
+				op2 = op2->next;
 		}
 		return true;
 	}
@@ -3343,13 +3347,15 @@ namespace Clipper2Lib {
 			Path64 path;
 			if (solutionOpen && outrec->state == OutRecState::Open)
 			{
-				if (BuildPath(*outrec->pts, true, path))
+				if (BuildPath(outrec->pts, 
+					fillrule_ == FillRule::Negative, true, path))
 					solutionOpen->emplace_back(std::move(path));
 				path.resize(0);
 			}
 			else
 			{
-				if (BuildPath(*outrec->pts, false, path))
+				if (BuildPath(outrec->pts, 
+					fillrule_ == FillRule::Negative, false, path))
 					solutionClosed.emplace_back(std::move(path));
 				path.resize(0);
 			}
@@ -3440,7 +3446,8 @@ namespace Clipper2Lib {
 				if (outrec->owner->splits)
 				{
 					for (OutRec* splitOr : *outrec->owner->splits)
-						if (Path1InsidePath2(outrec->pts, splitOr->pts))
+						if (splitOr->pts && 
+							Path1InsidePath2(outrec->pts, splitOr->pts))
 						{
 							outrec->owner = splitOr;
 							break;
@@ -3462,7 +3469,8 @@ namespace Clipper2Lib {
 		
 			bool is_open_path = IsOpen(*outrec);
 			Path64 path;
-			if (!BuildPath(*outrec->pts, is_open_path, path)) continue;
+			if (!BuildPath(outrec->pts, 
+				fillrule_ == FillRule::Negative, is_open_path, path)) continue;
 
 			if (is_open_path)
 			{
@@ -3470,13 +3478,17 @@ namespace Clipper2Lib {
 				continue;
 			}
 
-			//update ownership ...
-			while (outrec->owner && !outrec->owner->pts)
-				outrec->owner = outrec->owner->owner;
 			if (outrec->owner && outrec->owner->state == outrec->state)
 			{
-				if (IsOuter(*outrec)) outrec->owner = nullptr;
-				else outrec->owner = outrec->owner->owner;
+				//inner/outer state needs fixing
+				while (outrec->owner && 
+					!Path1InsidePath2(outrec->pts, outrec->owner->pts))
+						outrec->owner = outrec->owner->owner;
+
+				if (!outrec->owner || IsInner(*outrec->owner))
+					outrec->state = OutRecState::Outer; 
+				else
+					outrec->state = OutRecState::Inner;
 			}
 
 			PolyPath64* owner_polypath;
