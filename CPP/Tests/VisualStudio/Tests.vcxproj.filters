@@ -31,6 +31,9 @@
     <ClCompile Include="..\Tests\TestFromTextFile3.cpp">
       <Filter>Tests</Filter>
     </ClCompile>
+    <ClCompile Include="..\Tests\TestOffset.cpp">
+      <Filter>Tests</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="Tests">
