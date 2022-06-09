@@ -1,7 +1,7 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
 * Version   :  10.0 (beta) - aka Clipper2                                      *
-* Date      :  8 June 2022                                                     *
+* Date      :  9 June 2022                                                     *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  Polygon offsetting                                              *
@@ -282,13 +282,19 @@ void ClipperOffset::DoGroupOffset(PathGroup& group, double delta)
 		//the lowermost polygon must be an outer polygon. So we can use that as the
 		//designated orientation for outer polygons (needed for tidy-up clipping)
 		Paths64::size_type lowestIdx = GetLowestPolygonIdx(group.paths_in_);
-		if (Area(group.paths_in_[lowestIdx]) == 0) 
-			return;
-		else if (Area(group.paths_in_[lowestIdx]) < 0)
+		if (Area(group.paths_in_[lowestIdx]) == 0) return;
+
+		if (Area(group.paths_in_[lowestIdx]) < 0)
 		{
-			//this is more efficient than literally reversing paths
-			group.is_reversed = true;
 			delta = -delta;
+#ifdef REVERSE_ORIENTATION
+			group.is_reversed = false;
+#else 
+		}
+		else
+		{
+			group.is_reversed = false;
+#endif 
 		}
 	}
 
@@ -348,14 +354,10 @@ void ClipperOffset::DoGroupOffset(PathGroup& group, double delta)
 		Clipper c;
 		c.PreserveCollinear = false;
 		c.AddSubject(group.paths_out_);
-#ifdef REVERSE_ORIENTATION
-		if (!group.is_reversed)
-#else 
 		if (group.is_reversed)
-#endif
-			c.Execute(ClipType::Union, FillRule::Positive, group.paths_out_);
-		else
 			c.Execute(ClipType::Union, FillRule::Negative, group.paths_out_);
+		else
+			c.Execute(ClipType::Union, FillRule::Positive, group.paths_out_);
 	}
 }
 
@@ -386,14 +388,10 @@ Paths64 ClipperOffset::Execute(double delta)
 		Clipper c;
 		c.PreserveCollinear = false;
 		c.AddSubject(result);
-#ifdef REVERSE_ORIENTATION
-		if (!groups_[0].is_reversed)
-#else 
 		if (groups_[0].is_reversed)
-#endif
-			c.Execute(ClipType::Union, FillRule::Positive, result);
-		else
 			c.Execute(ClipType::Union, FillRule::Negative, result);
+		else
+			c.Execute(ClipType::Union, FillRule::Positive, result);
 	}
 	return result;
 }

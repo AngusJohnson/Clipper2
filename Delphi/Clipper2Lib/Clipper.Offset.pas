@@ -3,7 +3,7 @@ unit Clipper.Offset;
 (*******************************************************************************
 * Author    :  Angus Johnson                                                   *
 * Version   :  10.0 (beta) - aka Clipper2                                      *
-* Date      :  7 June 2022                                                     *
+* Date      :  9 June 2022                                                     *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  Offset paths and clipping solutions                             *
@@ -241,15 +241,22 @@ begin
   IsClosedPaths := (pathgroup.endType in [etPolygon, etJoined]);
   if IsClosedPaths then
   begin
+    pathgroup.reversed := false;
     //the lowermost polygon must be an outer polygon. So we can use that as the
     //designated orientation for outer polygons (needed for tidy-up clipping)
     lowestIdx := GetLowestPolygonIdx(pathgroup.paths);
     if lowestIdx < 0 then Exit;
+
     if Area(pathgroup.paths[lowestIdx]) < 0 then
     begin
-      //more efficient than literally reversing paths
-      pathgroup.reversed := true;
       delta := -delta;
+{$IFDEF REVERSE_ORIENTATION}
+      pathgroup.reversed := true;
+{$ELSE}
+    end else
+    begin
+      pathgroup.reversed := true;
+{$ENDIF}
     end;
   end;
 
@@ -330,13 +337,9 @@ begin
     try
       PreserveCollinear := fPreserveCollinear;
       AddSubject(fOutPaths);
-{$IFDEF REVERSE_ORIENTATION}
-      if not pathgroup.reversed then
-{$ELSE}
       if pathgroup.reversed then
-{$ENDIF}
-        Execute(ctUnion, frPositive, fOutPaths) else
-        Execute(ctUnion, frNegative, fOutPaths);
+        Execute(ctUnion, frNegative, fOutPaths) else
+        Execute(ctUnion, frPositive, fOutPaths);
     finally
       free;
     end;
@@ -487,13 +490,9 @@ begin
     try
       PreserveCollinear := fPreserveCollinear;
       AddSubject(fSolution);
-{$IFDEF REVERSE_ORIENTATION}
-      if not TPathGroup(fInGroups[0]).reversed then
-{$ELSE}
       if TPathGroup(fInGroups[0]).reversed then
-{$ENDIF}
-        Execute(ctUnion, frPositive, fSolution) else
-        Execute(ctUnion, frNegative, fSolution);
+        Execute(ctUnion, frNegative, fSolution) else
+        Execute(ctUnion, frPositive, fSolution);
     finally
       free;
     end;

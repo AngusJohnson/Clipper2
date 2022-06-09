@@ -1,7 +1,7 @@
 ﻿/*******************************************************************************
 * Author    :  Angus Johnson                                                   *
 * Version   :  10.0 (beta) - also known as Clipper2                            *
-* Date      :  10 May 2022                                                     *
+* Date      :  9 June 2022                                                     *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  Minkowski Sum and Difference                                    *
@@ -54,7 +54,7 @@ namespace Clipper2Lib
           {
             tmp[g][h], tmp[i][h], tmp[i][j], tmp[g][j]
           };
-          if (!ClipperFunc.IsClockwise(quad))
+          if (!ClipperFunc.IsPositive(quad))
             result.Add(ClipperFunc.ReversePath(quad));
           else
             result.Add(quad);

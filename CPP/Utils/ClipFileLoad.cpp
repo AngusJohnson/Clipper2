@@ -141,17 +141,24 @@ bool LoadTestNum(ifstream &source, int test_num, bool seek_from_start,
         continue;
       }
 
-      if (line.find("SUBJECTS_OPEN") != string::npos) 
+      for (;;)
       {
-        while (getline(source, line) && GetPath(line, subj_open));
-      }
-      else if (line.find("SUBJECTS") != string::npos) 
-      {
-        while (getline(source, line) && GetPath(line, subj));
-      }
-      if (line.find("CLIPS") != string::npos) 
-      {
-        while (getline(source, line) && GetPath(line, clip));
+        if (line.find("SUBJECTS_OPEN") != string::npos)
+        {
+          while (getline(source, line) && GetPath(line, subj_open));
+          continue;
+        }
+        else if (line.find("SUBJECTS") != string::npos)
+        {
+          while (getline(source, line) && GetPath(line, subj));
+          continue;
+        }
+        if (line.find("CLIPS") != string::npos)
+        {
+          while (getline(source, line) && GetPath(line, clip));
+          continue;
+        }
+        break;
       }
     } //inner while still lines (found)
   } //outer while still lines (not found)

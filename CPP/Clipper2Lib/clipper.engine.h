@@ -1,7 +1,7 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
 * Version   :  10.0 (beta) - aka Clipper2                                      *
-* Date      :  6 June 2022                                                     *
+* Date      :  9 June 2022                                                     *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  This is the main polygon clipping module                        *
@@ -105,6 +105,11 @@ namespace Clipper2Lib {
 		~OutRec() { if (splits) delete splits; };
 	};
 
+	///////////////////////////////////////////////////////////////////
+	//Important: UP and DOWN here are premised on Y-axis positive down
+	//displays, which is the orientation used in Clipper's development.
+	///////////////////////////////////////////////////////////////////
+	
 	struct Active {
 		Point64 bot;
 		Point64 top;
@@ -151,7 +156,6 @@ namespace Clipper2Lib {
 		ClipType cliptype_ = ClipType::None;
 		FillRule fillrule_ = FillRule::EvenOdd;
 		int64_t bot_y_ = 0;
-		bool error_found_ = false;
 		bool has_open_paths_ = false;
 		bool minima_list_sorted_ = false;
 		bool using_polytree = false;
@@ -230,6 +234,7 @@ namespace Clipper2Lib {
 		void SetZ(const Active& e1, const Active& e2, Point64& pt);
 #endif
 	protected:
+		bool succeeded_ = true;
 		std::vector<OutRec*> outrec_list_;
 		void CleanUp();  //unlike Clear, CleanUp preserves added paths
 		void AddPath(const Path64& path, PathType polytype, bool is_open);
@@ -244,6 +249,7 @@ namespace Clipper2Lib {
 	public:
 		virtual ~ClipperBase();
 		bool PreserveCollinear = true;
+		bool ReverseOrientation = false;
 		void Clear();
 #ifdef USINGZ
 		ClipperBase() { zfill_func_ = nullptr; };

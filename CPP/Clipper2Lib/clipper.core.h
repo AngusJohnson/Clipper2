@@ -429,13 +429,9 @@ inline double Area(const Paths<T>& paths)
 }
 
 template <typename T>
-inline bool IsClockwise(const Path<T>& poly)
+inline bool IsPositive(const Path<T>& poly)
 {
-#ifdef REVERSE_ORIENTATION
-	return Area<T>(poly) >= 0;
-#else 
 	return Area<T>(poly) <= 0;
-#endif 
 }
 
 template <typename T>

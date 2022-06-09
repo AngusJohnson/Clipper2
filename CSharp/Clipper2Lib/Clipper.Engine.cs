@@ -1,7 +1,7 @@
 ﻿/*******************************************************************************
 * Author    :  Angus Johnson                                                   *
 * Version   :  10.0 (beta) - also known as Clipper2                            *
-* Date      :  7 June 2022                                                     *
+* Date      :  9 June 2022                                                     *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  This is the main polygon clipping module                        *
@@ -214,13 +214,23 @@ namespace Clipper2Lib
     private bool _isSortedMinimaList;
     private bool _hasOpenPaths;
     internal bool _using_polytree;
+    internal bool _succeeded;
     public bool PreserveCollinear { get; set; }
+    public bool ReverseOrientation { get; set; }
 
 #if USINGZ
     public delegate void ZCallback64(Point64 bot1, Point64 top1,
         Point64 bot2, Point64 top2, ref Point64 intersectPt);
 
     public ZCallback64? ZFillFunc { get; set; }
+#endif
+
+#if REVERSE_ORIENTATION
+    const FillRule fillPos = FillRule.Negative;
+    const FillRule fillNeg = FillRule.Positive;
+#else
+    const FillRule fillPos = FillRule.Positive;
+    const FillRule fillNeg = FillRule.Negative;
 #endif
 
     public ClipperBase()
@@ -333,13 +343,7 @@ namespace Clipper2Lib
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static bool IsFront(Active ae)
     {
-      //precondition: 'ae' is always 'hot'.
-      //the front edge will be the LEFT edge when it's an OUTER polygon
-      //so that outer polygons will be orientated clockwise
-      if (ae.outrec!.state == OutRecState.Open)
-        return (ae.windDx > 0);
-      else
-        return (ae == ae.outrec.frontEdge);
+      return (ae == ae.outrec!.frontEdge);
     }
 
     /*******************************************************************************
@@ -449,11 +453,7 @@ namespace Clipper2Lib
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static Vertex NextVertex(Active ae)
     {
-#if REVERSE_ORIENTATION
       if (ae.windDx > 0)
-#else
-      if (ae.windDx < 0)
-#endif
         return ae.vertexTop!.next!;
       else
         return ae.vertexTop!.prev!;
@@ -462,11 +462,7 @@ namespace Clipper2Lib
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private Vertex PrevPrevVertex(Active ae)
     {
-#if REVERSE_ORIENTATION
       if (ae.windDx > 0)
-#else
-      if (ae.windDx < 0)
-#endif
         return ae.vertexTop!.prev!.prev!;
       else 
         return ae.vertexTop!.next!.next!;
@@ -500,11 +496,7 @@ namespace Clipper2Lib
     private static Vertex? GetCurrYMaximaVertex(Active ae)
     {
       Vertex? result = ae.vertexTop;
-#if REVERSE_ORIENTATION
       if (ae.windDx > 0)
-#else
-      if (ae.windDx < 0)
-#endif
         while (result!.next!.pt.Y == result.pt.Y) result = result.next;
       else
         while (result!.prev!.pt.Y == result.pt.Y) result = result.prev;
@@ -811,6 +803,7 @@ namespace Clipper2Lib
       _currentLocMin = 0;
       _actives = null;
       _sel = null;
+      _succeeded = true;
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -989,11 +982,11 @@ namespace Clipper2Lib
         case FillRule.NonZero:
           if (Math.Abs(ae.windCount) != 1) return false;
           break;
-        case FillRule.Positive:
-          if (ae.windCount != 1) return false;
-          break;
-        case FillRule.Negative:
+        case fillPos:
           if (ae.windCount != -1) return false;
+          break;
+        case fillNeg:
+          if (ae.windCount != 1) return false;
           break;
         case FillRule.EvenOdd:
           break;
@@ -1006,8 +999,8 @@ namespace Clipper2Lib
           {
             case FillRule.EvenOdd:
             case FillRule.NonZero: return (ae.windCount2 != 0);
-            case FillRule.Positive: return (ae.windCount2 > 0);
-            case FillRule.Negative: return (ae.windCount2 < 0);
+            case fillPos: return (ae.windCount2 < 0);
+            case fillNeg: return (ae.windCount2 > 0);
           }
 
           break;
@@ -1016,8 +1009,8 @@ namespace Clipper2Lib
           {
             case FillRule.EvenOdd:
             case FillRule.NonZero: return (ae.windCount2 == 0);
-            case FillRule.Positive: return (ae.windCount2 <= 0);
-            case FillRule.Negative: return (ae.windCount2 >= 0);
+            case fillPos: return (ae.windCount2 >= 0);
+            case fillNeg: return (ae.windCount2 <= 0);
           }
 
           break;
@@ -1027,16 +1020,16 @@ namespace Clipper2Lib
             {
               case FillRule.EvenOdd:
               case FillRule.NonZero: return (ae.windCount2 == 0);
-              case FillRule.Positive: return (ae.windCount2 <= 0);
-              case FillRule.Negative: return (ae.windCount2 >= 0);
+              case fillPos: return (ae.windCount2 >= 0);
+              case fillNeg: return (ae.windCount2 <= 0);
             }
           else
             switch (_fillrule)
             {
               case FillRule.EvenOdd:
               case FillRule.NonZero: return (ae.windCount2 != 0);
-              case FillRule.Positive: return (ae.windCount2 > 0);
-              case FillRule.Negative: return (ae.windCount2 < 0);
+              case fillPos: return (ae.windCount2 < 0);
+              case fillNeg: return (ae.windCount2 > 0);
             }
 
           break;
@@ -1271,11 +1264,7 @@ namespace Clipper2Lib
           {
             bot = localMinima.vertex.pt,
             curX = localMinima.vertex.pt.X,
-#if REVERSE_ORIENTATION
             windDx = -1,
-#else
-            windDx = 1,
-#endif
             vertexTop = localMinima.vertex.prev,
             top = localMinima.vertex.prev!.pt,
             outrec = null,
@@ -1294,11 +1283,7 @@ namespace Clipper2Lib
           {
             bot = localMinima.vertex.pt,
             curX = localMinima.vertex.pt.X,
-#if REVERSE_ORIENTATION
             windDx = 1,
-#else
-            windDx = -1,
-#endif
             vertexTop = localMinima.vertex.next, //i.e. ascending
             top = localMinima.vertex.next!.pt,
             outrec = null,
@@ -1459,7 +1444,14 @@ namespace Clipper2Lib
       //flag when orientation needs to be rechecked later ...
       ae2.outrec = outrec;
 
-      if (!IsOpen(ae1))
+      if (IsOpen(ae1))
+      {
+        if (ae1.windDx > 0)
+          SetSides(outrec, ae1, ae2);
+        else
+          SetSides(outrec, ae2, ae1);
+      }
+      else
       {
         //Setting the owner and inner/outer states (above) is an essential
         //precursor to setting edge 'sides' (i.e. left and right sides of output
@@ -1479,11 +1471,13 @@ namespace Clipper2Lib
     {
       if (IsFront(ae1) == IsFront(ae2))
       {
-        //we should practically never get here but in case something is wrong
         if (IsOpen(ae1))
           SwapSides(ae2.outrec!);
         else if (!FixSides(ae1, ae2))
+        {
+          _succeeded = false;
           return null;
+        }
       }
 
       OutPt result = AddOutPt(ae1, pt);
@@ -1520,11 +1514,10 @@ namespace Clipper2Lib
         p2Start.next = p1End;
         p1End.prev = p2Start;
         ae1.outrec.pts = p2Start;
-        if (!IsOpen(ae1))
-        {
-          ae1.outrec.frontEdge = ae2.outrec.frontEdge;
+        //nb: if IsOpen(e1) then e1 & e2 must be a 'maximaPair'
+        ae1.outrec.frontEdge = ae2.outrec.frontEdge;
+        if (ae1.outrec.frontEdge != null)
           ae1.outrec.frontEdge!.outrec = ae1.outrec;
-        }
       }
       else
       {
@@ -1533,11 +1526,9 @@ namespace Clipper2Lib
         p1Start.next = p2End;
         p2End.prev = p1Start;
 
-        if (!IsOpen(ae1))
-        {
-          ae1.outrec.backEdge = ae2.outrec.backEdge;
+        ae1.outrec.backEdge = ae2.outrec.backEdge;
+        if (ae1.outrec.backEdge != null)
           ae1.outrec.backEdge!.outrec = ae1.outrec;
-        }
       }
 
       //after joining, the ae2.OutRec must contains no vertices ...
@@ -1592,8 +1583,8 @@ namespace Clipper2Lib
       outrec.state = OutRecState.Open;
       outrec.pts = null;
       outrec.polypath = null;
+      outrec.frontEdge = ae;
       outrec.backEdge = null;
-      outrec.frontEdge = null;
 
       ae.outrec = outrec;
 
@@ -1703,13 +1694,13 @@ namespace Clipper2Lib
 
       switch (_fillrule)
       {
-        case FillRule.Positive:
-          oldE1WindCount = ae1.windCount;
-          oldE2WindCount = ae2.windCount;
-          break;
-        case FillRule.Negative:
+        case fillPos:
           oldE1WindCount = -ae1.windCount;
           oldE2WindCount = -ae2.windCount;
+          break;
+        case fillNeg:
+          oldE1WindCount = ae1.windCount;
+          oldE2WindCount = ae2.windCount;
           break;
         default:
           oldE1WindCount = Math.Abs(ae1.windCount);
@@ -1788,13 +1779,13 @@ namespace Clipper2Lib
         long e1Wc2, e2Wc2;
         switch (_fillrule)
         {
-          case FillRule.Positive:
-            e1Wc2 = ae1.windCount2;
-            e2Wc2 = ae2.windCount2;
-            break;
-          case FillRule.Negative:
+          case fillPos:
             e1Wc2 = -ae1.windCount2;
             e2Wc2 = -ae2.windCount2;
+            break;
+          case fillNeg:
+            e1Wc2 = ae1.windCount2;
+            e2Wc2 = ae2.windCount2;
             break;
           default:
             e1Wc2 = Math.Abs(ae1.windCount2);
@@ -1883,7 +1874,7 @@ namespace Clipper2Lib
       _cliptype = ct;
       Reset();
       if (!PopScanline(out long y)) return;
-      for (; ; )
+      while (_succeeded)
       {
         InsertLocalMinimaIntoAEL(y);
         Active? ae;
@@ -1897,7 +1888,7 @@ namespace Clipper2Lib
         while (PopHorz(out ae)) DoHorizontal(ae!);
       }
 
-      ProcessJoinList();
+      if (_succeeded) ProcessJoinList();
     }
 
     private void DoIntersections(long topY)
@@ -3218,8 +3209,10 @@ namespace Clipper2Lib
     private void CleanCollinear(OutRec? outrec)
     {
       outrec = GetRealOutRec(outrec);
-      if (outrec == null || outrec.frontEdge != null ||
-        !ValidateClosedPathEx(ref outrec.pts)) return;
+      if (outrec == null || outrec.state == OutRecState.Open || 
+        outrec.frontEdge != null || !ValidateClosedPathEx(ref outrec.pts)) 
+          return;
+
       OutPt startOp = outrec.pts!;
       OutPt? op2 = startOp;
       for (; ; )
@@ -3375,14 +3368,14 @@ namespace Clipper2Lib
         Path64 path = new Path64();
         if (outrec.state == OutRecState.Open)
         {
-          if (BuildPath(outrec.pts!, 
-            _fillrule == FillRule.Negative, true, path))
+          if (BuildPath(outrec.pts!,
+            ReverseOrientation != (_fillrule == fillPos), true, path))
               solutionOpen.Add(path);
         }
         else
         {
-          if (BuildPath(outrec.pts!, 
-            _fillrule == FillRule.Negative, false, path))
+          if (BuildPath(outrec.pts!,
+            ReverseOrientation != (_fillrule == fillPos), false, path))
               solutionClosed.Add(path);
         }
       }
@@ -3505,8 +3498,9 @@ namespace Clipper2Lib
         bool isOpenPath = outrec.state == OutRecState.Open;
 
         Path64 path = new Path64();
-        if (!BuildPath(outrec.pts!, 
-          _fillrule == FillRule.Negative, isOpenPath, path)) continue;
+        if (!BuildPath(outrec.pts!,
+          ReverseOrientation != (_fillrule == fillPos), isOpenPath, path)) 
+            continue;
 
         if (isOpenPath)
         {
@@ -3515,17 +3509,7 @@ namespace Clipper2Lib
         }
 
         if (outrec.owner != null && outrec.owner.state != outrec.state)
-        {
-          //inner/outer state needs fixing
-          while (outrec.owner != null && 
-            !Path1InsidePath2(outrec.pts!, outrec.owner.pts!))
               outrec.owner = outrec.owner.owner;
-
-          if (outrec.owner == null || IsInner(outrec.owner))
-            outrec.state = OutRecState.Outer;
-          else
-            outrec.state = OutRecState.Inner;
-        }
 
         PolyPathBase ownerPP;
         if (outrec.owner != null && outrec.owner.polypath != null)
@@ -3589,7 +3573,6 @@ namespace Clipper2Lib
     public bool Execute(ClipType clipType, FillRule fillRule,
         Paths64 solutionClosed, Paths64 solutionOpen)
     {
-      bool success = true;
       solutionClosed.Clear();
       solutionOpen.Clear();
       try
@@ -3599,11 +3582,11 @@ namespace Clipper2Lib
       }
       catch
       {
-        success = false;
+        _succeeded = false;
       }
 
       ClearSolution();
-      return success;
+      return _succeeded;
     }
 
     public bool Execute(ClipType clipType, FillRule fillRule, Paths64 solutionClosed)
@@ -3615,7 +3598,6 @@ namespace Clipper2Lib
     {
       polytree.Clear();
       openPaths.Clear();
-      bool success = true;
       _using_polytree = true;
       try
       {
@@ -3624,11 +3606,11 @@ namespace Clipper2Lib
       }
       catch
       {
-        success = false;
+        _succeeded = false;
       }
 
       ClearSolution();
-      return success;
+      return _succeeded;
     }
 
     public bool Execute(ClipType clipType, FillRule fillRule, PolyTree polytree)

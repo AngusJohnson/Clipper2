@@ -87,7 +87,7 @@ begin
       quad[1] := tmp[i][h];
       quad[2] := tmp[i][(j)];
       quad[3] := tmp[g][(j)];
-      if not IsClockwise(quad) then
+      if not IsPositive(quad) then
         Result[k + j] := ReversePath(quad) else
         Result[k + j] := copy(quad, 0, 4);
       h := j;

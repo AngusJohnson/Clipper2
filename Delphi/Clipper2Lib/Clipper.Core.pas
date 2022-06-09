@@ -100,9 +100,9 @@ function Area(const paths: TPaths64): Double; overload;
 function Area(const path: TPathD): Double; overload;
 function Area(const paths: TPathsD): Double; overload;
   {$IFDEF INLINING} inline; {$ENDIF}
-function IsClockwise(const path: TPath64): Boolean; overload;
+function IsPositive(const path: TPath64): Boolean; overload;
   {$IFDEF INLINING} inline; {$ENDIF}
-function IsClockwise(const path: TPathD): Boolean; overload;
+function IsPositive(const path: TPathD): Boolean; overload;
   {$IFDEF INLINING} inline; {$ENDIF}
 
 function CrossProduct(const pt1, pt2, pt3: TPoint64): double; overload;
@@ -1244,9 +1244,6 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-//Areas will be positive when path orientation is clockwise, otherwise they
-//will be negative (assuming the REVERSE_ORIENTATION preprocessor define
-//corresponds with the display's orientation).
 function Area(const path: TPath64): Double;
 var
   i, highI: Integer;
@@ -1265,7 +1262,11 @@ begin
     Result := Result + d * (p1.X - p2.X);
     p1 := p2; inc(p2);
   end;
+//{$IFDEF REVERSE_ORIENTATION}
+//  Result := -Result * 0.5;
+//{$ELSE}
   Result := Result * 0.5;
+//{$ENDIF}
 end;
 //------------------------------------------------------------------------------
 
@@ -1309,23 +1310,15 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-function IsClockwise(const path: TPath64): Boolean;
+function IsPositive(const path: TPath64): Boolean;
 begin
-{$IFDEF REVERSE_ORIENTATION}
-  Result := (Area(path) >= 0);
-{$ELSE}
   Result := (Area(path) <= 0);
-{$ENDIF}
 end;
 //------------------------------------------------------------------------------
 
-function IsClockwise(const path: TPathD): Boolean;
+function IsPositive(const path: TPathD): Boolean;
 begin
-{$IFDEF REVERSE_ORIENTATION}
   Result := (Area(path) >= 0);
-{$ELSE}
-  Result := (Area(path) <= 0);
-{$ENDIF}
 end;
 //------------------------------------------------------------------------------
 

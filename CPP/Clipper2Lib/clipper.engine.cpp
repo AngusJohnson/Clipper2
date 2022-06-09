@@ -1,7 +1,7 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
 * Version   :  10.0 (beta) - aka Clipper2                                      *
-* Date      :  7 June 2022                                                     *
+* Date      :  9 June 2022                                                     *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  This is the main polygon clipping module                        *
@@ -20,6 +20,15 @@ namespace Clipper2Lib {
 
 	static const double DefaultScale = 100;
 	static const double FloatingPointTolerance = 1.0e-12;
+
+#ifdef REVERSE_ORIENTATION
+	static const FillRule fill_pos = FillRule::Negative; 
+	static const FillRule fill_neg = FillRule::Positive;
+#else 
+	static const FillRule fill_pos = FillRule::Positive;
+	static const FillRule fill_neg = FillRule::Negative;
+#endif 
+
 
 	//Every closed path (or polygon) is made up of a series of vertices forming
 	//edges that alternate between going up (relative to the Y-axis) and going
@@ -145,12 +154,7 @@ namespace Clipper2Lib {
 
 	inline bool IsFront(const Active& e)
 	{
-		//the front edge will be the LEFT edge when it's an OUTER polygon
-		//so that outer polygons will be orientated clockwise
-		if (e.outrec->state == OutRecState::Open)
-			return (e.wind_dx > 0);
-		else
-			return (&e == e.outrec->front_edge);
+		return (&e == e.outrec->front_edge);
 	}
 
 
@@ -310,24 +314,18 @@ namespace Clipper2Lib {
 
 	inline Vertex* NextVertex(const Active& e)
 	{
-#ifdef REVERSE_ORIENTATION
 		if (e.wind_dx > 0)
-#else 
-		if (e.wind_dx < 0)
-#endif 
 			return e.vertex_top->next;
 		else
 			return e.vertex_top->prev;
 	}
 
 
+	//PrevPrevVertex: useful to get the (inverted Y-axis) top of the
+	//alternate edge (ie left or right bound) during edge insertion.	
 	inline Vertex* PrevPrevVertex(const Active& ae)
 	{
-#ifdef REVERSE_ORIENTATION
 		if (ae.wind_dx > 0)
-#else 
-		if (ae.wind_dx < 0)
-#endif 
 			return ae.vertex_top->prev->prev;
 		else
 			return ae.vertex_top->next->next;
@@ -367,11 +365,7 @@ namespace Clipper2Lib {
 	Vertex* GetCurrYMaximaVertex(const Active& e)
 	{
 		Vertex* result = e.vertex_top;
-#ifdef REVERSE_ORIENTATION
 		if (e.wind_dx > 0)
-#else 
-		if (e.wind_dx < 0)
-#endif 
 			while (result->next->pt.y == result->pt.y) result = result->next;
 		else
 			while (result->prev->pt.y == result->pt.y) result = result->prev;
@@ -704,7 +698,7 @@ namespace Clipper2Lib {
 		loc_min_iter_ = minima_list_.begin();
 		actives_ = nullptr;
 		sel_ = nullptr;
-		error_found_ = false;
+		succeeded_ = true;
 	}
 
 
@@ -904,11 +898,11 @@ namespace Clipper2Lib {
 		case FillRule::NonZero:
 			if (abs(e.wind_cnt) != 1) return false;
 			break;
-		case FillRule::Positive:
-			if (e.wind_cnt != 1) return false;
-			break;
-		case FillRule::Negative:
+		case fill_pos:
 			if (e.wind_cnt != -1) return false;
+			break;
+		case fill_neg:
+			if (e.wind_cnt != 1) return false;
 			break;
 		case FillRule::EvenOdd:
 			break;
@@ -921,8 +915,8 @@ namespace Clipper2Lib {
 			{
 			case FillRule::EvenOdd:
 			case FillRule::NonZero: return (e.wind_cnt2 != 0);
-			case FillRule::Positive: return (e.wind_cnt2 > 0);
-			case FillRule::Negative: return (e.wind_cnt2 < 0);
+			case fill_pos: return (e.wind_cnt2 < 0);
+			case fill_neg: return (e.wind_cnt2 > 0);
 			}
 			break;
 		case ClipType::Union:
@@ -930,8 +924,8 @@ namespace Clipper2Lib {
 			{
 			case FillRule::EvenOdd:
 			case FillRule::NonZero: return (e.wind_cnt2 == 0);
-			case FillRule::Positive: return (e.wind_cnt2 <= 0);
-			case FillRule::Negative: return (e.wind_cnt2 >= 0);
+			case fill_pos: return (e.wind_cnt2 <= 0);
+			case fill_neg: return (e.wind_cnt2 >= 0);
 			}
 			break;
 		case ClipType::Difference:
@@ -940,16 +934,16 @@ namespace Clipper2Lib {
 				{
 				case FillRule::EvenOdd:
 				case FillRule::NonZero: return (e.wind_cnt2 == 0);
-				case FillRule::Positive: return (e.wind_cnt2 <= 0);
-				case FillRule::Negative: return (e.wind_cnt2 >= 0);
+				case fill_pos: return (e.wind_cnt2 >= 0);
+				case fill_neg: return (e.wind_cnt2 <= 0);
 				}
 			else
 				switch (fillrule_)
 				{
 				case FillRule::EvenOdd:
 				case FillRule::NonZero: return (e.wind_cnt2 != 0);
-				case FillRule::Positive: return (e.wind_cnt2 > 0);
-				case FillRule::Negative: return (e.wind_cnt2 < 0);
+				case fill_pos: return (e.wind_cnt2 < 0);
+				case fill_neg: return (e.wind_cnt2 > 0);
 				}
 			break;
 		case ClipType::Xor:
@@ -1182,12 +1176,8 @@ namespace Clipper2Lib {
 				left_bound = new Active();
 				left_bound->bot = local_minima->vertex->pt;
 				left_bound->curr_x = left_bound->bot.x;
-#ifdef REVERSE_ORIENTATION
 				left_bound->wind_dx = -1,
-#else
-				left_bound->wind_dx = 1,
-#endif
-					left_bound->vertex_top = local_minima->vertex->prev;  //ie descending
+				left_bound->vertex_top = local_minima->vertex->prev;  //ie descending
 				left_bound->top = left_bound->vertex_top->pt;
 				left_bound->outrec = nullptr;
 				left_bound->local_min = local_minima;
@@ -1203,12 +1193,8 @@ namespace Clipper2Lib {
 				right_bound = new Active();
 				right_bound->bot = local_minima->vertex->pt;
 				right_bound->curr_x = right_bound->bot.x;
-#ifdef REVERSE_ORIENTATION
 				right_bound->wind_dx = 1,
-#else
-				right_bound->wind_dx = -1,
-#endif
-					right_bound->vertex_top = local_minima->vertex->next;  //ie ascending
+				right_bound->vertex_top = local_minima->vertex->next;  //ie ascending
 				right_bound->top = right_bound->vertex_top->pt;
 				right_bound->outrec = nullptr;
 				right_bound->local_min = local_minima;
@@ -1373,7 +1359,14 @@ namespace Clipper2Lib {
 		//flag when orientation needs to be rechecked later ...
 		e2.outrec = outrec;
 
-		if (!IsOpen(e1))
+		if (IsOpen(e1))
+		{
+			if (e1.wind_dx > 0)
+				SetSides(*outrec, e1, e2);
+			else
+				SetSides(*outrec, e2, e1);
+		}
+		else
 		{
 			//Setting the owner and inner/outer states (above) is an essential
 			//precursor to setting edge 'sides' (ie left and right sides of output
@@ -1400,20 +1393,19 @@ namespace Clipper2Lib {
 				IsOuter(*e2.outrec) == IsFront(e2))
 				SwapSides(*e2.outrec);
 			else
-				error_found_ = true;
+				succeeded_ = false;
 		}
 		else if (!e.outrec->pts)
 		{
 			if (ValidateClosedPathEx(e2.outrec))
-				error_found_ = true;
+				succeeded_ = false;
 			UncoupleOutRec(e);
 			UncoupleOutRec(e2);
 			//fixed, but there's nothing to terminate in AddLocalMaxPoly
 		}
 		else
-			error_found_ = true;
-
-		return !error_found_;
+			succeeded_ = false;
+		return succeeded_;
 	}
 
 
@@ -1424,7 +1416,10 @@ namespace Clipper2Lib {
 			if (IsOpen(e1))
 				SwapSides(*e2.outrec);
 			else if (!FixSides(e1, e2))
+			{
+				succeeded_ = false;
 				return nullptr;
+			}
 		}
 
 		OutPt* result = AddOutPt(e1, pt);
@@ -1462,11 +1457,9 @@ namespace Clipper2Lib {
 			p2_st->next = p1_end;
 			p1_end->prev = p2_st;
 			e1.outrec->pts = p2_st;
-			if (!IsOpen(e1))
-			{
-				e1.outrec->front_edge = e2.outrec->front_edge;
+			e1.outrec->front_edge = e2.outrec->front_edge;
+			if (e1.outrec->front_edge)
 				e1.outrec->front_edge->outrec = e1.outrec;
-			}
 		}
 		else
 		{
@@ -1474,11 +1467,9 @@ namespace Clipper2Lib {
 			p2_st->next = p1_end;
 			p1_st->next = p2_end;
 			p2_end->prev = p1_st;
-			if (!IsOpen(e1))
-			{
-				e1.outrec->back_edge = e2.outrec->back_edge;
+			e1.outrec->back_edge = e2.outrec->back_edge;
+			if (e1.outrec->back_edge)
 				e1.outrec->back_edge->outrec = e1.outrec;
-			}
 		}
 
 		//after joining, the e2.OutRec must contains no vertices ...
@@ -1538,7 +1529,8 @@ namespace Clipper2Lib {
 	void ClipperBase::CleanCollinear(OutRec* outrec)
 	{
 		outrec = GetRealOutRec(outrec);
-		if (!outrec || outrec->front_edge || !ValidateClosedPathEx(outrec)) return;
+		if (!outrec || outrec->state == OutRecState::Open ||
+			outrec->front_edge || !ValidateClosedPathEx(outrec)) return;
 
 		OutPt* startOp = outrec->pts, * op2 = startOp;
 		for (; ; )
@@ -1840,7 +1832,7 @@ namespace Clipper2Lib {
 				if (abs(edge_c->wind_cnt) != 1) return nullptr;
 				break;
 			case ClipType::None:
-				error_found_ = true;
+				succeeded_ = false;
 				break;
 			}
 			//toggle contribution ...
@@ -1898,13 +1890,13 @@ namespace Clipper2Lib {
 
 		switch (fillrule_)
 		{
-		case FillRule::Positive:
-			old_e1_windcnt = e1.wind_cnt;
-			old_e2_windcnt = e2.wind_cnt;
-			break;
-		case FillRule::Negative:
+		case fill_pos:
 			old_e1_windcnt = -e1.wind_cnt;
 			old_e2_windcnt = -e2.wind_cnt;
+			break;
+		case fill_neg:
+			old_e1_windcnt = e1.wind_cnt;
+			old_e2_windcnt = e2.wind_cnt;
 			break;
 		default:
 			old_e1_windcnt = abs(e1.wind_cnt);
@@ -1982,13 +1974,13 @@ namespace Clipper2Lib {
 			int64_t e1Wc2, e2Wc2;
 			switch (fillrule_)
 			{
-			case FillRule::Positive:
-				e1Wc2 = e1.wind_cnt2;
-				e2Wc2 = e2.wind_cnt2;
-				break;
-			case FillRule::Negative:
+			case fill_pos:
 				e1Wc2 = -e1.wind_cnt2;
 				e2Wc2 = -e2.wind_cnt2;
+				break;
+			case fill_neg:
+				e1Wc2 = e1.wind_cnt2;
+				e2Wc2 = e2.wind_cnt2;
 				break;
 			default:
 				e1Wc2 = abs(e1.wind_cnt2);
@@ -2073,7 +2065,7 @@ namespace Clipper2Lib {
 		int64_t y;
 		if (ct == ClipType::None || !PopScanline(y)) return true;
 
-		while (!error_found_)
+		while (succeeded_)
 		{
 			InsertLocalMinimaIntoAEL(y);
 			Active* e;
@@ -2086,7 +2078,7 @@ namespace Clipper2Lib {
 			while (PopHorz(e)) DoHorizontal(*e);
 		}
 		ProcessJoinerList();
-		return !error_found_;
+		return succeeded_;
 	}
 
 
@@ -2097,7 +2089,7 @@ namespace Clipper2Lib {
 		if (ExecuteInternal(clip_type, fill_rule))
 			BuildPaths(solution_closed, nullptr);
 		CleanUp();
-		return !error_found_;
+		return succeeded_;
 	}
 
 
@@ -2109,7 +2101,7 @@ namespace Clipper2Lib {
 		if (ExecuteInternal(clip_type, fill_rule))
 			BuildPaths(solution_closed, &solution_open);
 		CleanUp();
-		return !error_found_;
+		return succeeded_;
 	}
 
 
@@ -2122,7 +2114,7 @@ namespace Clipper2Lib {
 		if (ExecuteInternal(clip_type, fill_rule))
 			BuildTree(polytree, solution_open);
 		CleanUp();
-		return !error_found_;
+		return succeeded_;
 	}
 
 
@@ -2975,7 +2967,7 @@ namespace Clipper2Lib {
 			{
 				continue;
 			}
-			else if (error_found_)
+			else if (!succeeded_)
 			{
 				delete j;
 			}
@@ -3348,14 +3340,14 @@ namespace Clipper2Lib {
 			if (solutionOpen && outrec->state == OutRecState::Open)
 			{
 				if (BuildPath(outrec->pts, 
-					fillrule_ == FillRule::Negative, true, path))
+					ReverseOrientation != (fillrule_ == fill_pos), true, path))
 					solutionOpen->emplace_back(std::move(path));
 				path.resize(0);
 			}
 			else
 			{
 				if (BuildPath(outrec->pts, 
-					fillrule_ == FillRule::Negative, false, path))
+					ReverseOrientation != (fillrule_ == fill_pos), false, path))
 					solutionClosed.emplace_back(std::move(path));
 				path.resize(0);
 			}
@@ -3366,7 +3358,7 @@ namespace Clipper2Lib {
 	{
 		if (ops->next == ops || ops->next == ops->prev)
 			return PointInPolyResult::IsOutside;
-
+		
 		int val = 0;
 		OutPt* prev = ops->prev, *curr = ops;
 		do
@@ -3470,7 +3462,8 @@ namespace Clipper2Lib {
 			bool is_open_path = IsOpen(*outrec);
 			Path64 path;
 			if (!BuildPath(outrec->pts, 
-				fillrule_ == FillRule::Negative, is_open_path, path)) continue;
+				ReverseOrientation != (fillrule_ == fill_pos),
+				is_open_path, path)) continue;
 
 			if (is_open_path)
 			{
@@ -3479,17 +3472,7 @@ namespace Clipper2Lib {
 			}
 
 			if (outrec->owner && outrec->owner->state == outrec->state)
-			{
-				//inner/outer state needs fixing
-				while (outrec->owner && 
-					!Path1InsidePath2(outrec->pts, outrec->owner->pts))
-						outrec->owner = outrec->owner->owner;
-
-				if (!outrec->owner || IsInner(*outrec->owner))
-					outrec->state = OutRecState::Outer; 
-				else
-					outrec->state = OutRecState::Inner;
-			}
+				outrec->owner = outrec->owner->owner;
 
 			PolyPath64* owner_polypath;
 			if (outrec->owner && outrec->owner->polypath)

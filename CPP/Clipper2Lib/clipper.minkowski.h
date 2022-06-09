@@ -65,7 +65,7 @@ namespace Clipper2Lib
             quad.push_back(tmp[i][j]);
             quad.push_back(tmp[g][j]);
           };
-          if (!IsClockwise(quad))
+          if (!IsPositive(quad))
             std::reverse(quad.begin(), quad.end());
           result.push_back(quad);
           h = j;

@@ -1,5 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Target Name="AddWildCardItems"
+      AfterTargets="BuildGenerateSources">
+    <ItemGroup>
+      <ClCompile Include="@(_WildCardClCompile)" />
+    </ItemGroup>
+  </Target>
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug|Win32">
       <Configuration>Debug</Configuration>
@@ -137,11 +143,7 @@
       <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Release|x64'">../googletest/googletest/include;../googletest/googletest</AdditionalIncludeDirectories>
     </ClCompile>
     <ClCompile Include="..\googletest\googletest\src\gtest_main.cc" />
-    <ClCompile Include="..\Tests\TestFromTextFile.cpp" />
-    <ClCompile Include="..\Tests\TestFromTextFile2.cpp" />
-    <ClCompile Include="..\Tests\TestFromTextFile3.cpp" />
-    <ClCompile Include="..\Tests\TestIntersection.cpp" />
-    <ClCompile Include="..\Tests\TestUnion.cpp" />
+    <_WildCardClCompile Include="..\Tests\*.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

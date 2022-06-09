@@ -1,7 +1,7 @@
 ﻿/*******************************************************************************
 * Author    :  Angus Johnson                                                   *
 * Version   :  10.0 (beta) - also known as Clipper2                            *
-* Date      :  7 June 2022                                                     *
+* Date      :  9 June 2022                                                     *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  This module contains simple functions that will likely cover    *
@@ -179,23 +179,15 @@ namespace Clipper2Lib
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static bool IsClockwise(Path64 poly)
+    public static bool IsPositive(Path64 poly)
     {
-#if REVERSE_ORIENTATION
-        return Area(poly) >= 0;
-#else
       return Area(poly) <= 0;
-#endif
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static bool IsClockwise(PathD poly)
+    public static bool IsPositive(PathD poly)
     {
-#if REVERSE_ORIENTATION
-        return Area(poly) >= 0;
-#else
       return Area(poly) <= 0;
-#endif
     }
 
     public static Path64 OffsetPath(Path64 path, long dx, long dy)
