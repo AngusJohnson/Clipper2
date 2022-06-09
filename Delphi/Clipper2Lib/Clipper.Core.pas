@@ -3,7 +3,7 @@ unit Clipper.Core;
 (*******************************************************************************
 * Author    :  Angus Johnson                                                   *
 * Version   :  10.0 (beta) - aka Clipper2                                      *
-* Date      :  7 June 2022                                                     *
+* Date      :  9 June 2022                                                     *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  Core Clipper Library module                                     *
 *              Contains structures and functions used throughout the library   *
@@ -1312,7 +1312,7 @@ end;
 
 function IsPositive(const path: TPath64): Boolean;
 begin
-  Result := (Area(path) <= 0);
+  Result := (Area(path) >= 0);
 end;
 //------------------------------------------------------------------------------
 

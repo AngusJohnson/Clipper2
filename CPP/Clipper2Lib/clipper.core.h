@@ -139,6 +139,27 @@ using PathD = Path<double>;
 using Paths64 = std::vector< Path64>;
 using PathsD = std::vector< PathD>;
 
+template <typename T>
+std::ostream& operator << (std::ostream& outstream, const Path<T>& path)
+{
+	if (!path.empty())
+	{
+		auto pt = path.cbegin(), last = path.cend() - 1;
+		while (pt != last)
+			outstream << *pt++ << ", ";
+		outstream << *last << std::endl;
+	}
+	return outstream;
+}
+
+template <typename T>
+std::ostream& operator << (std::ostream& outstream, const Paths<T>& paths)
+{
+	for (auto p : paths)
+		outstream << p;
+	return outstream;
+}
+
 template <typename T1, typename T2>
 inline Path<T1> ScalePath(const Path<T2>& path, double scale)
 {
@@ -431,7 +452,7 @@ inline double Area(const Paths<T>& paths)
 template <typename T>
 inline bool IsPositive(const Path<T>& poly)
 {
-	return Area<T>(poly) <= 0;
+	return Area<T>(poly) >= 0;
 }
 
 template <typename T>

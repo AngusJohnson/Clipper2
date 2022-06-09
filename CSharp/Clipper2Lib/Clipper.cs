@@ -181,13 +181,13 @@ namespace Clipper2Lib
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static bool IsPositive(Path64 poly)
     {
-      return Area(poly) <= 0;
+      return Area(poly) >= 0;
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static bool IsPositive(PathD poly)
     {
-      return Area(poly) <= 0;
+      return Area(poly) >= 0;
     }
 
     public static Path64 OffsetPath(Path64 path, long dx, long dy)
