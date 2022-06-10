@@ -21,3 +21,20 @@ TEST(Clipper2Tests, TestOrientationAfterOffsetting) {
 
     EXPECT_EQ(Clipper2Lib::IsPositive(input), Clipper2Lib::IsPositive(output));
 }
+
+TEST(Clipper2Tests, DoesNotSplitRegionWhenOffsetting) {
+
+    const Clipper2Lib::Path64 input = {
+        Clipper2Lib::Point64(1, 1),
+        Clipper2Lib::Point64(1, 4),
+        Clipper2Lib::Point64(2, 3),
+        Clipper2Lib::Point64(1, 2)
+    };
+
+    for (int delta = 1; delta <= 3; ++delta) {
+        Clipper2Lib::ClipperOffset clipper;
+        clipper.AddPath(input, Clipper2Lib::JoinType::Round, Clipper2Lib::EndType::Polygon);
+        const auto outputs = clipper.Execute(delta);
+        EXPECT_EQ(outputs.size(), 1);
+    }
+}
