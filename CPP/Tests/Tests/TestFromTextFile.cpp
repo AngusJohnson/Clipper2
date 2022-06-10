@@ -24,7 +24,11 @@ TEST(Clipper2Tests, TestFromTextFile) {
             c.AddClip(clip);
             c.Execute(ct, fr, solution, solution_open);
 
-            const int64_t area2 = static_cast<int64_t>(Area(solution));
+            int64_t area2 = static_cast<int64_t>(Area(solution));
+#ifndef REVERSE_ORIENTATION
+            area -= area;
+            area2 -= area2;
+#endif
             const int64_t count2 = solution.size() + solution_open.size();
             const int64_t count_diff = std::abs(count2 - count);
             const int64_t area_diff = std::abs(area2 - area);
@@ -76,13 +80,14 @@ TEST(Clipper2Tests, TestFromTextFile) {
                 EXPECT_LE(count_diff, 1);
                 EXPECT_EQ(area, area2);
             }
-            else if (test_number == 202) {
+            else if (test_number == 202) 
+            {
 #ifdef REVERSE_ORIENTATION
-              EXPECT_EQ(count, 0);
-              EXPECT_EQ(area, 0);
-#else              
               EXPECT_EQ(count, 1);
               EXPECT_EQ(area, -9);
+#else
+              EXPECT_EQ(count, 1);
+              EXPECT_EQ(area, 0);
 #endif 
             }
             else {

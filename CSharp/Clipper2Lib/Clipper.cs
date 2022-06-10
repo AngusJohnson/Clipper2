@@ -1,7 +1,7 @@
 ﻿/*******************************************************************************
 * Author    :  Angus Johnson                                                   *
 * Version   :  10.0 (beta) - also known as Clipper2                            *
-* Date      :  9 June 2022                                                     *
+* Date      :  10 June 2022                                                    *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  This module contains simple functions that will likely cover    *
@@ -145,7 +145,11 @@ namespace Clipper2Lib
         a += (double) (prevPt.Y + pt.Y) * (prevPt.X - pt.X);
         prevPt = pt;
       }
+#if REVERSE_ORIENTATION
       return a * 0.5;
+#else
+      return a * -0.5;
+#endif
     }
 
     public static double Area(Paths64 paths)
@@ -167,7 +171,11 @@ namespace Clipper2Lib
         a += (prevPt.y + pt.y) * (prevPt.x - pt.x);
         prevPt = pt;
       }
+#if REVERSE_ORIENTATION
       return a * 0.5;
+#else
+      return a * -0.5;
+#endif
     }
 
     public static double Area(PathsD paths)

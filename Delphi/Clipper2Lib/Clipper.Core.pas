@@ -1262,11 +1262,11 @@ begin
     Result := Result + d * (p1.X - p2.X);
     p1 := p2; inc(p2);
   end;
-//{$IFDEF REVERSE_ORIENTATION}
-//  Result := -Result * 0.5;
-//{$ELSE}
+{$IFDEF REVERSE_ORIENTATION}
   Result := Result * 0.5;
-//{$ENDIF}
+{$ELSE}
+  Result := Result * -0.5;
+{$ENDIF}
 end;
 //------------------------------------------------------------------------------
 
@@ -1282,7 +1282,7 @@ end;
 
 function Area(const path: TPathD): Double;
 var
-  i, j, highI: Integer;
+  i, highI: Integer;
   p1,p2: PPoint64;
 begin
   //https://en.wikipedia.org/wiki/Shoelace_formula
@@ -1296,7 +1296,11 @@ begin
     Result := Result + (p1.Y + p2.Y) * (p1.X - p2.X);
     p1 := p2; inc(p2);
   end;
+{$IFDEF REVERSE_ORIENTATION}
   Result := Result * 0.5;
+{$ELSE}
+  Result := Result * -0.5;
+{$ENDIF}
 end;
 //------------------------------------------------------------------------------
 
@@ -1466,8 +1470,8 @@ begin
       Result.Y := m1 * Result.X + b1;
     end else
     begin
-      Result.X := (ln1a.X + ln1b.X)/2;
-      Result.Y := (ln1a.Y + ln1b.Y)/2;
+      Result.X := (ln1a.X + ln1b.X) * 0.5;
+      Result.Y := (ln1a.Y + ln1b.Y) * 0.5;
     end;
   end;
 end;

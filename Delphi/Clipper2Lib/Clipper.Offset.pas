@@ -3,7 +3,7 @@ unit Clipper.Offset;
 (*******************************************************************************
 * Author    :  Angus Johnson                                                   *
 * Version   :  10.0 (beta) - aka Clipper2                                      *
-* Date      :  9 June 2022                                                     *
+* Date      :  10 June 2022                                                    *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  Offset paths and clipping solutions                             *
@@ -97,7 +97,8 @@ uses
   Math, Clipper.Engine;
 
 const
-  Two_Pi              : Double = 2 * PI;
+  TwoPi     : Double = 2 * PI;
+  InvTwoPi  : Double = 1/(2 * PI);
 
 //------------------------------------------------------------------------------
 //  Miscellaneous offset support functions
@@ -233,10 +234,11 @@ end;
 procedure TClipperOffset.DoGroupOffset(pathGroup: TPathGroup; delta: double);
 var
   i, len, lowestIdx: Integer;
-  absDelta, arcTol, steps: Double;
+  absDelta, arcTol, area, steps: Double;
   IsClosedPaths: Boolean;
 begin
-  if pathgroup.endType <> etPolygon then delta := Abs(delta) / 2;
+  if pathgroup.endType <> etPolygon then
+    delta := Abs(delta) * 0.5;
 
   IsClosedPaths := (pathgroup.endType in [etPolygon, etJoined]);
   if IsClosedPaths then
@@ -246,18 +248,21 @@ begin
     //designated orientation for outer polygons (needed for tidy-up clipping)
     lowestIdx := GetLowestPolygonIdx(pathgroup.paths);
     if lowestIdx < 0 then Exit;
+    area := Clipper.Core.Area(pathgroup.paths[lowestIdx]);
+    if area = 0 then Exit;
 
-    if Area(pathgroup.paths[lowestIdx]) < 0 then
+{$IFDEF REVERSE_ORIENTATION}
+    if area < 0 then
     begin
       delta := -delta;
-{$IFDEF REVERSE_ORIENTATION}
       pathgroup.reversed := true;
+    end;
 {$ELSE}
-    end else
-    begin
+    if area > 0 then
+      delta := -delta
+    else
       pathgroup.reversed := true;
 {$ENDIF}
-    end;
   end;
 
   fDelta := delta;
@@ -273,7 +278,7 @@ begin
   begin
     //get steps per 180 degrees (see offset_triginometry2.svg)
     steps := PI / ArcCos(1 - arcTol / absDelta);
-    fStepsPerRad := steps / Two_Pi;
+    fStepsPerRad := steps  * InvTwoPi;
   end;
 
   fOutPaths := nil;
@@ -296,7 +301,7 @@ begin
         SetLength(fNorms, 2);
         fNorms[0] := PointD(1,0);
         fNorms[1] := PointD(-1,0);
-        DoRound(0, 1, Two_Pi);
+        DoRound(0, 1, TwoPi);
         dec(fOutPathLen);
         SetLength(fOutPath, fOutPathLen);
       end else

@@ -434,7 +434,11 @@ inline double Area(const Path<T>& path)
 		a += static_cast<double>(path_iter_last->y + path_iter->y) *
 			(path_iter_last->x - path_iter->x);
 	}
+#ifdef REVERSE_ORIENTATION		
 	return a * 0.5;
+#else 
+	return a * -0.5;
+#endif 
 }
 
 template <typename T>

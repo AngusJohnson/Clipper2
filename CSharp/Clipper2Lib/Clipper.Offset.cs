@@ -1,7 +1,7 @@
 ﻿/*******************************************************************************
 * Author    :  Angus Johnson                                                   *
 * Version   :  10.0 (beta) - also known as Clipper2                            *
-* Date      :  9 June 2022                                                     *
+* Date      :  10 June 2022                                                    *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  Offsets both open and closed paths (i.e. polylines & polygons). *
@@ -140,14 +140,10 @@ namespace Clipper2Lib
         Clipper c = new Clipper(); 
         c.PreserveCollinear = PreserveCollinear;
         c.AddSubject(solution);
-#if REVERSE_ORIENTATION
-          if (!_pathGroups[0]._pathsReversed)
-#else
         if (_pathGroups[0]._pathsReversed)
-#endif
-          c.Execute(ClipType.Union, FillRule.Positive, solution);
-        else
           c.Execute(ClipType.Union, FillRule.Negative, solution);
+        else
+          c.Execute(ClipType.Union, FillRule.Positive, solution);
       }
 
       return solution;
@@ -396,12 +392,21 @@ namespace Clipper2Lib
         //designated orientation for outer polygons (needed for tidy-up clipping)
         int lowestIdx = GetLowestPolygonIdx(group._inPaths);
         if (lowestIdx < 0) return;
-        if (ClipperFunc.Area(group._inPaths[lowestIdx]) < 0)
+        double area = ClipperFunc.Area(group._inPaths[lowestIdx]);
+        if (area == 0) return;
+
+#if REVERSE_ORIENTATION
+        if (area < 0)
         {
-          //this is more efficient than literally reversing paths
-          group._pathsReversed = true;
           delta = -delta;
+          group._pathsReversed = true;
         }
+#else
+        if (area > 0)
+          delta = -delta;
+        else
+          group._pathsReversed = true;
+#endif
       }
 
       _delta = delta;
@@ -459,15 +464,10 @@ namespace Clipper2Lib
         Clipper c = new Clipper();
         c.PreserveCollinear = PreserveCollinear;
         c.AddSubject(group._outPaths);
-
-#if REVERSE_ORIENTATION
-          if (!group._pathsReversed)
-#else
         if (group._pathsReversed)
-#endif
-          c.Execute(ClipType.Union, FillRule.Positive, group._outPaths);
-        else
           c.Execute(ClipType.Union, FillRule.Negative, group._outPaths);
+        else
+          c.Execute(ClipType.Union, FillRule.Positive, group._outPaths);
       }
     }
   }

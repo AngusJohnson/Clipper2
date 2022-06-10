@@ -3,7 +3,7 @@ unit Clipper.Engine;
 (*******************************************************************************
 * Author    :  Angus Johnson                                                   *
 * Version   :  10.0 (beta) - aka Clipper2                                      *
-* Date      :  9 June 2022                                                     *
+* Date      :  10 June 2022                                                    *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  This is the main polygon clipping module                        *
@@ -360,11 +360,11 @@ type
 implementation
 
 {$IFDEF REVERSE_ORIENTATION}
-  const fillPos = TFillRule.frNegative;
-  const fillNeg = TFillRule.frPositive;
+  const fillPos = frNegative;
+  const fillNeg = frPositive;
 {$ELSE}
-  const fillPos = TFillRule.frPositive;
-  const fillNeg = TFillRule.frNegative;
+  const fillPos = frPositive;
+  const fillNeg = frNegative;
 {$ENDIF}
 
 //OVERFLOWCHECKS OFF is a necessary workaround for a compiler bug that very
@@ -858,7 +858,29 @@ begin
     Result := Result + d * (op2.Prev.Pt.X - op2.Pt.X);
     op2 := op2.Next;
   until op2 = op;
+{$IFDEF REVERSE_ORIENTATION}
   Result := Result * 0.5;
+{$ELSE}
+  Result := Result * -0.5;
+{$ENDIF}
+end;
+//------------------------------------------------------------------------------
+
+function AreaTriangle(const pt1, pt2, pt3: TPoint64): double;
+var
+  d1,d2,d3,d4,d5,d6: double;
+begin
+  d1 := (pt3.y + pt1.y);
+  d2 := (pt3.x - pt1.x);
+  d3 := (pt1.y + pt2.y);
+  d4 := (pt1.x - pt2.x);
+  d5 := (pt2.y + pt3.y);
+  d6 := (pt2.x - pt3.x);
+{$IFDEF REVERSE_ORIENTATION}
+  result := d1 * d2 + d3 *d4 + d5 *d6;
+{$ELSE}
+  result := -(d1 * d2 + d3 *d4 + d5 *d6);
+{$ENDIF}
 end;
 //------------------------------------------------------------------------------
 
@@ -1948,20 +1970,6 @@ begin
     if op2 = startOp then Break;
   end;
   FixSelfIntersects(outRec.Pts);
-end;
-//------------------------------------------------------------------------------
-
-function AreaTriangle(const pt1, pt2, pt3: TPoint64): double;
-var
-  d1,d2,d3,d4,d5,d6: double;
-begin
-  d1 := (pt3.y + pt1.y);
-  d2 := (pt3.x - pt1.x);
-  d3 := (pt1.y + pt2.y);
-  d4 := (pt1.x - pt2.x);
-  d5 := (pt2.y + pt3.y);
-  d6 := (pt2.x - pt3.x);
-  result := d1 * d2 + d3 *d4 + d5 *d6;
 end;
 //------------------------------------------------------------------------------
 

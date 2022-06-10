@@ -1,7 +1,7 @@
 ﻿/*******************************************************************************
 * Author    :  Angus Johnson                                                   *
 * Version   :  10.0 (beta) - also known as Clipper2                            *
-* Date      :  9 June 2022                                                     *
+* Date      :  10 June 2022                                                    *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  This is the main polygon clipping module                        *
@@ -601,7 +601,25 @@ namespace Clipper2Lib
           (op2.prev.pt.X - op2.pt.X);
         op2 = op2.next!;
       } while (op2 != op);
+#if REVERSE_ORIENTATION
       return area * 0.5;
+#else
+      return area * -0.5;
+#endif
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static double AreaTriangle(Point64 pt1, Point64 pt2, Point64 pt3)
+    {
+#if REVERSE_ORIENTATION
+      return (double) (pt3.Y + pt1.Y) * (double) (pt3.X - pt1.X) +
+              (double) (pt1.Y + pt2.Y) * (double) (pt1.X - pt2.X) +
+              (double) (pt2.Y + pt3.Y) * (double) (pt2.X - pt3.X);
+#else
+      return -((double) (pt3.Y + pt1.Y) * (double) (pt3.X - pt1.X) +
+              (double) (pt1.Y + pt2.Y) * (double) (pt1.X - pt2.X) +
+              (double) (pt2.Y + pt3.Y) * (double) (pt2.X - pt3.X));
+#endif
     }
 
     private static void ReverseOutPts(OutPt op)
@@ -3238,14 +3256,6 @@ namespace Clipper2Lib
         if (op2 == startOp) break;
       }
       FixSelfIntersects(ref outrec.pts!);
-    }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static double AreaTriangle(Point64 pt1, Point64 pt2, Point64 pt3)
-    {
-      return (double)(pt3.Y + pt1.Y) * (double)(pt3.X - pt1.X) +
-              (double)(pt1.Y + pt2.Y) * (double)(pt1.X - pt2.X) +
-              (double)(pt2.Y + pt3.Y) * (double )(pt2.X - pt3.X);
     }
 
     private OutPt DoSplitOp(ref OutPt outRecOp, OutPt splitOp)

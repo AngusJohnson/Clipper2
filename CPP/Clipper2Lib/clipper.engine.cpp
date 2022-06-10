@@ -507,9 +507,25 @@ namespace Clipper2Lib {
 				static_cast<double>(op2->prev->pt.x - op2->pt.x);
 			op2 = op2->next;
 		} while (op2 != op);
+#ifdef REVERSE_ORIENTATION		
 		return area * 0.5;
+#else 
+		return area * -0.5;
+#endif 
 	}
 
+	inline double AreaTriangle(const Point64& pt1, const Point64& pt2, const Point64& pt3)
+	{
+#ifdef REVERSE_ORIENTATION		
+		return static_cast<double>(pt3.y + pt1.y) * static_cast<double>(pt3.x - pt1.x) +
+			static_cast<double>(pt1.y + pt2.y) * static_cast<double>(pt1.x - pt2.x) +
+			static_cast<double>(pt2.y + pt3.y) * static_cast<double>(pt2.x - pt3.x);
+#else 
+		return -(static_cast<double>(pt3.y + pt1.y) * static_cast<double>(pt3.x - pt1.x) +
+			static_cast<double>(pt1.y + pt2.y) * static_cast<double>(pt1.x - pt2.x) +
+			static_cast<double>(pt2.y + pt3.y) * static_cast<double>(pt2.x - pt3.x));
+#endif 
+	}
 
 	void ReverseOutPts(OutPt* op)
 	{
@@ -1573,14 +1589,6 @@ namespace Clipper2Lib {
 			(dy1 * (seg2b.x - seg1a.x) - dx1 * (seg2b.y - seg1a.y)) < 0) &&
 			((dy2 * (seg1a.x - seg2a.x) - dx2 * (seg1a.y - seg2a.y)) *
 				(dy2 * (seg1b.x - seg2a.x) - dx2 * (seg1b.y - seg2a.y)) < 0));
-	}
-
-
-	inline double AreaTriangle(const Point64& pt1, const Point64& pt2, const Point64& pt3)
-	{
-		return static_cast<double>(pt3.y + pt1.y) * static_cast<double>(pt3.x - pt1.x) +
-			static_cast<double>(pt1.y + pt2.y) * static_cast<double>(pt1.x - pt2.x) +
-			static_cast<double>(pt2.y + pt3.y) * static_cast<double>(pt2.x - pt3.x);
 	}
 
 

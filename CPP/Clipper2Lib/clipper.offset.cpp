@@ -282,20 +282,21 @@ void ClipperOffset::DoGroupOffset(PathGroup& group, double delta)
 		//the lowermost polygon must be an outer polygon. So we can use that as the
 		//designated orientation for outer polygons (needed for tidy-up clipping)
 		Paths64::size_type lowestIdx = GetLowestPolygonIdx(group.paths_in_);
-		if (Area(group.paths_in_[lowestIdx]) == 0) return;
+		double area = Area(group.paths_in_[lowestIdx]);
+		if (area == 0) return;
 
-		if (Area(group.paths_in_[lowestIdx]) < 0)
+#ifdef REVERSE_ORIENTATION
+		if (area < 0)
 		{
 			delta = -delta;
-#ifdef REVERSE_ORIENTATION
-			group.is_reversed = false;
+			group.is_reversed = true;
+		}
 #else 
-		}
+		if (area > 0)
+			delta = -delta;
 		else
-		{
-			group.is_reversed = false;
+			group.is_reversed = true;
 #endif 
-		}
 	}
 
 	delta_ = delta;
@@ -376,10 +377,14 @@ Paths64 ClipperOffset::Execute(double delta)
 		2.0 / (miter_limit_ * miter_limit_);
 
 	std::vector<PathGroup>::iterator groups_iter;
-	for (groups_iter = groups_.begin(); groups_iter != groups_.end(); ++groups_iter)
+	for (groups_iter = groups_.begin(); 
+		groups_iter != groups_.end(); ++groups_iter)
 	{
 		DoGroupOffset(*groups_iter, delta);
+		Paths64::const_iterator cit = groups_iter->paths_out_.cbegin();
+		Paths64::const_iterator cend = groups_iter->paths_out_.cend();
 		result.swap(groups_iter->paths_out_);
+		groups_iter->path_.clear();
 	}
 
 	if (merge_groups_ && groups_.size() > 0)
