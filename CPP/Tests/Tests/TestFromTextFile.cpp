@@ -35,10 +35,17 @@ TEST(Clipper2Tests, TestFromTextFile) {
             const double relative_count_diff = count ? count_diff / static_cast<double>(count): 0;
             const double relative_area_diff = area ? area_diff / static_cast<double>(area): 0;
 
-            // TODO: perhaps it would be better to specify the individual tolerances in the text file
-            if (test_number < 7 || test_number == 8 || test_number == 10) {
-                EXPECT_EQ(count, count2);
-                EXPECT_EQ(area, area2);
+            if (test_number == 1)
+            {
+              EXPECT_EQ(count_diff, 0);
+              EXPECT_EQ(area_diff, 0);
+              if (solution.size() > 0)
+                EXPECT_TRUE(IsPositive(subject[0]) == IsPositive(solution[0]));
+            }
+            else if (test_number < 7 || test_number == 8 || test_number == 10)
+            {
+              EXPECT_EQ(count, count2);
+              EXPECT_EQ(area, area2);
             }
             else if (test_number < 14) {
                 EXPECT_EQ(count, count2);
@@ -69,33 +76,29 @@ TEST(Clipper2Tests, TestFromTextFile) {
                 EXPECT_LE(count_diff, 1);
                 EXPECT_EQ(area_diff, 0);
             }
-            else if (test_number < 160) {
-                EXPECT_LE(count_diff, 2);
-                if (count > 0) EXPECT_LE(relative_count_diff, 0.02);
-                else           EXPECT_EQ(count2, 0);
-                if (area > 0)  EXPECT_LE(relative_area_diff, 0.035);
-                else           EXPECT_EQ(area, 0);
+            else if (test_number < 160)
+            {
+              EXPECT_LE(count_diff, 2);
+              if (count > 0) EXPECT_LE(relative_count_diff, 0.02);
+              else           EXPECT_EQ(count2, 0);
+              if (area > 0)  EXPECT_LE(relative_area_diff, 0.035);
+              else           EXPECT_EQ(area, 0);
             }
-            else if (test_number == 183) {
-                EXPECT_LE(count_diff, 1);
-                EXPECT_EQ(area_diff, 0);
+            else if (test_number == 183)
+            {
+              EXPECT_LE(count_diff, 1);
+              EXPECT_EQ(area_diff, 0);
             }
-            else if (test_number >= 204) {         
+            else if (test_number >= 204)
+            {
 #ifdef REVERSE_ORIENTATION
               EXPECT_EQ(count_diff, 0);
               EXPECT_EQ(area_diff, 0);
-              //if (test_number == 207 || (test_number == 208)
-              //{
-              //  EXPECT_EQ(count, 1);
-              //    if (count = 1)
-              //      EXPECT_EQ(solution_open[0][0].x, 50);
-              //}
-              //else if (test_number == 209)
-              //{
-              //  EXPECT_EQ(count, 1);
-              //    if (count = 1)
-              //      EXPECT_EQ(solution_open[0][0].x, 100);
-              //}
+              if (test_number == 204 || test_number == 205)
+              {
+                if (solution.size() > 0)
+                  EXPECT_TRUE(IsPositive(subject[0]) == IsPositive(solution[0]));
+              }
 #else
               EXPECT_LQ(count, 0);
               EXPECT_EQ(area, 0);
@@ -113,7 +116,5 @@ TEST(Clipper2Tests, TestFromTextFile) {
             break;
         }
     }
-
-    //EXPECT_GE(test_number, 188);
-    EXPECT_GE(test_number, 10);
+    EXPECT_GE(test_number, 205);
 }

@@ -3357,9 +3357,9 @@ namespace Clipper2Lib
           path.Add(lastPt);
         }
         if (reverse)
-          op2 = op2.prev!;
+          op2 = op2.prev;
         else
-          op2 = op2.next;
+          op2 = op2.next!;
       }
       return true;
     }
