@@ -3,7 +3,7 @@ unit Clipper.Engine;
 (*******************************************************************************
 * Author    :  Angus Johnson                                                   *
 * Version   :  10.0 (beta) - aka Clipper2                                      *
-* Date      :  10 June 2022                                                    *
+* Date      :  11 June 2022                                                    *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  This is the main polygon clipping module                        *
@@ -3926,7 +3926,6 @@ var
   cntOpen     : Integer;
   outRec      : POutRec;
   path        : TPath64;
-  isOpenPath  : Boolean;
   ownerPP     : TPolyPathBase;
 begin
   try
@@ -3967,18 +3966,21 @@ begin
         end;
       end;
 
-      isOpenPath := IsOpen(outRec);
-      if not BuildPath(outRec.Pts, not isOpenPath and
-        (FReverseOrientation <> (FFillRule = fillPos)),
-        isOpenPath, path) then
-          Continue;
-
-      if isOpenPath then
+      if IsOpen(outRec) then
       begin
-        openPaths[cntOpen] := path;
-        inc(cntOpen);
+        if BuildPath(outRec.Pts,
+          FReverseOrientation, true, path) then
+        begin
+          openPaths[cntOpen] := path;
+          inc(cntOpen);
+        end;
         Continue;
       end;
+
+      if not BuildPath(outRec.Pts,
+        (FReverseOrientation <> (FFillRule = fillPos)),
+        false, path) then
+          Continue;
 
       if assigned(outRec.Owner) and (outRec.Owner.State = outRec.State) then
         outRec.Owner := outRec.Owner.Owner;

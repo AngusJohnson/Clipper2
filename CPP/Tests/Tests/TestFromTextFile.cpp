@@ -78,19 +78,31 @@ TEST(Clipper2Tests, TestFromTextFile) {
             }
             else if (test_number == 183) {
                 EXPECT_LE(count_diff, 1);
-                EXPECT_EQ(area, area2);
+                EXPECT_EQ(area_diff, 0);
             }
-            else if (test_number == 202) 
-            {
+            else if (test_number >= 204) {         
 #ifdef REVERSE_ORIENTATION
-              EXPECT_EQ(count, 1);
-              EXPECT_EQ(area, -9);
+              EXPECT_EQ(count_diff, 0);
+              EXPECT_EQ(area_diff, 0);
+              //if (test_number == 207 || (test_number == 208)
+              //{
+              //  EXPECT_EQ(count, 1);
+              //    if (count = 1)
+              //      EXPECT_EQ(solution_open[0][0].x, 50);
+              //}
+              //else if (test_number == 209)
+              //{
+              //  EXPECT_EQ(count, 1);
+              //    if (count = 1)
+              //      EXPECT_EQ(solution_open[0][0].x, 100);
+              //}
 #else
-              EXPECT_EQ(count, 1);
+              EXPECT_LQ(count, 0);
               EXPECT_EQ(area, 0);
-#endif 
+#endif               
             }
-            else {
+            else 
+            {
                 EXPECT_LE(count_diff, 8);
                 EXPECT_LE(relative_count_diff, 0.1);
                 EXPECT_LE(relative_area_diff, 0.0005);

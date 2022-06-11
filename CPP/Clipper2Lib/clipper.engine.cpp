@@ -1,7 +1,7 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
 * Version   :  10.0 (beta) - aka Clipper2                                      *
-* Date      :  9 June 2022                                                     *
+* Date      :  11 June 2022                                                    *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  This is the main polygon clipping module                        *
@@ -3347,8 +3347,7 @@ namespace Clipper2Lib {
 			Path64 path;
 			if (solutionOpen && outrec->state == OutRecState::Open)
 			{
-				if (BuildPath(outrec->pts, 
-					ReverseOrientation != (fillrule_ == fill_pos), true, path))
+				if (BuildPath(outrec->pts, ReverseOrientation, true, path))
 					solutionOpen->emplace_back(std::move(path));
 				path.resize(0);
 			}
@@ -3467,17 +3466,18 @@ namespace Clipper2Lib {
 				}
 			}
 		
-			bool is_open_path = IsOpen(*outrec);
+			if (IsOpen(*outrec))
+			{
+				Path64 path;
+				if (BuildPath(outrec->pts, ReverseOrientation, true, path))
+					open_paths.push_back(path);
+				continue;
+			}
+
 			Path64 path;
 			if (!BuildPath(outrec->pts, 
 				ReverseOrientation != (fillrule_ == fill_pos),
-				is_open_path, path)) continue;
-
-			if (is_open_path)
-			{
-				open_paths.push_back(path);
-				continue;
-			}
+				false, path)) continue;
 
 			if (outrec->owner && outrec->owner->state == outrec->state)
 				outrec->owner = outrec->owner->owner;

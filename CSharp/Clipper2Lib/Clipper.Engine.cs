@@ -1,7 +1,7 @@
 ﻿/*******************************************************************************
 * Author    :  Angus Johnson                                                   *
 * Version   :  10.0 (beta) - also known as Clipper2                            *
-* Date      :  10 June 2022                                                    *
+* Date      :  11 June 2022                                                    *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  This is the main polygon clipping module                        *
@@ -3378,8 +3378,7 @@ namespace Clipper2Lib
         Path64 path = new Path64();
         if (outrec.state == OutRecState.Open)
         {
-          if (BuildPath(outrec.pts!,
-            ReverseOrientation != (_fillrule == fillPos), true, path))
+          if (BuildPath(outrec.pts!, ReverseOrientation, true, path))
               solutionOpen.Add(path);
         }
         else
@@ -3505,18 +3504,19 @@ namespace Clipper2Lib
 
         }
 
-        bool isOpenPath = outrec.state == OutRecState.Open;
-
-        Path64 path = new Path64();
-        if (!BuildPath(outrec.pts!,
-          ReverseOrientation != (_fillrule == fillPos), isOpenPath, path)) 
-            continue;
-
-        if (isOpenPath)
+        if (outrec.state == OutRecState.Open)
         {
-          solutionOpen.Add(path);
+          Path64 open_path = new Path64();
+          if (BuildPath(outrec.pts!,
+            ReverseOrientation != (_fillrule == fillPos), true, open_path))
+              solutionOpen.Add(open_path);
           continue;
         }
+        
+        Path64 path = new Path64();
+        if (!BuildPath(outrec.pts!,
+          ReverseOrientation != (_fillrule == fillPos), false, path))
+            continue;
 
         if (outrec.owner != null && outrec.owner.state != outrec.state)
               outrec.owner = outrec.owner.owner;
