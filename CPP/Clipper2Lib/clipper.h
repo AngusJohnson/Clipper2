@@ -1,7 +1,7 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
 * Version   :  10.0 (beta) - aka Clipper2                                      *
-* Date      :  16 May 2022                                                     *
+* Date      :  11 June 2022                                                    *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  This module provides a simple interface to the Clipper Library  *
@@ -355,6 +355,46 @@ namespace Clipper2Lib
     }
     return result;
   }
+
+  static Path64 TrimCollinear(const Path64& p, bool is_open_path = false)
+  {
+    size_t len = p.size();
+    if (len < 3)
+    {
+      if (!is_open_path || len < 2 || p[0] == p[1]) return Path64();
+      else return p;
+    }
+
+    Path64 dst;
+    dst.reserve(len);
+    Path64::const_iterator srcIt = p.cbegin(), prevIt, stop = p.cend() - 1;
+    prevIt = srcIt++;
+    dst.push_back(*prevIt);
+    for (; srcIt != stop; ++srcIt)
+    {
+      if (CrossProduct(*prevIt, *srcIt, *(srcIt + 1)))
+      {
+        prevIt = srcIt;
+        dst.push_back(*prevIt);
+      }
+    }
+    if (!is_open_path)
+    {
+      if (CrossProduct(*prevIt, *srcIt, dst[0]))
+      {
+        prevIt = srcIt;
+        dst.push_back(*prevIt);
+      }
+      if (dst.size() == 1) return Path64();
+      if (!CrossProduct(*prevIt, dst[0], dst[1]))
+        dst.erase(dst.begin());
+    }
+    else if (*prevIt != *srcIt)
+      dst.push_back(*srcIt);
+
+    return dst;
+  }
+
 
 }  //end Clipper2Lib namespace
 
