@@ -1,7 +1,7 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
 * Version   :  10.0 (beta) - aka Clipper2                                      *
-* Date      :  7 June 2022                                                     *
+* Date      :  11 June 2022                                                    *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  Core Clipper Library structures and functions                   *
@@ -21,10 +21,7 @@
 namespace Clipper2Lib 
 {
 
-//#define REVERSE_ORIENTATION
-//#define USINGZ
-
-	static double const PI = 3.141592653589793238;
+static double const PI = 3.141592653589793238;
 
 // Point ------------------------------------------------------------------------
 
@@ -396,11 +393,22 @@ inline double DistanceSqr(const Point<T> pt1, const Point<T> pt2) {
 template <typename T>
 inline double Distance(const Point<T> pt1, const Point<T> pt2)
 {
-	return std::sqrt(DistanceSqr(pt1.x - pt2.x) + Sqr(pt1.y - pt2.y));
+	return std::sqrt(DistanceSqr(pt1, pt2));
 }
 
 template <typename T>
-const double Length = Distance<T>;
+static T Length(const Path<T>& path, bool is_closed_path = false)
+{
+	T result = 0.0;
+	if (path.size() < 2) return result;
+	auto it = path.cbegin(), stop = path.end() - 1;
+	for ( ; it != stop; ++it)
+		result += Distance(*it, *(it+1));
+	if (is_closed_path)
+		result += Distance(*stop, *path.cbegin());
+	return result;
+}
+
 
 template <typename T>
 inline double DistanceFromLineSqrd(const Point<T> &pt, const Point<T> &ln1, const Point<T> &ln2)
@@ -434,7 +442,7 @@ inline double Area(const Path<T>& path)
 		a += static_cast<double>(path_iter_last->y + path_iter->y) *
 			(path_iter_last->x - path_iter->x);
 	}
-#ifdef REVERSE_ORIENTATION		
+#ifdef REVERSE_ORIENTATION
 	return a * 0.5;
 #else 
 	return a * -0.5;
