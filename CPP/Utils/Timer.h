@@ -41,41 +41,65 @@ struct Timer {
 private:
   std::streamsize old_precision;
   int old_flags;
-  std::chrono::steady_clock::time_point time_started = {};
-  std::string _time_text = "";  
-  void init() 
+  bool paused_ = false;
+  std::chrono::steady_clock::time_point time_started_ = {};
+  std::chrono::steady_clock::duration duration_ = {};
+  std::string time_text_ = "";
+  
+  void init(bool start_paused)
   { 
     old_precision = std::cout.precision(0);
     old_flags = std::cout.flags();
-    time_started = std::chrono::high_resolution_clock::now(); 
+    paused_ = start_paused;
+    if (!start_paused)
+      time_started_ = std::chrono::high_resolution_clock::now();
   }
+
 public:
-  explicit Timer() { init(); }  
-  explicit Timer(const std::string& caption, const std::string& time_text = "")  
+  explicit Timer(bool start_paused = false)
+  { 
+    init(start_paused);
+  }
+  explicit Timer(const std::string& caption,
+    const std::string& time_text = "", bool start_paused = false)  
   {
-    init();
-    _time_text = time_text;
+    init(start_paused);
+    time_text_ = time_text;
     if (caption != "") std::cout << caption << std::endl;
+  }
+
+  void resume()
+  {
+    if (!paused_) return;
+    paused_ = false;
+    time_started_ = std::chrono::high_resolution_clock::now();
+  }
+
+  void pause()
+  {
+    if (paused_) return;
+    std::chrono::steady_clock::time_point now =
+      std::chrono::high_resolution_clock::now();
+    duration_ += (now - time_started_);
+    paused_ = true;
   }
 
   ~Timer()
   {
-    std::chrono::steady_clock::time_point 
-      time_ended = std::chrono::high_resolution_clock::now();
-    int nsecs = static_cast<int>(std::log10(std::chrono::duration_cast<std::chrono::nanoseconds>
-      (time_ended - time_started).count()));
-
-    std::cout << std::fixed << std::setprecision(static_cast<uint8_t>(2 -(nsecs % 3))) << _time_text;
-    if (nsecs < 6) 
+    pause();
+    int nsecs_log10 = static_cast<int>(std::log10(
+      std::chrono::duration_cast<std::chrono::nanoseconds>(duration_).count()));
+    std::cout << std::fixed << 
+      std::setprecision(static_cast<uint8_t>(2 -(nsecs_log10 % 3))) << time_text_;
+    if (nsecs_log10 < 6) 
       std::cout << std::chrono::duration_cast<std::chrono::nanoseconds>
-      (time_ended - time_started).count() * 1.0e-3 << " microsecs" << std::endl;
-    else if (nsecs < 9)
+      (duration_).count() * 1.0e-3 << " microsecs" << std::endl;
+    else if (nsecs_log10 < 9)
       std::cout << std::chrono::duration_cast<std::chrono::microseconds>
-        (time_ended - time_started).count() * 1.0e-3 << " millisecs" << std::endl;
+        (duration_).count() * 1.0e-3 << " millisecs" << std::endl;
     else 
       std::cout << std::chrono::duration_cast<std::chrono::milliseconds>
-      (time_ended - time_started).count() * 1.0e-3 << " secs" << std::endl;
-    
+      (duration_).count() * 1.0e-3 << " secs" << std::endl;
     std::cout.precision(old_precision);
     std::cout.flags(old_flags);
   }

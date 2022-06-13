@@ -3,7 +3,7 @@ unit Clipper.Engine;
 (*******************************************************************************
 * Author    :  Angus Johnson                                                   *
 * Version   :  10.0 (beta) - aka Clipper2                                      *
-* Date      :  11 June 2022                                                    *
+* Date      :  14 June 2022                                                    *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  This is the main polygon clipping module                        *
@@ -156,6 +156,7 @@ type
     FCurrentLocMinIdx   : Integer;
     FClipType           : TClipType;
     FFillRule           : TFillRule;
+    FUsingPolytree      : Boolean;
     FPreserveCollinear  : Boolean;
     FIntersectList      : TList;
     FOutRecList         : TList;
@@ -171,7 +172,7 @@ type
     FHasOpenPaths       : Boolean;
     FLocMinListSorted   : Boolean;
     FSucceeded          : Boolean;
-    FReverseOrientation : Boolean;
+    FReverseSolution : Boolean;
   {$IFDEF USINGZ}
     FZFunc              : TZCallback64;
   {$ENDIF}
@@ -233,7 +234,8 @@ type
     procedure AddPaths(const paths: TPaths64;
       pathType: TPathType; isOpen: Boolean);
     procedure ClearSolution; //unlike Clear, CleanUp preserves added paths
-    procedure ExecuteInternal(clipType: TClipType; fillRule: TFillRule);
+    procedure ExecuteInternal(clipType: TClipType;
+      fillRule: TFillRule; usingPolytree: Boolean);
     function  BuildPaths(out closedPaths, openPaths: TPaths64): Boolean;
     procedure BuildTree(polytree: TPolyPathBase; out openPaths: TPaths64);
   {$IFDEF USINGZ}
@@ -248,8 +250,8 @@ type
     function GetBounds: TRect64;
     property PreserveCollinear: Boolean read
       FPreserveCollinear write FPreserveCollinear;
-    property ReverseOrientation: Boolean read
-      FReverseOrientation write FReverseOrientation;
+    property ReverseSolution: Boolean read
+      FReverseSolution write FReverseSolution;
   end;
 
   TClipper64 = class(TClipperBase) //for integer coordinates
@@ -1138,7 +1140,7 @@ begin
   FIntersectList    := TList.Create;
   FVertexArrayList  := TList.Create;
   FPreserveCollinear := true;
-  FReverseOrientation := false;
+  FReverseSolution := false;
 end;
 //------------------------------------------------------------------------------
 
@@ -2346,9 +2348,12 @@ begin
     newOr.PolyPath := nil;
     newOr.Split := nil;
 
-    i := Length(OutRec.Split);
-    SetLength(OutRec.Split, i +1);
-    OutRec.Split[i] := newOr;
+    if (FUsingPolytree) then
+    begin
+      i := Length(OutRec.Split);
+      SetLength(OutRec.Split, i +1);
+      OutRec.Split[i] := newOr;
+    end;
 
     if Abs(area1) >= Abs(area2) then
     begin
@@ -3004,7 +3009,7 @@ end;
 //------------------------------------------------------------------------------
 
 procedure TClipperBase.ExecuteInternal(clipType: TClipType;
-  fillRule: TFillRule);
+  fillRule: TFillRule; usingPolytree: Boolean);
 var
   Y: Int64;
   e: PActive;
@@ -3822,13 +3827,12 @@ begin
 
       if IsOpen(outRec) then
       begin
-        if BuildPath(outRec.Pts, FReverseOrientation,
+        if BuildPath(outRec.Pts, FReverseSolution,
           true, openPaths[cntOpen]) then
             inc(cntOpen);
       end else
       begin
-        if BuildPath(outRec.Pts,
-          FReverseOrientation <> (FFillRule = fillPos),
+        if BuildPath(outRec.Pts, FReverseSolution,
           false, closedPaths[cntClosed]) then
             inc(cntClosed);
       end;
@@ -3969,7 +3973,7 @@ begin
       if IsOpen(outRec) then
       begin
         if BuildPath(outRec.Pts,
-          FReverseOrientation, true, path) then
+          FReverseSolution, true, path) then
         begin
           openPaths[cntOpen] := path;
           inc(cntOpen);
@@ -3978,12 +3982,12 @@ begin
       end;
 
       if not BuildPath(outRec.Pts,
-        (FReverseOrientation <> (FFillRule = fillPos)),
-        false, path) then
+        FReverseSolution, false, path) then
           Continue;
 
-      if assigned(outRec.Owner) and (outRec.Owner.State = outRec.State) then
-        outRec.Owner := outRec.Owner.Owner;
+      if assigned(outRec.Owner) and
+        (outRec.Owner.State = outRec.State) then
+          outRec.Owner := outRec.Owner.Owner;
 
       if assigned(outRec.Owner) and
         assigned(outRec.Owner.PolyPath) then
@@ -4066,7 +4070,7 @@ var
 begin
   closedSolutions := nil;
   try try
-    ExecuteInternal(clipType, fillRule);
+    ExecuteInternal(clipType, fillRule, false);
     BuildPaths(closedSolutions, dummy);
     Result := Succeeded;
   except
@@ -4084,7 +4088,7 @@ begin
   closedSolutions := nil;
   openSolutions := nil;
   try try
-    ExecuteInternal(clipType, fillRule);
+    ExecuteInternal(clipType, fillRule, false);
     BuildPaths(closedSolutions, openSolutions);
     Result := Succeeded;
   except
@@ -4104,7 +4108,7 @@ begin
   solutionTree.Clear;
   openSolutions := nil;
   try try
-    ExecuteInternal(clipType, fillRule);
+    ExecuteInternal(clipType, fillRule, true);
     BuildTree(solutionTree, openSolutions);
     Result := Succeeded;
   except
@@ -4355,7 +4359,7 @@ var
 begin
   closedSolutions := nil;
   try try
-    ExecuteInternal(clipType, fillRule);
+    ExecuteInternal(clipType, fillRule, false);
     Result := BuildPaths(closedP, openP);
     if not Result then Exit;
     closedSolutions := ScalePathsD(closedP, FInvScale);
@@ -4381,7 +4385,7 @@ begin
   solutionsTree.SetScale(FScale);
   openSolutions := nil;
   try try
-    ExecuteInternal(clipType, fillRule);
+    ExecuteInternal(clipType, fillRule, true);
     BuildTree(solutionsTree, open_Paths);
     openSolutions := ScalePathsD(open_Paths, FInvScale);
     Result := true;

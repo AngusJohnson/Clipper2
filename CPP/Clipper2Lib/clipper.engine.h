@@ -1,7 +1,7 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
 * Version   :  10.0 (beta) - aka Clipper2                                      *
-* Date      :  9 June 2022                                                     *
+* Date      :  14 June 2022                                                    *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  This is the main polygon clipping module                        *
@@ -144,6 +144,17 @@ namespace Clipper2Lib {
 			vertex(v), polytype(pt), is_open(open){}
 	};
 
+	struct IntersectNode {
+		Point64 pt;
+		Active* edge1;
+		Active* edge2;
+		IntersectNode() : pt(Point64(0, 0)), edge1(NULL), edge2(NULL) {}
+			IntersectNode(Active* e1, Active* e2, Point64& pt_) :
+			pt(pt_), edge1(e1), edge2(e2)
+		{
+		}
+	};
+
 #ifdef USINGZ
 	typedef void (*ZFillCallback)(const Point64& e1bot, const Point64& e1top, 
 		const Point64& e2bot, const Point64& e2top, Point64& pt);
@@ -158,16 +169,17 @@ namespace Clipper2Lib {
 		int64_t bot_y_ = 0;
 		bool has_open_paths_ = false;
 		bool minima_list_sorted_ = false;
-		bool using_polytree = false;
+		bool using_polytree_ = false;
 		Active *actives_ = nullptr;
 		Active *sel_ = nullptr;
 		Joiner *horz_joiners_ = nullptr;
-		std::vector<LocalMinima*> minima_list_;
-		std::vector<LocalMinima*>::iterator loc_min_iter_;
+		std::vector<LocalMinima*> minima_list_;		//pointers in case of memory reallocs
+		std::vector<LocalMinima*>::iterator current_locmin_iter_;
 		std::vector<Vertex*> vertex_lists_;
 		std::priority_queue<int64_t> scanline_list_;
-		std::vector<IntersectNode*> intersect_nodes_;
-		std::vector<Joiner*> joiner_list_;
+		std::vector<IntersectNode> intersect_nodes_; 
+		std::vector<OutRec*> outrec_list_;				//pointers in case of memory reallocs
+		std::vector<Joiner*> joiner_list_;				//pointers in case of memory reallocs
 		void Reset();
 		void InsertScanline(int64_t y);
 		bool PopScanline(int64_t &y);
@@ -189,7 +201,6 @@ namespace Clipper2Lib {
 		inline void DeleteFromAEL(Active &e);
 		inline void AdjustCurrXAndCopyToSEL(const int64_t top_y);
 		void DoIntersections(const int64_t top_y);
-		void DisposeIntersectNodes();
 		void AddNewIntersectNode(Active &e1, Active &e2, const int64_t top_y);
 		bool BuildIntersectList(const int64_t top_y);
 		void ProcessIntersectList();
@@ -226,7 +237,7 @@ namespace Clipper2Lib {
 		void DeleteJoin(Joiner* joiner);
 		void ProcessJoinerList();
 		OutRec* ProcessJoin(Joiner* joiner);
-		virtual bool ExecuteInternal(ClipType ct, FillRule ft);
+		virtual bool ExecuteInternal(ClipType ct, FillRule ft, bool use_polytrees);
 		void BuildPaths(Paths64& solutionClosed, Paths64* solutionOpen);
 		void BuildTree(PolyPath64& polytree, Paths64& open_paths);
 #ifdef USINGZ
@@ -235,7 +246,6 @@ namespace Clipper2Lib {
 #endif
 	protected:
 		bool succeeded_ = true;
-		std::vector<OutRec*> outrec_list_;
 		void CleanUp();  //unlike Clear, CleanUp preserves added paths
 		void AddPath(const Path64& path, PathType polytype, bool is_open);
 		void AddPaths(const Paths64& paths, PathType polytype, bool is_open);
@@ -249,7 +259,7 @@ namespace Clipper2Lib {
 	public:
 		virtual ~ClipperBase();
 		bool PreserveCollinear = true;
-		bool ReverseOrientation = false;
+		bool ReverseSolution = false;
 		void Clear();
 #ifdef USINGZ
 		ClipperBase() { zfill_func_ = nullptr; };

@@ -1,7 +1,7 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
 * Version   :  10.0 (beta) - aka Clipper2                                      *
-* Date      :  11 June 2022                                                    *
+* Date      :  14 June 2022                                                    *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  This is the main polygon clipping module                        *
@@ -41,15 +41,6 @@ namespace Clipper2Lib {
 		Scanline* next = nullptr;
 
 		explicit Scanline(int64_t y_) : y(y_) {}
-	};
-
-	struct IntersectNode {
-		Point64 pt;
-		Active* edge1;
-		Active* edge2;
-
-		IntersectNode(Active* e1, Active* e2, Point64& pt_) :
-			pt(pt_), edge1(e1), edge2(e2) {}
 	};
 
 	struct  Joiner {
@@ -452,10 +443,10 @@ namespace Clipper2Lib {
 	}
 
 
-	bool IntersectListSort(IntersectNode* a, IntersectNode* b)
+	bool IntersectListSort(const IntersectNode& a, const IntersectNode& b)
 	{
 		//note different inequality tests ...
-		return (a->pt.y == b->pt.y) ? (a->pt.x < b->pt.x) : (a->pt.y > b->pt.y);
+		return (a.pt.y == b.pt.y) ? (a.pt.x < b.pt.x) : (a.pt.y > b.pt.y);
 	}
 
 
@@ -670,7 +661,6 @@ namespace Clipper2Lib {
 	}
 
 
-
 	//------------------------------------------------------------------------------
 	// ClipperBase methods ...
 	//------------------------------------------------------------------------------
@@ -685,7 +675,7 @@ namespace Clipper2Lib {
 	{
 		while (actives_) DeleteFromAEL(*actives_);
 		scanline_list_ = std::priority_queue<int64_t>();
-		DisposeIntersectNodes();
+		intersect_nodes_.clear();
 		DisposeAllOutRecs();
 	}
 
@@ -694,7 +684,7 @@ namespace Clipper2Lib {
 	{
 		CleanUp();
 		DisposeVerticesAndLocalMinima();
-		loc_min_iter_ = minima_list_.begin();
+		current_locmin_iter_ = minima_list_.begin();
 		minima_list_sorted_ = false;
 		has_open_paths_ = false;
 	}
@@ -711,7 +701,7 @@ namespace Clipper2Lib {
 		for (i = minima_list_.rbegin(); i != minima_list_.rend(); ++i)
 			InsertScanline((*i)->vertex->pt.y);
 
-		loc_min_iter_ = minima_list_.begin();
+		current_locmin_iter_ = minima_list_.begin();
 		actives_ = nullptr;
 		sel_ = nullptr;
 		succeeded_ = true;
@@ -872,8 +862,8 @@ namespace Clipper2Lib {
 
 	bool ClipperBase::PopLocalMinima(int64_t y, LocalMinima*& local_minima)
 	{
-		if (loc_min_iter_ == minima_list_.end() || (*loc_min_iter_)->vertex->pt.y != y) return false;
-		local_minima = (*loc_min_iter_++);
+		if (current_locmin_iter_ == minima_list_.end() || (*current_locmin_iter_)->vertex->pt.y != y) return false;
+		local_minima = (*current_locmin_iter_++);
 		return true;
 	}
 
@@ -1732,7 +1722,7 @@ namespace Clipper2Lib {
 			outrec_list_.push_back(newOr);
 			newOr->polypath = nullptr;
 
-			if (using_polytree)
+			if (using_polytree_)
 			{
 				if (!outrec.splits) outrec.splits = new OutRecList();
 				outrec.splits->push_back(newOr);
@@ -2065,10 +2055,11 @@ namespace Clipper2Lib {
 	}
 
 
-	bool ClipperBase::ExecuteInternal(ClipType ct, FillRule fillrule)
+	bool ClipperBase::ExecuteInternal(ClipType ct, FillRule fillrule, bool use_polytrees)
 	{
-		fillrule_ = fillrule;
 		cliptype_ = ct;
+		fillrule_ = fillrule;
+		using_polytree_ = use_polytrees;
 		Reset();
 		int64_t y;
 		if (ct == ClipType::None || !PopScanline(y)) return true;
@@ -2094,7 +2085,7 @@ namespace Clipper2Lib {
 		FillRule fill_rule, Paths64& solution_closed)
 	{
 		solution_closed.clear();
-		if (ExecuteInternal(clip_type, fill_rule))
+		if (ExecuteInternal(clip_type, fill_rule, false))
 			BuildPaths(solution_closed, nullptr);
 		CleanUp();
 		return succeeded_;
@@ -2106,7 +2097,7 @@ namespace Clipper2Lib {
 	{
 		solution_closed.clear();
 		solution_open.clear();
-		if (ExecuteInternal(clip_type, fill_rule))
+		if (ExecuteInternal(clip_type, fill_rule, false))
 			BuildPaths(solution_closed, &solution_open);
 		CleanUp();
 		return succeeded_;
@@ -2116,10 +2107,9 @@ namespace Clipper2Lib {
 	bool ClipperBase::Execute(ClipType clip_type,
 		FillRule fill_rule, PolyTree64& polytree, Paths64& solution_open)
 	{
-		using_polytree = true;
 		polytree.Clear();
 		solution_open.clear();
-		if (ExecuteInternal(clip_type, fill_rule))
+		if (ExecuteInternal(clip_type, fill_rule, true))
 			BuildTree(polytree, solution_open);
 		CleanUp();
 		return succeeded_;
@@ -2131,17 +2121,9 @@ namespace Clipper2Lib {
 		if (BuildIntersectList(top_y))
 		{
 			ProcessIntersectList();
-			DisposeIntersectNodes();
+			intersect_nodes_.clear();
 		}
 	}
-
-
-	inline void ClipperBase::DisposeIntersectNodes()
-	{
-		for (auto node : intersect_nodes_) delete node;
-		intersect_nodes_.resize(0);
-	}
-
 
 	void ClipperBase::AddNewIntersectNode(Active& e1, Active& e2, int64_t top_y)
 	{
@@ -2173,7 +2155,7 @@ namespace Clipper2Lib {
 				pt.x = e2.curr_x;
 		}
 
-		intersect_nodes_.push_back(new IntersectNode(&e1, &e2, pt));
+		intersect_nodes_.push_back(IntersectNode(&e1, &e2, pt));
 	}
 
 
@@ -2184,7 +2166,6 @@ namespace Clipper2Lib {
 		//Calculate edge positions at the top of the current scanbeam, and from this
 		//we will determine the intersections required to reach these new positions.
 		AdjustCurrXAndCopyToSEL(top_y);
-
 		//Find all edge intersections in the current scanbeam using a stable merge
 		//sort that ensures only adjacent edges are intersecting. Intersect info is
 		//stored in FIntersectList ready to be processed in ProcessIntersectList.
@@ -2249,33 +2230,33 @@ namespace Clipper2Lib {
 		//Now as we process these intersections, we must sometimes adjust the order
 		//to ensure that intersecting edges are always adjacent ...
 
-		std::vector<IntersectNode*>::iterator node_iter, node_iter2;
+		std::vector<IntersectNode>::iterator node_iter, node_iter2;
 		for (node_iter = intersect_nodes_.begin();
 			node_iter != intersect_nodes_.end();  ++node_iter)
 		{
-			if (!EdgesAdjacentInAEL(*(*node_iter)))
+			if (!EdgesAdjacentInAEL(*node_iter))
 			{
 				node_iter2 = node_iter + 1;
 				while (node_iter2 != intersect_nodes_.end() &&
-					!EdgesAdjacentInAEL(*(*node_iter2))) ++node_iter2;
+					!EdgesAdjacentInAEL(*node_iter2)) ++node_iter2;
 				if (node_iter2 != intersect_nodes_.end())
 					std::swap(*node_iter, *node_iter2);
 			}
 
-			IntersectNode* node = *node_iter;
-			IntersectEdges(*node->edge1, *node->edge2, node->pt);
-			SwapPositionsInAEL(*node->edge1, *node->edge2);
+			IntersectNode& node = *node_iter;
+			IntersectEdges(*node.edge1, *node.edge2, node.pt);
+			SwapPositionsInAEL(*node.edge1, *node.edge2);
 
-			if (TestJoinWithPrev2(*node->edge2, node->pt))
+			if (TestJoinWithPrev2(*node.edge2, node.pt))
 			{
-				OutPt* op1 = AddOutPt(*node->edge2->prev_in_ael, node->pt);
-				OutPt* op2 = AddOutPt(*node->edge2, node->pt);
+				OutPt* op1 = AddOutPt(*node.edge2->prev_in_ael, node.pt);
+				OutPt* op2 = AddOutPt(*node.edge2, node.pt);
 				if (op1 != op2) AddJoin(op1, op2);
 			}
-			else if (TestJoinWithNext2(*node->edge1, node->pt))
+			else if (TestJoinWithNext2(*node.edge1, node.pt))
 			{
-				OutPt* op1 = AddOutPt(*node->edge1, node->pt);
-				OutPt* op2 = AddOutPt(*node->edge1->next_in_ael, node->pt);
+				OutPt* op1 = AddOutPt(*node.edge1, node.pt);
+				OutPt* op2 = AddOutPt(*node.edge1->next_in_ael, node.pt);
 				if (op1 != op2) AddJoin(op1, op2);
 			}
 		}
@@ -2323,7 +2304,7 @@ namespace Clipper2Lib {
 		}
 	}
 
-	inline bool HorzIsSpike(Active& horzEdge)
+	inline bool HorzIsSpike(const Active& horzEdge)
 	{
 		Point64 nextPt = NextVertex(horzEdge)->pt;
 		return (horzEdge.bot.x < horzEdge.top.x) != (horzEdge.top.x < nextPt.x);
@@ -3344,24 +3325,24 @@ namespace Clipper2Lib {
 		for (OutRec* outrec : outrec_list_)
 		{
 			if (outrec->pts == nullptr) continue;
-			Path64 path;
 			if (solutionOpen && outrec->state == OutRecState::Open)
 			{
-				if (BuildPath(outrec->pts, ReverseOrientation, true, path))
+				Path64 path;
+				if (BuildPath(outrec->pts, ReverseSolution, true, path))
 					solutionOpen->emplace_back(std::move(path));
 				path.resize(0);
 			}
 			else
 			{
-				if (BuildPath(outrec->pts, 
-					ReverseOrientation != (fillrule_ == fill_pos), false, path))
+				Path64 path;
+				if (BuildPath(outrec->pts, ReverseSolution, false, path))
 					solutionClosed.emplace_back(std::move(path));
 				path.resize(0);
 			}
 		}
 	}
 
-	PointInPolyResult PointInPolygon(const Point64 pt, OutPt* ops)
+	PointInPolyResult PointInPolygon(const Point64& pt, OutPt* ops)
 	{
 		if (ops->next == ops || ops->next == ops->prev)
 			return PointInPolyResult::IsOutside;
@@ -3469,15 +3450,14 @@ namespace Clipper2Lib {
 			if (IsOpen(*outrec))
 			{
 				Path64 path;
-				if (BuildPath(outrec->pts, ReverseOrientation, true, path))
+				if (BuildPath(outrec->pts, ReverseSolution, true, path))
 					open_paths.push_back(path);
 				continue;
 			}
 
 			Path64 path;
 			if (!BuildPath(outrec->pts, 
-				ReverseOrientation != (fillrule_ == fill_pos),
-				false, path)) continue;
+				ReverseSolution, false, path)) continue;
 
 			if (outrec->owner && outrec->owner->state == outrec->state)
 				outrec->owner = outrec->owner->owner;

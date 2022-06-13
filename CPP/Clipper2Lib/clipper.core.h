@@ -397,9 +397,9 @@ inline double Distance(const Point<T> pt1, const Point<T> pt2)
 }
 
 template <typename T>
-static T Length(const Path<T>& path, bool is_closed_path = false)
+static double Length(const Path<T>& path, bool is_closed_path = false)
 {
-	T result = 0.0;
+	double result = 0.0;
 	if (path.size() < 2) return result;
 	auto it = path.cbegin(), stop = path.end() - 1;
 	for ( ; it != stop; ++it)
@@ -430,18 +430,22 @@ bool NearCollinear(const Point<T> &pt1, const Point<T> &pt2, const Point<T> &pt3
 }
 
 template <typename T>
-inline double Area(const Path<T>& path)
+static double Area(const Path<T>& path)
 {
-	//https://en.wikipedia.org/wiki/Shoelace_formula
-	if (path.size() == 0) return 0.0;
+	size_t cnt = path.size();
+	if (cnt < 3) return 0.0;
 	double a = 0.0;
-	typename Path<T>::const_iterator path_iter, path_iter_last = --path.cend();
-	for (path_iter = path.cbegin(); 
-		path_iter != path.cend(); path_iter_last = path_iter, ++path_iter)
+	typename Path<T>::const_iterator it1, it2 = path.cend() - 1, stop = it2;
+	if (!(cnt & 1)) ++stop;
+	for (it1 = path.cbegin(); it1 != stop;)
 	{
-		a += static_cast<double>(path_iter_last->y + path_iter->y) *
-			(path_iter_last->x - path_iter->x);
+		a += static_cast<double>(it2->y + it1->y) * (it2->x - it1->x);
+		it2 = it1 + 1;
+		a += static_cast<double>(it1->y + it2->y) * (it1->x - it2->x);
+		it1 += 2;
 	}
+	if (cnt & 1)
+		a += static_cast<double>(it2->y + it1->y) * (it2->x - it1->x);
 #ifdef REVERSE_ORIENTATION
 	return a * 0.5;
 #else 
@@ -464,6 +468,10 @@ inline double Area(const Paths<T>& paths)
 template <typename T>
 inline bool IsPositive(const Path<T>& poly)
 {
+	// A curve has positive orientation [and area] if a region 'R' 
+	// is on the left when traveling around the outside of 'R'.
+	//https://mathworld.wolfram.com/CurveOrientation.html
+	//nb: This statement is premised on using Cartesian coordinates
 	return Area<T>(poly) >= 0;
 }
 
@@ -475,11 +483,14 @@ static Path<T> Ellipse(const Point<T>& center,
 	if (radiusY <= 0) radiusY = radiusX;
 	if (steps <= 2)
 		steps = static_cast<int>(PI * sqrt((radiusX + radiusY) / 2));
+
+//to ensure function returns a positive area
 #ifdef REVERSE_ORIENTATION
-	double si = -std::sin(2 * PI / steps);
-#else
 	double si = std::sin(2 * PI / steps);
+#else
+	double si = -std::sin(2 * PI / steps);
 #endif
+
 	double co = std::cos(2 * PI / steps);
 	double dx = co, dy = si;
 	Path<T> result;

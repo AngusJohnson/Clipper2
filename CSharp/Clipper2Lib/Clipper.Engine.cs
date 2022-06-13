@@ -167,6 +167,11 @@ namespace Clipper2Lib
     }
   }
 
+  ///////////////////////////////////////////////////////////////////
+  //Important: UP and DOWN here are premised on Y-axis positive down
+  //displays, which is the orientation used in Clipper's development.
+  ///////////////////////////////////////////////////////////////////
+  
   internal class Active
   {
     public Point64 bot;
@@ -216,7 +221,7 @@ namespace Clipper2Lib
     internal bool _using_polytree;
     internal bool _succeeded;
     public bool PreserveCollinear { get; set; }
-    public bool ReverseOrientation { get; set; }
+    public bool ReverseSolution { get; set; }
 
 #if USINGZ
     public delegate void ZCallback64(Point64 bot1, Point64 top1,
