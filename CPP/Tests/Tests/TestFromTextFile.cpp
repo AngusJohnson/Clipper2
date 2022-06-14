@@ -100,7 +100,7 @@ TEST(Clipper2Tests, TestFromTextFile) {
                   IsPositive(solution[0]);
               }
 #else
-              EXPECT_LQ(count, 0);
+              EXPECT_EQ(count, 0);
               EXPECT_EQ(area, 0);
 #endif               
             }
