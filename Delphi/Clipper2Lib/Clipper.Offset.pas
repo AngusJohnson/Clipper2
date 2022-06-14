@@ -3,7 +3,7 @@ unit Clipper.Offset;
 (*******************************************************************************
 * Author    :  Angus Johnson                                                   *
 * Version   :  10.0 (beta) - aka Clipper2                                      *
-* Date      :  10 June 2022                                                    *
+* Date      :  14 June 2022                                                    *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  Offset paths and clipping solutions                             *
@@ -52,7 +52,8 @@ type
     fOutPaths    : TPaths64;
     fOutPathLen  : Integer;
     fSolution    : TPaths64;
-    fPreserveCollinear : Boolean;
+    fPreserveCollinear  : Boolean;
+    fReverseSolution    : Boolean;
     procedure AddPoint(x,y: double); overload;
     procedure AddPoint(const pt: TPoint64); overload;
       {$IFDEF INLINING} inline; {$ENDIF}
@@ -89,6 +90,8 @@ type
     property MergeGroups: Boolean read fMergeGroups write fMergeGroups;
     property PreserveCollinear: Boolean
       read fPreserveCollinear write fPreserveCollinear;
+    property ReverseSolution: Boolean
+      read fReverseSolution write fReverseSolution;
   end;
 
 implementation
@@ -343,8 +346,14 @@ begin
       PreserveCollinear := fPreserveCollinear;
       AddSubject(fOutPaths);
       if pathgroup.reversed then
-        Execute(ctUnion, frNegative, fOutPaths) else
+      begin
+        ReverseSolution := not fReverseSolution;
+        Execute(ctUnion, frNegative, fOutPaths)
+      end else
+      begin
+        ReverseSolution := fReverseSolution;
         Execute(ctUnion, frPositive, fOutPaths);
+      end;
     finally
       free;
     end;
@@ -496,8 +505,14 @@ begin
       PreserveCollinear := fPreserveCollinear;
       AddSubject(fSolution);
       if TPathGroup(fInGroups[0]).reversed then
-        Execute(ctUnion, frNegative, fSolution) else
+      begin
+        ReverseSolution := not fReverseSolution;
+        Execute(ctUnion, frNegative, fSolution)
+      end else
+      begin
+        ReverseSolution := fReverseSolution;
         Execute(ctUnion, frPositive, fSolution);
+      end;
     finally
       free;
     end;

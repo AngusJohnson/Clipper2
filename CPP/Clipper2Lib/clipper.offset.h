@@ -1,7 +1,7 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
 * Version   :  10.0 (beta) - aka Clipper2                                      *
-* Date      :  7 June 2022                                                     *
+* Date      :  14 June 2022                                                    *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  Polygon offsetting                                              *
@@ -49,6 +49,7 @@ private:
 	double arc_tolerance_ = 0.0;
 	bool merge_groups_ = true;
 	bool preserve_collinear_ = false;
+	bool reverse_solution_ = false;
 
 	void DoSquare(PathGroup& group, const Path64& path, size_t j, size_t k);
 	void DoMiter(PathGroup& group, const Path64& path, size_t j, size_t k, double cos_a);
@@ -61,9 +62,11 @@ private:
 	void DoGroupOffset(PathGroup &group, double delta);
 public:
 	ClipperOffset(double miter_limit = 2.0, 
-		double arc_tolerance = 0.0, int precision = 2, bool preserve_collinear = false) :
+		double arc_tolerance = 0.0, int precision = 2, 
+		bool preserve_collinear = false, bool reverse_solution = false) :
 		miter_limit_(miter_limit), arc_tolerance_(arc_tolerance),
-		preserve_collinear_(preserve_collinear) { };
+		preserve_collinear_(preserve_collinear),
+		reverse_solution_(reverse_solution) { };
 
 	~ClipperOffset() { Clear(); };
 
@@ -81,6 +84,7 @@ public:
 	//ArcTolerance: needed for rounded offsets (See offset_triginometry2.svg)
 	double ArcTolerance() const { return arc_tolerance_; }
 	void ArcTolerance(double arc_tolerance) { arc_tolerance_ = arc_tolerance; }
+
 	//MergeGroups: A path group is one or more paths added via the AddPath or
 	//AddPaths methods. By default these path groups will be offset
 	//independently of other groups and this may cause overlaps (intersections).
@@ -90,8 +94,14 @@ public:
 	void MergeGroups(bool merge_groups) { merge_groups_ = merge_groups; }
 
 	bool PreserveCollinear() const { return preserve_collinear_; }
-	void PreserveCollinear(bool preserve_collinear) { 
-		preserve_collinear_ = preserve_collinear; 
+	void PreserveCollinear(bool preserve_collinear)
+	{
+		preserve_collinear_ = preserve_collinear;
+	}
+	bool ReverseSolution() const { return reverse_solution_; }
+	void ReverseSolution(bool reverse_solution)
+	{
+		reverse_solution_ = reverse_solution;
 	}
 };
 

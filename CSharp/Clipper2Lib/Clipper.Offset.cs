@@ -65,17 +65,20 @@ namespace Clipper2Lib
     public bool MergeGroups { get; set; }
     public double MiterLimit { get; set; }
     public bool PreserveCollinear { get; set; }
+    public bool ReverseSolution { get; set; }
 
     private const double TwoPi = Math.PI * 2;
     private const double DefaultArcTolerance = 0.25;
 
     public ClipperOffset(double miterLimit = 2.0, 
-      double arcTolerance = 0.0, bool preserveCollinear = false)
+      double arcTolerance = 0.0, bool 
+      preserveCollinear = false, bool reverseSolution = false)
     {
       MiterLimit = miterLimit;
       ArcTolerance = arcTolerance;
       MergeGroups = true;
       PreserveCollinear = preserveCollinear;
+      ReverseSolution = reverseSolution;
     }
 
     public void Clear()
@@ -141,11 +144,16 @@ namespace Clipper2Lib
         c.PreserveCollinear = PreserveCollinear;
         c.AddSubject(solution);
         if (_pathGroups[0]._pathsReversed)
+        {
+          c.ReverseSolution = !ReverseSolution;
           c.Execute(ClipType.Union, FillRule.Negative, solution);
+        }
         else
+        {
+          c.ReverseSolution = ReverseSolution;
           c.Execute(ClipType.Union, FillRule.Positive, solution);
+        }
       }
-
       return solution;
     }
 
@@ -465,9 +473,15 @@ namespace Clipper2Lib
         c.PreserveCollinear = PreserveCollinear;
         c.AddSubject(group._outPaths);
         if (group._pathsReversed)
+        {
+          c.ReverseSolution = !ReverseSolution;
           c.Execute(ClipType.Union, FillRule.Negative, group._outPaths);
+        }
         else
+        {
+          c.ReverseSolution = ReverseSolution;
           c.Execute(ClipType.Union, FillRule.Positive, group._outPaths);
+        }
       }
     }
   }

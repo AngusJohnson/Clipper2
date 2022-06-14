@@ -1,7 +1,7 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
 * Version   :  10.0 (beta) - aka Clipper2                                      *
-* Date      :  9 June 2022                                                     *
+* Date      :  14 June 2022                                                    *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  Polygon offsetting                                              *
@@ -356,9 +356,15 @@ void ClipperOffset::DoGroupOffset(PathGroup& group, double delta)
 		c.PreserveCollinear = false;
 		c.AddSubject(group.paths_out_);
 		if (group.is_reversed)
+		{
+			c.ReverseSolution = !reverse_solution_;
 			c.Execute(ClipType::Union, FillRule::Negative, group.paths_out_);
+		}
 		else
+		{
+			c.ReverseSolution = reverse_solution_;
 			c.Execute(ClipType::Union, FillRule::Positive, group.paths_out_);
+		}
 	}
 }
 
@@ -394,9 +400,15 @@ Paths64 ClipperOffset::Execute(double delta)
 		c.PreserveCollinear = false;
 		c.AddSubject(result);
 		if (groups_[0].is_reversed)
+		{
+			c.ReverseSolution = !reverse_solution_;
 			c.Execute(ClipType::Union, FillRule::Negative, result);
+		}
 		else
+		{
+			c.ReverseSolution = reverse_solution_;
 			c.Execute(ClipType::Union, FillRule::Positive, result);
+		}
 	}
 	return result;
 }
