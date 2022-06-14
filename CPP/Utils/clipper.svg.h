@@ -106,8 +106,8 @@ namespace Clipper2Lib {
   {
   private:
       PathInfoList path_infos;
-      bool LoadPath(std::string::iterator& p,
-        const std::string::iterator& pe);
+      bool LoadPath(std::string::const_iterator& p,
+        const std::string::const_iterator& pe);
   public:
       std::string xml;
       bool LoadFromFile(const std::string &filename);

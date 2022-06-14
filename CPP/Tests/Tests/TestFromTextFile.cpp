@@ -3,7 +3,11 @@
 #include "../../Utils/ClipFileLoad.h"
 
 TEST(Clipper2Tests, TestFromTextFile) {
+#ifdef WIN32
     std::ifstream ifs("../../../Tests/Tests.txt");
+#else
+    std::ifstream ifs("Tests.txt");
+#endif
     ASSERT_TRUE(ifs);
     ASSERT_TRUE(ifs.good());
 

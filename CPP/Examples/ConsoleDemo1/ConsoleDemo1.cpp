@@ -20,6 +20,7 @@ void RunSavedTests(const std::string& filename,
   bool svg_draw, bool show_solution_coords);
 void DoBenchmark(int edge_cnt_start, int edge_cnt_end, int increment);
 void DoMemoryLeakTest();
+void System(const std::string &filename);
 
 int main()
 {
@@ -127,7 +128,7 @@ void DoSimpleTest(bool show_solution_coords)
   //save and display
   SvgAddSolution(svg, solution, false);
   SvgSaveToFile(svg, "solution1.svg", fr, 450, 450, 10);
-  system("solution1.svg");
+  System("solution1.svg");
 
   //SVG IMAGE #2
   //intersect a 9 point star with a circle
@@ -146,7 +147,7 @@ void DoSimpleTest(bool show_solution_coords)
   SvgAddClip(svg2, clip);
   SvgAddSolution(svg2, solution, false);
   SvgSaveToFile(svg2, "solution2.svg", fr, 450, 450, 10);
-  system("solution2.svg");
+  System("solution2.svg");
 }
 
 void RunSavedTests(const std::string& filename,
@@ -196,7 +197,7 @@ void RunSavedTests(const std::string& filename,
         SvgAddSolution(svg, solution, show_solution_coords);
         SvgAddOpenSolution(svg, solution_open, show_solution_coords);
         SvgSaveToFile(svg, filename2, fr, display_width, display_height, 20);
-        system(filename2.c_str());
+        System(filename2.c_str());
       }
     }
     else break;
@@ -234,11 +235,12 @@ void DoBenchmark(int edge_cnt_start, int edge_cnt_end, int increment)
   SvgAddSolution(svg, solution, false);
   SvgSaveToFile(svg, "solution3.svg", 
     fr_benchmark, display_width, display_height, 20);
-  system("solution3.svg");
+  System("solution3.svg");
 }
 
 void DoMemoryLeakTest()
 {
+#ifdef WIN32
   int edge_cnt = 1000;
 
   Paths64 subject, clip;
@@ -260,4 +262,14 @@ void DoMemoryLeakTest()
   {
     std::cout << std::endl << "No memory leaks detected :)" << std::endl << std::endl;
   }
+#endif
+}
+
+void System(const std::string &filename)
+{
+#ifdef WIN32
+  system(filename.c_str());
+#else
+  system(("firefox " + filename).c_str());
+#endif
 }
