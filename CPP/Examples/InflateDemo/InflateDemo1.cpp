@@ -7,6 +7,7 @@
 using namespace std;
 using namespace Clipper2Lib;
 
+void System(const std::string &filename);
 
 int main(int argc, char* argv[])
 {
@@ -43,7 +44,7 @@ int main(int argc, char* argv[])
   SvgWriter svg;
   SvgAddSolution(svg, Paths64ToPathsD(pp), false);
   SvgSaveToFile(svg, "solution_off.svg", fr, 800, 600, 20);
-  system("solution_off.svg");
+  System("solution_off.svg");
 
   // Because ClipperOffset uses integer coordinates,
   // you'll need to scale coordinates when you 
@@ -69,7 +70,16 @@ int main(int argc, char* argv[])
   svg.Clear();
   SvgAddSolution(svg, ScalePaths<double, int64_t>(pp, 1/scale), false);   //scale back down
   SvgSaveToFile(svg, "solution_off2.svg", fr, 450, 720, 0);
-  system("solution_off2.svg");
+  System("solution_off2.svg");
 
 }
 //---------------------------------------------------------------------------
+
+void System(const std::string &filename)
+{
+#ifdef WIN32
+  system(filename.c_str());
+#else
+  system(("firefox " + filename).c_str());
+#endif
+}
