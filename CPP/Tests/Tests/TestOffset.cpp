@@ -19,5 +19,7 @@ TEST(Clipper2Tests, TestOrientationAfterOffsetting) {
 
     const auto& output = outputs.front();
 
+#ifdef REVERSE_ORIENTATION
     EXPECT_EQ(Clipper2Lib::IsPositive(input), Clipper2Lib::IsPositive(output));
+#endif // REVERSE_ORIENTATION
 }
