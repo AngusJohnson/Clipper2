@@ -272,15 +272,15 @@ namespace Clipper2Lib {
   //------------------------------------------------------------------------------
 
   inline bool Find(const std::string& text,
-    std::string::iterator& start, const std::string::iterator& end)
+    std::string::const_iterator& start, const std::string::const_iterator& end)
   {
     start = std::search(start, end, text.cbegin(), text.cend());
     return start != end;
   }
   //------------------------------------------------------------------------------
 
-  bool SvgReader::LoadPath(std::string::iterator& p,
-    const std::string::iterator& pe)
+  bool SvgReader::LoadPath(std::string::const_iterator& p,
+    const std::string::const_iterator& pe)
   {
     if (!Find("d=\"", p, pe)) return false;
     p += 3;
@@ -353,7 +353,7 @@ namespace Clipper2Lib {
       xml_buff << file.rdbuf();
       file.close();
       xml = xml_buff.str();
-      std::string::iterator p = xml.begin(), q, xml_end = xml.end();
+      std::string::const_iterator p = xml.cbegin(), q, xml_end = xml.cend();
 
       while (Find("<path", p, xml_end))
       {      
