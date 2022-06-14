@@ -40,10 +40,10 @@ Example:
 struct Timer {
 private:
   std::streamsize old_precision;
-  int old_flags;
+  std::ios_base::fmtflags old_flags;
   bool paused_ = false;
-  std::chrono::steady_clock::time_point time_started_ = {};
-  std::chrono::steady_clock::duration duration_ = {};
+  std::chrono::high_resolution_clock::time_point time_started_ = {};
+  std::chrono::high_resolution_clock::duration duration_ = {};
   std::string time_text_ = "";
   
   void init(bool start_paused)
@@ -78,7 +78,7 @@ public:
   void pause()
   {
     if (paused_) return;
-    std::chrono::steady_clock::time_point now =
+    std::chrono::high_resolution_clock::time_point now =
       std::chrono::high_resolution_clock::now();
     duration_ += (now - time_started_);
     paused_ = true;
@@ -105,4 +105,4 @@ public:
   }
 };
 
-#endif CLIPPER_TIMER_H
+#endif // CLIPPER_TIMER_H
