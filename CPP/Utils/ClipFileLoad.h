@@ -8,6 +8,11 @@
 #include <fstream>
 #include <string>
 #include "../Clipper2Lib/clipper.h"
+#ifndef WIN32
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <unistd.h>
+#endif
 
 bool GetInt(std::string::const_iterator& s_it,
   const std::string::const_iterator& it_end, int64_t& value);
