@@ -240,6 +240,7 @@ void DoBenchmark(int edge_cnt_start, int edge_cnt_end, int increment)
 
 void DoMemoryLeakTest()
 {
+#ifdef WIN32
   int edge_cnt = 1000;
 
   Paths64 subject, clip;
@@ -261,6 +262,7 @@ void DoMemoryLeakTest()
   {
     std::cout << std::endl << "No memory leaks detected :)" << std::endl << std::endl;
   }
+#endif
 }
 
 void System(const std::string &filename)
