@@ -77,7 +77,7 @@ int main(int argc, char* argv[])
 
 void System(const std::string &filename)
 {
-#ifdef WIN32
+#ifdef _WIN32
   system(filename.c_str());
 #else
   system(("firefox " + filename).c_str());

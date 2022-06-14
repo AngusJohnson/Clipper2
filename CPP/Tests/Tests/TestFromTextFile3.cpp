@@ -42,7 +42,7 @@ std::vector<ResultRegion> ExtractResults(
 };
 
 TEST(Clipper2Tests, TestFromTextFile3) {
-#ifdef WIN32
+#ifdef _WIN32
     std::ifstream ifs("../../../Tests/Tests3.txt");
 #else
     std::ifstream ifs("Tests3.txt");

@@ -3,7 +3,7 @@
 #include "../../Utils/ClipFileLoad.h"
 
 TEST(Clipper2Tests, TestFromTextFile2) {
-#ifdef WIN32
+#ifdef _WIN32
     std::ifstream ifs("../../../Tests/Tests2.txt");
 #else
     std::ifstream ifs("Tests2.txt");

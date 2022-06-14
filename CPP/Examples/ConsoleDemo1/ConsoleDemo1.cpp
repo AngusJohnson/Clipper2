@@ -240,7 +240,7 @@ void DoBenchmark(int edge_cnt_start, int edge_cnt_end, int increment)
 
 void DoMemoryLeakTest()
 {
-#ifdef WIN32
+#ifdef _WIN32
   int edge_cnt = 1000;
 
   Paths64 subject, clip;
@@ -267,7 +267,7 @@ void DoMemoryLeakTest()
 
 void System(const std::string &filename)
 {
-#ifdef WIN32
+#ifdef _WIN32
   system(filename.c_str());
 #else
   system(("firefox " + filename).c_str());

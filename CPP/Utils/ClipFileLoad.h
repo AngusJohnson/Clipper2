@@ -8,7 +8,7 @@
 #include <fstream>
 #include <string>
 #include "../Clipper2Lib/clipper.h"
-#ifndef WIN32
+#ifndef _WIN32
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <unistd.h>
