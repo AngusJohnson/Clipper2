@@ -1283,7 +1283,7 @@ end;
 function Area(const path: TPathD): Double;
 var
   i, highI: Integer;
-  p1,p2: PPoint64;
+  p1,p2: PPointD;
 begin
   //https://en.wikipedia.org/wiki/Shoelace_formula
   Result := 0.0;
