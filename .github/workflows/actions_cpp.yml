@@ -34,4 +34,8 @@ jobs:
         mkdir CPP/build
         cd CPP/build
         cmake ..
-        cmake --build .
+        make
+    - name: Run tests
+      run: |
+        cd CPP/build
+        make test
