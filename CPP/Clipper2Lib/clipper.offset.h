@@ -1,7 +1,7 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
 * Version   :  10.0 (beta) - aka Clipper2                                      *
-* Date      :  14 June 2022                                                    *
+* Date      :  16 June 2022                                                    *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  Polygon offsetting                                              *
@@ -42,6 +42,7 @@ private:
 	double temp_lim_ = 0.0;
 	double steps_per_rad_ = 0.0;
 	PathD norms;
+	Paths64 solution;
 	std::vector<PathGroup> groups_;
 	JoinType join_type_ = JoinType::Square;
 	
@@ -50,6 +51,7 @@ private:
 	bool merge_groups_ = true;
 	bool preserve_collinear_ = false;
 	bool reverse_solution_ = false;
+	bool reverse_orientation_ = false;
 
 	void DoSquare(PathGroup& group, const Path64& path, size_t j, size_t k);
 	void DoMiter(PathGroup& group, const Path64& path, size_t j, size_t k, double cos_a);
@@ -61,12 +63,15 @@ private:
 	void OffsetPoint(PathGroup& group, Path64& path, size_t j, size_t& k);
 	void DoGroupOffset(PathGroup &group, double delta);
 public:
-	ClipperOffset(double miter_limit = 2.0, 
-		double arc_tolerance = 0.0, int precision = 2, 
-		bool preserve_collinear = false, bool reverse_solution = false) :
+	ClipperOffset(double miter_limit = 2.0,
+		double arc_tolerance = 0.0, int precision = 2,
+		bool preserve_collinear = false, 
+		bool reverse_solution = false,
+		bool reverse_orientation = DEFAULT_ORIENTATION_IS_REVERSED) :
 		miter_limit_(miter_limit), arc_tolerance_(arc_tolerance),
 		preserve_collinear_(preserve_collinear),
-		reverse_solution_(reverse_solution) { };
+		reverse_solution_(reverse_solution),
+		reverse_orientation_(reverse_orientation){ };
 
 	~ClipperOffset() { Clear(); };
 
@@ -94,15 +99,10 @@ public:
 	void MergeGroups(bool merge_groups) { merge_groups_ = merge_groups; }
 
 	bool PreserveCollinear() const { return preserve_collinear_; }
-	void PreserveCollinear(bool preserve_collinear)
-	{
-		preserve_collinear_ = preserve_collinear;
-	}
+	void PreserveCollinear(bool preserve_collinear){preserve_collinear_ = preserve_collinear;}
+	
 	bool ReverseSolution() const { return reverse_solution_; }
-	void ReverseSolution(bool reverse_solution)
-	{
-		reverse_solution_ = reverse_solution;
-	}
+	void ReverseSolution(bool reverse_solution) {reverse_solution_ = reverse_solution;}
 };
 
 }

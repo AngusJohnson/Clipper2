@@ -1,7 +1,7 @@
 ﻿/*******************************************************************************
 * Author    :  Angus Johnson                                                   *
 * Version   :  10.0 (beta) - also known as Clipper2                            *
-* Date      :  7 June 2022                                                     *
+* Date      :  16 June 2022                                                    *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  Core structures and functions for the Clipper Library           *
@@ -412,6 +412,22 @@ namespace Clipper2Lib
 
   public static class InternalClipperFunc
   {
+
+    //The classic Cartesian plane is defined by an X-axis that's positive toward
+    //the right and a Y-axis that's positive upwards. However, many modern
+    //graphics libraries use an inverted Y-axis (where Y is positive downward).
+    //This effectively flips polygons upside down, with winding directions that
+    //were clockwise becoming anti-clockwise, and areas that were positive
+    //becoming negative. This is important to understand when using Clipper's
+    //Positive and Negative filling rules, since winding directions in Clipper
+    //may be opposite to what you were expecting. To minimise any confusion,
+    //the DEFAULT_ORIENTATION_IS_REVERSED constant below allows you to change the
+    //**default** orientation. This constant is intended as "set and perhaps not
+    //quite forget". While this sets the default orientation, both the Clipper
+    //and ClipperOffest classes contain 'OrientationIsReversed' parameters which
+    //can override the default setting.
+    public const bool DEFAULT_ORIENTATION_IS_REVERSED = true;
+
     public const double floatingPointTolerance = 1E-15;
     public const double defaultMinimumEdgeLength = 0.1;
 

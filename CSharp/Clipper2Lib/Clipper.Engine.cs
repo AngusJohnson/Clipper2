@@ -1,7 +1,7 @@
 ﻿/*******************************************************************************
 * Author    :  Angus Johnson                                                   *
 * Version   :  10.0 (beta) - also known as Clipper2                            *
-* Date      :  11 June 2022                                                    *
+* Date      :  16 June 2022                                                    *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  This is the main polygon clipping module                        *
@@ -220,8 +220,10 @@ namespace Clipper2Lib
     private bool _hasOpenPaths;
     internal bool _using_polytree;
     internal bool _succeeded;
+    private readonly FillRule fillPos = FillRule.Positive;
     public bool PreserveCollinear { get; set; }
     public bool ReverseSolution { get; set; }
+    public bool OrientationIsReversed { get; set; }
 
 #if USINGZ
     public delegate void ZCallback64(Point64 bot1, Point64 top1,
@@ -229,16 +231,8 @@ namespace Clipper2Lib
 
     public ZCallback64? ZFillFunc { get; set; }
 #endif
-
-#if REVERSE_ORIENTATION
-    const FillRule fillPos = FillRule.Negative;
-    const FillRule fillNeg = FillRule.Positive;
-#else
-    const FillRule fillPos = FillRule.Positive;
-    const FillRule fillNeg = FillRule.Negative;
-#endif
-
-    public ClipperBase()
+    public ClipperBase(bool UseReversedOrientation = 
+      InternalClipperFunc. DEFAULT_ORIENTATION_IS_REVERSED)
     {
       _minimaList = new List<LocalMinima>();
       _intersectList = new List<IntersectNode>();
@@ -247,6 +241,11 @@ namespace Clipper2Lib
       _joinerList = new List<Joiner?>();
       _scanlineList = new List<long>();
       PreserveCollinear = true;
+      OrientationIsReversed = UseReversedOrientation;
+      if (UseReversedOrientation)
+      {
+        fillPos = FillRule.Negative;
+      }
     }
 
 #if USINGZ
@@ -527,20 +526,6 @@ namespace Clipper2Lib
       return null;
     }
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static int PointCount(OutPt op)
-    {
-      OutPt p = op;
-      int cnt = 0;
-      do
-      {
-        cnt++;
-        p = p.next!;
-      } while (p != op);
-
-      return cnt;
-    }
-
     private struct IntersectListSort : IComparer<IntersectNode>
     {
       public int Compare(IntersectNode a, IntersectNode b)
@@ -595,7 +580,7 @@ namespace Clipper2Lib
       ae2.outrec = or1;
     }
 
-    private static double Area(OutPt op)
+    private static double Area(OutPt op, bool OrientationReversed)
     {
       //https://en.wikipedia.org/wiki/Shoelace_formula
       double area = 0.0;
@@ -606,25 +591,24 @@ namespace Clipper2Lib
           (op2.prev.pt.X - op2.pt.X);
         op2 = op2.next!;
       } while (op2 != op);
-#if REVERSE_ORIENTATION
-      return area * 0.5;
-#else
-      return area * -0.5;
-#endif
+      if (OrientationReversed)
+        return area * 0.5;
+      else
+        return area * -0.5;
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static double AreaTriangle(Point64 pt1, Point64 pt2, Point64 pt3)
+    private static double AreaTriangle(Point64 pt1, 
+      Point64 pt2, Point64 pt3, bool OrientationReversed)
     {
-#if REVERSE_ORIENTATION
-      return (double) (pt3.Y + pt1.Y) * (double) (pt3.X - pt1.X) +
-              (double) (pt1.Y + pt2.Y) * (double) (pt1.X - pt2.X) +
-              (double) (pt2.Y + pt3.Y) * (double) (pt2.X - pt3.X);
-#else
-      return -((double) (pt3.Y + pt1.Y) * (double) (pt3.X - pt1.X) +
-              (double) (pt1.Y + pt2.Y) * (double) (pt1.X - pt2.X) +
-              (double) (pt2.Y + pt3.Y) * (double) (pt2.X - pt3.X));
-#endif
+      if (OrientationReversed)
+        return (double) (pt3.Y + pt1.Y) * (double) (pt3.X - pt1.X) +
+          (double) (pt1.Y + pt2.Y) * (double) (pt1.X - pt2.X) +
+          (double) (pt2.Y + pt3.Y) * (double) (pt2.X - pt3.X);
+      else
+        return -((double) (pt3.Y + pt1.Y) * (double) (pt3.X - pt1.X) +
+          (double) (pt1.Y + pt2.Y) * (double) (pt1.X - pt2.X) +
+          (double) (pt2.Y + pt3.Y) * (double) (pt2.X - pt3.X));
     }
 
     private static void ReverseOutPts(OutPt op)
@@ -678,7 +662,7 @@ namespace Clipper2Lib
           ae.outrec!.owner = ae2.outrec;
       }
 
-      if ((Area(ae.outrec!.pts!) < 0.0) == isOuter)
+      if ((Area(ae.outrec!.pts!, OrientationIsReversed) > 0.0) != isOuter)
         ReverseOutPts(ae.outrec.pts!);
       return true;
     }
@@ -1002,16 +986,20 @@ namespace Clipper2Lib
     {
       switch (_fillrule)
       {
+        case FillRule.EvenOdd:
+          break;
         case FillRule.NonZero:
           if (Math.Abs(ae.windCount) != 1) return false;
           break;
-        case fillPos:
-          if (ae.windCount != -1) return false;
-          break;
-        case fillNeg:
-          if (ae.windCount != 1) return false;
-          break;
-        case FillRule.EvenOdd:
+        default:
+          if (_fillrule == fillPos)
+          {
+            if (ae.windCount != -1) return false;
+          }
+          else //fillNeg
+          {
+            if (ae.windCount != 1) return false;
+          }
           break;
       }
 
@@ -1021,48 +1009,56 @@ namespace Clipper2Lib
           switch (_fillrule)
           {
             case FillRule.EvenOdd:
-            case FillRule.NonZero: return (ae.windCount2 != 0);
-            case fillPos: return (ae.windCount2 < 0);
-            case fillNeg: return (ae.windCount2 > 0);
+            case FillRule.NonZero: 
+              return (ae.windCount2 != 0);
+            default:
+              if (_fillrule == fillPos)
+                return (ae.windCount2 < 0);
+              else
+                return (ae.windCount2 > 0);
           }
-
-          break;
         case ClipType.Union:
           switch (_fillrule)
           {
             case FillRule.EvenOdd:
-            case FillRule.NonZero: return (ae.windCount2 == 0);
-            case fillPos: return (ae.windCount2 >= 0);
-            case fillNeg: return (ae.windCount2 <= 0);
+            case FillRule.NonZero: 
+              return (ae.windCount2 == 0);
+            default:
+              if (_fillrule == fillPos)
+                return (ae.windCount2 >= 0);
+              else
+                return (ae.windCount2 <= 0);
           }
-
-          break;
         case ClipType.Difference:
           if (GetPolyType(ae) == PathType.Subject)
             switch (_fillrule)
             {
               case FillRule.EvenOdd:
-              case FillRule.NonZero: return (ae.windCount2 == 0);
-              case fillPos: return (ae.windCount2 >= 0);
-              case fillNeg: return (ae.windCount2 <= 0);
+              case FillRule.NonZero: 
+                return (ae.windCount2 == 0);
+              default:
+                if (_fillrule == fillPos)
+                  return (ae.windCount2 >= 0);
+                else
+                  return (ae.windCount2 <= 0);
             }
           else
             switch (_fillrule)
             {
               case FillRule.EvenOdd:
-              case FillRule.NonZero: return (ae.windCount2 != 0);
-              case fillPos: return (ae.windCount2 < 0);
-              case fillNeg: return (ae.windCount2 > 0);
+              case FillRule.NonZero: 
+                return (ae.windCount2 != 0);
+              default:
+                if (_fillrule == fillPos)
+                  return (ae.windCount2 < 0);
+                else
+                  return (ae.windCount2 > 0);
             }
-
-          break;
         case ClipType.Xor:
           return true; //XOr is always contributing unless open
         default:
           return false; // delphi2cpp translation note: no warnings
       }
-
-      return false; //we should never get here
     }
 
     private bool IsContributingOpen(Active ae)
@@ -1717,17 +1713,22 @@ namespace Clipper2Lib
 
       switch (_fillrule)
       {
-        case fillPos:
-          oldE1WindCount = -ae1.windCount;
-          oldE2WindCount = -ae2.windCount;
-          break;
-        case fillNeg:
-          oldE1WindCount = ae1.windCount;
-          oldE2WindCount = ae2.windCount;
-          break;
-        default:
+        case FillRule.EvenOdd:
+        case FillRule.NonZero:
           oldE1WindCount = Math.Abs(ae1.windCount);
           oldE2WindCount = Math.Abs(ae2.windCount);
+          break;
+        default:
+          if (_fillrule == fillPos)
+          {
+            oldE1WindCount = -ae1.windCount;
+            oldE2WindCount = -ae2.windCount;
+          }
+          else
+          {
+            oldE1WindCount = ae1.windCount;
+            oldE2WindCount = ae2.windCount;
+          }
           break;
       }
 
@@ -1802,17 +1803,22 @@ namespace Clipper2Lib
         long e1Wc2, e2Wc2;
         switch (_fillrule)
         {
-          case fillPos:
-            e1Wc2 = -ae1.windCount2;
-            e2Wc2 = -ae2.windCount2;
-            break;
-          case fillNeg:
-            e1Wc2 = ae1.windCount2;
-            e2Wc2 = ae2.windCount2;
-            break;
-          default:
+          case FillRule.EvenOdd:
+          case FillRule.NonZero:
             e1Wc2 = Math.Abs(ae1.windCount2);
             e2Wc2 = Math.Abs(ae2.windCount2);
+            break;
+          default:
+            if (_fillrule == fillPos)
+            {
+              e1Wc2 = -ae1.windCount2;
+              e2Wc2 = -ae2.windCount2;
+            }
+            else
+            {
+              e1Wc2 = ae1.windCount2;
+              e2Wc2 = ae2.windCount2;
+            }
             break;
         }
 
@@ -3169,8 +3175,8 @@ namespace Clipper2Lib
 
     private void CompleteSplit(OutPt? op1, OutPt? op2, OutRec outrec)
     {
-      double area1 = Area(op1!);
-      double area2 = Area(op2!);
+      double area1 = Area(op1!, OrientationIsReversed);
+      double area2 = Area(op2!, OrientationIsReversed);
       if (Math.Abs(area1) < 1)
       {
         SafeDisposeOutPts(op1!);
@@ -3272,8 +3278,9 @@ namespace Clipper2Lib
       Point64 ip = new Point64(ipD);
 #if USINGZ
 #endif
-      double area1 = Area(outRecOp);
-      double area2 = AreaTriangle(ip, splitOp.pt, splitOp.next.pt);
+      double area1 = Area(outRecOp, OrientationIsReversed);
+      double area2 = AreaTriangle(ip, 
+        splitOp.pt, splitOp.next.pt, OrientationIsReversed);
 
       if (ip == prevOp.pt || ip == nextNextOp.pt)
       {
@@ -3383,13 +3390,12 @@ namespace Clipper2Lib
         Path64 path = new Path64();
         if (outrec.state == OutRecState.Open)
         {
-          if (BuildPath(outrec.pts!, ReverseOrientation, true, path))
+          if (BuildPath(outrec.pts!, ReverseSolution, true, path))
               solutionOpen.Add(path);
         }
         else
         {
-          if (BuildPath(outrec.pts!,
-            ReverseOrientation != (_fillrule == fillPos), false, path))
+          if (BuildPath(outrec.pts!, ReverseSolution, false, path))
               solutionClosed.Add(path);
         }
       }
@@ -3512,15 +3518,13 @@ namespace Clipper2Lib
         if (outrec.state == OutRecState.Open)
         {
           Path64 open_path = new Path64();
-          if (BuildPath(outrec.pts!,
-            ReverseOrientation != (_fillrule == fillPos), true, open_path))
+          if (BuildPath(outrec.pts!, ReverseSolution, true, open_path))
               solutionOpen.Add(open_path);
           continue;
         }
         
         Path64 path = new Path64();
-        if (!BuildPath(outrec.pts!,
-          ReverseOrientation != (_fillrule == fillPos), false, path))
+        if (!BuildPath(outrec.pts!, ReverseSolution, false, path))
             continue;
 
         if (outrec.owner != null && outrec.owner.state != outrec.state)
@@ -3560,6 +3564,11 @@ namespace Clipper2Lib
 
   public class Clipper : ClipperBase
   {
+    public Clipper(
+      bool UseReversedOrientation = InternalClipperFunc.DEFAULT_ORIENTATION_IS_REVERSED) :
+      base(UseReversedOrientation)
+    { }
+
     internal new void AddPath(Path64 path, PathType polytype, bool isOpen = false)
     {
       base.AddPath(path, polytype, isOpen);
@@ -3646,7 +3655,9 @@ namespace Clipper2Lib
     public ZCallbackD? ZFillDFunc { get; set; }
 #endif
 
-    public ClipperD(int roundingDecimalPrecision = 0)
+    public ClipperD(int roundingDecimalPrecision = 0, 
+      bool UseReversedOrientation = InternalClipperFunc.DEFAULT_ORIENTATION_IS_REVERSED):
+      base(UseReversedOrientation)
     {
       if (roundingDecimalPrecision < -8 || roundingDecimalPrecision > 8)
         throw new ClipperLibException("Error - RoundingDecimalPrecision exceeds the allowed range.");

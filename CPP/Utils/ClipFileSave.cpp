@@ -210,19 +210,21 @@ public:
 }; //BMH_Search class
 
 
-void PathsToStream(Paths64& paths, std::ostream& stream)
+void PathsToStream(const Paths64& paths, std::ostream& stream)
 {
-  for (Paths64::iterator paths_it = paths.begin(); paths_it != paths.end(); ++paths_it)
+  for (Paths64::const_iterator paths_it = paths.cbegin(); 
+    paths_it != paths.cend(); ++paths_it)
   {
     //watch out for empty paths
-    if (paths_it->begin() == paths_it->end()) continue;
-    Path64::iterator path_it, path_it_last;
-    for (path_it = paths_it->begin(), path_it_last = --paths_it->end();
+    if (paths_it->cbegin() == paths_it->cend()) continue;
+    Path64::const_iterator path_it, path_it_last;
+    for (path_it = paths_it->cbegin(), path_it_last = --paths_it->cend();
       path_it != path_it_last; ++path_it)
       stream << *path_it << ", ";
     stream << *path_it_last << endl;
   }
 }
+
 
 bool SaveTest(const std::string& filename, bool append,
   Clipper2Lib::Paths64* subj, Clipper2Lib::Paths64* subj_open, Clipper2Lib::Paths64* clip,

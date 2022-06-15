@@ -3,7 +3,7 @@ unit Clipper.Engine;
 (*******************************************************************************
 * Author    :  Angus Johnson                                                   *
 * Version   :  10.0 (beta) - aka Clipper2                                      *
-* Date      :  14 June 2022                                                    *
+* Date      :  16 June 2022                                                    *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  This is the main polygon clipping module                        *
@@ -148,6 +148,7 @@ type
     var intersectPt: TPointD) of object;
   {$ENDIF}
 
+
   //ClipperBase: abstract base of Clipper class
   TClipperBase = class
   {$IFDEF STRICT}strict{$ENDIF} private
@@ -163,6 +164,7 @@ type
     FLocMinList         : TList;
     FVertexArrayList    : TList;
     FJoinerList         : TList;
+    FFillPos            : TFillRule;
     //FActives: see AEL above
     FActives            : PActive;
     //FSel: see SEL above.
@@ -172,7 +174,8 @@ type
     FHasOpenPaths       : Boolean;
     FLocMinListSorted   : Boolean;
     FSucceeded          : Boolean;
-    FReverseSolution : Boolean;
+    FReverseSolution    : Boolean;
+    FOrientationIsReversed : Boolean;
   {$IFDEF USINGZ}
     FZFunc              : TZCallback64;
   {$ENDIF}
@@ -244,7 +247,8 @@ type
   {$ENDIF}
     property  Succeeded : Boolean read FSucceeded;
   public
-    constructor Create; virtual;
+    constructor Create(OrientationIsReversed: Boolean =
+      DEFAULT_ORIENTATION_IS_REVERSED); virtual;
     destructor Destroy; override;
     procedure Clear;
     function GetBounds: TRect64;
@@ -328,7 +332,9 @@ type
     procedure AddOpenSubject(const pathsD: TPathsD); overload;
     procedure AddClip(const pathD: TPathD); overload;
     procedure AddClip(const pathsD: TPathsD); overload;
-    constructor Create(roundingDecimalPrecision: integer = 2); reintroduce; overload;
+    constructor Create(roundingDecimalPrecision: integer = 2;
+      OrientationIsReversed: Boolean = DEFAULT_ORIENTATION_IS_REVERSED);
+      reintroduce; overload;
     function Execute(clipType: TClipType; fillRule: TFillRule;
       out closedSolutions: TPathsD): Boolean; overload;
     function  Execute(clipType: TClipType; fillRule: TFillRule;
@@ -360,14 +366,6 @@ type
   end;
 
 implementation
-
-{$IFDEF REVERSE_ORIENTATION}
-  const fillPos = frNegative;
-  const fillNeg = frPositive;
-{$ELSE}
-  const fillPos = frPositive;
-  const fillNeg = frNegative;
-{$ENDIF}
 
 //OVERFLOWCHECKS OFF is a necessary workaround for a compiler bug that very
 //occasionally reports incorrect overflow errors in Delphi versions before 10.2.
@@ -846,7 +844,7 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-function Area(op: POutPt): Double;
+function Area(op: POutPt; reverseOrientation : Boolean): Double;
 var
   op2: POutPt;
   d: double;
@@ -860,15 +858,14 @@ begin
     Result := Result + d * (op2.Prev.Pt.X - op2.Pt.X);
     op2 := op2.Next;
   until op2 = op;
-{$IFDEF REVERSE_ORIENTATION}
-  Result := Result * 0.5;
-{$ELSE}
-  Result := Result * -0.5;
-{$ENDIF}
+  if reverseOrientation then
+    Result := Result * 0.5 else
+    Result := Result * -0.5;
 end;
 //------------------------------------------------------------------------------
 
-function AreaTriangle(const pt1, pt2, pt3: TPoint64): double;
+function AreaTriangle(const pt1, pt2, pt3: TPoint64;
+  reverseOrientation : Boolean): double;
 var
   d1,d2,d3,d4,d5,d6: double;
 begin
@@ -878,11 +875,9 @@ begin
   d4 := (pt1.x - pt2.x);
   d5 := (pt2.y + pt3.y);
   d6 := (pt2.x - pt3.x);
-{$IFDEF REVERSE_ORIENTATION}
-  result := d1 * d2 + d3 *d4 + d5 *d6;
-{$ELSE}
-  result := -(d1 * d2 + d3 *d4 + d5 *d6);
-{$ENDIF}
+  if reverseOrientation then
+    result := d1 * d2 + d3 *d4 + d5 *d6 else
+    result := -(d1 * d2 + d3 *d4 + d5 *d6);
 end;
 //------------------------------------------------------------------------------
 
@@ -901,7 +896,7 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-function CheckFixInnerOuter(e: PActive): Boolean;
+function CheckFixInnerOuter(e: PActive; reverseOrientation: Boolean): Boolean;
 var
   wasOuter, isOuter: Boolean;
   e2: PActive;
@@ -934,7 +929,7 @@ begin
     else e.OutRec.Owner := e2.OutRec;
   end;
 
-  if (Area(e.outrec.Pts) > 0) <> isOuter then
+  if (Area(e.outrec.Pts, reverseOrientation) > 0) <> isOuter then
     ReverseOutPts(e.outrec.Pts);
 end;
 //------------------------------------------------------------------------------
@@ -1132,15 +1127,21 @@ end;
 // TClipperBase methods ...
 //------------------------------------------------------------------------------
 
-constructor TClipperBase.Create;
+constructor TClipperBase.Create(OrientationIsReversed: Boolean);
+
 begin
   FLocMinList       := TList.Create;
   FOutRecList       := TList.Create;
   FJoinerList       := TList.Create;
   FIntersectList    := TList.Create;
   FVertexArrayList  := TList.Create;
-  FPreserveCollinear := true;
-  FReverseSolution := false;
+  FPreserveCollinear  := true;
+  FReverseSolution    := false;
+
+  FOrientationIsReversed := OrientationIsReversed;
+  if FOrientationIsReversed then
+    FFillPos := frNegative else
+    FFillPos := frPositive;
 end;
 //------------------------------------------------------------------------------
 
@@ -1497,36 +1498,49 @@ function TClipperBase.IsContributingClosed(e: PActive): Boolean;
 begin
   Result := false;
   case FFillRule of
-    frNonZero: if abs(e.WindCnt) <> 1 then Exit;
-    fillPos: if (e.WindCnt <> -1) then Exit;
-    fillNeg: if (e.WindCnt <> 1) then Exit;
+    frNonZero:
+      if abs(e.WindCnt) <> 1 then Exit;
+    frPositive, frNegative:
+      if FFillRule = FFillPos then
+      begin
+        if (e.WindCnt <> -1) then Exit;
+      end else
+        if (e.WindCnt <> 1) then Exit;
   end;
 
   case FClipType of
     ctIntersection:
       case FFillRule of
         frEvenOdd, frNonZero: Result := (e.WindCnt2 <> 0);
-        fillPos: Result := (e.WindCnt2 < 0);
-        fillNeg: Result := (e.WindCnt2 > 0);
+      else
+        if FFillRule = FFillPos then
+          Result := (e.WindCnt2 < 0) else
+          Result := (e.WindCnt2 > 0);
       end;
     ctUnion:
       case FFillRule of
         frEvenOdd, frNonZero: Result := (e.WindCnt2 = 0);
-        fillPos: Result := (e.WindCnt2 >= 0);
-        fillNeg: Result := (e.WindCnt2 <= 0);
+      else
+        if FFillRule = FFillPos then
+          Result := (e.WindCnt2 >= 0) else
+          Result := (e.WindCnt2 <= 0);
       end;
     ctDifference:
       if GetPolyType(e) = ptSubject then
         case FFillRule of
           frEvenOdd, frNonZero: Result := (e.WindCnt2 = 0);
-          fillPos: Result := (e.WindCnt2 >= 0);
-          fillNeg: Result := (e.WindCnt2 <= 0);
+        else
+          if FFillRule = FFillPos then
+            Result := (e.WindCnt2 >= 0) else
+            Result := (e.WindCnt2 <= 0);
         end
       else
         case FFillRule of
           frEvenOdd, frNonZero: Result := (e.WindCnt2 <> 0);
-          fillPos: Result := (e.WindCnt2 < 0);
-          fillNeg: Result := (e.WindCnt2 > 0);
+        else
+          if FFillRule = FFillPos then
+            Result := (e.WindCnt2 < 0) else
+            Result := (e.WindCnt2 > 0);
         end;
     ctXor:
         Result := true;
@@ -1993,8 +2007,9 @@ procedure TClipperBase.FixSelfIntersects(var op: POutPt);
     if Assigned(FZFunc) then
       FZFunc(prevOp.Pt, splitOp.Pt, splitOp.Next.Pt, nextNextOp.Pt, ip.Pt);
   {$ENDIF}
-    area1 := Area(op);
-    area2 := AreaTriangle(ip, splitOp.Pt, splitOp.Next.Pt);
+    area1 := Area(op, FOrientationIsReversed);
+    area2 := AreaTriangle(ip,
+      splitOp.Pt, splitOp.Next.Pt, FOrientationIsReversed);
 
     if PointsEqual(ip, prevOp.Pt) or
       PointsEqual(ip, nextNextOp.Pt) then
@@ -2324,8 +2339,8 @@ var
   area1, area2: double;
   newOr: POutRec;
 begin
-  area1 := Area(op1);
-  area2 := Area(op2);
+  area1 := Area(op1, FOrientationIsReversed);
+  area2 := Area(op2, FOrientationIsReversed);
   if Abs(area1) < 1 then
   begin
     SafeDisposeOutPts(op1);
@@ -2804,20 +2819,22 @@ begin
   end;
 
   case FFillRule of
-    fillPos:
+      frEvenOdd, frNonZero:
+        begin
+          e1WindCnt := abs(e1.WindCnt);
+          e2WindCnt := abs(e2.WindCnt);
+        end;
+      else
       begin
-        e1WindCnt := -e1.WindCnt;
-        e2WindCnt := -e2.WindCnt;
-      end;
-    fillNeg:
-      begin
-        e1WindCnt := e1.WindCnt;
-        e2WindCnt := e2.WindCnt;
-      end;
-    else
-      begin
-        e1WindCnt := abs(e1.WindCnt);
-        e2WindCnt := abs(e2.WindCnt);
+        if FFillRule = FFillPos then
+        begin
+          e1WindCnt := -e1.WindCnt;
+          e2WindCnt := -e2.WindCnt;
+        end else
+        begin
+          e1WindCnt := e1.WindCnt;
+          e2WindCnt := e2.WindCnt;
+        end;
       end;
   end;
 
@@ -2883,21 +2900,23 @@ begin
   else //neither edge is 'hot'
   begin
     case FFillRule of
-      fillPos:
-      begin
-        e1WindCnt2 := -e1.WindCnt2;
-        e2WindCnt2 := -e2.WindCnt2;
-      end;
-      fillNeg:
-      begin
-        e1WindCnt2 := e1.WindCnt2;
-        e2WindCnt2 := e2.WindCnt2;
-      end
-      else
-      begin
-        e1WindCnt2 := abs(e1.WindCnt2);
-        e2WindCnt2 := abs(e2.WindCnt2);
-      end;
+      frEvenOdd, frNonZero:
+        begin
+          e1WindCnt2 := abs(e1.WindCnt2);
+          e2WindCnt2 := abs(e2.WindCnt2);
+        end;
+        else
+        begin
+          if FFillRule = FFillPos then
+          begin
+            e1WindCnt2 := -e1.WindCnt2;
+            e2WindCnt2 := -e2.WindCnt2;
+          end else
+          begin
+            e1WindCnt2 := e1.WindCnt2;
+            e2WindCnt2 := e2.WindCnt2;
+          end;
+        end;
     end;
 
     if not IsSamePolyType(e1, e2) then
@@ -2953,10 +2972,10 @@ begin
   if ValidateClosedPathEx(e1.OutRec.Pts) and
     ValidateClosedPathEx(e2.OutRec.Pts) then
   begin
-    if CheckFixInnerOuter(e1) and
+    if CheckFixInnerOuter(e1, FOrientationIsReversed) and
       (IsOuter(e1.OutRec) <> IsFront(e1)) then
       SwapFrontBackSides(e1.OutRec)
-    else if CheckFixInnerOuter(e2) and
+    else if CheckFixInnerOuter(e2, FOrientationIsReversed) and
       (IsOuter(e2.OutRec) <> IsFront(e2)) then
       SwapFrontBackSides(e2.OutRec)
     else
@@ -4191,9 +4210,10 @@ end;
 //  TClipperD methods
 //------------------------------------------------------------------------------
 
-constructor TClipperD.Create(roundingDecimalPrecision: integer = 2);
+constructor TClipperD.Create(roundingDecimalPrecision: integer;
+  OrientationIsReversed: Boolean);
 begin
-  inherited Create;
+  inherited Create(OrientationIsReversed);
   if (roundingDecimalPrecision < -8) or
     (roundingDecimalPrecision > 8) then
       Raise EClipperLibException(rsClipper_RoundingErr);

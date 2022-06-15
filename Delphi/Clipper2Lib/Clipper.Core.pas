@@ -3,7 +3,7 @@ unit Clipper.Core;
 (*******************************************************************************
 * Author    :  Angus Johnson                                                   *
 * Version   :  10.0 (beta) - aka Clipper2                                      *
-* Date      :  9 June 2022                                                     *
+* Date      :  16 June 2022                                                    *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  Core Clipper Library module                                     *
 *              Contains structures and functions used throughout the library   *
@@ -16,6 +16,21 @@ interface
 
 uses
   SysUtils, Math;
+
+	//The classic Cartesian plane is defined by an X-axis that's positive toward
+	//the right and a Y-axis that's positive upwards. However, many modern
+	//graphics libraries use an inverted Y-axis (where Y is positive downward).
+	//This effectively flips polygons upside down, with winding directions that
+	//were clockwise becoming anti-clockwise, and areas that were positive
+	//becoming negative. This is important to understand when using Clipper's
+	//Positive and Negative filling rules, since winding directions in Clipper
+	//may be opposite to what you were expecting. To minimise any confusion,
+	//the DEFAULT_ORIENTATION_IS_REVERSED constant below allows you to change the
+	//**default** orientation. This constant is intended as "set and perhaps not
+	//quite forget". While this sets the default orientation, both the Clipper
+	//and ClipperOffest classes contain 'OrientationIsReversed' parameters which
+	//can override the default setting.
+  const DEFAULT_ORIENTATION_IS_REVERSED = true;
 
 type
   PPoint64  = ^TPoint64;
@@ -94,15 +109,21 @@ type
 
   EClipperLibException = class(Exception);
 
-function Area(const path: TPath64): Double; overload;
-function Area(const paths: TPaths64): Double; overload;
+function Area(const path: TPath64;
+  orientationIsReversed: Boolean = DEFAULT_ORIENTATION_IS_REVERSED): Double; overload;
+function Area(const paths: TPaths64;
+  orientationIsReversed: Boolean = DEFAULT_ORIENTATION_IS_REVERSED): Double; overload;
   {$IFDEF INLINING} inline; {$ENDIF}
-function Area(const path: TPathD): Double; overload;
-function Area(const paths: TPathsD): Double; overload;
+function Area(const path: TPathD;
+  orientationIsReversed: Boolean = DEFAULT_ORIENTATION_IS_REVERSED): Double; overload;
+function Area(const paths: TPathsD;
+  orientationIsReversed: Boolean = DEFAULT_ORIENTATION_IS_REVERSED): Double; overload;
   {$IFDEF INLINING} inline; {$ENDIF}
-function IsPositive(const path: TPath64): Boolean; overload;
+function IsPositive(const path: TPath64;
+  orientationIsReversed: Boolean = DEFAULT_ORIENTATION_IS_REVERSED): Boolean; overload;
   {$IFDEF INLINING} inline; {$ENDIF}
-function IsPositive(const path: TPathD): Boolean; overload;
+function IsPositive(const path: TPathD;
+  orientationIsReversed: Boolean = DEFAULT_ORIENTATION_IS_REVERSED): Boolean; overload;
   {$IFDEF INLINING} inline; {$ENDIF}
 
 function CrossProduct(const pt1, pt2, pt3: TPoint64): double; overload;
@@ -1244,7 +1265,7 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-function Area(const path: TPath64): Double;
+function Area(const path: TPath64; orientationIsReversed: Boolean): Double;
 var
   i, highI: Integer;
   d: double;
@@ -1262,28 +1283,26 @@ begin
     Result := Result + d * (p1.X - p2.X);
     p1 := p2; inc(p2);
   end;
-{$IFDEF REVERSE_ORIENTATION}
-  Result := Result * 0.5;
-{$ELSE}
-  Result := Result * -0.5;
-{$ENDIF}
+  if orientationIsReversed then
+    Result := Result * 0.5 else
+    Result := Result * -0.5;
 end;
 //------------------------------------------------------------------------------
 
-function Area(const paths: TPaths64): Double;
+function Area(const paths: TPaths64; orientationIsReversed: Boolean): Double;
 var
   i: integer;
 begin
   Result := 0;
   for i := 0 to High(paths) do
-    Result := Result + Area(paths[i]);
+    Result := Result + Area(paths[i], orientationIsReversed);
 end;
 //------------------------------------------------------------------------------
 
-function Area(const path: TPathD): Double;
+function Area(const path: TPathD; orientationIsReversed: Boolean): Double;
 var
   i, highI: Integer;
-  p1,p2: PPoint64;
+  p1,p2: PPointD;
 begin
   //https://en.wikipedia.org/wiki/Shoelace_formula
   Result := 0.0;
@@ -1296,33 +1315,31 @@ begin
     Result := Result + (p1.Y + p2.Y) * (p1.X - p2.X);
     p1 := p2; inc(p2);
   end;
-{$IFDEF REVERSE_ORIENTATION}
-  Result := Result * 0.5;
-{$ELSE}
-  Result := Result * -0.5;
-{$ENDIF}
+  if orientationIsReversed then
+    Result := Result * 0.5 else
+    Result := Result * -0.5;
 end;
 //------------------------------------------------------------------------------
 
-function Area(const paths: TPathsD): Double;
+function Area(const paths: TPathsD; orientationIsReversed: Boolean): Double;
 var
   i: integer;
 begin
   Result := 0;
   for i := 0 to High(paths) do
-    Result := Result + Area(paths[i]);
+    Result := Result + Area(paths[i], orientationIsReversed);
 end;
 //------------------------------------------------------------------------------
 
-function IsPositive(const path: TPath64): Boolean;
+function IsPositive(const path: TPath64; orientationIsReversed: Boolean): Boolean;
 begin
-  Result := (Area(path) >= 0);
+  Result := (Area(path, orientationIsReversed) >= 0);
 end;
 //------------------------------------------------------------------------------
 
-function IsPositive(const path: TPathD): Boolean;
+function IsPositive(const path: TPathD; orientationIsReversed: Boolean): Boolean;
 begin
-  Result := (Area(path) >= 0);
+  Result := (Area(path, orientationIsReversed) >= 0);
 end;
 //------------------------------------------------------------------------------
 
@@ -1558,5 +1575,6 @@ begin
     Result[i] := RamerDouglasPeucker(paths[i], epsilon);
 end;
 //------------------------------------------------------------------------------
+
 end.
 
