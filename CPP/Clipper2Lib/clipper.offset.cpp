@@ -387,8 +387,6 @@ Paths64 ClipperOffset::Execute(double delta)
 		groups_iter != groups_.end(); ++groups_iter)
 	{
 		DoGroupOffset(*groups_iter, delta);
-		Paths64::const_iterator cit = groups_iter->paths_out_.cbegin();
-		Paths64::const_iterator cend = groups_iter->paths_out_.cend();
 		result.swap(groups_iter->paths_out_);
 		groups_iter->path_.clear();
 	}
