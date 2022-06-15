@@ -20,6 +20,8 @@ target_include_directories(Clipper2
   PUBLIC Clipper2Lib
   SYSTEM INTERFACE Clipper2Lib
 )
+
+target_compile_options(Clipper2 PRIVATE -Wall -Wextra -Wpedantic -Werror)
 target_link_libraries(Clipper2 PRIVATE -lm)
 set_target_properties(Clipper2 PROPERTIES LINKER_LANGUAGE CXX)
 set_target_properties(Clipper2 PROPERTIES LINK_FLAGS "-Wl,-rpath,${CMAKE_SOURCE_DIR}/lib")
