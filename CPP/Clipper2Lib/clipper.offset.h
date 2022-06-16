@@ -71,7 +71,7 @@ public:
 		miter_limit_(miter_limit), arc_tolerance_(arc_tolerance),
 		preserve_collinear_(preserve_collinear),
 		reverse_solution_(reverse_solution),
-		reverse_orientation_(reverse_orientation){ };
+		reverse_orientation_(reverse_orientation) { (void)reverse_orientation_; };
 
 	~ClipperOffset() { Clear(); };
 

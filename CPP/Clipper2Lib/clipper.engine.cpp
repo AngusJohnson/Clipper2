@@ -18,7 +18,6 @@
 
 namespace Clipper2Lib {
 
-	static const double DefaultScale = 100;
 	static const double FloatingPointTolerance = 1.0e-12;
 
 	//Every closed path (or polygon) is made up of a series of vertices forming

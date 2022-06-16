@@ -356,6 +356,11 @@ namespace Clipper2Lib {
 
 	};
 
+#ifdef __clang__
+# pragma clang diagnostic push
+# pragma clang diagnostic ignored "-Woverloaded-virtual"
+#endif
+
 	void Polytree64ToPolytreeD(const PolyPath64& polytree, PolyPathD& result);
 
 	class Clipper64 : public ClipperBase
@@ -449,6 +454,10 @@ namespace Clipper2Lib {
 		}
 
 	};
+#ifdef __clang__
+# pragma clang diagnostic pop
+#endif
+
 
 	using Clipper = Clipper64;
 
