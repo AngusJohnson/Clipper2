@@ -52,7 +52,7 @@ namespace Clipper2Lib
     ClipperD clipper;
     clipper.AddSubject(subjects);
     clipper.AddClip(clips);
-    clipper.Execute(cliptype, fillrule, result);
+    clipper.ExecuteD(cliptype, fillrule, result);
     return result;
   }
 
@@ -90,7 +90,7 @@ namespace Clipper2Lib
     PathsD result;
     ClipperD clipper;
     clipper.AddSubject(subjects);
-    clipper.Execute(ClipType::Union, fillrule, result);
+    clipper.ExecuteD(ClipType::Union, fillrule, result);
     return result;
   }
 
