@@ -265,8 +265,8 @@ void ClipperOffset::OffsetOpenPath(PathGroup& group, Path64& path, EndType end_t
 
 void ClipperOffset::DoGroupOffset(PathGroup& group, double delta)
 {
-	if (group.end_type != EndType::Polygon) delta = std::abs(delta) / 2;
-	bool isClosedPaths = IsClosedPath(group.end_type);
+	if (group.end_type_ != EndType::Polygon) delta = std::abs(delta) / 2;
+	bool isClosedPaths = IsClosedPath(group.end_type_);
 
 	if (isClosedPaths)
 	{
@@ -275,26 +275,26 @@ void ClipperOffset::DoGroupOffset(PathGroup& group, double delta)
 		Paths64::size_type lowestIdx = GetLowestPolygonIdx(group.paths_in_);
 		double area = Area(group.paths_in_[lowestIdx], true);
 		if (area == 0) return;	
-		group.is_reversed = (area < 0);
-		if (group.is_reversed) delta = -delta;
+		group.is_reversed_ = (area < 0);
+		if (group.is_reversed_) delta = -delta;
 	} 
 	else
-		group.is_reversed = false;
+		group.is_reversed_ = false;
 
 	delta_ = delta;
 	double absDelta = std::abs(delta_);
-	join_type_ = group.join_type;
+	join_type_ = group.join_type_;
 
 	double arcTol = (arc_tolerance_ > floating_point_tolerance ? arc_tolerance_
 		: std::log10(2 + absDelta) * default_arc_tolerance); //empirically derived
 
 //calculate a sensible number of steps (for 360 deg for the given offset
-	if (group.join_type == JoinType::Round || group.end_type == EndType::Round)
+	if (group.join_type_ == JoinType::Round || group.end_type_ == EndType::Round)
 	{
 		steps_per_rad_ = PI / std::acos(1 - arcTol / absDelta) / (PI *2);
 	}
 
-	bool is_closed_path = IsClosedPath(group.end_type);
+	bool is_closed_path = IsClosedPath(group.end_type_);
 	Paths64::const_iterator path_iter;
 	for(path_iter = group.paths_in_.cbegin(); path_iter != group.paths_in_.cend(); ++path_iter)
 	{
@@ -306,10 +306,10 @@ void ClipperOffset::DoGroupOffset(PathGroup& group, double delta)
 		{
 			group.path_ = Path64();
 			//single vertex so build a circle or square ...
-			if (group.join_type == JoinType::Round)
+			if (group.join_type_ == JoinType::Round)
 			{
 				double radius = std::abs(delta_);
-				if (group.end_type == EndType::Polygon) radius *= 0.5;
+				if (group.end_type_ == EndType::Polygon) radius *= 0.5;
 				group.path_ = Ellipse(path[0], radius, radius);
 			}
 			else
@@ -325,9 +325,9 @@ void ClipperOffset::DoGroupOffset(PathGroup& group, double delta)
 		else
 		{
 			BuildNormals(path);
-			if (group.end_type == EndType::Polygon) OffsetPolygon(group, path);
-			else if (group.end_type == EndType::Joined) OffsetOpenJoined(group, path);
-			else OffsetOpenPath(group, path, group.end_type);
+			if (group.end_type_ == EndType::Polygon) OffsetPolygon(group, path);
+			else if (group.end_type_ == EndType::Joined) OffsetOpenJoined(group, path);
+			else OffsetOpenPath(group, path, group.end_type_);
 		}
 	}
 
@@ -337,9 +337,9 @@ void ClipperOffset::DoGroupOffset(PathGroup& group, double delta)
 		Clipper c(true);
 		c.PreserveCollinear = false;
 		//the solution should retain the orientation of the input
-		c.ReverseSolution = reverse_solution_ != group.is_reversed;
+		c.ReverseSolution = reverse_solution_ != group.is_reversed_;
 		c.AddSubject(group.paths_out_);
-		if (group.is_reversed)
+		if (group.is_reversed_)
 			c.Execute(ClipType::Union, FillRule::Negative, group.paths_out_);
 		else
 			c.Execute(ClipType::Union, FillRule::Positive, group.paths_out_);
@@ -380,10 +380,10 @@ Paths64 ClipperOffset::Execute(double delta)
 		Clipper c(true);
 		c.PreserveCollinear = false;
 		//the solution should retain the orientation of the input
-		c.ReverseSolution = reverse_solution_ != groups_[0].is_reversed;
+		c.ReverseSolution = reverse_solution_ != groups_[0].is_reversed_;
 
 		c.AddSubject(solution);
-		if (groups_[0].is_reversed)
+		if (groups_[0].is_reversed_)
 			c.Execute(ClipType::Union, FillRule::Negative, solution);
 		else
 			c.Execute(ClipType::Union, FillRule::Positive, solution);
