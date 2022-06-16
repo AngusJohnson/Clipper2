@@ -20,6 +20,8 @@ target_include_directories(Clipper2
   PUBLIC Clipper2Lib
   SYSTEM INTERFACE Clipper2Lib
 )
+
+target_compile_options(Clipper2 PRIVATE -Wall -Wextra -Wpedantic -Werror)
 target_link_libraries(Clipper2 PRIVATE -lm)
 set_target_properties(Clipper2 PROPERTIES LINKER_LANGUAGE CXX)
 set_target_properties(Clipper2 PROPERTIES LINK_FLAGS "-Wl,-rpath,${CMAKE_SOURCE_DIR}/lib")
@@ -73,20 +75,21 @@ if(PACKAGE_TESTS)
     set_target_properties(${TESTNAME} PROPERTIES FOLDER tests)
   endmacro()
 
-  package_add_test(test1 Tests/Tests/TestFromTextFile2.cpp )
-  package_add_test(test2 Tests/Tests/TestFromTextFile.cpp )
+  package_add_test(test1 Tests/Tests/TestPolygons.cpp )
+  package_add_test(test2 Tests/Tests/TestLines.cpp )
   package_add_test(test3 Tests/Tests/TestIntersection.cpp )
-  package_add_test(test4 Tests/Tests/TestOffset.cpp )
-  package_add_test(test5 Tests/Tests/TestOpenPath.cpp )
-  package_add_test(test6 Tests/Tests/TestUnion.cpp )
+  package_add_test(test4 Tests/Tests/TestUnion.cpp )
+  package_add_test(test5 Tests/Tests/TestOffset.cpp )
+  package_add_test(test6 Tests/Tests/TestFromTextFile2.cpp )
   package_add_test(test7 Tests/Tests/TestFromTextFile3.cpp )
 
   install( FILES  ../Tests/Tests3.txt DESTINATION . )
   install( FILES  ../Tests/Tests2.txt DESTINATION . )
-  install( FILES  ../Tests/Tests.txt DESTINATION . )
+  install( FILES  ../Tests/Lines.txt DESTINATION . )
+  install( FILES  ../Tests/Polygons.txt DESTINATION . )
 
   file(COPY ../Tests/Tests3.txt DESTINATION ${CMAKE_BINARY_DIR} FILE_PERMISSIONS OWNER_READ GROUP_READ WORLD_READ )
   file(COPY ../Tests/Tests2.txt DESTINATION ${CMAKE_BINARY_DIR} FILE_PERMISSIONS OWNER_READ GROUP_READ WORLD_READ )
-  file(COPY ../Tests/Tests.txt DESTINATION ${CMAKE_BINARY_DIR} FILE_PERMISSIONS OWNER_READ GROUP_READ WORLD_READ )
+  file(COPY ../Tests/Lines.txt DESTINATION ${CMAKE_BINARY_DIR} FILE_PERMISSIONS OWNER_READ GROUP_READ WORLD_READ )
+  file(COPY ../Tests/Polygons.txt DESTINATION ${CMAKE_BINARY_DIR} FILE_PERMISSIONS OWNER_READ GROUP_READ WORLD_READ )
 endif()
-
