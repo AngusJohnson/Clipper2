@@ -252,11 +252,11 @@ namespace Clipper2Lib {
 		void AddPath(const Path64& path, PathType polytype, bool is_open);
 		void AddPaths(const Paths64& paths, PathType polytype, bool is_open);
 
-		virtual bool Execute(ClipType clip_type,
+		bool Execute(ClipType clip_type,
 			FillRule fill_rule, Paths64& solution_closed);
-		virtual bool Execute(ClipType clip_type,
+		bool Execute(ClipType clip_type,
 			FillRule fill_rule, Paths64& solution_closed, Paths64& solution_open);
-		virtual bool Execute(ClipType clip_type,
+		bool Execute(ClipType clip_type,
 			FillRule fill_rule, PolyTree64& polytree, Paths64& open_paths);
 	public:
 #ifdef USINGZ
@@ -377,19 +377,19 @@ namespace Clipper2Lib {
 		}
 
 		bool Execute(ClipType clip_type,
-			FillRule fill_rule, Paths64& closed_paths) override
+			FillRule fill_rule, Paths64& closed_paths)
 		{
 			return ClipperBase::Execute(clip_type, fill_rule, closed_paths);
 		}
 
 		bool Execute(ClipType clip_type,
-			FillRule fill_rule, Paths64& closed_paths, Paths64& open_paths) override
+			FillRule fill_rule, Paths64& closed_paths, Paths64& open_paths)
 		{
 			return ClipperBase::Execute(clip_type, fill_rule, closed_paths, open_paths);
 		}
 
 		bool Execute(ClipType clip_type,
-			FillRule fill_rule, PolyTree64& polytree, Paths64& open_paths) override
+			FillRule fill_rule, PolyTree64& polytree, Paths64& open_paths)
 		{
 			return ClipperBase::Execute(clip_type, fill_rule, polytree, open_paths);
 		}
