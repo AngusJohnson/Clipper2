@@ -1,6 +1,6 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  16 May 2022                                                     *
+* Date      :  16 June 2022                                                    *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * License   :  http://www.boost.org/LICENSE_1_0.txt                            *
@@ -45,11 +45,11 @@ namespace Clipper2Lib {
 
   inline void SvgAddSubject(SvgWriter& svg, const PathsD& path)
   {
-    if (svg.FillRule() == FillRule::Positive ||
-      svg.FillRule() == FillRule::Negative)
+    if (svg.Fill_Rule() == FillRule::Positive ||
+      svg.Fill_Rule() == FillRule::Negative)
     {
       svg.AddPaths(path, false, 0x0, subj_stroke_clr, 0.8, false);
-      PathsD tmp = Union(path, svg.FillRule());
+      PathsD tmp = Union(path, svg.Fill_Rule());
       svg.AddPaths(tmp, false, subj_brush_clr, subj_stroke_clr, 0.8, false);
     } 
     else
@@ -60,11 +60,11 @@ namespace Clipper2Lib {
   inline void SvgAddSubject(SvgWriter& svg, const Paths64& paths)
   {
     PathsD tmp = TransformPaths<double, int64_t>(paths);
-    if (svg.FillRule() == FillRule::Positive ||
-      svg.FillRule() == FillRule::Negative)
+    if (svg.Fill_Rule() == FillRule::Positive ||
+      svg.Fill_Rule() == FillRule::Negative)
     {
       svg.AddPaths(tmp, false, 0x0, subj_stroke_clr, 0.8, false);
-      tmp = Union(tmp, svg.FillRule());
+      tmp = Union(tmp, svg.Fill_Rule());
       svg.AddPaths(tmp, false, subj_brush_clr, subj_stroke_clr, 0.8, false);
     }
     else 
@@ -89,11 +89,11 @@ namespace Clipper2Lib {
 
   inline void SvgAddClip(SvgWriter& svg, const PathsD& path)
   {
-    if (svg.FillRule() == FillRule::Positive ||
-      svg.FillRule() == FillRule::Negative)
+    if (svg.Fill_Rule() == FillRule::Positive ||
+      svg.Fill_Rule() == FillRule::Negative)
     {
       svg.AddPaths(path, false, 0x0, clip_stroke_clr, 0.8, false);
-      PathsD tmp = Union(path, svg.FillRule());
+      PathsD tmp = Union(path, svg.Fill_Rule());
       svg.AddPaths(tmp, false, clip_brush_clr, clip_stroke_clr, 0.8, false);
     }
     else
@@ -104,11 +104,11 @@ namespace Clipper2Lib {
   inline void SvgAddClip(SvgWriter& svg, const Paths64& paths)
   {
     PathsD tmp = TransformPaths<double, int64_t>(paths);
-    if (svg.FillRule() == FillRule::Positive ||
-      svg.FillRule() == FillRule::Negative)
+    if (svg.Fill_Rule() == FillRule::Positive ||
+      svg.Fill_Rule() == FillRule::Negative)
     {
       svg.AddPaths(tmp, false, 0x0, clip_stroke_clr, 0.8, false);
-      tmp = Union(tmp, svg.FillRule());
+      tmp = Union(tmp, svg.Fill_Rule());
       svg.AddPaths(tmp, false, clip_brush_clr, clip_stroke_clr, 0.8, false);
     }
     else

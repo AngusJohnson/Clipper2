@@ -1,6 +1,6 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  16 May 2022                                                     *
+* Date      :  16 June 2022                                                    *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * License   :  http://www.boost.org/LICENSE_1_0.txt                            *
@@ -86,7 +86,7 @@ namespace Clipper2Lib {
     ~SvgWriter() { Clear(); };
         
     void Clear();
-    FillRule FillRule() { return fill_rule_; }
+    FillRule Fill_Rule() { return fill_rule_; }
     void SetCoordsStyle(const std::string &font_name, unsigned font_color, unsigned font_size);
     void AddText(const std::string &text, unsigned font_color, unsigned font_size, int x, int y);
     void AddPath(const PathD& path, bool is_open, unsigned brush_color,
