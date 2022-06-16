@@ -177,11 +177,11 @@ void RunSavedTests(const std::string& filename,
       c.Execute(ct, fr, solution, solution_open);
       int64_t area2 = static_cast<int64_t>(Area(solution));
       int64_t count2 = solution.size();
-      int64_t count_diff = abs(count2 - count);
+      int64_t count_diff = std::labs(count2 - count);
       if (count && count_diff > 2 && count_diff/ static_cast<double>(count) > 0.02)
         std::cout << "  Test " << i << " path counts differ: Saved val= " <<
         count << "; New val=" << count2 << std::endl;
-      int64_t area_diff = std::abs(area2 - area);
+      int64_t area_diff = std::labs(area2 - area);
       if (area && (area_diff > 2) && (area_diff/static_cast<double>(area)) > 0.02)
         std::cout << "  Test " << i << " path areas differ: Saved val= " <<
         area << "; New val=" << area2 << std::endl;
