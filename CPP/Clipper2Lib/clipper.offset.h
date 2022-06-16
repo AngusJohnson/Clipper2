@@ -64,7 +64,7 @@ private:
 	void DoGroupOffset(PathGroup &group, double delta);
 public:
 	ClipperOffset(double miter_limit = 2.0,
-		double arc_tolerance = 0.0, int precision = 2,
+		double arc_tolerance = 0.0,
 		bool preserve_collinear = false, 
 		bool reverse_solution = false,
 		bool reverse_orientation = DEFAULT_ORIENTATION_IS_REVERSED) :
