@@ -2,10 +2,14 @@
 #include "../../Clipper2Lib/clipper.h"
 #include "../../Utils/ClipFileLoad.h"
 
+TEST(Clipper2Tests, TestMultipleLines) {
 
-TEST(Clipper2Tests, TestLines)
-{
+#ifdef _WIN32
   std::ifstream ifs("../../../Tests/Lines.txt");
+#else
+  std::ifstream ifs("Lines.txt");
+#endif
+
   ASSERT_TRUE(ifs);
   ASSERT_TRUE(ifs.good());
 
