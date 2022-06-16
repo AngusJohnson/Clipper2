@@ -51,7 +51,6 @@ private:
 	bool merge_groups_ = true;
 	bool preserve_collinear_ = false;
 	bool reverse_solution_ = false;
-	bool reverse_orientation_ = false;
 
 	void DoSquare(PathGroup& group, const Path64& path, size_t j, size_t k);
 	void DoMiter(PathGroup& group, const Path64& path, size_t j, size_t k, double cos_a);
@@ -70,8 +69,7 @@ public:
 		bool reverse_orientation = DEFAULT_ORIENTATION_IS_REVERSED) :
 		miter_limit_(miter_limit), arc_tolerance_(arc_tolerance),
 		preserve_collinear_(preserve_collinear),
-		reverse_solution_(reverse_solution),
-		reverse_orientation_(reverse_orientation) { (void)reverse_orientation_; };
+		reverse_solution_(reverse_solution) { };
 
 	~ClipperOffset() { Clear(); };
 

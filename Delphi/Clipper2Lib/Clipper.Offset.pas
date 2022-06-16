@@ -53,7 +53,6 @@ type
     fOutPathLen  : Integer;
     fSolution    : TPaths64;
     fPreserveCollinear  : Boolean;
-    fOrientationIsReversed : Boolean;
     fReverseSolution    : Boolean;
     procedure AddPoint(x,y: double); overload;
     procedure AddPoint(const pt: TPoint64); overload;
@@ -72,8 +71,7 @@ type
     constructor Create(miterLimit: double = 2.0;
       arcTolerance: double = 0.0;
       PreserveCollinear: Boolean = False;
-      ReverseSolution: Boolean = False;
-      OrientationIsReversed: Boolean = DEFAULT_ORIENTATION_IS_REVERSED);
+      ReverseSolution: Boolean = False);
     destructor Destroy; override;
     procedure AddPath(const path: TPath64;
       joinType: TJoinType; endType: TEndType);
@@ -187,7 +185,7 @@ end;
 
 constructor TClipperOffset.Create(miterLimit: double;
   arcTolerance: double; PreserveCollinear: Boolean;
-  ReverseSolution: Boolean; OrientationIsReversed: Boolean);
+  ReverseSolution: Boolean);
 begin
   fMergeGroups  := true;
   fMiterLimit   := MiterLimit;
@@ -195,7 +193,6 @@ begin
   fInGroups     := TList.Create;
   fPreserveCollinear := preserveCollinear;
   fReverseSolution := ReverseSolution;
-  fOrientationIsReversed := OrientationIsReversed;
 end;
 //------------------------------------------------------------------------------
 
@@ -258,7 +255,8 @@ begin
     //designated orientation for outer polygons (needed for tidy-up clipping)
     lowestIdx := GetLowestPolygonIdx(pathgroup.paths);
     if lowestIdx < 0 then Exit;
-    area := Clipper.Core.Area(pathgroup.paths[lowestIdx], true);
+    //nb: don't use the default orientation here ...
+    area := Clipper.Core.Area(pathgroup.paths[lowestIdx], false);
     if area = 0 then Exit;
     pathgroup.reversed := (area < 0);
     if pathgroup.reversed then delta := -delta;
@@ -338,7 +336,7 @@ begin
   if not fMergeGroups then
   begin
     //clean up self-intersections ...
-    with TClipper64.Create(true) do
+    with TClipper64.Create(false) do
     try
       PreserveCollinear := fPreserveCollinear;
       //the solution should retain the orientation of the input
@@ -484,10 +482,11 @@ begin
   if fMergeGroups and (fInGroups.Count > 0) then
   begin
     //clean up self-intersections ...
-    with TClipper64.Create(true) do
+    with TClipper64.Create(false) do
     try
       PreserveCollinear := fPreserveCollinear;
       //the solution should retain the orientation of the input
+
       ReverseSolution :=
         fReverseSolution <> TPathGroup(fInGroups[0]).reversed;
       AddSubject(fSolution);

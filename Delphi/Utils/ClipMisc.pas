@@ -12,8 +12,10 @@ function MakeRandomPath(maxWidth, maxHeight, count: Integer;
 function MakeRandomPathD(maxWidth, maxHeight, count: Integer;
   margin: Integer = 10): TPathD;
 
-function Ellipse(const rec: TRect64; steps: integer = 0): TPath64; overload;
-function Ellipse(const rec: TRectD; steps: integer = 0): TPathD; overload;
+function Ellipse(const rec: TRect64; steps: integer = 0;
+    reverse_orientation: Boolean = DEFAULT_ORIENTATION_IS_REVERSED): TPath64; overload;
+function Ellipse(const rec: TRectD; steps: integer = 0;
+    reverse_orientation: Boolean = DEFAULT_ORIENTATION_IS_REVERSED): TPathD; overload;
 
 function MakeNPointedStar(const rec: TRect64;
   points: integer = 5): TPath64; overload;
@@ -82,16 +84,18 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-function Ellipse(const rec: TRect64; steps: integer): TPath64;
+function Ellipse(const rec: TRect64; steps: integer;
+  reverse_orientation: Boolean): TPath64;
 var
   tmp: TPathD;
 begin
-  tmp := Ellipse(RectD(rec), steps);
+  tmp := Ellipse(RectD(rec), steps, reverse_orientation);
   Result := Path64(tmp);
 end;
 //------------------------------------------------------------------------------
 
-function Ellipse(const rec: TRectD; steps: integer): TPathD;
+function Ellipse(const rec: TRectD; steps: integer;
+  reverse_orientation: Boolean): TPathD;
 var
   i: Integer;
   sinA, cosA: double;
@@ -106,7 +110,9 @@ begin
   end;
   if steps < 4 then
     steps := Max(4, Round(Pi * Sqrt(rec.width + rec.height)));
-  GetSinCos(2 * Pi / Steps, sinA, cosA);
+  if reverse_orientation then
+    GetSinCos(-2 * Pi / Steps, sinA, cosA) else
+    GetSinCos(2 * Pi / Steps, sinA, cosA);
   delta.x := cosA; delta.y := sinA;
   SetLength(Result, Steps);
   Result[0] := PointD(centre.X + radius.X, centre.Y);
@@ -144,8 +150,9 @@ function PointInPath(const pt: TPointD; const path: TPathD): Boolean;
 var
   i: integer;
 begin
+  Result := true;
   for i := 0 to high(path) do
-    if Clipper.Core.PointsNearEqual(pt, path[i], 0.001) then Exit(true);
+    if Clipper.Core.PointsNearEqual(pt, path[i], 0.001) then Exit;
   Result := false;
 end;
 //------------------------------------------------------------------------------

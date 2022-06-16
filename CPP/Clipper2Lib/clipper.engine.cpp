@@ -899,10 +899,10 @@ namespace Clipper2Lib {
 		{
 			if (fillrule_ == fillpos)
 			{
-				if (e.wind_cnt != -1) return false;
+				if (e.wind_cnt != 1) return false;
 			}
 			else /*(fillrule_ == fillneg)*/ 
-				if (e.wind_cnt != 1) return false;
+				if (e.wind_cnt != -1) return false;
 		}
 		}
 
@@ -916,9 +916,9 @@ namespace Clipper2Lib {
 				return (e.wind_cnt2 != 0);
 			default:
 				if (fillrule_ == fillpos) 
-					return (e.wind_cnt2 < 0);
-				else 
 					return (e.wind_cnt2 > 0);
+				else 
+					return (e.wind_cnt2 < 0);
 			}
 			break;
 
@@ -945,9 +945,9 @@ namespace Clipper2Lib {
 					return (e.wind_cnt2 == 0);
 				default:
 					if (fillrule_ == fillpos)
-						return (e.wind_cnt2 >= 0);
-					else
 						return (e.wind_cnt2 <= 0);
+					else
+						return (e.wind_cnt2 >= 0);
 				}
 			else
 				switch (fillrule_)
@@ -957,9 +957,9 @@ namespace Clipper2Lib {
 					return (e.wind_cnt2 != 0);
 				default:
 					if (fillrule_ == fillpos)
-						return (e.wind_cnt2 < 0);
-					else
 						return (e.wind_cnt2 > 0);
+					else
+						return (e.wind_cnt2 < 0);
 				}
 			break;
 
@@ -1909,13 +1909,13 @@ namespace Clipper2Lib {
 		default:
 			if (fillrule_ == fillpos)
 			{
-				old_e1_windcnt = -e1.wind_cnt;
-				old_e2_windcnt = -e2.wind_cnt;
+				old_e1_windcnt = e1.wind_cnt;
+				old_e2_windcnt = e2.wind_cnt;
 			}
 			else
 			{
-				old_e1_windcnt = e1.wind_cnt;
-				old_e2_windcnt = e2.wind_cnt;
+				old_e1_windcnt = -e1.wind_cnt;
+				old_e2_windcnt = -e2.wind_cnt;
 			}
 			break;
 		}
@@ -1998,13 +1998,13 @@ namespace Clipper2Lib {
 			default:
 				if (fillrule_ == fillpos)
 				{
-					e1Wc2 = -e1.wind_cnt2;
-					e2Wc2 = -e2.wind_cnt2;
+					e1Wc2 = e1.wind_cnt2;
+					e2Wc2 = e2.wind_cnt2;
 				}
 				else
 				{
-					e1Wc2 = e1.wind_cnt2;
-					e2Wc2 = e2.wind_cnt2;
+					e1Wc2 = -e1.wind_cnt2;
+					e2Wc2 = -e2.wind_cnt2;
 				}
 				break;
 			}
@@ -3360,7 +3360,7 @@ namespace Clipper2Lib {
 				Path64 path;
 				//closed paths should always return a Positive orientation
 				if (BuildPath(outrec->pts, 
-					ReverseSolution == orientation_is_reversed_, false, path))
+					ReverseSolution != orientation_is_reversed_, false, path))
 					solutionClosed.emplace_back(std::move(path));
 				path.resize(0);
 			}
@@ -3483,7 +3483,7 @@ namespace Clipper2Lib {
 			Path64 path;
 			//closed paths should always return a Positive orientation
 			if (!BuildPath(outrec->pts,
-				ReverseSolution == orientation_is_reversed_, false, path)) continue;
+				ReverseSolution != orientation_is_reversed_, false, path)) continue;
 
 			if (outrec->owner && outrec->owner->state == outrec->state)
 				outrec->owner = outrec->owner->owner;

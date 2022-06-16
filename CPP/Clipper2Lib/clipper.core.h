@@ -1,7 +1,7 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
 * Version   :  10.0 (beta) - aka Clipper2                                      *
-* Date      :  11 June 2022                                                    *
+* Date      :  17 June 2022                                                    *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  Core Clipper Library structures and functions                   *
@@ -26,15 +26,18 @@ namespace Clipper2Lib
 	//graphics libraries use an inverted Y-axis (where Y is positive downward).
 	//This effectively flips polygons upside down, with winding directions that
 	//were clockwise becoming anti-clockwise, and areas that were positive
-	//becoming negative. This is important to understand when using Clipper's
-	//Positive and Negative filling rules, since winding directions in Clipper
-	//may be opposite to what you were expecting. To minimise any confusion,
-	//the DEFAULT_ORIENTATION_IS_REVERSED constant below allows you to change the
-	//**default** orientation. This constant is intended as "set and perhaps not
-	//quite forget". While this sets the default orientation, both the Clipper
-	//and ClipperOffest classes contain 'OrientationIsReversed' parameters which
-	//can override the default setting.
-	static bool const DEFAULT_ORIENTATION_IS_REVERSED = true;//false;//
+	//becoming negative. Nevertheless, in Cartesian coordinates the area of a
+	//convex polygon is defined to be positive if the points are arranged in a
+	//counterclockwise order, and negative if they are in clockwise order
+	//(see https://mathworld.wolfram.com/PolygonArea.html). If this "normal"
+	//winding direction is inconvenient for whatever reason the following 
+	//constant can be changed to accommodate this. Note however that winding 
+	//direction is only important when using Clipper's Positive and Negative 
+	//filling rules. (Reversing orientation has no effect on NonZero an EvenOdd 
+	//filling.) The constant below is intended as "set and perhaps not quite 
+  //forget". While this sets the default orientation, the Clipper class
+  //constructor contains a parameter which can override this default setting.
+	static bool const DEFAULT_ORIENTATION_IS_REVERSED = false;
 	
 	static double const PI = 3.141592653589793238;
 
@@ -463,9 +466,9 @@ static double Area(const Path<T>& path,
 	if (cnt & 1)
 		a += static_cast<double>(it2->y + it1->y) * (it2->x - it1->x);
 	if (orientation_is_reversed)
-		return a * 0.5; 
+		return a * -0.5; 
 	else 
-		return a * -0.5;
+		return a * 0.5;
 }
 
 template <typename T>
@@ -505,9 +508,9 @@ static Path<T> Ellipse(const Point<T>& center,
 	//to ensure function returns a positive area
 	double si;
 	if (orientation_is_reversed)
-		si = std::sin(2 * PI / steps);
-	else
 		si = -std::sin(2 * PI / steps);
+	else
+		si = std::sin(2 * PI / steps);
 
 	double co = std::cos(2 * PI / steps);
 	double dx = co, dy = si;

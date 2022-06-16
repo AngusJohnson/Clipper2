@@ -859,8 +859,8 @@ begin
     op2 := op2.Next;
   until op2 = op;
   if reverseOrientation then
-    Result := Result * 0.5 else
-    Result := Result * -0.5;
+    Result := Result * -0.5 else
+    Result := Result * 0.5;
 end;
 //------------------------------------------------------------------------------
 
@@ -876,8 +876,8 @@ begin
   d5 := (pt2.y + pt3.y);
   d6 := (pt2.x - pt3.x);
   if reverseOrientation then
-    result := d1 * d2 + d3 *d4 + d5 *d6 else
-    result := -(d1 * d2 + d3 *d4 + d5 *d6);
+    result := -(d1 * d2 + d3 *d4 + d5 *d6) else
+    result := d1 * d2 + d3 *d4 + d5 *d6;
 end;
 //------------------------------------------------------------------------------
 
@@ -1503,9 +1503,9 @@ begin
     frPositive, frNegative:
       if FFillRule = FFillPos then
       begin
-        if (e.WindCnt <> -1) then Exit;
-      end else
         if (e.WindCnt <> 1) then Exit;
+      end else
+        if (e.WindCnt <> -1) then Exit;
   end;
 
   case FClipType of
@@ -1514,16 +1514,16 @@ begin
         frEvenOdd, frNonZero: Result := (e.WindCnt2 <> 0);
       else
         if FFillRule = FFillPos then
-          Result := (e.WindCnt2 < 0) else
-          Result := (e.WindCnt2 > 0);
+          Result := (e.WindCnt2 > 0) else
+          Result := (e.WindCnt2 < 0);
       end;
     ctUnion:
       case FFillRule of
         frEvenOdd, frNonZero: Result := (e.WindCnt2 = 0);
       else
         if FFillRule = FFillPos then
-          Result := (e.WindCnt2 >= 0) else
-          Result := (e.WindCnt2 <= 0);
+          Result := (e.WindCnt2 <= 0) else
+          Result := (e.WindCnt2 >= 0);
       end;
     ctDifference:
       if GetPolyType(e) = ptSubject then
@@ -1531,16 +1531,16 @@ begin
           frEvenOdd, frNonZero: Result := (e.WindCnt2 = 0);
         else
           if FFillRule = FFillPos then
-            Result := (e.WindCnt2 >= 0) else
-            Result := (e.WindCnt2 <= 0);
+            Result := (e.WindCnt2 <= 0) else
+            Result := (e.WindCnt2 >= 0);
         end
       else
         case FFillRule of
           frEvenOdd, frNonZero: Result := (e.WindCnt2 <> 0);
         else
           if FFillRule = FFillPos then
-            Result := (e.WindCnt2 < 0) else
-            Result := (e.WindCnt2 > 0);
+            Result := (e.WindCnt2 > 0) else
+            Result := (e.WindCnt2 < 0);
         end;
     ctXor:
         Result := true;
@@ -2828,12 +2828,12 @@ begin
       begin
         if FFillRule = FFillPos then
         begin
-          e1WindCnt := -e1.WindCnt;
-          e2WindCnt := -e2.WindCnt;
-        end else
-        begin
           e1WindCnt := e1.WindCnt;
           e2WindCnt := e2.WindCnt;
+        end else
+        begin
+          e1WindCnt := -e1.WindCnt;
+          e2WindCnt := -e2.WindCnt;
         end;
       end;
   end;
@@ -2909,12 +2909,12 @@ begin
         begin
           if FFillRule = FFillPos then
           begin
-            e1WindCnt2 := -e1.WindCnt2;
-            e2WindCnt2 := -e2.WindCnt2;
-          end else
-          begin
             e1WindCnt2 := e1.WindCnt2;
             e2WindCnt2 := e2.WindCnt2;
+          end else
+          begin
+            e1WindCnt2 := -e1.WindCnt2;
+            e2WindCnt2 := -e2.WindCnt2;
           end;
         end;
     end;
@@ -3854,7 +3854,7 @@ begin
         //closed paths should always return a Positive orientation
         //except when ReverseSolution == true
         if BuildPath(outRec.Pts,
-          FReverseSolution = FOrientationIsReversed,
+          FReverseSolution <> FOrientationIsReversed,
           false, closedPaths[cntClosed]) then
             inc(cntClosed);
       end;
@@ -4006,7 +4006,7 @@ begin
       //closed paths should always return a Positive orientation
       //except when ReverseSolution == true
       if not BuildPath(outRec.Pts,
-        FReverseSolution = FOrientationIsReversed, false, path) then
+        FReverseSolution <> FOrientationIsReversed, false, path) then
           Continue;
 
       if assigned(outRec.Owner) and

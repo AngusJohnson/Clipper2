@@ -1,7 +1,7 @@
 ﻿/*******************************************************************************
 * Author    :  Angus Johnson                                                   *
 * Version   :  10.0 (beta) - also known as Clipper2                            *
-* Date      :  16 June 2022                                                    *
+* Date      :  17 June 2022                                                    *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  This is the main polygon clipping module                        *
@@ -243,9 +243,7 @@ namespace Clipper2Lib
       PreserveCollinear = true;
       OrientationIsReversed = UseReversedOrientation;
       if (UseReversedOrientation)
-      {
         fillPos = FillRule.Negative;
-      }
     }
 
 #if USINGZ
@@ -592,9 +590,9 @@ namespace Clipper2Lib
         op2 = op2.next!;
       } while (op2 != op);
       if (OrientationReversed)
-        return area * 0.5;
-      else
         return area * -0.5;
+      else
+        return area * 0.5;
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -602,20 +600,19 @@ namespace Clipper2Lib
       Point64 pt2, Point64 pt3, bool OrientationReversed)
     {
       if (OrientationReversed)
-        return (double) (pt3.Y + pt1.Y) * (double) (pt3.X - pt1.X) +
-          (double) (pt1.Y + pt2.Y) * (double) (pt1.X - pt2.X) +
-          (double) (pt2.Y + pt3.Y) * (double) (pt2.X - pt3.X);
-      else
         return -((double) (pt3.Y + pt1.Y) * (double) (pt3.X - pt1.X) +
           (double) (pt1.Y + pt2.Y) * (double) (pt1.X - pt2.X) +
           (double) (pt2.Y + pt3.Y) * (double) (pt2.X - pt3.X));
+      else
+        return (double) (pt3.Y + pt1.Y) * (double) (pt3.X - pt1.X) +
+          (double) (pt1.Y + pt2.Y) * (double) (pt1.X - pt2.X) +
+          (double) (pt2.Y + pt3.Y) * (double) (pt2.X - pt3.X);
     }
 
     private static void ReverseOutPts(OutPt op)
     {
       OutPt op1 = op;
       OutPt op2;
-
       do
       {
         op2 = op1.next!;
@@ -994,11 +991,11 @@ namespace Clipper2Lib
         default:
           if (_fillrule == fillPos)
           {
-            if (ae.windCount != -1) return false;
+            if (ae.windCount != 1) return false;
           }
           else //fillNeg
           {
-            if (ae.windCount != 1) return false;
+            if (ae.windCount != -1) return false;
           }
           break;
       }
@@ -1013,9 +1010,9 @@ namespace Clipper2Lib
               return (ae.windCount2 != 0);
             default:
               if (_fillrule == fillPos)
-                return (ae.windCount2 < 0);
-              else
                 return (ae.windCount2 > 0);
+              else
+                return (ae.windCount2 < 0);
           }
         case ClipType.Union:
           switch (_fillrule)
@@ -1025,9 +1022,9 @@ namespace Clipper2Lib
               return (ae.windCount2 == 0);
             default:
               if (_fillrule == fillPos)
-                return (ae.windCount2 >= 0);
-              else
                 return (ae.windCount2 <= 0);
+              else
+                return (ae.windCount2 >= 0);
           }
         case ClipType.Difference:
           if (GetPolyType(ae) == PathType.Subject)
@@ -1038,9 +1035,9 @@ namespace Clipper2Lib
                 return (ae.windCount2 == 0);
               default:
                 if (_fillrule == fillPos)
-                  return (ae.windCount2 >= 0);
-                else
                   return (ae.windCount2 <= 0);
+                else
+                  return (ae.windCount2 >= 0);
             }
           else
             switch (_fillrule)
@@ -1050,9 +1047,9 @@ namespace Clipper2Lib
                 return (ae.windCount2 != 0);
               default:
                 if (_fillrule == fillPos)
-                  return (ae.windCount2 < 0);
-                else
                   return (ae.windCount2 > 0);
+                else
+                  return (ae.windCount2 < 0);
             }
         case ClipType.Xor:
           return true; //XOr is always contributing unless open
@@ -1721,13 +1718,13 @@ namespace Clipper2Lib
         default:
           if (_fillrule == fillPos)
           {
-            oldE1WindCount = -ae1.windCount;
-            oldE2WindCount = -ae2.windCount;
+            oldE1WindCount = ae1.windCount;
+            oldE2WindCount = ae2.windCount;
           }
           else
           {
-            oldE1WindCount = ae1.windCount;
-            oldE2WindCount = ae2.windCount;
+            oldE1WindCount = -ae1.windCount;
+            oldE2WindCount = -ae2.windCount;
           }
           break;
       }
@@ -1811,13 +1808,13 @@ namespace Clipper2Lib
           default:
             if (_fillrule == fillPos)
             {
-              e1Wc2 = -ae1.windCount2;
-              e2Wc2 = -ae2.windCount2;
+              e1Wc2 = ae1.windCount2;
+              e2Wc2 = ae2.windCount2;
             }
             else
             {
-              e1Wc2 = ae1.windCount2;
-              e2Wc2 = ae2.windCount2;
+              e1Wc2 = -ae1.windCount2;
+              e2Wc2 = -ae2.windCount2;
             }
             break;
         }
@@ -3398,7 +3395,7 @@ namespace Clipper2Lib
           //closed paths should always return a Positive orientation
           //except when ReverseSolution == true
           if (BuildPath(outrec.pts!, 
-            ReverseSolution == OrientationIsReversed, false, path))
+            ReverseSolution != OrientationIsReversed, false, path))
               solutionClosed.Add(path);
         }
       }
@@ -3530,7 +3527,7 @@ namespace Clipper2Lib
         //closed paths should always return a Positive orientation
         //except when ReverseSolution == true
         if (!BuildPath(outrec.pts!,
-          ReverseSolution == OrientationIsReversed, false, path))
+          ReverseSolution != OrientationIsReversed, false, path))
             continue;
 
         if (outrec.owner != null && outrec.owner.state != outrec.state)

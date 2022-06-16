@@ -146,9 +146,9 @@ namespace Clipper2Lib
         prevPt = pt;
       }
       if (OrientationIsReversed)
-        return a * 0.5; 
+        return a * -0.5; 
       else
-        return a * -0.5;
+        return a * 0.5;
     }
 
     public static double Area(Paths64 paths,
@@ -173,9 +173,9 @@ namespace Clipper2Lib
         prevPt = pt;
       }
       if (OrientationIsReversed)
-        return a * 0.5;
-      else
         return a * -0.5;
+      else
+        return a * 0.5;
     }
 
     public static double Area(PathsD paths,

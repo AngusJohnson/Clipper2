@@ -1,7 +1,7 @@
 ﻿/*******************************************************************************
 * Author    :  Angus Johnson                                                   *
 * Version   :  10.0 (beta) - also known as Clipper2                            *
-* Date      :  16 June 2022                                                    *
+* Date      :  17 June 2022                                                    *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  Offsets both open and closed paths (i.e. polylines & polygons). *
@@ -67,22 +67,19 @@ namespace Clipper2Lib
     public double MiterLimit { get; set; }
     public bool PreserveCollinear { get; set; }
     public bool ReverseSolution { get; set; }
-    public bool OrientationReversed { get; }
 
     private const double TwoPi = Math.PI * 2;
     private const double DefaultArcTolerance = 0.25;
 
     public ClipperOffset(double miterLimit = 2.0, 
       double arcTolerance = 0.0, bool 
-      preserveCollinear = false, bool reverseSolution = false,
-      bool orientationIsReversed = InternalClipperFunc.DEFAULT_ORIENTATION_IS_REVERSED)
+      preserveCollinear = false, bool reverseSolution = false)
     {
       MiterLimit = miterLimit;
       ArcTolerance = arcTolerance;
       MergeGroups = true;
       PreserveCollinear = preserveCollinear;
       ReverseSolution = reverseSolution;
-      OrientationReversed = orientationIsReversed;
     }
 
     public void Clear()
@@ -139,7 +136,7 @@ namespace Clipper2Lib
       if (MergeGroups && _pathGroups.Count > 0)
       {
         //clean up self-intersections ...
-        Clipper c = new Clipper(true)
+        Clipper c = new Clipper(false)
         {
           PreserveCollinear = PreserveCollinear,
           //the solution should retain the orientation of the input
@@ -389,7 +386,8 @@ namespace Clipper2Lib
         //designated orientation for outer polygons (needed for tidy-up clipping)
         int lowestIdx = GetLowestPolygonIdx(group._inPaths);
         if (lowestIdx < 0) return;
-        double area = ClipperFunc.Area(group._inPaths[lowestIdx], true);
+        //nb: don't use the default orientation here ...
+        double area = ClipperFunc.Area(group._inPaths[lowestIdx], false);
         if (area == 0) return;
         group._pathsReversed = (area < 0);
         if (group._pathsReversed)
@@ -449,7 +447,7 @@ namespace Clipper2Lib
       if (!MergeGroups)
       {
         //clean up self-intersections
-        Clipper c = new Clipper(true)
+        Clipper c = new Clipper(false)
         {
           PreserveCollinear = PreserveCollinear,
           //the solution should retain the orientation of the input

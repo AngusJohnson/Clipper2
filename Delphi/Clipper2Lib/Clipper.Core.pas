@@ -17,20 +17,24 @@ interface
 uses
   SysUtils, Math;
 
-	//The classic Cartesian plane is defined by an X-axis that's positive toward
-	//the right and a Y-axis that's positive upwards. However, many modern
-	//graphics libraries use an inverted Y-axis (where Y is positive downward).
-	//This effectively flips polygons upside down, with winding directions that
-	//were clockwise becoming anti-clockwise, and areas that were positive
-	//becoming negative. This is important to understand when using Clipper's
-	//Positive and Negative filling rules, since winding directions in Clipper
-	//may be opposite to what you were expecting. To minimise any confusion,
-	//the DEFAULT_ORIENTATION_IS_REVERSED constant below allows you to change the
-	//**default** orientation. This constant is intended as "set and perhaps not
-	//quite forget". While this sets the default orientation, both the Clipper
-	//and ClipperOffest classes contain 'OrientationIsReversed' parameters which
-	//can override the default setting.
-  const DEFAULT_ORIENTATION_IS_REVERSED = true;
+//The classic Cartesian plane is defined by an X-axis that's positive toward
+//the right and a Y-axis that's positive upwards. However, many modern
+//graphics libraries use an inverted Y-axis (where Y is positive downward).
+//This effectively flips polygons upside down, with winding directions that
+//were clockwise becoming anti-clockwise, and areas that were positive
+//becoming negative. Nevertheless, in Cartesian coordinates the area of a
+//convex polygon is defined to be positive if the points are arranged in a
+//counterclockwise order, and negative if they are in clockwise order
+//(see https://mathworld.wolfram.com/PolygonArea.html). If this "normal"
+//winding direction is inconvenient for whatever reason the following
+//constant can be changed to accommodate this. Note however that winding
+//direction is only important when using Clipper's Positive and Negative
+//filling rules. (Reversing orientation has no effect on NonZero an EvenOdd
+//filling.) The constant below is intended as "set and perhaps not quite
+//forget". While this sets the default orientation, the Clipper class
+//constructor contains a parameter which can override this default setting.
+
+const DEFAULT_ORIENTATION_IS_REVERSED = false;
 
 type
   PPoint64  = ^TPoint64;
@@ -1284,8 +1288,8 @@ begin
     p1 := p2; inc(p2);
   end;
   if orientationIsReversed then
-    Result := Result * 0.5 else
-    Result := Result * -0.5;
+    Result := Result * -0.5 else
+    Result := Result * 0.5;
 end;
 //------------------------------------------------------------------------------
 
@@ -1316,8 +1320,8 @@ begin
     p1 := p2; inc(p2);
   end;
   if orientationIsReversed then
-    Result := Result * 0.5 else
-    Result := Result * -0.5;
+    Result := Result * -0.5 else
+    Result := Result * 0.5;
 end;
 //------------------------------------------------------------------------------
 

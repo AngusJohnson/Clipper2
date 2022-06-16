@@ -1,7 +1,7 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
 * Version   :  10.0 (beta) - aka Clipper2                                      *
-* Date      :  16 June 2022                                                    *
+* Date      :  17 June 2022                                                    *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  Polygon offsetting                                              *
@@ -273,7 +273,8 @@ void ClipperOffset::DoGroupOffset(PathGroup& group, double delta)
 		//the lowermost polygon must be an outer polygon. So we can use that as the
 		//designated orientation for outer polygons (needed for tidy-up clipping)
 		Paths64::size_type lowestIdx = GetLowestPolygonIdx(group.paths_in_);
-		double area = Area(group.paths_in_[lowestIdx], true);
+    //nb: don't use the default orientation here ...
+		double area = Area(group.paths_in_[lowestIdx], false);
 		if (area == 0) return;	
 		group.is_reversed = (area < 0);
 		if (group.is_reversed) delta = -delta;
@@ -334,7 +335,7 @@ void ClipperOffset::DoGroupOffset(PathGroup& group, double delta)
 	if (!merge_groups_)
 	{
 		//clean up self-intersections ...
-		Clipper c(true);
+		Clipper c(false);
 		c.PreserveCollinear = false;
 		//the solution should retain the orientation of the input
 		c.ReverseSolution = reverse_solution_ != group.is_reversed;
@@ -377,7 +378,7 @@ Paths64 ClipperOffset::Execute(double delta)
 	if (merge_groups_ && groups_.size() > 0)
 	{
 		//clean up self-intersections ...
-		Clipper c(true);
+		Clipper c(false);
 		c.PreserveCollinear = false;
 		//the solution should retain the orientation of the input
 		c.ReverseSolution = reverse_solution_ != groups_[0].is_reversed;
