@@ -20,7 +20,7 @@ jobs:
       run: msbuild CPP/Examples/ConsoleDemo1/ConsoleDemo1_cpp.sln
     - name: Build inflate demo application
       run: msbuild CPP/Examples/InflateDemo/InflateDemoApp.sln
-  ubuntu-latest-gcc:
+  ubuntu-latest-gcc-default:
     runs-on: 'ubuntu-latest'
     steps:
     - uses: actions/checkout@v2
@@ -36,7 +36,28 @@ jobs:
       run: |
         cd CPP/build
         make test
-  ubuntu-latest-clang:
+  ubuntu-latest-gcc-11:
+    runs-on: 'ubuntu-latest'
+    steps:
+    - uses: actions/checkout@v2
+    - name: Get GoogleTest
+      run: git submodule update --init
+    - name: Install gcc 11
+      run: |
+        sudo apt update
+        sudo apt install gcc-11 g++-11
+        sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-11 110 --slave /usr/bin/g++ g++ /usr/bin/g++-11 --slave /usr/bin/gcov gcov /usr/bin/gcov-11
+    - name: Build
+      run: |
+        mkdir CPP/build
+        cd CPP/build
+        cmake ..
+        make
+    - name: Run tests
+      run: |
+        cd CPP/build
+        make test
+  ubuntu-latest-clang-default:
     runs-on: 'ubuntu-latest'
     steps:
     - uses: actions/checkout@v2
@@ -46,6 +67,29 @@ jobs:
       run: |
         export CC=/usr/bin/clang
         export CXX=/usr/bin/clang++
+        mkdir CPP/build
+        cd CPP/build
+        cmake ..
+        make
+    - name: Run tests
+      run: |
+        cd CPP/build
+        make test
+  ubuntu-latest-clang-13:
+    runs-on: 'ubuntu-latest'
+    steps:
+    - uses: actions/checkout@v2
+    - name: Get GoogleTest
+      run: git submodule update --init
+    - name: Install clang 13
+      run: |
+        wget https://apt.llvm.org/llvm.sh
+        chmod +x llvm.sh
+        sudo ./llvm.sh 13
+    - name: Build
+      run: |
+        export CC=/usr/bin/clang-13
+        export CXX=/usr/bin/clang++-13
         mkdir CPP/build
         cd CPP/build
         cmake ..
