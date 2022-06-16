@@ -51,7 +51,7 @@ private:
 	bool merge_groups_ = true;
 	bool preserve_collinear_ = false;
 	bool reverse_solution_ = false;
-	bool reverse_orientation_ = false;
+	[[maybe_unused]] bool reverse_orientation_ = false;
 
 	void DoSquare(PathGroup& group, const Path64& path, size_t j, size_t k);
 	void DoMiter(PathGroup& group, const Path64& path, size_t j, size_t k, double cos_a);
