@@ -21,7 +21,22 @@
 namespace Clipper2Lib 
 {
 
-static double const PI = 3.141592653589793238;
+	//The classic Cartesian plane is defined by an X-axis that's positive toward
+	//the right and a Y-axis that's positive upwards. However, many modern
+	//graphics libraries use an inverted Y-axis (where Y is positive downward).
+	//This effectively flips polygons upside down, with winding directions that
+	//were clockwise becoming anti-clockwise, and areas that were positive
+	//becoming negative. This is important to understand when using Clipper's
+	//Positive and Negative filling rules, since winding directions in Clipper
+	//may be opposite to what you were expecting. To minimise any confusion,
+	//the DEFAULT_ORIENTATION_IS_REVERSED constant below allows you to change the
+	//**default** orientation. This constant is intended as "set and perhaps not
+	//quite forget". While this sets the default orientation, both the Clipper
+	//and ClipperOffest classes contain 'OrientationIsReversed' parameters which
+	//can override the default setting.
+	static bool const DEFAULT_ORIENTATION_IS_REVERSED = true;
+	
+	static double const PI = 3.141592653589793238;
 
 // Point ------------------------------------------------------------------------
 
@@ -430,7 +445,8 @@ bool NearCollinear(const Point<T> &pt1, const Point<T> &pt2, const Point<T> &pt3
 }
 
 template <typename T>
-static double Area(const Path<T>& path)
+static double Area(const Path<T>& path, 
+	bool orientation_is_reversed = DEFAULT_ORIENTATION_IS_REVERSED)
 {
 	size_t cnt = path.size();
 	if (cnt < 3) return 0.0;
@@ -446,50 +462,52 @@ static double Area(const Path<T>& path)
 	}
 	if (cnt & 1)
 		a += static_cast<double>(it2->y + it1->y) * (it2->x - it1->x);
-#ifdef REVERSE_ORIENTATION
-	return a * 0.5;
-#else 
-	return a * -0.5;
-#endif 
+	if (orientation_is_reversed)
+		return a * 0.5; 
+	else 
+		return a * -0.5;
 }
 
 template <typename T>
-inline double Area(const Paths<T>& paths)
+inline double Area(const Paths<T>& paths,
+	bool orientation_is_reversed = DEFAULT_ORIENTATION_IS_REVERSED)
 {
 	double a = 0.0;
 	for (typename Paths<T>::const_iterator paths_iter = paths.cbegin();
 		paths_iter != paths.cend(); ++paths_iter)
 	{
-		a += Area<T>(*paths_iter);
+		a += Area<T>(*paths_iter, orientation_is_reversed);
 	}
 	return a;
 }
 
 template <typename T>
-inline bool IsPositive(const Path<T>& poly)
+inline bool IsPositive(const Path<T>& poly,
+	bool orientation_is_reversed = DEFAULT_ORIENTATION_IS_REVERSED)
 {
 	// A curve has positive orientation [and area] if a region 'R' 
 	// is on the left when traveling around the outside of 'R'.
 	//https://mathworld.wolfram.com/CurveOrientation.html
 	//nb: This statement is premised on using Cartesian coordinates
-	return Area<T>(poly) >= 0;
+	return Area<T>(poly, orientation_is_reversed) >= 0;
 }
 
 template <typename T>
 static Path<T> Ellipse(const Point<T>& center,
-	double radiusX, double radiusY = 0, int steps = 0)
+	double radiusX, double radiusY = 0, int steps = 0,
+	bool orientation_is_reversed = DEFAULT_ORIENTATION_IS_REVERSED)
 {
 	if (radiusX <= 0) return Path64();
 	if (radiusY <= 0) radiusY = radiusX;
 	if (steps <= 2)
 		steps = static_cast<int>(PI * sqrt((radiusX + radiusY) / 2));
 
-//to ensure function returns a positive area
-#ifdef REVERSE_ORIENTATION
-	double si = std::sin(2 * PI / steps);
-#else
-	double si = -std::sin(2 * PI / steps);
-#endif
+	//to ensure function returns a positive area
+	double si;
+	if (orientation_is_reversed)
+		si = std::sin(2 * PI / steps);
+	else
+		si = -std::sin(2 * PI / steps);
 
 	double co = std::cos(2 * PI / steps);
 	double dx = co, dy = si;

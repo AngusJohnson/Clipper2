@@ -68,14 +68,15 @@ namespace Clipper2Lib {
 
   private:
       double scale_;
+      FillRule fill_rule_;
       CoordsStyle coords_style;
       TextInfoList text_infos;
       PathInfoList path_infos;
       void DrawCircle(std::ofstream& file, double x, double y, double radius);
   public:
-    SvgWriter(int precision = 0)
+    SvgWriter(FillRule fill_rule, int precision = 0)
     { 
-      fill_rule = FillRule::EvenOdd; 
+      fill_rule_ = fill_rule;
       coords_style.font_name = "Verdana";
       coords_style.font_color = 0xFF000000; 
       coords_style.font_size = 11; 
@@ -83,10 +84,9 @@ namespace Clipper2Lib {
     };
 
     ~SvgWriter() { Clear(); };
-    
-    FillRule fill_rule;
-    
+        
     void Clear();
+    FillRule FillRule() { return fill_rule_; }
     void SetCoordsStyle(const std::string &font_name, unsigned font_color, unsigned font_size);
     void AddText(const std::string &text, unsigned font_color, unsigned font_size, int x, int y);
     void AddPath(const PathD& path, bool is_open, unsigned brush_color,

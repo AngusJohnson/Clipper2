@@ -3,7 +3,7 @@ unit Clipper.Offset;
 (*******************************************************************************
 * Author    :  Angus Johnson                                                   *
 * Version   :  10.0 (beta) - aka Clipper2                                      *
-* Date      :  14 June 2022                                                    *
+* Date      :  15 June 2022                                                    *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  Offset paths and clipping solutions                             *
@@ -53,6 +53,7 @@ type
     fOutPathLen  : Integer;
     fSolution    : TPaths64;
     fPreserveCollinear  : Boolean;
+    fOrientationIsReversed : Boolean;
     fReverseSolution    : Boolean;
     procedure AddPoint(x,y: double); overload;
     procedure AddPoint(const pt: TPoint64); overload;
@@ -69,7 +70,10 @@ type
     procedure OffsetOpenPath(endType: TEndType);
   public
     constructor Create(miterLimit: double = 2.0;
-      arcTolerance: double = 0.0; PreserveCollinear: Boolean = False);
+      arcTolerance: double = 0.0;
+      PreserveCollinear: Boolean = False;
+      ReverseSolution: Boolean = False;
+      OrientationIsReversed: Boolean = DEFAULT_ORIENTATION_IS_REVERSED);
     destructor Destroy; override;
     procedure AddPath(const path: TPath64;
       joinType: TJoinType; endType: TEndType);
@@ -182,12 +186,16 @@ end;
 //------------------------------------------------------------------------------
 
 constructor TClipperOffset.Create(miterLimit: double;
-  arcTolerance: double; preserveCollinear: Boolean);
+  arcTolerance: double; PreserveCollinear: Boolean;
+  ReverseSolution: Boolean; OrientationIsReversed: Boolean);
 begin
+  fMergeGroups  := true;
   fMiterLimit   := MiterLimit;
   fArcTolerance := ArcTolerance;
   fInGroups     := TList.Create;
   fPreserveCollinear := preserveCollinear;
+  fReverseSolution := ReverseSolution;
+  fOrientationIsReversed := OrientationIsReversed;
 end;
 //------------------------------------------------------------------------------
 
@@ -246,27 +254,16 @@ begin
   IsClosedPaths := (pathgroup.endType in [etPolygon, etJoined]);
   if IsClosedPaths then
   begin
-    pathgroup.reversed := false;
     //the lowermost polygon must be an outer polygon. So we can use that as the
     //designated orientation for outer polygons (needed for tidy-up clipping)
     lowestIdx := GetLowestPolygonIdx(pathgroup.paths);
     if lowestIdx < 0 then Exit;
-    area := Clipper.Core.Area(pathgroup.paths[lowestIdx]);
+    area := Clipper.Core.Area(pathgroup.paths[lowestIdx], true);
     if area = 0 then Exit;
-
-{$IFDEF REVERSE_ORIENTATION}
-    if area < 0 then
-    begin
-      delta := -delta;
-      pathgroup.reversed := true;
-    end;
-{$ELSE}
-    if area > 0 then
-      delta := -delta
-    else
-      pathgroup.reversed := true;
-{$ENDIF}
-  end;
+    pathgroup.reversed := (area < 0);
+    if pathgroup.reversed then delta := -delta;
+  end else
+    pathgroup.reversed := false;
 
   fDelta := delta;
   absDelta := Abs(fDelta);
@@ -341,24 +338,18 @@ begin
   if not fMergeGroups then
   begin
     //clean up self-intersections ...
-    with TClipper64.Create do
+    with TClipper64.Create(true) do
     try
       PreserveCollinear := fPreserveCollinear;
+      ReverseSolution := fReverseSolution;
       AddSubject(fOutPaths);
-      if pathgroup.reversed then
-      begin
-        ReverseSolution := not fReverseSolution;
-        Execute(ctUnion, frNegative, fOutPaths)
-      end else
-      begin
-        ReverseSolution := fReverseSolution;
+      if pathGroup.reversed then
+        Execute(ctUnion, frNegative, fOutPaths) else
         Execute(ctUnion, frPositive, fOutPaths);
-      end;
     finally
       free;
     end;
   end;
-
   //finally copy the working 'outPaths' to the solution
   AppendPaths(fSolution, fOutPaths);
 end;
@@ -432,11 +423,7 @@ begin
  //cap the end first ...
   case endType of
     etButt: DoButtEnd(highI);
-{$IFDEF REVERSE_ORIENTATION}
     etRound: DoRound(highI, k, PI);
-{$ELSE}
-    etRound: DoRound(highI, k, -PI);
-{$ENDIF}
     else DoSquare(highI, k);
   end;
 
@@ -455,11 +442,7 @@ begin
   //now cap the start ...
   case endType of
     etButt: DoButtStart;
-{$IFDEF REVERSE_ORIENTATION}
     etRound: DoRound(0, 1, PI);
-{$ELSE}
-    etRound: DoRound(0, 1, -PI);
-{$ENDIF}
     else doSquare(0, 1);
   end;
 end;
@@ -500,19 +483,14 @@ begin
   if fMergeGroups and (fInGroups.Count > 0) then
   begin
     //clean up self-intersections ...
-    with TClipper64.Create do
+    with TClipper64.Create(true) do
     try
       PreserveCollinear := fPreserveCollinear;
+      ReverseSolution := fReverseSolution;
       AddSubject(fSolution);
       if TPathGroup(fInGroups[0]).reversed then
-      begin
-        ReverseSolution := not fReverseSolution;
-        Execute(ctUnion, frNegative, fSolution)
-      end else
-      begin
-        ReverseSolution := fReverseSolution;
+        Execute(ctUnion, frNegative, fSolution) else
         Execute(ctUnion, frPositive, fSolution);
-      end;
     finally
       free;
     end;

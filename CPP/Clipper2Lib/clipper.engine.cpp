@@ -1,7 +1,7 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
 * Version   :  10.0 (beta) - aka Clipper2                                      *
-* Date      :  14 June 2022                                                    *
+* Date      :  16 June 2022                                                    *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  This is the main polygon clipping module                        *
@@ -20,15 +20,6 @@ namespace Clipper2Lib {
 
 	static const double DefaultScale = 100;
 	static const double FloatingPointTolerance = 1.0e-12;
-
-#ifdef REVERSE_ORIENTATION
-	static const FillRule fill_pos = FillRule::Negative; 
-	static const FillRule fill_neg = FillRule::Positive;
-#else 
-	static const FillRule fill_pos = FillRule::Positive;
-	static const FillRule fill_neg = FillRule::Negative;
-#endif 
-
 
 	//Every closed path (or polygon) is made up of a series of vertices forming
 	//edges that alternate between going up (relative to the Y-axis) and going
@@ -487,7 +478,7 @@ namespace Clipper2Lib {
 	}
 
 
-	double Area(OutPt* op)
+	double Area(OutPt* op, bool orientation_is_reversed)
 	{
 		//https://en.wikipedia.org/wiki/Shoelace_formula
 		double area = 0.0;
@@ -498,24 +489,23 @@ namespace Clipper2Lib {
 				static_cast<double>(op2->prev->pt.x - op2->pt.x);
 			op2 = op2->next;
 		} while (op2 != op);
-#ifdef REVERSE_ORIENTATION		
-		return area * 0.5;
-#else 
-		return area * -0.5;
-#endif 
+		if (orientation_is_reversed)
+			return area * 0.5;
+		else
+			return area * -0.5;
 	}
 
-	inline double AreaTriangle(const Point64& pt1, const Point64& pt2, const Point64& pt3)
+	inline double AreaTriangle(const Point64& pt1, 
+		const Point64& pt2, const Point64& pt3, bool orientation_is_reversed)
 	{
-#ifdef REVERSE_ORIENTATION		
-		return static_cast<double>(pt3.y + pt1.y) * static_cast<double>(pt3.x - pt1.x) +
-			static_cast<double>(pt1.y + pt2.y) * static_cast<double>(pt1.x - pt2.x) +
-			static_cast<double>(pt2.y + pt3.y) * static_cast<double>(pt2.x - pt3.x);
-#else 
-		return -(static_cast<double>(pt3.y + pt1.y) * static_cast<double>(pt3.x - pt1.x) +
-			static_cast<double>(pt1.y + pt2.y) * static_cast<double>(pt1.x - pt2.x) +
-			static_cast<double>(pt2.y + pt3.y) * static_cast<double>(pt2.x - pt3.x));
-#endif 
+		if (orientation_is_reversed)
+			return static_cast<double>(pt3.y + pt1.y) * static_cast<double>(pt3.x - pt1.x) +
+				static_cast<double>(pt1.y + pt2.y) * static_cast<double>(pt1.x - pt2.x) +
+				static_cast<double>(pt2.y + pt3.y) * static_cast<double>(pt2.x - pt3.x);
+		else
+			return -(static_cast<double>(pt3.y + pt1.y) * static_cast<double>(pt3.x - pt1.x) +
+				static_cast<double>(pt1.y + pt2.y) * static_cast<double>(pt1.x - pt2.x) +
+				static_cast<double>(pt2.y + pt3.y) * static_cast<double>(pt2.x - pt3.x));
 	}
 
 	void ReverseOutPts(OutPt* op)
@@ -568,7 +558,7 @@ namespace Clipper2Lib {
 	}
 
 
-	bool CheckFixInnerOuter(Active& ae)
+	bool CheckFixInnerOuter(Active& ae, bool orientation_is_reversed)
 	{
 		bool wasOuter = IsOuter(*ae.outrec), isOuter = true;
 
@@ -605,7 +595,7 @@ namespace Clipper2Lib {
 				ae.outrec->owner = ae2->outrec;
 		}
 
-		if ((Area(ae.outrec->pts) < 0.0) == isOuter)
+		if ((Area(ae.outrec->pts, orientation_is_reversed) < 0.0) == isOuter)
 			ReverseOutPts(ae.outrec->pts);
 		return true;
 	}
@@ -901,17 +891,20 @@ namespace Clipper2Lib {
 	{
 		switch (fillrule_)
 		{
+		case FillRule::EvenOdd:
+			break; 
 		case FillRule::NonZero:
 			if (abs(e.wind_cnt) != 1) return false;
 			break;
-		case fill_pos:
-			if (e.wind_cnt != -1) return false;
-			break;
-		case fill_neg:
-			if (e.wind_cnt != 1) return false;
-			break;
-		case FillRule::EvenOdd:
-			break;
+		default:
+		{
+			if (fillrule_ == fillpos)
+			{
+				if (e.wind_cnt != -1) return false;
+			}
+			else /*(fillrule_ == fillneg)*/ 
+				if (e.wind_cnt != 1) return false;
+		}
 		}
 
 		switch (cliptype_)
@@ -920,40 +913,60 @@ namespace Clipper2Lib {
 			switch (fillrule_)
 			{
 			case FillRule::EvenOdd:
-			case FillRule::NonZero: return (e.wind_cnt2 != 0);
-			case fill_pos: return (e.wind_cnt2 < 0);
-			case fill_neg: return (e.wind_cnt2 > 0);
+			case FillRule::NonZero: 
+				return (e.wind_cnt2 != 0);
+			default:
+				if (fillrule_ == fillpos) 
+					return (e.wind_cnt2 < 0);
+				else 
+					return (e.wind_cnt2 > 0);
 			}
 			break;
+
 		case ClipType::Union:
 			switch (fillrule_)
 			{
 			case FillRule::EvenOdd:
-			case FillRule::NonZero: return (e.wind_cnt2 == 0);
-			case fill_pos: return (e.wind_cnt2 <= 0);
-			case fill_neg: return (e.wind_cnt2 >= 0);
+			case FillRule::NonZero: 
+				return (e.wind_cnt2 == 0);
+			default:
+				if (fillrule_ == fillpos)
+					return (e.wind_cnt2 <= 0);
+				else
+					return (e.wind_cnt2 >= 0);
 			}
 			break;
+
 		case ClipType::Difference:
 			if (GetPolyType(e) == PathType::Subject)
 				switch (fillrule_)
 				{
 				case FillRule::EvenOdd:
-				case FillRule::NonZero: return (e.wind_cnt2 == 0);
-				case fill_pos: return (e.wind_cnt2 >= 0);
-				case fill_neg: return (e.wind_cnt2 <= 0);
+				case FillRule::NonZero: 
+					return (e.wind_cnt2 == 0);
+				default:
+					if (fillrule_ == fillpos)
+						return (e.wind_cnt2 >= 0);
+					else
+						return (e.wind_cnt2 <= 0);
 				}
 			else
 				switch (fillrule_)
 				{
 				case FillRule::EvenOdd:
-				case FillRule::NonZero: return (e.wind_cnt2 != 0);
-				case fill_pos: return (e.wind_cnt2 < 0);
-				case fill_neg: return (e.wind_cnt2 > 0);
+				case FillRule::NonZero: 
+					return (e.wind_cnt2 != 0);
+				default:
+					if (fillrule_ == fillpos)
+						return (e.wind_cnt2 < 0);
+					else
+						return (e.wind_cnt2 > 0);
 				}
 			break;
+
 		case ClipType::Xor:
 			return true;  //XOr is always contributing unless open
+
 		default:
 			return false;
 		}
@@ -1392,10 +1405,10 @@ namespace Clipper2Lib {
 	{
 		if (ValidateClosedPathEx(e.outrec) && ValidateClosedPathEx(e2.outrec))
 		{
-			if (CheckFixInnerOuter(e) &&
+			if (CheckFixInnerOuter(e, orientation_is_reversed_) &&
 				IsOuter(*e.outrec) == IsFront(e))
 				SwapSides(*e.outrec);
-			else if (CheckFixInnerOuter(e2) &&
+			else if (CheckFixInnerOuter(e2, orientation_is_reversed_) &&
 				IsOuter(*e2.outrec) == IsFront(e2))
 				SwapSides(*e2.outrec);
 			else
@@ -1595,8 +1608,9 @@ namespace Clipper2Lib {
 		if (zfill_func_)
 			zfill_func_(prevOp->pt, splitOp->pt, splitOp->next->pt, nextNextOp->pt, ip);
 #endif
-		double area1 = Area(outRecOp);
-		double area2 = AreaTriangle(ip, splitOp->pt, splitOp->next->pt);
+		double area1 = Area(outRecOp, orientation_is_reversed_);
+		double area2 = AreaTriangle(ip, 
+			splitOp->pt, splitOp->next->pt, orientation_is_reversed_);
 
 		if (ip == prevOp->pt || ip == nextNextOp->pt)
 		{
@@ -1703,8 +1717,8 @@ namespace Clipper2Lib {
 
 	void ClipperBase::CompleteSplit(OutPt* op1, OutPt* op2, OutRec& outrec)
 	{
-		double area1 = Area(op1);
-		double area2 = Area(op2);
+		double area1 = Area(op1, orientation_is_reversed_);
+		double area2 = Area(op2, orientation_is_reversed_);
 		if (std::abs(area1) < 1)
 		{
 			SafeDisposeOutPts(op1);
@@ -1888,17 +1902,22 @@ namespace Clipper2Lib {
 
 		switch (fillrule_)
 		{
-		case fill_pos:
-			old_e1_windcnt = -e1.wind_cnt;
-			old_e2_windcnt = -e2.wind_cnt;
-			break;
-		case fill_neg:
-			old_e1_windcnt = e1.wind_cnt;
-			old_e2_windcnt = e2.wind_cnt;
-			break;
-		default:
+		case FillRule::EvenOdd:
+		case FillRule::NonZero:
 			old_e1_windcnt = abs(e1.wind_cnt);
 			old_e2_windcnt = abs(e2.wind_cnt);
+			break;
+		default:
+			if (fillrule_ == fillpos)
+			{
+				old_e1_windcnt = -e1.wind_cnt;
+				old_e2_windcnt = -e2.wind_cnt;
+			}
+			else
+			{
+				old_e1_windcnt = e1.wind_cnt;
+				old_e2_windcnt = e2.wind_cnt;
+			}
 			break;
 		}
 
@@ -1972,17 +1991,22 @@ namespace Clipper2Lib {
 			int64_t e1Wc2, e2Wc2;
 			switch (fillrule_)
 			{
-			case fill_pos:
-				e1Wc2 = -e1.wind_cnt2;
-				e2Wc2 = -e2.wind_cnt2;
-				break;
-			case fill_neg:
-				e1Wc2 = e1.wind_cnt2;
-				e2Wc2 = e2.wind_cnt2;
-				break;
-			default:
+			case FillRule::EvenOdd:
+			case FillRule::NonZero:
 				e1Wc2 = abs(e1.wind_cnt2);
 				e2Wc2 = abs(e2.wind_cnt2);
+				break;
+			default:
+				if (fillrule_ == fillpos)
+				{
+					e1Wc2 = -e1.wind_cnt2;
+					e2Wc2 = -e2.wind_cnt2;
+				}
+				else
+				{
+					e1Wc2 = e1.wind_cnt2;
+					e2Wc2 = e2.wind_cnt2;
+				}
 				break;
 			}
 

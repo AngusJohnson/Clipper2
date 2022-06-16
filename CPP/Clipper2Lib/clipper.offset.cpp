@@ -1,7 +1,7 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
 * Version   :  10.0 (beta) - aka Clipper2                                      *
-* Date      :  14 June 2022                                                    *
+* Date      :  16 June 2022                                                    *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  Polygon offsetting                                              *
@@ -226,11 +226,7 @@ void ClipperOffset::OffsetOpenPath(PathGroup& group, Path64& path, EndType end_t
 			path[j].y - norms[k].y * delta_));
 		break;
 	case EndType::Round:
-#ifdef REVERSE_ORIENTATION
 		DoRound(group, path[j], norms[j], norms[k], PI);
-#else
-		DoRound(group, path[j], norms[j], norms[k], -PI);
-#endif
 		break;
 	default:
 		DoSquare(group, path, j, k);
@@ -257,11 +253,7 @@ void ClipperOffset::OffsetOpenPath(PathGroup& group, Path64& path, EndType end_t
 			path[0].y - norms[1].y * delta_));
 		break;
 	case EndType::Round:
-#ifdef REVERSE_ORIENTATION
 		DoRound(group, path[0], norms[0], norms[1], PI);
-#else
-		DoRound(group, path[0], norms[0], norms[1], -PI);
-#endif
 		break;
 	default:
 		DoSquare(group, path, 0, 1);
@@ -278,26 +270,16 @@ void ClipperOffset::DoGroupOffset(PathGroup& group, double delta)
 
 	if (isClosedPaths)
 	{
-		group.is_reversed = false;
 		//the lowermost polygon must be an outer polygon. So we can use that as the
 		//designated orientation for outer polygons (needed for tidy-up clipping)
 		Paths64::size_type lowestIdx = GetLowestPolygonIdx(group.paths_in_);
-		double area = Area(group.paths_in_[lowestIdx]);
-		if (area == 0) return;
-
-#ifdef REVERSE_ORIENTATION
-		if (area < 0)
-		{
-			delta = -delta;
-			group.is_reversed = true;
-		}
-#else 
-		if (area > 0)
-			delta = -delta;
-		else
-			group.is_reversed = true;
-#endif 
-	}
+		double area = Area(group.paths_in_[lowestIdx], true);
+		if (area == 0) return;	
+		group.is_reversed = (area < 0);
+		if (group.is_reversed) delta = -delta;
+	} 
+	else
+		group.is_reversed = false;
 
 	delta_ = delta;
 	double absDelta = std::abs(delta_);
@@ -352,30 +334,32 @@ void ClipperOffset::DoGroupOffset(PathGroup& group, double delta)
 	if (!merge_groups_)
 	{
 		//clean up self-intersections ...
-		Clipper c;
+		Clipper c(true);
 		c.PreserveCollinear = false;
+		c.ReverseSolution = reverse_solution_;
 		c.AddSubject(group.paths_out_);
 		if (group.is_reversed)
-		{
-			c.ReverseSolution = !reverse_solution_;
 			c.Execute(ClipType::Union, FillRule::Negative, group.paths_out_);
-		}
 		else
-		{
-			c.ReverseSolution = reverse_solution_;
 			c.Execute(ClipType::Union, FillRule::Positive, group.paths_out_);
-		}
 	}
+
+	solution.reserve(solution.size() + group.paths_out_.size());
+	copy(group.paths_out_.begin(), group.paths_out_.end(), back_inserter(solution));
+	group.paths_out_.clear();
 }
 
 Paths64 ClipperOffset::Execute(double delta)
 {
-	Paths64 result = Paths64();
+	solution.clear();
 	if (std::abs(delta) < default_arc_tolerance)
 	{
 		for (const PathGroup& group : groups_)
-			result.insert(result.begin(), group.paths_in_.cbegin(), group.paths_in_.cend());
-		return result;
+		{
+			solution.reserve(solution.size() + group.paths_in_.size());
+			copy(group.paths_in_.begin(), group.paths_in_.end(), back_inserter(solution));
+		}
+		return solution;
 	}
 
 	temp_lim_ = (miter_limit_ <= 1) ? 
@@ -387,28 +371,22 @@ Paths64 ClipperOffset::Execute(double delta)
 		groups_iter != groups_.end(); ++groups_iter)
 	{
 		DoGroupOffset(*groups_iter, delta);
-		result.swap(groups_iter->paths_out_);
-		groups_iter->path_.clear();
 	}
 
 	if (merge_groups_ && groups_.size() > 0)
 	{
 		//clean up self-intersections ...
-		Clipper c;
+		Clipper c(true);
 		c.PreserveCollinear = false;
-		c.AddSubject(result);
+		c.ReverseSolution = reverse_solution_;
+
+		c.AddSubject(solution);
 		if (groups_[0].is_reversed)
-		{
-			c.ReverseSolution = !reverse_solution_;
-			c.Execute(ClipType::Union, FillRule::Negative, result);
-		}
+			c.Execute(ClipType::Union, FillRule::Negative, solution);
 		else
-		{
-			c.ReverseSolution = reverse_solution_;
-			c.Execute(ClipType::Union, FillRule::Positive, result);
-		}
+			c.Execute(ClipType::Union, FillRule::Positive, solution);
 	}
-	return result;
+	return solution;
 }
 
 } //namespace

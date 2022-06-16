@@ -23,12 +23,7 @@ TEST(Clipper2Tests, TestBasicUnion) {
     Clipper2Lib::PolyTree64 solution;
     Clipper2Lib::Paths64 open_paths;
 
-#ifdef REVERSE_ORIENTATION
     clipper.Execute(Clipper2Lib::ClipType::Union, Clipper2Lib::FillRule::Negative, solution, open_paths);
-#else 
-    clipper.Execute(Clipper2Lib::ClipType::Union, Clipper2Lib::FillRule::Positive, solution, open_paths);
-#endif 
-
     EXPECT_EQ(open_paths.size(), 0);
     ASSERT_EQ(solution.ChildCount(), 1);
     EXPECT_EQ(solution.childs.front()->polygon.size(), 8);

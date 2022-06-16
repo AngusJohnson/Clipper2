@@ -24,11 +24,8 @@ TEST(Clipper2Tests, TestBasicIntersection) {
     Clipper2Lib::PolyTree64 solution;
     Clipper2Lib::Paths64 open_paths;
 
-#ifdef REVERSE_ORIENTATION
-    clipper.Execute(Clipper2Lib::ClipType::Intersection, Clipper2Lib::FillRule::Negative, solution, open_paths);
-#else 
-    clipper.Execute(Clipper2Lib::ClipType::Intersection, Clipper2Lib::FillRule::Positive, solution, open_paths);
-#endif 
+    clipper.Execute(Clipper2Lib::ClipType::Intersection, 
+      Clipper2Lib::FillRule::Negative, solution, open_paths);
 
     EXPECT_EQ(open_paths.size(), 0);
     ASSERT_EQ(solution.ChildCount(), 1);

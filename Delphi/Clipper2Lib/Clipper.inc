@@ -6,17 +6,6 @@
 //For user defined Z-coordinates, defined in Clipper's 'SetZ' callback event
 {.$DEFINE USINGZ}
 
-//Winding direction is based on the Cartesian Plane where the display origin 
-//is in the bottom-left corner. For displays with inverted Y-axes, the winding 
-//direction will be reversed such that clockwise becomes anti-clockwise and 
-//positive winding will become negative. This is important when using either
-//FillRule.Positive or FillRule.Negative, and also when calculating areas
-//(which may be positive or negative depending on orientation). When 
-//developing graphics related software using displays with inverted Y-axes,
-//coordinate orientation is reversed which may cause confusion. This can be
-//addressed by reversing the normal orientation.
-{.$DEFINE REVERSE_ORIENTATION}
-
 ///////////////////////////////////////////////////////////////////////////////
 //COMPILER DIFINED PREPROCESSOR DIRECTIVES (ie. do not touch ;))
 ///////////////////////////////////////////////////////////////////////////////

@@ -1,7 +1,7 @@
 ﻿/*******************************************************************************
 * Author    :  Angus Johnson                                                   *
 * Version   :  10.0 (beta) - also known as Clipper2                            *
-* Date      :  10 June 2022                                                    *
+* Date      :  16 June 2022                                                    *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  Offsets both open and closed paths (i.e. polylines & polygons). *
@@ -59,6 +59,7 @@ namespace Clipper2Lib
   {
     private readonly List<PathGroup> _pathGroups = new List<PathGroup>();
     private readonly PathD _normals = new PathD();
+    private readonly Paths64 solution = new Paths64();
     private double _delta, _tmpLimit, _stepsPerRad;
     private JoinType _joinType;
     public double ArcTolerance { get; set; }
@@ -66,19 +67,22 @@ namespace Clipper2Lib
     public double MiterLimit { get; set; }
     public bool PreserveCollinear { get; set; }
     public bool ReverseSolution { get; set; }
+    public bool OrientationReversed { get; }
 
     private const double TwoPi = Math.PI * 2;
     private const double DefaultArcTolerance = 0.25;
 
     public ClipperOffset(double miterLimit = 2.0, 
       double arcTolerance = 0.0, bool 
-      preserveCollinear = false, bool reverseSolution = false)
+      preserveCollinear = false, bool reverseSolution = false,
+      bool orientationIsReversed = InternalClipperFunc.DEFAULT_ORIENTATION_IS_REVERSED)
     {
       MiterLimit = miterLimit;
       ArcTolerance = arcTolerance;
       MergeGroups = true;
       PreserveCollinear = preserveCollinear;
       ReverseSolution = reverseSolution;
+      OrientationReversed = orientationIsReversed;
     }
 
     public void Clear()
@@ -118,8 +122,7 @@ namespace Clipper2Lib
 
     public Paths64 Execute(double delta)
     {
-      Paths64 solution = new Paths64();
-
+      solution.Clear();
       if (Math.Abs(delta) < DefaultArcTolerance)
       {
         foreach (PathGroup group in _pathGroups)
@@ -131,28 +134,21 @@ namespace Clipper2Lib
       _tmpLimit = (MiterLimit <= 1 ? 2.0 : 2.0 / ClipperFunc.Sqr(MiterLimit));
 
       foreach (PathGroup group in _pathGroups)
-      {
         DoGroupOffset(group, delta);
-        solution.AddRange(group._outPaths);
-        group._outPaths.Clear();
-      }
 
       if (MergeGroups && _pathGroups.Count > 0)
       {
         //clean up self-intersections ...
-        Clipper c = new Clipper(); 
-        c.PreserveCollinear = PreserveCollinear;
+        Clipper c = new Clipper(true)
+        {
+          PreserveCollinear = PreserveCollinear,
+          ReverseSolution = ReverseSolution
+        };
         c.AddSubject(solution);
         if (_pathGroups[0]._pathsReversed)
-        {
-          c.ReverseSolution = !ReverseSolution;
           c.Execute(ClipType.Union, FillRule.Negative, solution);
-        }
         else
-        {
-          c.ReverseSolution = ReverseSolution;
           c.Execute(ClipType.Union, FillRule.Positive, solution);
-        }
       }
       return solution;
     }
@@ -338,11 +334,7 @@ namespace Clipper2Lib
               path[cnt - 1].Y - _normals[cnt - 2].y * _delta));
           break;
         case EndType.Round:
-#if REVERSE_ORIENTATION
           DoRound(group, path[cnt - 1], _normals[cnt - 1], _normals[cnt - 2], Math.PI);
-#else
-          DoRound(group, path[cnt - 1], _normals[cnt - 1], _normals[cnt - 2], -Math.PI);
-#endif
           break;
         default:
           DoSquare(group, path, cnt - 1, cnt - 2);
@@ -370,11 +362,7 @@ namespace Clipper2Lib
               path[0].Y - _normals[1].y * _delta));
           break;
         case EndType.Round:
-#if REVERSE_ORIENTATION
           DoRound(group, path[0], _normals[0], _normals[1], Math.PI);
-#else
-          DoRound(group, path[0], _normals[0], _normals[1], -Math.PI);
-#endif
           break;
         default:
           DoSquare(group, path, 0, 1);
@@ -400,22 +388,14 @@ namespace Clipper2Lib
         //designated orientation for outer polygons (needed for tidy-up clipping)
         int lowestIdx = GetLowestPolygonIdx(group._inPaths);
         if (lowestIdx < 0) return;
-        double area = ClipperFunc.Area(group._inPaths[lowestIdx]);
+        double area = ClipperFunc.Area(group._inPaths[lowestIdx], true);
         if (area == 0) return;
-
-#if REVERSE_ORIENTATION
-        if (area < 0)
-        {
+        group._pathsReversed = (area < 0);
+        if (group._pathsReversed)
           delta = -delta;
-          group._pathsReversed = true;
-        }
-#else
-        if (area > 0)
-          delta = -delta;
-        else
-          group._pathsReversed = true;
-#endif
       }
+      else
+        group._pathsReversed = false;
 
       _delta = delta;
       double absDelta = Math.Abs(_delta);
@@ -454,7 +434,6 @@ namespace Clipper2Lib
             group._outPath.Add(new Point64(path[0].X + _delta, path[0].Y + _delta));
             group._outPath.Add(new Point64(path[0].X - _delta, path[0].Y + _delta));
           }
-
           group._outPaths.Add(group._outPath);
         }
         else
@@ -468,21 +447,20 @@ namespace Clipper2Lib
 
       if (!MergeGroups)
       {
-        //clean up self-intersections ...
-        Clipper c = new Clipper();
-        c.PreserveCollinear = PreserveCollinear;
+        //clean up self-intersections
+        Clipper c = new Clipper(true)
+        {
+          PreserveCollinear = PreserveCollinear,
+          ReverseSolution = ReverseSolution
+        };
         c.AddSubject(group._outPaths);
         if (group._pathsReversed)
-        {
-          c.ReverseSolution = !ReverseSolution;
           c.Execute(ClipType.Union, FillRule.Negative, group._outPaths);
-        }
         else
-        {
-          c.ReverseSolution = ReverseSolution;
           c.Execute(ClipType.Union, FillRule.Positive, group._outPaths);
-        }
       }
+      solution.AddRange(group._outPaths);
+      group._outPaths.Clear();
     }
   }
 

@@ -49,7 +49,7 @@ int main()
     std::cout << std::endl << "==========" << std::endl;
     std::cout << "Benchmarks" << std::endl;
     std::cout << "==========" << std::endl;
-    DoBenchmark(1000, 3000, 1000);
+    DoBenchmark(1000, 5000, 1000);
     if (test_type == TestType::Benchmark) break;
 
   case TestType::MemoryLeak:
@@ -101,11 +101,11 @@ void DoSimpleTest(bool show_solution_coords)
   //SVG IMAGE #1
   //Use Minkowski to draw a stylised "C2"
   
-  SvgWriter svg;
+  SvgWriter svg(fr);
   //create a circular shape to use as the 'paint brush' shape
-  //Path64 pattern = Ellipse<int64_t>(Point64(), 25, 25);
+  Path64 pattern = Ellipse<int64_t>(Point64(), 25, 25);
   //or alternatively create a diagonal brush shape
-  Path64 pattern = MakePath("-13,20,  -11,26, 13,-20  11,-26");
+  //Path64 pattern = MakePath("-13,20,  -11,26, 13,-20  11,-26");
 
   //design "C2" as the drawing path
   //first design "C" 
@@ -117,7 +117,6 @@ void DoSimpleTest(bool show_solution_coords)
   SvgAddSolution(svg, solution, false);
   //and design "2"
   path = Ellipse<int64_t>(Point64(240, 180), 75, 65);
-  std::reverse(path.begin(), path.end());
   std::rotate(path.begin(), path.begin() + 6, path.end());
   path.erase(path.begin(), path.begin() +9);
   path.push_back(Point64(190, 249));
@@ -127,7 +126,7 @@ void DoSimpleTest(bool show_solution_coords)
   solution = MinkowskiSum(pattern, path, false);
   //save and display
   SvgAddSolution(svg, solution, false);
-  SvgSaveToFile(svg, "solution1.svg", fr, 450, 450, 10);
+  SvgSaveToFile(svg, "solution1.svg", 450, 450, 10);
   System("solution1.svg");
 
   //SVG IMAGE #2
@@ -142,11 +141,11 @@ void DoSimpleTest(bool show_solution_coords)
   solution = Intersect(subject, clip, fr);
   solution = InflatePaths(solution, -10, JoinType::Round, EndType::Polygon);
 
-  SvgWriter svg2;
+  SvgWriter svg2(fr);
   SvgAddSubject(svg2, subject);
   SvgAddClip(svg2, clip);
   SvgAddSolution(svg2, solution, false);
-  SvgSaveToFile(svg2, "solution2.svg", fr, 450, 450, 10);
+  SvgSaveToFile(svg2, "solution2.svg", 450, 450, 10);
   System("solution2.svg");
 }
 
@@ -190,13 +189,13 @@ void RunSavedTests(const std::string& filename,
       {
         std::string filename2 = "test_" + std::to_string(i) + ".svg";
 
-        SvgWriter svg;
+        SvgWriter svg(fr);
         SvgAddSubject(svg, subject);
         SvgAddOpenSubject(svg, subject_open);
         SvgAddClip(svg, clip);
         SvgAddSolution(svg, solution, show_solution_coords);
         SvgAddOpenSolution(svg, solution_open, show_solution_coords);
-        SvgSaveToFile(svg, filename2, fr, display_width, display_height, 20);
+        SvgSaveToFile(svg, filename2, display_width, display_height, 20);
         System(filename2.c_str());
       }
     }
@@ -208,7 +207,7 @@ void RunSavedTests(const std::string& filename,
 void DoBenchmark(int edge_cnt_start, int edge_cnt_end, int increment)
 {
   ClipType ct_benchmark = ClipType::Intersection;
-  FillRule fr_benchmark = FillRule::NonZero;//EvenOdd;//
+  FillRule fr_benchmark = FillRule::NonZero;//EvenOdd;//Positive;//
 
   Paths64 subject, clip, solution;
 
@@ -223,18 +222,17 @@ void DoBenchmark(int edge_cnt_start, int edge_cnt_end, int increment)
 
     std::cout << "Edge Count: " << i << " = ";
     {
-      Timer t("");
+      Timer t;
       solution = BooleanOp(ct_benchmark, fr_benchmark, subject, clip);
       if (solution.empty()) break;
     }
   }
-  
-  SvgWriter svg;
+
+  SvgWriter svg(fr_benchmark);
   SvgAddSubject(svg, subject);
   SvgAddClip(svg, clip);
   SvgAddSolution(svg, solution, false);
-  SvgSaveToFile(svg, "solution3.svg", 
-    fr_benchmark, display_width, display_height, 20);
+  SvgSaveToFile(svg, "solution3.svg", display_width, display_height, 20);
   System("solution3.svg");
 }
 

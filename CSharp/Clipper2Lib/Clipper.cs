@@ -27,7 +27,7 @@ namespace Clipper2Lib
   using Paths64 = List<List<Point64>>;
   using PathD = List<PointD>;
   using PathsD = List<List<PointD>>;
-
+  
   public static class ClipperFunc
   {
 
@@ -132,8 +132,8 @@ namespace Clipper2Lib
       tmp = co.Execute(delta * scale);
       return ScalePathsD(tmp, 1/scale);
     }
-
-    public static double Area(Path64 path)
+    public static double Area(Path64 path, 
+      bool OrientationIsReversed = InternalClipperFunc.DEFAULT_ORIENTATION_IS_REVERSED)
     {
       //https://en.wikipedia.org/wiki/Shoelace_formula
       double a = 0.0;
@@ -145,22 +145,23 @@ namespace Clipper2Lib
         a += (double) (prevPt.Y + pt.Y) * (prevPt.X - pt.X);
         prevPt = pt;
       }
-#if REVERSE_ORIENTATION
-      return a * 0.5;
-#else
-      return a * -0.5;
-#endif
+      if (OrientationIsReversed)
+        return a * 0.5; 
+      else
+        return a * -0.5;
     }
 
-    public static double Area(Paths64 paths)
+    public static double Area(Paths64 paths,
+      bool OrientationIsReversed = InternalClipperFunc.DEFAULT_ORIENTATION_IS_REVERSED)
     {
       double a = 0.0;
       foreach (Path64 path in paths)
-        a += Area(path);
+        a += Area(path, OrientationIsReversed);
       return a;
     }
 
-    public static double Area(PathD path)
+    public static double Area(PathD path,
+      bool OrientationIsReversed = InternalClipperFunc.DEFAULT_ORIENTATION_IS_REVERSED)
     {
       double a = 0.0;
       int cnt = path.Count;
@@ -171,31 +172,33 @@ namespace Clipper2Lib
         a += (prevPt.y + pt.y) * (prevPt.x - pt.x);
         prevPt = pt;
       }
-#if REVERSE_ORIENTATION
-      return a * 0.5;
-#else
-      return a * -0.5;
-#endif
+      if (OrientationIsReversed)
+        return a * 0.5;
+      else
+        return a * -0.5;
     }
 
-    public static double Area(PathsD paths)
+    public static double Area(PathsD paths,
+      bool orientation_is_reversed = InternalClipperFunc.DEFAULT_ORIENTATION_IS_REVERSED)
     {
       double a = 0.0;
       foreach (PathD path in paths)
-        a += Area(path);
+        a += Area(path, orientation_is_reversed);
       return a;
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static bool IsPositive(Path64 poly)
+    public static bool IsPositive(Path64 poly,
+      bool orientation_is_reversed = InternalClipperFunc.DEFAULT_ORIENTATION_IS_REVERSED)
     {
-      return Area(poly) >= 0;
+      return Area(poly, orientation_is_reversed) >= 0;
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static bool IsPositive(PathD poly)
+    public static bool IsPositive(PathD poly,
+      bool orientation_is_reversed = InternalClipperFunc.DEFAULT_ORIENTATION_IS_REVERSED)
     {
-      return Area(poly) >= 0;
+      return Area(poly, orientation_is_reversed) >= 0;
     }
 
     public static Path64 OffsetPath(Path64 path, long dx, long dy)

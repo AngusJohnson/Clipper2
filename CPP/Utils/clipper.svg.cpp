@@ -109,7 +109,8 @@ namespace Clipper2Lib {
   }
   //------------------------------------------------------------------------------
 
-  bool SvgWriter::SaveToFile(const std::string &filename, int max_width, int max_height, int margin)
+  bool SvgWriter::SaveToFile(const std::string &filename, 
+    int max_width, int max_height, int margin)
   {
     RectD rec = MaxInvalidRectD;
     for (const PathInfo* pi : path_infos)
@@ -163,7 +164,7 @@ namespace Clipper2Lib {
       file << svg_xml_0 << ColorToHtml(pi->brush_color_) <<
         svg_xml_1 << GetAlphaAsFrac(pi->brush_color_) <<
         svg_xml_2 <<
-        (fill_rule == FillRule::EvenOdd ? "evenodd" : "nonzero") <<
+        (fill_rule_ == FillRule::NonZero ? "nonzero" : "evenodd") <<
         svg_xml_3 << ColorToHtml(pi->pen_color_) <<
         svg_xml_4 << GetAlphaAsFrac(pi->pen_color_) <<
         svg_xml_5 << pi->pen_width_ << svg_xml_6;
