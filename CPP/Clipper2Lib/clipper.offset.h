@@ -65,8 +65,7 @@ public:
 	ClipperOffset(double miter_limit = 2.0,
 		double arc_tolerance = 0.0,
 		bool preserve_collinear = false, 
-		bool reverse_solution = false,
-		bool reverse_orientation = DEFAULT_ORIENTATION_IS_REVERSED) :
+		bool reverse_solution = false) :
 		miter_limit_(miter_limit), arc_tolerance_(arc_tolerance),
 		preserve_collinear_(preserve_collinear),
 		reverse_solution_(reverse_solution) { };
