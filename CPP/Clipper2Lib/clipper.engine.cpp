@@ -3359,7 +3359,9 @@ namespace Clipper2Lib {
 			else
 			{
 				Path64 path;
-				if (BuildPath(outrec->pts, ReverseSolution, false, path))
+				//closed paths should always return a Positive orientation
+				if (BuildPath(outrec->pts, 
+					ReverseSolution == orientation_is_reversed_, false, path))
 					solutionClosed.emplace_back(std::move(path));
 				path.resize(0);
 			}
@@ -3480,8 +3482,9 @@ namespace Clipper2Lib {
 			}
 
 			Path64 path;
-			if (!BuildPath(outrec->pts, 
-				ReverseSolution, false, path)) continue;
+			//closed paths should always return a Positive orientation
+			if (!BuildPath(outrec->pts,
+				ReverseSolution == orientation_is_reversed_, false, path)) continue;
 
 			if (outrec->owner && outrec->owner->state == outrec->state)
 				outrec->owner = outrec->owner->owner;

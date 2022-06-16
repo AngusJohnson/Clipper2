@@ -3851,7 +3851,10 @@ begin
             inc(cntOpen);
       end else
       begin
-        if BuildPath(outRec.Pts, FReverseSolution,
+        //closed paths should always return a Positive orientation
+        //except when ReverseSolution == true
+        if BuildPath(outRec.Pts,
+          FReverseSolution = FOrientationIsReversed,
           false, closedPaths[cntClosed]) then
             inc(cntClosed);
       end;
@@ -4000,8 +4003,10 @@ begin
         Continue;
       end;
 
+      //closed paths should always return a Positive orientation
+      //except when ReverseSolution == true
       if not BuildPath(outRec.Pts,
-        FReverseSolution, false, path) then
+        FReverseSolution = FOrientationIsReversed, false, path) then
           Continue;
 
       if assigned(outRec.Owner) and

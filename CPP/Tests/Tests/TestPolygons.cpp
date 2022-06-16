@@ -43,8 +43,9 @@ TEST(Clipper2Tests, TestMultiplePolygons)
     {
       EXPECT_EQ(count_diff, 0);
       EXPECT_EQ(area_diff, 0);
-      if (solution.size() > 0)
-        EXPECT_TRUE(IsPositive(subject[0]) == IsPositive(solution[0]));
+      EXPECT_EQ(solution.size(), 1);
+      //clipping solutions should always be positive irrespective of orientation
+      EXPECT_TRUE(IsPositive(solution[0]));
     }
     else if (test_number < 7 || test_number == 8 || test_number == 10)
     {

@@ -142,7 +142,8 @@ namespace Clipper2Lib
         Clipper c = new Clipper(true)
         {
           PreserveCollinear = PreserveCollinear,
-          ReverseSolution = ReverseSolution
+          //the solution should retain the orientation of the input
+          ReverseSolution = ReverseSolution != _pathGroups[0]._pathsReversed
         };
         c.AddSubject(solution);
         if (_pathGroups[0]._pathsReversed)
@@ -451,7 +452,8 @@ namespace Clipper2Lib
         Clipper c = new Clipper(true)
         {
           PreserveCollinear = PreserveCollinear,
-          ReverseSolution = ReverseSolution
+          //the solution should retain the orientation of the input
+          ReverseSolution = ReverseSolution != group._pathsReversed
         };
         c.AddSubject(group._outPaths);
         if (group._pathsReversed)

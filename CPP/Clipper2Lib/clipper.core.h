@@ -34,7 +34,7 @@ namespace Clipper2Lib
 	//quite forget". While this sets the default orientation, both the Clipper
 	//and ClipperOffest classes contain 'OrientationIsReversed' parameters which
 	//can override the default setting.
-	static bool const DEFAULT_ORIENTATION_IS_REVERSED = true;
+	static bool const DEFAULT_ORIENTATION_IS_REVERSED = true;//false;//
 	
 	static double const PI = 3.141592653589793238;
 

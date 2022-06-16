@@ -1,7 +1,8 @@
 #include <gtest/gtest.h>
 #include "../../Clipper2Lib/clipper.h"
 
-TEST(Clipper2Tests, TestBasicIntersection) {
+TEST(Clipper2Tests, TestIntersectionUsingPolyTree) 
+{
     Clipper2Lib::Clipper clipper;
 
     const Clipper2Lib::Path64 a = {
@@ -24,8 +25,12 @@ TEST(Clipper2Tests, TestBasicIntersection) {
     Clipper2Lib::PolyTree64 solution;
     Clipper2Lib::Paths64 open_paths;
 
-    clipper.Execute(Clipper2Lib::ClipType::Intersection, 
-      Clipper2Lib::FillRule::Negative, solution, open_paths);
+    if (IsPositive(a))
+      clipper.Execute(Clipper2Lib::ClipType::Intersection,
+        Clipper2Lib::FillRule::Positive, solution, open_paths);
+    else
+      clipper.Execute(Clipper2Lib::ClipType::Intersection,
+        Clipper2Lib::FillRule::Negative, solution, open_paths);
 
     EXPECT_EQ(open_paths.size(), 0);
     ASSERT_EQ(solution.ChildCount(), 1);

@@ -11,12 +11,10 @@ TEST(Clipper2Tests, TestOrientationAfterOffsetting) {
         Clipper2Lib::Point64(5, 0)
     };
 
-    EXPECT_FALSE(Clipper2Lib::IsPositive(input));
-
     co.AddPath(input, Clipper2Lib::JoinType::Round, Clipper2Lib::EndType::Polygon);
     const auto outputs = co.Execute(1);
 
     ASSERT_EQ(outputs.size(), 1);
-    EXPECT_TRUE(Clipper2Lib::IsPositive(outputs[0]));
-
+    //when offsetting, output orientation should match input
+    EXPECT_TRUE(Clipper2Lib::IsPositive(input) == Clipper2Lib::IsPositive(outputs[0]));
 }

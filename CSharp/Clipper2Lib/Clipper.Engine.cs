@@ -3395,7 +3395,10 @@ namespace Clipper2Lib
         }
         else
         {
-          if (BuildPath(outrec.pts!, ReverseSolution, false, path))
+          //closed paths should always return a Positive orientation
+          //except when ReverseSolution == true
+          if (BuildPath(outrec.pts!, 
+            ReverseSolution == OrientationIsReversed, false, path))
               solutionClosed.Add(path);
         }
       }
@@ -3524,7 +3527,10 @@ namespace Clipper2Lib
         }
         
         Path64 path = new Path64();
-        if (!BuildPath(outrec.pts!, ReverseSolution, false, path))
+        //closed paths should always return a Positive orientation
+        //except when ReverseSolution == true
+        if (!BuildPath(outrec.pts!,
+          ReverseSolution == OrientationIsReversed, false, path))
             continue;
 
         if (outrec.owner != null && outrec.owner.state != outrec.state)

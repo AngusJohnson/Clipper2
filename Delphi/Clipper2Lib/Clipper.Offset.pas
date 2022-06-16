@@ -3,7 +3,7 @@ unit Clipper.Offset;
 (*******************************************************************************
 * Author    :  Angus Johnson                                                   *
 * Version   :  10.0 (beta) - aka Clipper2                                      *
-* Date      :  15 June 2022                                                    *
+* Date      :  16 June 2022                                                    *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  Offset paths and clipping solutions                             *
@@ -341,7 +341,8 @@ begin
     with TClipper64.Create(true) do
     try
       PreserveCollinear := fPreserveCollinear;
-      ReverseSolution := fReverseSolution;
+      //the solution should retain the orientation of the input
+      ReverseSolution := fReverseSolution <> pathGroup.reversed;
       AddSubject(fOutPaths);
       if pathGroup.reversed then
         Execute(ctUnion, frNegative, fOutPaths) else
@@ -486,7 +487,9 @@ begin
     with TClipper64.Create(true) do
     try
       PreserveCollinear := fPreserveCollinear;
-      ReverseSolution := fReverseSolution;
+      //the solution should retain the orientation of the input
+      ReverseSolution :=
+        fReverseSolution <> TPathGroup(fInGroups[0]).reversed;
       AddSubject(fSolution);
       if TPathGroup(fInGroups[0]).reversed then
         Execute(ctUnion, frNegative, fSolution) else

@@ -42,8 +42,7 @@ TEST(Clipper2Tests, TestMultipleLines) {
       EXPECT_EQ(solution.size(), 1);
       if (solution.size() > 0)
       {
-        EXPECT_EQ(solution[0].size(), 6);
-        EXPECT_TRUE(IsPositive(subject[0]));
+        EXPECT_EQ(solution[0].size(), 6);        
         EXPECT_TRUE(IsPositive(solution[0]));
       }
 
