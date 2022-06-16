@@ -98,3 +98,19 @@ jobs:
       run: |
         cd CPP/build
         make test
+  macos-latest:
+    runs-on: 'macos-latest'
+    steps:
+    - uses: actions/checkout@v2
+    - name: Get GoogleTest
+      run: git submodule update --init
+    - name: Build
+      run: |
+        mkdir CPP/build
+        cd CPP/build
+        cmake ..
+        make
+    - name: Run tests
+      run: |
+        cd CPP/build
+        make test
