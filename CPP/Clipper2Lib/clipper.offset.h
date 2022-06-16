@@ -29,11 +29,11 @@ public:
 	Paths64 paths_in_;
 	Paths64 paths_out_;
 	Path64 path_;
-	bool is_reversed = false;
-	JoinType join_type;
-	EndType end_type;
+	bool is_reversed_ = false;
+	JoinType join_type_;
+	EndType end_type_;
 	PathGroup(const Paths64& paths, JoinType join_type, EndType end_type):
-		paths_in_(paths), join_type(join_type), end_type(end_type) {}
+		paths_in_(paths), join_type_(join_type), end_type_(end_type) {}
 };
 
 class ClipperOffset {
