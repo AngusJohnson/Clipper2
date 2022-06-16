@@ -349,8 +349,8 @@ namespace Clipper2Lib {
 		double Area() const
 		{
 			double result = Clipper2Lib::Area<T>(polygon);
-			for (PolyPath<T> child : childs)
-				result += child.Area();
+			for (const PolyPath<T>* child : childs)
+				result += child->Area();
 			return result;
 		}
 
