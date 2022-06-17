@@ -43,9 +43,9 @@ std::vector<ResultRegion> ExtractResults(
 
 TEST(Clipper2Tests, TestFromTextFile3) {
 #ifdef _WIN32
-    std::ifstream ifs("../../../Tests/Tests3.txt");
+    std::ifstream ifs("../../../Tests/PolytreeHoleOwner.txt");
 #else
-    std::ifstream ifs("Tests3.txt");
+    std::ifstream ifs("PolytreeHoleOwner.txt");
 #endif
     ASSERT_TRUE(ifs);
     ASSERT_TRUE(ifs.good());
