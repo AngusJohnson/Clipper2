@@ -1,7 +1,7 @@
 ﻿/*******************************************************************************
 * Author    :  Angus Johnson                                                   *
 * Version   :  10.0 (beta) - also known as Clipper2                            *
-* Date      :  17 June 2022                                                    *
+* Date      :  19 June 2022                                                    *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  Offsets both open and closed paths (i.e. polylines & polygons). *
@@ -46,7 +46,7 @@ namespace Clipper2Lib
 
     public PathGroup(Paths64 paths, JoinType joinType, EndType endType = EndType.Polygon)
     {
-      _inPaths = paths;
+      _inPaths = new Paths64(paths);
       _joinType = joinType;
       _endType = endType;
       _outPath = new Path64();
