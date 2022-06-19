@@ -2319,11 +2319,13 @@ namespace Clipper2Lib
         if (horzIsOpen && IsOpenEnd(horz))
         {
           if (IsHotEdge(horz))
+          {
             AddOutPt(horz, horz.top);
-          if (IsFront(horz))
-            horz.outrec!.frontEdge = null;
-          else
-            horz.outrec!.backEdge = null;
+            if (IsFront(horz))
+              horz.outrec!.frontEdge = null;
+            else
+              horz.outrec!.backEdge = null;
+          }
           horz.outrec = null;
           DeleteFromAEL(horz); //ie open at top
           return;
