@@ -623,5 +623,65 @@ namespace Clipper2Lib
       return result;
     }
 
+    public static Path64 TrimCollinear(Path64 path, bool isOpen = false)
+    {
+      int len = path.Count;
+      int i = 0;
+      if (!isOpen)
+      {
+        while (i < len - 1 && InternalClipperFunc.CrossProduct(
+          path[len - 1], path[i], path[i + 1]) == 0) i++;
+        while (i < len - 1 && InternalClipperFunc.CrossProduct(
+          path[len - 2], path[len - 1], path[i]) == 0) len--;
+      }
+
+      if (len - i < 3)
+      {
+        if (!isOpen || len < 2 || path[0] == path[1])
+          return new Path64();
+        else
+          return path;
+      }
+
+      Path64 result = new Path64(len - i);
+      Point64 last = path[i];
+      result.Add(last);
+      for (i++; i < len - 1; i++)
+      {
+        if (InternalClipperFunc.CrossProduct(
+          last, path[i], path[i + 1]) != 0)
+        {
+          last = path[i];
+          result.Add(last);
+        }
+        else if (result.Count > 1 && InternalClipperFunc.CrossProduct(
+          result[^2], last, path[i]) == 0)
+        {
+          result.RemoveAt(result.Count - 1);
+          last = result[^1];
+        } 
+      }
+
+      if (isOpen)
+        result.Add(path[len - 1]);
+      else if (InternalClipperFunc.CrossProduct(
+        last, path[len - 1], result[0]) != 0)
+        result.Add(path[len - 1]);
+      else if (result.Count < 3)
+        result.Clear();
+
+      return result;      
+    }
+
+    public static PathD TrimCollinear(PathD path, int precision, bool isOpen = false)
+    {
+      if (precision < -8 || precision > 8)
+        throw new Exception("Error: Precision is out of range.");
+      double scale = Math.Pow(10, precision);
+      Path64 p = ScalePath64(path, scale);
+      p = TrimCollinear(p, isOpen);
+      return ScalePathD(p, 1 / scale);
+    }
+
   }
 } //namespace

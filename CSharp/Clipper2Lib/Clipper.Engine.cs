@@ -1,7 +1,7 @@
 ﻿/*******************************************************************************
 * Author    :  Angus Johnson                                                   *
 * Version   :  10.0 (beta) - also known as Clipper2                            *
-* Date      :  17 June 2022                                                    *
+* Date      :  19 June 2022                                                    *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  This is the main polygon clipping module                        *
@@ -686,6 +686,8 @@ namespace Clipper2Lib
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static void SwapSides(OutRec outrec)
     {
+      //while this proc. is needed for open paths
+      //it's almost never needed for closed paths
       Active ae2 = outrec.frontEdge!;
       outrec.frontEdge = outrec.backEdge;
       outrec.backEdge = ae2;
@@ -1507,6 +1509,13 @@ namespace Clipper2Lib
         result = outrec.pts;
       }
       //and to preserve the winding orientation of outrec ...
+      else if (IsOpen(ae1))
+      {
+        if (ae1.windDx < 0)
+          JoinOutrecPaths(ae1, ae2);
+        else
+          JoinOutrecPaths(ae2, ae1);
+      }
       else if (ae1.outrec!.idx < ae2.outrec!.idx)
         JoinOutrecPaths(ae1, ae2);
       else
@@ -1599,11 +1608,18 @@ namespace Clipper2Lib
       outrec.state = OutRecState.Open;
       outrec.pts = null;
       outrec.polypath = null;
-      outrec.frontEdge = ae;
-      outrec.backEdge = null;
+      if (ae.windDx > 0)
+      {
+        outrec.frontEdge = ae;
+        outrec.backEdge = null;
+      }
+      else 
+      {
+        outrec.frontEdge = null; 
+        outrec.backEdge = ae;
+      }
 
       ae.outrec = outrec;
-
       OutPt op = new OutPt(pt, outrec);
       outrec.pts = op;
       return op;
@@ -2304,6 +2320,11 @@ namespace Clipper2Lib
         {
           if (IsHotEdge(horz))
             AddOutPt(horz, horz.top);
+          if (IsFront(horz))
+            horz.outrec!.frontEdge = null;
+          else
+            horz.outrec!.backEdge = null;
+          horz.outrec = null;
           DeleteFromAEL(horz); //ie open at top
           return;
         }
@@ -2398,11 +2419,17 @@ namespace Clipper2Lib
 
       if (IsOpenEnd(ae))
       {
-        if (IsHotEdge(ae))
-          AddOutPt(ae, ae.top);
+        if (IsHotEdge(ae)) AddOutPt(ae, ae.top);
         if (!IsHorizontal(ae))
         {
-          if (IsHotEdge(ae)) ae.outrec = null;
+          if (IsHotEdge(ae))
+          {
+            if (IsFront(ae))
+              ae.outrec!.frontEdge = null;
+            else
+              ae.outrec!.backEdge = null;
+            ae.outrec = null;
+          }
           DeleteFromAEL(ae);
         }
         return nextE;

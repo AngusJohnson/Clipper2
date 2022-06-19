@@ -1,7 +1,7 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
 * Version   :  10.0 (beta) - aka Clipper2                                      *
-* Date      :  11 June 2022                                                    *
+* Date      :  18 June 2022                                                    *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  This module provides a simple interface to the Clipper Library  *
@@ -368,6 +368,16 @@ namespace Clipper2Lib
     Path64 dst;
     dst.reserve(len);
     Path64::const_iterator srcIt = p.cbegin(), prevIt, stop = p.cend() - 1;
+
+    if (!is_open_path)
+    {
+      while (srcIt != stop && !CrossProduct(*stop, *srcIt, *(srcIt + 1)))
+        ++srcIt;
+      while (srcIt != stop && !CrossProduct(*(stop - 1), *stop, *srcIt))
+        --stop;
+      if (srcIt == stop) return Path64();
+    }
+
     prevIt = srcIt++;
     dst.push_back(*prevIt);
     for (; srcIt != stop; ++srcIt)
@@ -377,24 +387,32 @@ namespace Clipper2Lib
         prevIt = srcIt;
         dst.push_back(*prevIt);
       }
-    }
-    if (!is_open_path)
-    {
-      if (CrossProduct(*prevIt, *srcIt, dst[0]))
+      else if (!is_open_path && dst.size() > 1 &&
+        !CrossProduct(*(prevIt - 1), *prevIt, *srcIt))
       {
-        prevIt = srcIt;
-        dst.push_back(*prevIt);
+        dst.pop_back();
+        --prevIt;
       }
-      if (dst.size() == 1) return Path64();
-      if (!CrossProduct(*prevIt, dst[0], dst[1]))
-        dst.erase(dst.begin());
     }
-    else if (*prevIt != *srcIt)
-      dst.push_back(*srcIt);
 
+    if (is_open_path)
+      dst.push_back(*srcIt);
+    else if (CrossProduct(*prevIt, *stop, dst[0]))
+      dst.push_back(*stop);
+    else if (dst.size() < 3)
+      return Path64();
     return dst;
   }
 
+  static PathD TrimCollinear(const PathD& path, int precision, bool is_open_path = false)
+  {
+    if (precision > 8 || precision < -8) 
+      throw new Clipper2Exception("Error: Precision exceeds the allowed range.");
+    const double scale = std::pow(10, precision);
+    Path64 p = ScalePath<int64_t, double>(path, scale);
+    p = TrimCollinear(p, is_open_path);
+    return ScalePath<double, int64_t>(p, 1/scale);
+  }
 
 }  //end Clipper2Lib namespace
 

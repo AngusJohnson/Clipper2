@@ -52,8 +52,8 @@ TEST(Clipper2Tests, TestMultipleLines) {
         EXPECT_EQ(solution_open[0].size(), 2);
         if (solution_open[0].size() > 0)
         {
-          //expect smallest Y before largest
-          EXPECT_EQ(solution_open[0][0].y, 5);
+          //expect vertex closest to input path's start
+          EXPECT_EQ(solution_open[0][0].y, 6);
         }
       }
     }

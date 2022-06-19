@@ -3,7 +3,7 @@ unit Clipper.Engine;
 (*******************************************************************************
 * Author    :  Angus Johnson                                                   *
 * Version   :  10.0 (beta) - aka Clipper2                                      *
-* Date      :  16 June 2022                                                    *
+* Date      :  19 June 2022                                                    *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  This is the main polygon clipping module                        *
@@ -906,7 +906,8 @@ begin
   e2 := e.PrevInAEL;
   while assigned(e2) do
   begin
-    if IsHotEdge(e2) and not IsOpen(e2) then isOuter := not isOuter;
+    if IsHotEdge(e2) and not IsOpen(e2) then
+      isOuter := not isOuter;
     e2 := e2.PrevInAEL;
   end;
 
@@ -938,7 +939,8 @@ procedure SwapFrontBackSides(outRec: POutRec); {$IFDEF INLINING} inline; {$ENDIF
 var
   e2: PActive;
 begin
-  //this proc. is almost never needed
+  //while this proc. is needed for open paths
+  //it's almost never needed for closed paths
   e2 := outRec.FrontE;
   outRec.FrontE := outRec.BackE;
   outRec.BackE := e2;
@@ -958,6 +960,7 @@ begin
     outRec.State := osOpen;
     Exit;
   end;
+
   //set owner ...
   if IsHeadingLeftHorz(e) then
   begin
@@ -2091,7 +2094,9 @@ begin
   if (IsFront(e1) = IsFront(e2)) then
   begin
     if IsOpen(e1) then
-      SwapFrontBackSides(e2.OutRec)
+    begin
+      SwapFrontBackSides(e2.OutRec);
+    end
     else if not FixSides(e1, e2) then
     begin
       FSucceeded := false;
@@ -2110,8 +2115,15 @@ begin
     Result := outRec.Pts;
   end
   //and to preserve the winding orientation of Outrec ...
+  else if IsOpen(e1) then
+  begin
+    if e1.WindDx < 0 then
+      JoinOutrecPaths(e1, e2) else
+      JoinOutrecPaths(e2, e1);
+  end
   else if e1.OutRec.Idx < e2.OutRec.Idx then
-    JoinOutrecPaths(e1, e2) else
+    JoinOutrecPaths(e1, e2)
+  else
     JoinOutrecPaths(e2, e1);
 end;
 //------------------------------------------------------------------------------
@@ -2714,8 +2726,15 @@ begin
   newOr.Pts := nil;
   newOr.Split := nil;
   newOr.PolyPath := nil;
-  newOr.FrontE := e;
-  newOr.BackE := nil;
+  if e.WindDx > 0 then
+  begin
+    newOr.FrontE := e;
+    newOr.BackE := nil;
+  end else
+  begin
+    newOr.FrontE := nil;
+    newOr.BackE := e;
+  end;
   e.OutRec := newOr;
 
   new(Result);
@@ -3682,7 +3701,13 @@ begin
     if horzIsOpen and IsOpenEnd(horzEdge) then
     begin
       if IsHotEdge(horzEdge) then
+      begin
         AddOutPt(horzEdge, horzEdge.Top);
+        if IsFront(horzEdge) then
+          horzEdge.OutRec.FrontE := nil else
+          horzEdge.OutRec.BackE := nil;
+        horzEdge.OutRec := nil;
+      end;
       DeleteFromAEL(horzEdge); //ie open at top
       Exit;
     end
@@ -3784,7 +3809,13 @@ begin
     if IsHotEdge(e) then AddOutPt(e, e.Top);
     if not IsHorizontal(e) then
     begin
-      if IsHotEdge(e) then e.OutRec := nil;
+      if IsHotEdge(e) then
+      begin
+        if IsFront(e) then
+          e.OutRec.FrontE := nil else
+          e.OutRec.BackE := nil;
+        e.OutRec := nil;
+      end;
       DeleteFromAEL(e);
     end;
     Exit;

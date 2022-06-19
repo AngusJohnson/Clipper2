@@ -61,7 +61,7 @@ begin
   end; //bottom of edgecount loop
 
   //now display the very last solution ...
-  with SimpleClipperSvgWriter.Create(frNonZero) do
+  with TSimpleClipperSvgWriter.Create(frNonZero) do
   try
     AddText('sample', 0,0);
     AddPaths(subj, false, $1000BBFF, $800099FF, 0.8);

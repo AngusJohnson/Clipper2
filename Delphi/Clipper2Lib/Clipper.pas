@@ -3,7 +3,7 @@ unit Clipper;
 (*******************************************************************************
 * Author    :  Angus Johnson                                                   *
 * Version   :  10.0 (beta) - aka Clipper2                                      *
-* Date      :  16 June 2022                                                    *
+* Date      :  18 June 2022                                                    *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  This module provides a simple interface to the Clipper Library  *
@@ -91,6 +91,11 @@ function PolyTreeDToPathsD(PolyTree: TPolyTreeD): TPathsD;
 
 function MakePath(const ints: TArrayOfInteger): TPath64; overload;
 function MakePath(const dbls: TArrayOfDouble): TPathD; overload;
+
+function TrimCollinear(const p: TPath64;
+  is_open_path: Boolean = false): TPath64; overload;
+function TrimCollinear(const path: TPathD;
+  precision: integer; is_open_path: Boolean = false): TPathD; overload;
 
 resourcestring
   rsPrecisionRangeError = 'Error: Precision is out of range (-8..8).';
@@ -316,6 +321,75 @@ begin
  Result := Clipper.Minkowski.MinkowskiSum(pattern, path, pathIsClosed);
 end;
 //------------------------------------------------------------------------------
+
+function TrimCollinear(const p: TPath64; is_open_path: Boolean = false): TPath64;
+var
+  i,j, len: integer;
+begin
+  len := Length(p);
+
+  i := 0;
+  if not is_open_path then
+  begin
+    while (i < len -1) and
+      (CrossProduct(p[len -1], p[i], p[i+1]) = 0) do inc(i);
+    while (i < len -1) and
+      (CrossProduct(p[len -2], p[len -1], p[i]) = 0) do dec(len);
+  end;
+  if (len - i < 3) then
+  begin
+    if not is_open_path or (len < 2) or PointsEqual(p[0], p[1]) then
+      Result := nil else
+      Result := p;
+    Exit;
+  end;
+
+  SetLength(Result, len -i);
+
+  Result[0] := p[i];
+  j := 0;
+  for i := i+1 to len -2 do
+    if CrossProduct(result[j], p[i], p[i+1]) <> 0 then
+    begin
+      inc(j);
+      result[j] := p[i];
+    end
+    else if (j > 0) and
+      (CrossProduct(result[j-1], result[j], p[i]) = 0) then
+    begin
+      dec(j);
+    end;
+
+  if is_open_path then
+  begin
+    inc(j);
+    result[j] := p[len-1];
+  end
+  else if CrossProduct(result[j], p[len-1], result[0]) <> 0 then
+  begin
+    inc(j);
+    result[j] := p[len-1];
+  end
+  else if j < 2 then
+    j := -1;
+
+  SetLength(Result, j +1);
+end;
+//------------------------------------------------------------------------------
+
+function TrimCollinear(const path: TPathD;
+  precision: integer; is_open_path: Boolean = false): TPathD;
+var
+  p: TPath64;
+  scale: double;
+begin
+  scale := power(10, precision);
+  p := ScalePath(path, scale);
+  p := TrimCollinear(p, is_open_path);
+  Result := ScalePathD(p, 1/scale);
+end;
+//------------------------------------------------------------------------------
+
 
 end.
 
