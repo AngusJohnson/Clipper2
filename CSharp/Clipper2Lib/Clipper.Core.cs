@@ -1,7 +1,7 @@
 ﻿/*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Version   :  10.0 (beta) - also known as Clipper2                            *
-* Date      :  17 June 2022                                                    *
+* Version   :  Clipper2 - beta                                                 *
+* Date      :  20 June 2022                                                    *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  Core structures and functions for the Clipper Library           *
@@ -410,7 +410,7 @@ namespace Clipper2Lib
     Inner
   };
 
-  public static class InternalClipperFunc
+  public static class InternalClipper
   {
 
     //The classic Cartesian plane is defined by an X-axis that's positive toward
@@ -431,29 +431,30 @@ namespace Clipper2Lib
     //constructor contains a parameter which can override this default setting.
     public const bool DEFAULT_ORIENTATION_IS_REVERSED = false;
 
-    public const double floatingPointTolerance = 1E-15;
-    public const double defaultMinimumEdgeLength = 0.1;
+    internal const double floatingPointTolerance = 1E-15;
+    internal const double defaultMinimumEdgeLength = 0.1;
 
-    public static double CrossProduct(Point64 pt1, Point64 pt2, Point64 pt3)
+    internal static double CrossProduct(Point64 pt1, Point64 pt2, Point64 pt3)
     {
       //typecast to double to avoid potential int overflow
       return ((double) (pt2.X - pt1.X) * (pt3.Y - pt2.Y) -
               (double) (pt2.Y - pt1.Y) * (pt3.X - pt2.X));
     }
 
-    public static double DotProduct(Point64 pt1, Point64 pt2, Point64 pt3)
+    internal static double DotProduct(Point64 pt1, Point64 pt2, Point64 pt3)
     {
       //typecast to double to avoid potential int overflow
       return ((double) (pt2.X - pt1.X) * (pt3.X - pt2.X) +
               (double) (pt2.Y - pt1.Y) * (pt3.Y - pt2.Y));
     }
 
-    public static double DotProduct(PointD vec1, PointD vec2)
+    internal static double DotProduct(PointD vec1, PointD vec2)
     {
       return (vec1.x * vec2.x + vec1.y * vec2.y);
     }
 
-    public static bool GetIntersectPoint(Point64 ln1a, Point64 ln1b, Point64 ln2a, Point64 ln2b, out PointD ip)
+    internal static bool GetIntersectPoint(Point64 ln1a, 
+      Point64 ln1b, Point64 ln2a, Point64 ln2b, out PointD ip)
     {
       ip = new PointD();
       double m1, b1, m2, b2;
@@ -493,7 +494,8 @@ namespace Clipper2Lib
       return true;
     }
 
-    public static bool SegmentsIntersect(Point64 seg1a, Point64 seg1b, Point64 seg2a, Point64 seg2b)
+    internal static bool SegmentsIntersect(Point64 seg1a, 
+      Point64 seg1b, Point64 seg2a, Point64 seg2b)
     {
       double dx1 = seg1a.X - seg1b.X;
       double dy1 = seg1a.Y - seg1b.Y;
@@ -506,5 +508,6 @@ namespace Clipper2Lib
         dx2 * (seg1a.Y - seg2a.Y)) * (dy2 * (seg1b.X - seg2a.X) -
         dx2 * (seg1b.Y - seg2a.Y)) < 0));
     }
-  } //InternalClipperFuncs
+  } //InternalClipper
+
 } //namespace

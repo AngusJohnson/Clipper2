@@ -20,7 +20,7 @@ namespace Clipper2Lib
   using Paths64 = List<List<Point64>>;
   using PathsD = List<List<PointD>>;
 
-  public class SimpleClipperSvgWriter
+  public class SimpleSvgWriter
   {
 
     public const uint black = 0xFF000000;
@@ -112,7 +112,7 @@ namespace Clipper2Lib
     private const string svg_path_format2 = "\"\n style=\"fill:none; stroke:{0};" +
         "stroke-opacity:{1:f2}; stroke-width:{2:f2};\"/>\n\n";
 
-    public SimpleClipperSvgWriter(FillRule fillrule = FillRule.EvenOdd,
+    public SimpleSvgWriter(FillRule fillrule = FillRule.EvenOdd,
       string coordFontName = "Verdana", int coordFontsize = 9, uint coordFontColor = black)
     {
       coordStyle = new CoordStyle(coordFontName, coordFontsize, coordFontColor);
@@ -140,7 +140,7 @@ namespace Clipper2Lib
       uint penColor, double penWidth, bool showCoords = false)
     {
       if (paths.Count == 0) return;
-      PolyInfoList.Add(new PolyInfo(ClipperFunc.PathsD(paths),
+      PolyInfoList.Add(new PolyInfo(Clipper.PathsD(paths),
         brushColor, penColor, penWidth, showCoords, IsOpen));
     }
     //------------------------------------------------------------------------------

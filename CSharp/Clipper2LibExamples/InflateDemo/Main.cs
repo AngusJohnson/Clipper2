@@ -19,50 +19,42 @@ namespace ClipperDemo1
 
   using Path64 = List<Point64>;
   using Paths64 = List<List<Point64>>;
-  using PathD = List<PointD>;
   using PathsD = List<List<PointD>>;
 
   public class Application
   {
-
-    const int margin = 20;
-    const int displayWidth = 800, displayHeight = 600;
-
-    //-----------------------------------------------------------------------
-    //-----------------------------------------------------------------------
-
     public static void Main()
     {
       //triangle offset - with large miter
       Paths64 p = new Paths64();
-      p.Add(ClipperFunc.MakePath(new int []{ 30, 150, 60, 350, 0, 350}));
+      p.Add(Clipper.MakePath(new int []{ 30, 150, 60, 350, 0, 350}));
       Paths64 pp = new Paths64();
       pp.AddRange(p);
 
       for (int i = 0; i < 5; ++i)
       {
         //nb: the following '10' parameter greatly increases miter limit
-        p = ClipperFunc.InflatePaths(p, 5, JoinType.Miter, EndType.Polygon, 10);
+        p = Clipper.InflatePaths(p, 5, JoinType.Miter, EndType.Polygon, 10);
         pp.AddRange(p);
       }
 
       //rectangle offset - both squared and rounded
       p.Clear();
-      p.Add(ClipperFunc.MakePath(new int[] { 100, 0, 340, 0, 340, 200, 100, 200 }));
+      p.Add(Clipper.MakePath(new int[] { 100, 0, 340, 0, 340, 200, 100, 200 }));
       pp.AddRange(p);
       //nb: using the ClipperOffest class directly here to control 
       //different join types within the same offset operation
       ClipperOffset co = new ClipperOffset();
       co.AddPaths(p, JoinType.Miter, EndType.Joined);
-      p = ClipperFunc.OffsetPaths(p, 120, 100);
+      p = Clipper.OffsetPaths(p, 120, 100);
       pp.AddRange(p);
       co.AddPaths(p, JoinType.Round, EndType.Joined);
       p = co.Execute(20);
       pp.AddRange(p);
 
-      SimpleClipperSvgWriter svg = new SimpleClipperSvgWriter();
-      SvgAddSolution(svg, pp, false);
-      SvgSaveToFile(svg, "../../../inflate.svg", FillRule.EvenOdd, 800, 600, 20);
+      SimpleSvgWriter svg = new SimpleSvgWriter();
+      SvgUtils.AddSolution(svg, pp, false);
+      SvgUtils.SaveToFile(svg, "../../../inflate.svg", FillRule.EvenOdd, 800, 600, 20);
       OpenFile("../../../inflate.svg");
 
       // Because ClipperOffset uses integer coordinates,
@@ -71,23 +63,23 @@ namespace ClipperDemo1
       const double scale = 100;
 
       p = LoadPathsFromResource("InflateDemo.rabbit.bin");
-      p = ClipperFunc.ScalePaths(p, scale);                    //scale up
+      p = Clipper.ScalePaths(p, scale);                    //scale up
       pp.Clear();
       pp.AddRange(p);
 
       while (p.Count > 0)
       {
         //don't forget to scale the delta offset
-        p = ClipperFunc.InflatePaths(p, -5 * scale, JoinType.Round, EndType.Polygon);
+        p = Clipper.InflatePaths(p, -2.5 * scale, JoinType.Round, EndType.Polygon);
         //RamerDouglasPeucker - not essential but
         //speeds up the loop and also tidies up the result
-        p = ClipperFunc.RamerDouglasPeucker(p, 0.25 * scale);
+        p = Clipper.RamerDouglasPeucker(p, 0.25 * scale);
         pp.AddRange(p);
       }
-      PathsD ppp = ClipperFunc.ScalePathsD(pp, 1/scale);       //scale back down
+      PathsD ppp = Clipper.ScalePathsD(pp, 1/scale);       //scale back down
       svg.ClearAll();
-      SvgAddSolution(svg, ppp, false);
-      SvgSaveToFile(svg, "../../../rabbit2.svg", FillRule.EvenOdd, 450, 720, 10);
+      SvgUtils.AddSolution(svg, ppp, false);
+      SvgUtils.SaveToFile(svg, "../../../rabbit2.svg", FillRule.EvenOdd, 450, 720, 10);
       OpenFile("../../../rabbit2.svg");
 
     } //end Main()
@@ -100,52 +92,6 @@ namespace ClipperDemo1
       Process p = new Process();
       p.StartInfo = new ProcessStartInfo(path) { UseShellExecute = true };
       p.Start();
-    }
-
-    internal static void SvgAddCaption(SimpleClipperSvgWriter svg, string caption, int x, int y)
-    {
-      svg.AddText(caption, x, y, 14, 0xFF000000);
-    }
-
-    internal static void SvgAddSubject(SimpleClipperSvgWriter svg, Paths64 paths,
-      bool is_closed = true, bool is_joined = true)
-    {
-      if (!is_closed)
-        svg.AddPaths(paths, !is_joined, 0x0, 0xCCB3B3DA, 0.8, false);
-      else
-        svg.AddPaths(paths, false, 0x1800009C, 0xCCB3B3DA, 0.8, false);
-    }
-
-    internal static void SvgAddClip(SimpleClipperSvgWriter svg, Paths64 paths)
-    {
-      svg.AddPaths(paths, false, 0x129C0000, 0xCCFFA07A, 0.8, false);
-    }
-
-    internal static void SvgAddSolution(SimpleClipperSvgWriter svg, Paths64 paths,
-      bool show_coords, bool is_closed = true, bool is_joined = true)
-    {
-      if (!is_closed)
-        svg.AddPaths(paths, !is_joined, 0x0, 0xFF003300, 0.8, show_coords);
-      else
-        svg.AddPaths(paths, false, 0xFF80ff9C, 0xFF003300, 0.8, show_coords);
-    }
-
-    internal static void SvgAddSolution(SimpleClipperSvgWriter svg, PathsD paths,
-      bool show_coords, bool is_closed = true, bool is_joined = true)
-    {
-      if (!is_closed)
-        svg.AddPaths(paths, !is_joined, 0x0, 0xFF003300, 0.8, show_coords);
-      else
-        svg.AddPaths(paths, false, 0xFF80ff9C, 0xFF003300, 0.8, show_coords);
-    }
-
-    internal static void SvgSaveToFile(SimpleClipperSvgWriter svg,
-      string filename, FillRule fill_rule, 
-      int max_width = 0, int max_height = 0, int margin = 0)
-    {
-      if (File.Exists(filename)) File.Delete(filename);
-      svg.FillRule = fill_rule;
-      svg.SaveToFile(filename, max_width, max_height, margin);
     }
 
     public static Paths64 LoadPathsFromResource(string resourceName)

@@ -2,8 +2,8 @@ unit Clipper.Engine;
 
 (*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Version   :  10.0 (beta) - aka Clipper2                                      *
-* Date      :  19 June 2022                                                    *
+* Version   :  Clipper2 - beta                                                 *
+* Date      :  21 June 2022                                                    *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  This is the main polygon clipping module                        *
@@ -157,7 +157,6 @@ type
     FCurrentLocMinIdx   : Integer;
     FClipType           : TClipType;
     FFillRule           : TFillRule;
-    FUsingPolytree      : Boolean;
     FPreserveCollinear  : Boolean;
     FIntersectList      : TList;
     FOutRecList         : TList;
@@ -232,6 +231,7 @@ type
     procedure CleanCollinear(outRec: POutRec);
     procedure FixSelfIntersects(var op: POutPt);
   protected
+    FUsingPolytree : Boolean;
     procedure AddPath(const path: TPath64;
       pathType: TPathType; isOpen: Boolean);
     procedure AddPaths(const paths: TPaths64;
@@ -365,6 +365,9 @@ type
     property  Scale: double read FScale;
   end;
 
+resourcestring
+  rsClipper_RoundingErr = 'The decimal rounding value is invalid';
+
 implementation
 
 //OVERFLOWCHECKS OFF is a necessary workaround for a compiler bug that very
@@ -375,7 +378,6 @@ implementation
 resourcestring
   rsClipper_PolyTreeErr = 'The TPolyTree parameter must be assigned.';
   rsClipper_ClippingErr = 'Undefined clipping error';
-  rsClipper_RoundingErr = 'The decimal rounding value is invalid';
 
 const
   DefaultClipperDScale = 100;
@@ -3903,7 +3905,8 @@ function PointInPolygon(const pt: TPoint64; ops: POutPt): TPointInPolygonResult;
 var
   val: Integer;
   d: Double; //used to avoid integer overflow
-  ptCurr, ptPrev: POutPt;
+  curr, prev: POutPt;
+  isAbove: Boolean;
 begin
   if (ops.Next = ops) or (ops.Next = ops.Prev) then
   begin
@@ -3913,52 +3916,60 @@ begin
 
   Result := pipOn;
   val := 0;
-  ptPrev := ops.Prev;
-  ptCurr := ops;
+  prev := ops.Prev;
+
+  prev.Next := nil; //temporarily break the link !!
+  curr := ops;
+  isAbove := prev.Pt.Y < pt.Y;
   repeat
-    if (ptPrev.Pt.Y = ptCurr.Pt.Y) then //a horizontal edge
+    if isAbove then
     begin
-      if (pt.Y = ptCurr.Pt.Y) and
-        ((pt.X = ptPrev.Pt.X) or (pt.X = ptCurr.Pt.X) or
-          ((pt.X < ptPrev.Pt.X) <> (pt.X < ptCurr.Pt.X))) then Exit;
-    end
-    else if (ptPrev.Pt.Y < ptCurr.Pt.Y) then
-    begin
-      //nb: only allow one equality with Y to avoid
-      //double counting when pt.Y == ptCurr.Pt.Y
-      if (pt.Y > ptPrev.Pt.Y) and (pt.Y <= ptCurr.Pt.Y) and
-        ((pt.X >= ptPrev.Pt.X) or (pt.X >= ptCurr.Pt.X)) then
-      begin
-        if((pt.X > ptPrev.Pt.X) and (pt.X > ptCurr.Pt.X)) then
-          val := 1 - val //toggles val between 0 and 1
-        else
-        begin
-          d := CrossProduct(ptPrev.Pt, ptCurr.Pt, pt);
-          if d = 0 then Exit
-          else if d > 0 then val := 1 - val;
-        end;
-      end;
+      while Assigned(curr) and (curr.Pt.Y < pt.Y) do
+        curr := curr.Next;
+      if not Assigned(curr) then break;
     end else
     begin
-      if (pt.Y > ptCurr.Pt.Y) and (pt.Y <= ptPrev.Pt.Y) and
-        ((pt.X >= ptCurr.Pt.X) or (pt.X >= ptPrev.Pt.X)) then
-      begin
-        if((pt.X > ptPrev.Pt.X) and (pt.X > ptCurr.Pt.X)) then
-          val := 1 - val //toggles val between 0 and 1
-        else
-        begin
-          d := CrossProduct(ptCurr.Pt, ptPrev.Pt, pt);
-          if d = 0 then Exit
-          else if d > 0 then val := 1 - val;
-        end;
-      end;
+      while Assigned(curr) and (curr.Pt.Y > pt.Y) do
+        curr := curr.Next;
+      if not Assigned(curr) then break;
     end;
-    ptPrev := ptCurr;
-    ptCurr := ptCurr.Next;
-  until ptCurr = ops;
+    prev := curr.Prev;
+
+    if (curr.Pt.Y = pt.Y) then
+    begin
+      if (curr.Pt.X = pt.X) or ((curr.Pt.Y = prev.Pt.Y) and
+        ((pt.X < prev.Pt.X) <> (pt.X < curr.Pt.X))) then
+      begin
+        //ie point on path
+        ops.Prev.Next := ops; //reestablish the link
+        Exit;
+      end;
+      curr := curr.Next;
+      Continue;
+    end;
+
+    if (pt.X < curr.Pt.X) and (pt.X < prev.Pt.X) then
+      //we're only interested in edges crossing on the left
+    else if((pt.X > prev.Pt.X) and (pt.X > curr.Pt.X)) then
+      val := 1 - val //toggle val
+    else
+    begin
+      d := CrossProduct(prev.Pt, curr.Pt, pt);
+      if d = 0 then
+      begin
+        //ie point on path
+        ops.Prev.Next := ops; //reestablish the link
+        Exit;
+      end;
+      if (d < 0) = isAbove then val := 1 - val;
+    end;
+    isAbove := not isAbove;
+    curr := curr.Next;
+  until not Assigned(curr);
   if val = 0 then
      result := pipOutside else
      result := pipInside;
+  ops.Prev.Next := ops; //reestablish the link
 end;
 //------------------------------------------------------------------------------
 
@@ -4123,6 +4134,7 @@ function TClipper64.Execute(clipType: TClipType;
 var
   dummy: TPaths64;
 begin
+  FUsingPolytree := false;
   closedSolutions := nil;
   try try
     ExecuteInternal(clipType, fillRule, false);
@@ -4142,6 +4154,7 @@ function TClipper64.Execute(clipType: TClipType; fillRule: TFillRule;
 begin
   closedSolutions := nil;
   openSolutions := nil;
+  FUsingPolytree := false;
   try try
     ExecuteInternal(clipType, fillRule, false);
     BuildPaths(closedSolutions, openSolutions);
@@ -4161,6 +4174,7 @@ begin
   if not assigned(solutionTree) then
     Raise EClipperLibException(rsClipper_PolyTreeErr);
   solutionTree.Clear;
+  FUsingPolytree := true;
   openSolutions := nil;
   try try
     ExecuteInternal(clipType, fillRule, true);
@@ -4379,6 +4393,7 @@ var
 begin
   if not assigned(solutionsTree) then RaiseError(rsClipper_PolyTreeErr);
   solutionsTree.Clear;
+  FUsingPolytree := true;
   solutionsTree.SetScale(fScale);
   openSolutions := nil;
   try try

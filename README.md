@@ -1,5 +1,6 @@
 # Clipper2
-### A Polygon <a href="http://www.angusj.com/delphi/clipper/documentation/Docs/Units/ClipperLib/Types/ClipType.htm">Clipping</a> and <a href="http://www.angusj.com/delphi/clipper/documentation/Docs/Units/ClipperLib/Classes/ClipperOffset/_Body.htm">Offsetting</a> library (in C++, C# &amp; Delphi) [![GitHub Actions C++ status](https://github.com/AngusJohnson/Clipper2/actions/workflows/actions_cpp.yml/badge.svg)](https://github.com/AngusJohnson/Clipper2/actions/workflows/actions_cpp.yml)
+### A Polygon <a href="http://www.angusj.com/delphi/clipper/documentation/Docs/Units/ClipperLib/Types/ClipType.htm">Clipping</a> and <a href="http://www.angusj.com/delphi/clipper/documentation/Docs/Units/ClipperLib/Classes/ClipperOffset/_Body.htm">Offsetting</a> library (in C++, C# &amp; Delphi)<br>
+[![GitHub Actions C++ status](https://github.com/AngusJohnson/Clipper2/actions/workflows/actions_cpp.yml/badge.svg)](https://github.com/AngusJohnson/Clipper2/actions/workflows/actions_cpp.yml)&nbsp;[![License](https://img.shields.io/badge/License-Boost_1.0-lightblue.svg)](https://www.boost.org/LICENSE_1_0.txt)
 
 <b>Clipper2</b> is a major update of my original <a href="https://sourceforge.net/projects/polyclipping/"><b>Clipper</b></a> library which I'm now calling <b>Clipper1</b>. Clipper1 was written over 10 years ago and, while it still works very well, Clipper2 is better in just about every way: 
 <ul>

@@ -58,27 +58,27 @@ namespace ClipperDemo1
       {
         case DoCase.simple:
           fillrule = FillRule.NonZero;
-          subj.Add(ClipperFunc.MakePath(new int[] { 100,50, 10,79, 65,2, 65,98, 10,21 }));
-          clip.Add(ClipperFunc.MakePath(new int[] { 98,63, 4,68, 77,8, 52,100, 19,12 }));
-          sol = ClipperFunc.Intersect(subj, clip, fillrule);
+          subj.Add(Clipper.MakePath(new int[] { 100,50, 10,79, 65,2, 65,98, 10,21 }));
+          clip.Add(Clipper.MakePath(new int[] { 98,63, 4,68, 77,8, 52,100, 19,12 }));
+          sol = Clipper.Intersect(subj, clip, fillrule);
           break;
 
         case DoCase.fromResource:
           subj = LoadPathsFromResource("ConsoleDemo.subj.bin");
           clip = LoadPathsFromResource("ConsoleDemo.clip.bin");
-          Clipper c2 = new Clipper();
-          c2.AddPaths(subj, PathType.Subject);
-          c2.AddPaths(clip, PathType.Clip);
+          Clipper64 c2 = new Clipper64();
+          c2.AddSubject(subj);
+          c2.AddClip(clip);
           c2.Execute(clipType, fillrule, sol);
           break;
 
         case DoCase.fromSimpleFile:
           if (!ClipperFileIO.LoadTestNum("..\\..\\..\\sample1.txt", 1, subj, subj_open,
             clip, out clipType, out fillrule, out area2, out caption)) return;
-          Clipper c3 = new Clipper();
-          c3.AddPaths(subj, PathType.Subject);
-          c3.AddPaths(subj_open, PathType.Subject, true);
-          c3.AddPaths(clip, PathType.Clip);
+          Clipper64 c3 = new Clipper64();
+          c3.AddSubject(subj);
+          c3.AddOpenSubject(subj_open);
+          c3.AddClip(clip);
           c3.Execute(clipType, fillrule, sol, sol_open);
           break;
 
@@ -97,7 +97,7 @@ namespace ClipperDemo1
               ClipType.Intersection, fillrule, false);
 
             stopwatch.Start(); /////////////////////////////////// start
-            Clipper c4 = new Clipper();
+            Clipper64 c4 = new Clipper64();
             c4.AddSubject(subj);
             c4.AddClip(clip);
             c4.Execute(ClipType.Intersection, fillrule, sol);
@@ -118,14 +118,14 @@ namespace ClipperDemo1
                 clip, out clipType, out fillrule, out area2, out caption)) break;
             cnt++;
 
-            Clipper c5 = new Clipper();
+            Clipper64 c5 = new Clipper64();
             c5.AddSubject(subj);
             c5.AddOpenSubject(subj_open);
             c5.AddClip(clip);
             c5.Execute(clipType, fillrule, sol, sol_open);
             if (area2 > 0)
             {
-              double area3 = ClipperFunc.Area(sol);
+              double area3 = Clipper.Area(sol);
               double a = area3 / area2;
               if (Math.Abs(area2 - (long) area3) > 1 && (a < 0.995 || a > 1.005))
                 Console.Write("Check areas in {0}, {1} != {2}!\n\n", i, area2, (long) area3);

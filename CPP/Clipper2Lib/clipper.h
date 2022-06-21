@@ -1,7 +1,7 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Version   :  10.0 (beta) - aka Clipper2                                      *
-* Date      :  18 June 2022                                                    *
+* Version   :  Clipper2 - beta                                                 *
+* Date      :  21 June 2022                                                    *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  This module provides a simple interface to the Clipper Library  *
@@ -312,6 +312,26 @@ namespace Clipper2Lib
       }
     }
 
+    inline bool has_one_match(const char c, char* chrs)
+    {
+      while (*chrs > 0 && c != *chrs) ++chrs;
+      if (!*chrs) return false;
+      *chrs = ' '; //only match once per char
+      return true;
+    }
+
+
+    inline void SkipUserDefinedChars(std::string::const_iterator& iter,
+      const std::string::const_iterator& end_iter, const std::string skip_chars)
+    {
+      const size_t MAX_CHARS = 16;
+      char buff[MAX_CHARS] = {0};
+      std::copy(skip_chars.cbegin(), skip_chars.cend(), &buff[0]);
+      while (iter != end_iter && 
+        (*iter <= ' ' || has_one_match(*iter, buff))) ++iter;
+      return;
+    }
+
   } //end details namespace 
 
   template <typename T>
@@ -322,11 +342,15 @@ namespace Clipper2Lib
     return result;
   }
 
-  static Path64 MakePath(const std::string& s)
+  static Path64 MakePath(const std::string& s, const std::string& skip_chars = "")
   {
     Path64 result;
     std::string::const_iterator s_iter = s.cbegin();
-    details::SkipWhiteSpace(s_iter, s.cend());
+    bool user_defined_skip = (skip_chars.size() > 0 && skip_chars != " ");
+    if (user_defined_skip)
+      details::SkipUserDefinedChars(s_iter, s.cend(), skip_chars);
+    else
+      details::SkipWhiteSpace(s_iter, s.cend());
     while (s_iter != s.cend())
     {
       int64_t y = 0, x = 0;
@@ -334,7 +358,10 @@ namespace Clipper2Lib
       details::SkipSpacesWithOptionalComma(s_iter, s.cend());
       if (!details::GetInt(s_iter, s.cend(), y)) break;
       result.push_back(Point64(x, y));
-      details::SkipSpacesWithOptionalComma(s_iter, s.cend());
+      if (user_defined_skip)
+        details::SkipUserDefinedChars(s_iter, s.cend(), skip_chars);
+      else
+        details::SkipSpacesWithOptionalComma(s_iter, s.cend());
     }
     return result;
   }
@@ -412,6 +439,69 @@ namespace Clipper2Lib
     Path64 p = ScalePath<int64_t, double>(path, scale);
     p = TrimCollinear(p, is_open_path);
     return ScalePath<double, int64_t>(p, 1/scale);
+  }
+
+  static PointInPolyResult PointInPolygon(const Point64& pt, const Path64& polygon)
+  {
+    if (polygon.size() < 3) 
+      return PointInPolyResult::IsOutside;
+
+    int val = 0;
+    Path64::const_iterator cit = polygon.cbegin(); 
+    Path64::const_iterator cend = polygon.cend(), pit = cend -1;
+    bool is_above = pit->y < pt.y, first_pass = true;
+
+    while (cit != cend)
+    {
+      if (is_above)
+      {
+        while (cit != cend && cit->y < pt.y) ++cit;
+        if (cit == cend) break;
+      }
+      else
+      {
+        while (cit != cend && cit->y > pt.y) ++cit;
+        if (cit == cend) break;
+      }
+
+      if (first_pass)
+      {
+        if (cit != polygon.cbegin()) pit = cit - 1;
+        first_pass = false;
+      }
+      else 
+        pit = cit - 1;
+
+      if (cit->y == pt.y)
+      {
+        if (cit->x == pt.x || (cit->y == pit->y &&
+          ((pt.x < pit->x) != (pt.x < pit->x))))
+          return PointInPolyResult::IsOn;
+        cit++;
+        continue;
+      }
+      
+      if (pt.x < cit->x && pt.x < pit->x)
+      {
+        //we're only interested in edges crossing on the left
+      }
+      else if (pt.x > pit->x && pt.x > cit->x)
+        val = 1 - val; //toggle val
+      else
+      {
+        double d = CrossProduct(*pit, *cit, pt);
+        if (d == 0)
+          return PointInPolyResult::IsOn;
+        else if ((d < 0) == is_above) 
+          val  = 1 - val;
+      }      
+      is_above = !is_above;
+      cit++;
+    }
+    if (val == 0)
+      return PointInPolyResult::IsOutside;
+    else
+      return PointInPolyResult::IsInside;
   }
 
 }  //end Clipper2Lib namespace

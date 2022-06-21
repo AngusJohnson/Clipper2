@@ -251,9 +251,9 @@ namespace Clipper2Lib
     {
       afilename = Path.GetFullPath(afilename);
       if (File.Exists(afilename)) File.Delete(afilename);
-      SimpleClipperSvgWriter svg = new SimpleClipperSvgWriter(fillrule);
+      SimpleSvgWriter svg = new SimpleSvgWriter(fillrule);
       if (caption != "")
-        svg.AddText(caption, margin, margin, 14, SimpleClipperSvgWriter.navy);
+        svg.AddText(caption, margin, margin, 14, SimpleSvgWriter.navy);
       if (subj != null)
         svg.AddPaths(subj, false, 0x110066FF, 0x33000099, 0.8);
       if (subj_open != null)

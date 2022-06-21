@@ -1,7 +1,7 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Version   :  10.0 (beta) - aka Clipper2                                      *
-* Date      :  16 June 2022                                                    *
+* Version   :  Clipper2 - beta                                                 *
+* Date      :  20 June 2022                                                    *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  Polygon offsetting                                              *

@@ -1,7 +1,7 @@
 ﻿/*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Version   :  10.0 (beta) - also known as Clipper2                            *
-* Date      :  19 June 2022                                                    *
+* Version   :  Clipper2 - beta                                                 *
+* Date      :  20 June 2022                                                    *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  This is the main polygon clipping module                        *
@@ -232,7 +232,7 @@ namespace Clipper2Lib
     public ZCallback64? ZFillFunc { get; set; }
 #endif
     public ClipperBase(bool UseReversedOrientation = 
-      InternalClipperFunc. DEFAULT_ORIENTATION_IS_REVERSED)
+      InternalClipper. DEFAULT_ORIENTATION_IS_REVERSED)
     {
       _minimaList = new List<LocalMinima>();
       _intersectList = new List<IntersectNode>();
@@ -1188,7 +1188,7 @@ namespace Clipper2Lib
         return a2.curX > a1.curX;
 
       //get the turning direction  a1.top, a2.bot, a2.top
-      double d = InternalClipperFunc.CrossProduct(a1.top, a2.bot, a2.top);
+      double d = InternalClipper.CrossProduct(a1.top, a2.bot, a2.top);
 
 
       if (d < 0) return true;
@@ -1200,11 +1200,11 @@ namespace Clipper2Lib
       //the direction they're about to turn
       if (IsOpen(a1) && !IsMaxima(a1) && (a1.bot.Y <= a2.bot.Y) &&
           !IsSamePolyType(a1, a2) && (a1.top.Y > a2.top.Y))
-        return InternalClipperFunc.CrossProduct(
+        return InternalClipper.CrossProduct(
             a1.bot, a1.top, NextVertex(a1).pt) <= 0;
       else if (IsOpen(a2) && !IsMaxima(a2) && (a2.bot.Y <= a1.bot.Y) &&
                !IsSamePolyType(a1, a2) && (a2.top.Y > a1.top.Y))
-        return InternalClipperFunc.CrossProduct(
+        return InternalClipper.CrossProduct(
             a2.bot, a2.top, NextVertex(a2).pt) >= 0;
 
       long a2botY = a2.bot.Y;
@@ -1215,11 +1215,11 @@ namespace Clipper2Lib
       {
         if (IsLeftBound(a1) != a2IsLeftBound)
           return a2IsLeftBound;
-        else if (InternalClipperFunc.CrossProduct(PrevPrevVertex(a1).pt, a1.bot, a1.top) == 0)
+        else if (InternalClipper.CrossProduct(PrevPrevVertex(a1).pt, a1.bot, a1.top) == 0)
           return true; //a1 is a spike so effectively we can ignore it 
         else
           //compare turning direction of alternate bound
-          return (InternalClipperFunc.CrossProduct(PrevPrevVertex(a1).pt,
+          return (InternalClipper.CrossProduct(PrevPrevVertex(a1).pt,
               a2.bot, PrevPrevVertex(a2).pt) > 0) == a2IsLeftBound;
       }
 
@@ -1415,7 +1415,7 @@ namespace Clipper2Lib
              (e.prevInAEL != null) && (e.prevInAEL.curX == e.curX) &&
              IsHotEdge(e.prevInAEL) && !IsOpen(e.prevInAEL) &&
              (currY - e.top.Y > 1) && (currY - e.prevInAEL.top.Y > 1) &&
-             (InternalClipperFunc.CrossProduct(e.prevInAEL.top, e.bot, e.top) == 0);
+             (InternalClipper.CrossProduct(e.prevInAEL.top, e.bot, e.top) == 0);
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -1425,7 +1425,7 @@ namespace Clipper2Lib
              (e.prevInAEL != null) && !IsOpen(e.prevInAEL) &&
              IsHotEdge(e.prevInAEL) && (e.prevInAEL.top.Y < e.bot.Y) &&
              (Math.Abs(TopX(e.prevInAEL, currPt.Y) - currPt.X) < 2) &&
-             (InternalClipperFunc.CrossProduct(e.prevInAEL.top, currPt, e.top) == 0);
+             (InternalClipper.CrossProduct(e.prevInAEL.top, currPt, e.top) == 0);
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -1437,7 +1437,7 @@ namespace Clipper2Lib
              (e.nextInAEL != null) && (e.nextInAEL.curX == e.curX) &&
              IsHotEdge(e.nextInAEL) && !IsOpen(e.nextInAEL) &&
              (currY - e.top.Y > 1) && (currY - e.nextInAEL.top.Y > 1) &&
-             (InternalClipperFunc.CrossProduct(e.nextInAEL.top, e.bot, e.top) == 0);
+             (InternalClipper.CrossProduct(e.nextInAEL.top, e.bot, e.top) == 0);
     }
 
     private bool TestJoinWithNext2(Active e, Point64 currPt)
@@ -1446,7 +1446,7 @@ namespace Clipper2Lib
              (e.nextInAEL != null) && !IsOpen(e.nextInAEL) &&
              IsHotEdge(e.nextInAEL) && (e.nextInAEL.top.Y < e.bot.Y) &&
              (Math.Abs(TopX(e.nextInAEL, currPt.Y) - currPt.X) < 2) &&
-             (InternalClipperFunc.CrossProduct(e.nextInAEL.top, currPt, e.top) == 0);
+             (InternalClipper.CrossProduct(e.nextInAEL.top, currPt, e.top) == 0);
     }
 
     private OutPt AddLocalMinPoly(Active ae1, Active ae2, Point64 pt, bool isNew = false)
@@ -1777,7 +1777,7 @@ namespace Clipper2Lib
 #endif
           if (resultOp != null && resultOp.pt == op2.pt &&
             !IsHorizontal(ae1) && !IsHorizontal(ae2) &&
-            (InternalClipperFunc.CrossProduct(ae1.bot, resultOp.pt, ae2.bot) == 0))
+            (InternalClipper.CrossProduct(ae1.bot, resultOp.pt, ae2.bot) == 0))
             AddJoin(resultOp, op2);
         }
         else
@@ -3028,7 +3028,7 @@ namespace Clipper2Lib
           (or1 == or2 && (op1.prev == op2 || op1.next == op2))) return or1;
 
         if (op1.prev.pt == op2.next!.pt ||
-            ((InternalClipperFunc.CrossProduct(op1.prev.pt, op1.pt, op2.next.pt) == 0) &&
+            ((InternalClipper.CrossProduct(op1.prev.pt, op1.pt, op2.next.pt) == 0) &&
              CollinearSegsOverlap(op1.prev.pt, op1.pt, op2.pt, op2.next.pt)))
         {
           if (or1 == or2)
@@ -3082,7 +3082,7 @@ namespace Clipper2Lib
           break;
         }
         else if (op1.next!.pt == op2.prev.pt ||
-                 ((InternalClipperFunc.CrossProduct(op1.next.pt, op2.pt, op2.prev.pt) == 0) &&
+                 ((InternalClipper.CrossProduct(op1.next.pt, op2.pt, op2.prev.pt) == 0) &&
                   CollinearSegsOverlap(op1.next.pt, op1.pt, op2.pt, op2.prev.pt)))
         {
           if (or1 == or2) 
@@ -3274,9 +3274,9 @@ namespace Clipper2Lib
       {
         if (op2!.joiner != null) return;
         //NB if preserveCollinear == true, then only remove 180 deg. spikes
-        if ((InternalClipperFunc.CrossProduct(op2!.prev.pt, op2.pt, op2.next!.pt) == 0) &&
+        if ((InternalClipper.CrossProduct(op2!.prev.pt, op2.pt, op2.next!.pt) == 0) &&
           ((op2.pt == op2.prev.pt) || (op2.pt == op2.next.pt) || !PreserveCollinear ||
-          (InternalClipperFunc.DotProduct(op2.prev.pt, op2.pt, op2.next.pt) < 0)))
+          (InternalClipper.DotProduct(op2.prev.pt, op2.pt, op2.next.pt) < 0)))
         {
           if (op2 == outrec.pts)
             outrec.pts = op2.prev;
@@ -3299,7 +3299,7 @@ namespace Clipper2Lib
     {
       OutPt prevOp = splitOp.prev, nextNextOp = splitOp.next!.next!;
       OutPt result = prevOp;
-      InternalClipperFunc.GetIntersectPoint(
+      InternalClipper.GetIntersectPoint(
           prevOp.pt, splitOp.pt, splitOp.next.pt, nextNextOp.pt, out PointD ipD);
       Point64 ip = new Point64(ipD);
 #if USINGZ
@@ -3352,7 +3352,7 @@ namespace Clipper2Lib
       {
         //3 edged polygons can't self-intersect
         if (op2.prev == op2.next!.next) break;
-        if (InternalClipperFunc.SegmentsIntersect(op2.prev.pt,
+        if (InternalClipper.SegmentsIntersect(op2.prev.pt,
                 op2.pt, op2.next.pt, op2.next.next!.pt))
         {
           if (op2 == op || op2.next == op) op = op2.prev;
@@ -3437,55 +3437,58 @@ namespace Clipper2Lib
 			  return PointInPolygonResult.IsOutside;
 
 		  int val = 0;
-      OutPt prev = ops.prev!, curr = ops;
-		  do
-		  {
-			  if (prev.pt.Y == curr!.pt.Y) //a horizontal edge
-			  {
-				  if (pt.Y == curr.pt.Y &&
-					  (pt.X == prev.pt.X || pt.X == curr.pt.X ||
-					  (pt.X < prev.pt.X) != (pt.X < curr.pt.X)))
-						  return PointInPolygonResult.IsOn;
-			  }
-			  else if (prev.pt.Y < curr.pt.Y)
-			  {
-				  //nb: only allow one equality with Y to avoid 
-				  //double counting when pt.Y == ptCurr.Pt.Y
-				  if (pt.Y > prev.pt.Y && pt.Y <= curr.pt.Y &&
-					  (pt.X >= prev.pt.X || pt.X >= curr.pt.X))
-				  {
-					  if (pt.X > prev.pt.X && pt.X > curr.pt.X)
-						  val = 1 - val; //toggles val between 0 and 1
-					  else
-					  {
-						  double d = InternalClipperFunc.CrossProduct(
-                prev.pt, curr.pt, pt);
-						  if (d == 0) return PointInPolygonResult.IsOn;
-						  else if (d > 0) val = 1 - val;
-					  }
-				  }
-			  }
-
+      OutPt prev = ops.prev!;
+      OutPt? curr = ops;
+      prev.next = null; //temporary !!!
+      bool is_above = prev.pt.Y < pt.Y;
+      do
+      {
+        if (is_above)
+        {
+          while (curr != null && curr.pt.Y < pt.Y) curr = curr.next;
+          if (curr == null) break;
+        }
         else
         {
-          if (pt.Y > curr.pt.Y && pt.Y <= prev.pt.Y &&
-            (pt.X >= curr.pt.X || pt.X >= prev.pt.X))
-          {
-            if (pt.X > prev.pt.X && pt.X > curr.pt.X)
-              val = 1 - val; //toggles val between 0 and 1
-            else
-            {
-              double d = InternalClipperFunc.CrossProduct(
-                curr.pt, prev.pt, pt);
-              if (d == 0) return PointInPolygonResult.IsOn;
-              else if (d > 0) val = 1 - val;
-            }
-          }
+          while (curr != null && curr.pt.Y > pt.Y) curr = curr.next;
+          if (curr == null) break;
         }
-        prev = curr;
-        curr = curr.next!;
-		  } while (curr != ops) ;
+        prev = curr.prev;
 
+        if (curr.pt.Y == pt.Y)
+        {
+          if (curr.pt.X == pt.X || (curr.pt.Y == prev.pt.Y &&
+            ((pt.X < prev.pt.X) != (pt.X < curr.pt.X))))
+          {
+            ops.prev.next = ops; //reestablish the link
+            return PointInPolygonResult.IsOn;
+          }
+          curr = curr.next;
+          continue;
+        }
+
+        if (pt.X < curr.pt.X && pt.X < prev.pt.X)
+        {
+          //we're only interested in edges crossing on the left
+        }
+        else if (pt.X > prev.pt.X && pt.X > curr.pt.X)
+          val = 1 - val; //toggle val
+        else
+        {
+          double d = InternalClipper.CrossProduct(prev.pt, curr.pt, pt);
+          if (d == 0)
+          {
+            ops.prev.next = ops; //reestablish the link
+            return PointInPolygonResult.IsOn;
+          }
+          if ((d < 0) == is_above) val = 1 - val;
+        }
+        is_above = !is_above;
+        curr = curr.next;
+
+      } while (curr != null) ;
+
+      ops.prev.next = ops;
       return val == 0 ? 
         PointInPolygonResult.IsOutside : 
         PointInPolygonResult.IsInside;
@@ -3575,7 +3578,7 @@ namespace Clipper2Lib
 
     public Rect64 GetBounds()
     {
-      Rect64 bounds = ClipperFunc.MaxInvalidRect64;
+      Rect64 bounds = Clipper.MaxInvalidRect64;
       foreach (Vertex t in _vertexList)
       {
         Vertex v = t;
@@ -3594,10 +3597,10 @@ namespace Clipper2Lib
   } //ClipperBase class
 
 
-  public class Clipper : ClipperBase
+  public class Clipper64 : ClipperBase
   {
-    public Clipper(
-      bool UseReversedOrientation = InternalClipperFunc.DEFAULT_ORIENTATION_IS_REVERSED) :
+    public Clipper64(
+      bool UseReversedOrientation = InternalClipper.DEFAULT_ORIENTATION_IS_REVERSED) :
       base(UseReversedOrientation)
     { }
 
@@ -3688,7 +3691,7 @@ namespace Clipper2Lib
 #endif
 
     public ClipperD(int roundingDecimalPrecision = 0, 
-      bool UseReversedOrientation = InternalClipperFunc.DEFAULT_ORIENTATION_IS_REVERSED):
+      bool UseReversedOrientation = InternalClipper.DEFAULT_ORIENTATION_IS_REVERSED):
       base(UseReversedOrientation)
     {
       if (roundingDecimalPrecision < -8 || roundingDecimalPrecision > 8)
@@ -3716,12 +3719,12 @@ namespace Clipper2Lib
 
     public void AddPath(PathD path, PathType polytype, bool isOpen = false)
     {
-      base.AddPath(ClipperFunc.ScalePath64(path, _scale), polytype, isOpen);
+      base.AddPath(Clipper.ScalePath64(path, _scale), polytype, isOpen);
     }
 
     public void AddPaths(PathsD paths, PathType polytype, bool isOpen = false)
     {
-      base.AddPaths(ClipperFunc.ScalePaths64(paths, _scale), polytype, isOpen);
+      base.AddPaths(Clipper.ScalePaths64(paths, _scale), polytype, isOpen);
     }
 
     public void AddSubject(PathD path)
@@ -3786,10 +3789,10 @@ namespace Clipper2Lib
 
       solutionClosed.Capacity = solClosed64.Count;
       foreach (Path64 path in solClosed64)
-        solutionClosed.Add(ClipperFunc.ScalePathD(path, _invScale));
+        solutionClosed.Add(Clipper.ScalePathD(path, _invScale));
       solutionOpen.Capacity = solOpen64.Count;
       foreach (Path64 path in solOpen64)
-        solutionOpen.Add(ClipperFunc.ScalePathD(path, _invScale));
+        solutionOpen.Add(Clipper.ScalePathD(path, _invScale));
 
       return true;
     }
@@ -3829,7 +3832,7 @@ namespace Clipper2Lib
       {
         openPaths.Capacity = oPaths.Count;        
         foreach (Path64 path in oPaths)
-          openPaths.Add(ClipperFunc.ScalePathD(path, _invScale));
+          openPaths.Add(Clipper.ScalePathD(path, _invScale));
       }
 
       return true;
@@ -3905,7 +3908,7 @@ namespace Clipper2Lib
     {
       PolyPathBase newChild = new PolyPathD(this);
       (newChild as PolyPathD)!.Scale = Scale;
-      (newChild as PolyPathD)!.Polygon = ClipperFunc.ScalePathD(p, 1 / Scale);
+      (newChild as PolyPathD)!.Polygon = Clipper.ScalePathD(p, 1 / Scale);
       _childs.Add(newChild);
       return newChild;
     }

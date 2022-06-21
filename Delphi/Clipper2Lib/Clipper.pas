@@ -2,8 +2,8 @@ unit Clipper;
 
 (*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Version   :  10.0 (beta) - aka Clipper2                                      *
-* Date      :  18 June 2022                                                    *
+* Version   :  Clipper2 - beta                                                 *
+* Date      :  21 June 2022                                                    *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  This module provides a simple interface to the Clipper Library  *
@@ -97,8 +97,8 @@ function TrimCollinear(const p: TPath64;
 function TrimCollinear(const path: TPathD;
   precision: integer; is_open_path: Boolean = false): TPathD; overload;
 
-resourcestring
-  rsPrecisionRangeError = 'Error: Precision is out of range (-8..8).';
+function PointInPolygon(const pt: TPoint64;
+  const polygon: TPath64): TPointInPolygonResult;
 
 implementation
 
@@ -299,7 +299,7 @@ var
   scale, invScale: double;
 begin
   if (precision < -8) or (precision > 8) then
-    raise Exception.Create(rsPrecisionRangeError);
+    raise Exception.Create(rsClipper_RoundingErr);
   scale := Power(10, precision);
   invScale := 1/scale;
   pp := ScalePaths(paths, scale, scale);
@@ -390,6 +390,81 @@ begin
 end;
 //------------------------------------------------------------------------------
 
+function PointInPolygon(const pt: TPoint64;
+  const polygon: TPath64): TPointInPolygonResult;
+var
+  len, val: Integer;
+  isAbove, firstPass: Boolean;
+  d: Double; //used to avoid integer overflow
+  curr, prev, stop: PPoint64;
+begin
+  len := Length(polygon);
+  if len < 3 then
+  begin
+    result := pipOutside;
+    Exit;
+  end;
+  Result := pipOn;
+  prev := @polygon[len-1];
+  stop := prev;
+  inc(stop);
+  curr := @polygon[0];
+  firstPass := true;
+  isAbove := prev.Y < pt.Y;
+  val := 0;
+  while (curr <> stop) do
+  begin
+    if isAbove then
+    begin
+      while (curr <> stop) and (curr.Y < pt.Y) do inc(curr);
+      if (curr = stop) then break;
+    end else
+    begin
+      while (curr <> stop) and (curr.Y > pt.Y) do inc(curr);
+      if (curr = stop) then break;
+    end;
+
+    if firstPass then
+    begin
+      firstPass := false;
+      if curr <> @polygon[0] then
+      begin
+        prev := curr;
+        dec(prev);
+      end;
+    end else
+    begin
+      prev := curr;
+      dec(prev);
+    end;
+
+    if (curr.Y = pt.Y) then
+    begin
+      if (curr.X = pt.X) or ((curr.Y = prev.Y) and
+        ((pt.X < prev.X) <> (pt.X < curr.X))) then Exit;
+      inc(curr);
+      Continue;
+    end;
+
+    if (pt.X < curr.X) and (pt.X < prev.X) then
+      //we're only interested in edges crossing on the left
+    else if((pt.X > prev.X) and (pt.X > curr.X)) then
+      val := 1 - val //toggle val
+    else
+    begin
+      d := CrossProduct(prev^, curr^, pt);
+      if d = 0 then Exit; //ie point on path
+      if (d < 0) = isAbove then val := 1 - val;
+    end;
+
+    isAbove := not isAbove;
+    inc(curr);
+  end;
+  if val = 0 then
+     result := pipOutside else
+     result := pipInside;
+end;
+//------------------------------------------------------------------------------
 
 end.
 
