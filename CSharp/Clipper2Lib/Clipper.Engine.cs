@@ -3705,12 +3705,12 @@ namespace Clipper2Lib
         Point64 bot2, Point64 top2, ref Point64 intersectPt)
     {
       //de-scale coordinates
-      PointD tmp = ClipperFunc.ScalePoint(intersectPt, _invScale);
+      PointD tmp = Clipper.ScalePoint(intersectPt, _invScale);
       ZFillDFunc?.Invoke(
-        ClipperFunc.ScalePoint(bot1, _invScale),
-        ClipperFunc.ScalePoint(top1, _invScale),
-        ClipperFunc.ScalePoint(bot2, _invScale),
-        ClipperFunc.ScalePoint(top2, _invScale), ref tmp);
+        Clipper.ScalePoint(bot1, _invScale),
+        Clipper.ScalePoint(top1, _invScale),
+        Clipper.ScalePoint(bot2, _invScale),
+        Clipper.ScalePoint(top2, _invScale), ref tmp);
       //re-scale
       intersectPt = new Point64(intersectPt.X,
           intersectPt.Y, (long) Math.Round(tmp.z * _scale));
