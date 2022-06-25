@@ -114,12 +114,12 @@ namespace Clipper2Lib
     return BooleanOp(ClipType::Xor, fillrule, subjects, clips);
   }
 
-  static bool IsFullOpenEndType(EndType et)
+  inline bool IsFullOpenEndType(EndType et)
   {
     return (et != EndType::Polygon) && (et != EndType::Joined);
   }
 
-  static Paths64 InflatePaths(const Paths64& paths, double delta, 
+  inline Paths64 InflatePaths(const Paths64& paths, double delta,
     JoinType jt, EndType et, double miter_limit = 2.0)
   {
     ClipperOffset clip_offset(miter_limit);
@@ -127,7 +127,7 @@ namespace Clipper2Lib
     return clip_offset.Execute(delta);
   }
 
-  static PathsD InflatePaths(const PathsD& paths, double delta,
+  inline PathsD InflatePaths(const PathsD& paths, double delta,
     JoinType jt, EndType et, double miter_limit = 2.0, double precision = 2)
   {
     if (precision < -8 || precision > 8)
@@ -175,7 +175,7 @@ namespace Clipper2Lib
     return result;
   }
 
-  static Rect64 Bounds(const Path64& path)
+  inline Rect64 Bounds(const Path64& path)
   {
     Rect64 rec = MaxInvalidRect64;
     for (const Point64& pt : path)
@@ -189,7 +189,7 @@ namespace Clipper2Lib
     return rec;
   }
   
-  static Rect64 Bounds(const Paths64& paths)
+  inline Rect64 Bounds(const Paths64& paths)
   {
     Rect64 rec = MaxInvalidRect64;
     for (const Path64& path : paths)
@@ -204,7 +204,7 @@ namespace Clipper2Lib
     return rec;
   }
 
-  static RectD Bounds(const PathD& path)
+  inline RectD Bounds(const PathD& path)
   {
     RectD rec = MaxInvalidRectD;
     for (const PointD& pt : path)
@@ -218,7 +218,7 @@ namespace Clipper2Lib
     return rec;
   }
 
-  static RectD Bounds(const PathsD& paths)
+  inline RectD Bounds(const PathsD& paths)
   {
     RectD rec = MaxInvalidRectD;
     for (const PathD& path : paths)
@@ -342,7 +342,7 @@ namespace Clipper2Lib
     return result;
   }
 
-  static Path64 MakePath(const std::string& s, const std::string& skip_chars = "")
+  inline Path64 MakePath(const std::string& s, const std::string& skip_chars = "")
   {
     Path64 result;
     std::string::const_iterator s_iter = s.cbegin();
@@ -366,7 +366,7 @@ namespace Clipper2Lib
     return result;
   }
   
-  static PathD MakePathD(const std::string& s)
+  inline PathD MakePathD(const std::string& s)
   {
     PathD result;
     std::string::const_iterator s_iter = s.cbegin();
@@ -383,7 +383,7 @@ namespace Clipper2Lib
     return result;
   }
 
-  static Path64 TrimCollinear(const Path64& p, bool is_open_path = false)
+  inline Path64 TrimCollinear(const Path64& p, bool is_open_path = false)
   {
     size_t len = p.size();
     if (len < 3)
@@ -431,7 +431,7 @@ namespace Clipper2Lib
     return dst;
   }
 
-  static PathD TrimCollinear(const PathD& path, int precision, bool is_open_path = false)
+  inline PathD TrimCollinear(const PathD& path, int precision, bool is_open_path = false)
   {
     if (precision > 8 || precision < -8) 
       throw new Clipper2Exception("Error: Precision exceeds the allowed range.");
@@ -441,7 +441,7 @@ namespace Clipper2Lib
     return ScalePath<double, int64_t>(p, 1/scale);
   }
 
-  static PointInPolyResult PointInPolygon(const Point64& pt, const Path64& polygon)
+  inline PointInPolyResult PointInPolygon(const Point64& pt, const Path64& polygon)
   {
     if (polygon.size() < 3) 
       return PointInPolyResult::IsOutside;
