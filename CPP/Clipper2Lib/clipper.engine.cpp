@@ -551,7 +551,7 @@ namespace Clipper2Lib {
 	}
 
 
-	inline bool AreReallyClose(const Point64 pt1, const Point64 pt2)
+	inline bool AreReallyClose(const Point64& pt1, const Point64& pt2)
 	{
 	  return (std::abs(pt1.x - pt2.x) < 2) && (std::abs(pt1.y - pt2.y) < 2);
 	}
