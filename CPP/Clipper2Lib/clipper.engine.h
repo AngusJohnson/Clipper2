@@ -1,7 +1,7 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
 * Version   :  Clipper2 - beta                                                 *
-* Date      :  20 June 2022                                                    *
+* Date      :  26 June 2022                                                    *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  This is the main polygon clipping module                        *
@@ -299,7 +299,7 @@ namespace Clipper2Lib {
 		const PolyPath<T>* parent_;
 		PolyPath(const PolyPath<T>* parent, 
 			const Path<T>& path) : 
-			scale_(parent->scale_), parent_(parent), polygon_(path) {}
+			scale_(parent->scale_), polygon_(path), parent_(parent){}
 	public:
 
 		explicit PolyPath(int precision = 0) //NB only for root node
