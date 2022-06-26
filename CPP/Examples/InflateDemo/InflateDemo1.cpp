@@ -7,6 +7,7 @@
 using namespace std;
 using namespace Clipper2Lib;
 
+
 void System(const std::string &filename);
 
 int main(int argc, char* argv[])
@@ -14,7 +15,7 @@ int main(int argc, char* argv[])
   Paths64 subject, clip, ignored, solution;
   ClipType ct = ClipType::Intersection;;
   FillRule fr = FillRule::EvenOdd;
-
+  
   //triangle offset - with large miter
   Paths64 p, pp;
   p.push_back(MakePath("30, 150, 60, 350, 0, 350"));
@@ -54,7 +55,9 @@ int main(int argc, char* argv[])
   SvgReader svg_reader;
   svg_reader.LoadFromFile("./rabbit.svg");
   p = ScalePaths<int64_t, double>(svg_reader.GetPaths(), scale);          //scale up
+
   pp.clear();
+  pp.reserve(p.size());
   pp.insert(pp.end(), p.begin(), p.end());
 
   while (p.size())
@@ -64,7 +67,8 @@ int main(int argc, char* argv[])
     //RamerDouglasPeucker - not essential but
     //speeds up the loop and also tidies up the result
     p = RamerDouglasPeucker(p, 0.025 * scale);
-    pp.insert(pp.end(), p.begin(), p.end());
+    pp.reserve(pp.size() + p.size());
+    copy(p.begin(), p.end(), back_inserter(pp));
   }
 
   svg.Clear();

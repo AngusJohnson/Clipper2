@@ -136,7 +136,7 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-procedure AddPolyNodeToPaths(Poly: TPolyPath; var Paths: TPaths64);
+procedure AddPolyNodeToPaths(Poly: TPolyPath64; var Paths: TPaths64);
 var
   i: Integer;
 begin
@@ -147,7 +147,7 @@ begin
     Paths[i] := Poly.Polygon;
   end;
   for i := 0 to Poly.ChildCount - 1 do
-    AddPolyNodeToPaths(TPolyPath(Poly.Child[i]), Paths);
+    AddPolyNodeToPaths(TPolyPath64(Poly.Child[i]), Paths);
 end;
 //------------------------------------------------------------------------------
 

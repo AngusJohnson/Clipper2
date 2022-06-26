@@ -1,41 +1,32 @@
 #include <gtest/gtest.h>
 #include "../../Clipper2Lib/clipper.h"
 
+using namespace Clipper2Lib;
+
 TEST(Clipper2Tests, TestUnionUsingPolytree) {
-    Clipper2Lib::Clipper clipper;
 
-    const Clipper2Lib::Path64 a = {
-        Clipper2Lib::Point64(0, 0),
-        Clipper2Lib::Point64(0, 5),
-        Clipper2Lib::Point64(5, 5),
-        Clipper2Lib::Point64(5, 0)
-    };
+    Paths64 subject;
+    subject.push_back(MakePath("0,0  0,5  5,5  5,0"));
+    subject.push_back(MakePath("1,1  1,6  6,6  6,1"));
 
-    const Clipper2Lib::Path64 b = {
-        Clipper2Lib::Point64(1, 1),
-        Clipper2Lib::Point64(1, 6),
-        Clipper2Lib::Point64(6, 6),
-        Clipper2Lib::Point64(6, 1)
-    };
+    Clipper clipper;
+    clipper.AddSubject(subject);
 
-    clipper.AddSubject({ a, b });
-
-    Clipper2Lib::PolyTree64 solution;
-    Clipper2Lib::Paths64 open_paths;
-
-    if (IsPositive(a))
-      clipper.Execute(Clipper2Lib::ClipType::Union, 
-        Clipper2Lib::FillRule::Positive, solution, open_paths);
+    PolyTree64 solution;
+    Paths64 open_paths;
+    if (IsPositive(subject[0]))
+      clipper.Execute(ClipType::Union, 
+        FillRule::Positive, solution, open_paths);
     else
     {
       //because clipping ops normally return Positive solutions
       clipper.ReverseSolution = true;
-      clipper.Execute(Clipper2Lib::ClipType::Union,
-        Clipper2Lib::FillRule::Negative, solution, open_paths);
+      clipper.Execute(ClipType::Union,
+        FillRule::Negative, solution, open_paths);
     }
 
     EXPECT_EQ(open_paths.size(), 0);
     ASSERT_EQ(solution.ChildCount(), 1);
-    EXPECT_EQ(solution.childs.front()->polygon.size(), 8);
-    EXPECT_EQ(IsPositive(a), IsPositive(solution.childs.front()->polygon));
+    EXPECT_EQ(solution[0]->polygon().size(), 8);
+    EXPECT_EQ(IsPositive(subject[0]), IsPositive(solution[0]->polygon()));
 }

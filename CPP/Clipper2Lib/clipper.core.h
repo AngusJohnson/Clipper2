@@ -206,7 +206,7 @@ inline Path<T1> TransformPath(const Path<T2>& path)
 }
 
 template <typename T1, typename T2>
-static Paths<T1> TransformPaths(const Paths<T2>& paths)
+inline Paths<T1> TransformPaths(const Paths<T2>& paths)
 {
 	Paths<T1> result;
 	std::transform(paths.cbegin(), paths.cend(), std::back_inserter(result),
@@ -286,7 +286,7 @@ inline Paths<T> StripNearEqual(const Paths<T>& paths,
 }
 
 template<typename T>
-static Path<T> StripDuplicates(const Path<T>& path, bool is_closed_path)
+inline Path<T> StripDuplicates(const Path<T>& path, bool is_closed_path)
 {
 	if (path.size() == 0) return Path<T>();
 	Path<T> result;
@@ -308,7 +308,7 @@ static Path<T> StripDuplicates(const Path<T>& path, bool is_closed_path)
 }
 
 template<typename T>
-static Paths<T> StripDuplicates(const Paths<T>& paths, bool is_closed_path)
+inline Paths<T> StripDuplicates(const Paths<T>& paths, bool is_closed_path)
 {
 	Paths<T> result;
 	result.reserve(paths.size());
@@ -353,6 +353,16 @@ struct Rect {
 	void Width(T width) { right = left + width; }
 	void Height(T height) { bottom = top + height; }
 
+	Point<T> MidPoint() const
+	{
+		return Point<T>((left + right) / 2, (top + bottom) / 2);
+	}
+
+	bool PtIsInside(const Point<T> pt)
+	{
+		return pt.x > left && pt.x < right && pt.y > top && pt.y < bottom;
+	}
+
 	void Scale(double scale) { 
 		left *= scale; 
 		top *= scale;
@@ -384,7 +394,6 @@ private:
 
 // Miscellaneous ------------------------------------------------------------
 
-
 template <typename T>
 inline double CrossProduct(const Point<T>& pt1, const Point<T>& pt2, const Point<T>& pt3) {
 	return (static_cast<double>(pt2.x - pt1.x) * static_cast<double>(pt3.y - 
@@ -404,32 +413,13 @@ inline double DotProduct(const Point<T>& vec1, const Point<T>& vec2)
 }
 
 template <typename T>
-inline double DistanceSqr(const Point<T> pt1, const Point<T> pt2) {
+inline double DistanceSqr(const Point<T> pt1, const Point<T> pt2)
+{
 	return Sqr(pt1.x - pt2.x) + Sqr(pt1.y - pt2.y);
 }
 
 template <typename T>
-inline double Distance(const Point<T> pt1, const Point<T> pt2)
-{
-	return std::sqrt(DistanceSqr(pt1, pt2));
-}
-
-template <typename T>
-static double Length(const Path<T>& path, bool is_closed_path = false)
-{
-	double result = 0.0;
-	if (path.size() < 2) return result;
-	auto it = path.cbegin(), stop = path.end() - 1;
-	for ( ; it != stop; ++it)
-		result += Distance(*it, *(it+1));
-	if (is_closed_path)
-		result += Distance(*stop, *path.cbegin());
-	return result;
-}
-
-
-template <typename T>
-inline double DistanceFromLineSqrd(const Point<T> &pt, const Point<T> &ln1, const Point<T> &ln2)
+inline double DistanceFromLineSqrd(const Point<T>& pt, const Point<T>& ln1, const Point<T>& ln2)
 {
 	//perpendicular distance of point (x³,y³) = (Ax³ + By³ + C)/Sqrt(A² + B²)
 	//see http://en.wikipedia.org/wiki/Perpendicular_distance
@@ -441,14 +431,7 @@ inline double DistanceFromLineSqrd(const Point<T> &pt, const Point<T> &ln1, cons
 }
 
 template <typename T>
-bool NearCollinear(const Point<T> &pt1, const Point<T> &pt2, const Point<T> &pt3, double sin_sqrd_min_angle_rads)
-{
-	double cp = std::abs(CrossProduct(pt1, pt2, pt3));
-	return (cp * cp) / (DistanceSqr(pt1, pt2) * DistanceSqr(pt2, pt3)) < sin_sqrd_min_angle_rads;
-}
-
-template <typename T>
-static double Area(const Path<T>& path, 
+inline double Area(const Path<T>& path,
 	bool orientation_is_reversed = DEFAULT_ORIENTATION_IS_REVERSED)
 {
 	size_t cnt = path.size();
@@ -466,8 +449,8 @@ static double Area(const Path<T>& path,
 	if (cnt & 1)
 		a += static_cast<double>(it2->y + it1->y) * (it2->x - it1->x);
 	if (orientation_is_reversed)
-		return a * -0.5; 
-	else 
+		return a * -0.5;
+	else
 		return a * 0.5;
 }
 
@@ -493,98 +476,6 @@ inline bool IsPositive(const Path<T>& poly,
 	//https://mathworld.wolfram.com/CurveOrientation.html
 	//nb: This statement is premised on using Cartesian coordinates
 	return Area<T>(poly, orientation_is_reversed) >= 0;
-}
-
-template <typename T>
-static Path<T> Ellipse(const Point<T>& center,
-	double radiusX, double radiusY = 0, int steps = 0,
-	bool orientation_is_reversed = DEFAULT_ORIENTATION_IS_REVERSED)
-{
-	if (radiusX <= 0) return Path64();
-	if (radiusY <= 0) radiusY = radiusX;
-	if (steps <= 2)
-		steps = static_cast<int>(PI * sqrt((radiusX + radiusY) / 2));
-
-	//to ensure function returns a positive area
-	double si;
-	if (orientation_is_reversed)
-		si = -std::sin(2 * PI / steps);
-	else
-		si = std::sin(2 * PI / steps);
-
-	double co = std::cos(2 * PI / steps);
-	double dx = co, dy = si;
-	Path<T> result;
-	result.reserve(steps);
-	result.push_back(Point<T>(center.x + radiusX, static_cast<double>(center.y)));
-	for (int i = 1; i < steps; ++i)
-	{
-		result.push_back(Point<T>(center.x + radiusX * dx, center.y + radiusY * dy));
-		double x = dx * co - dy * si;
-		dy = dy * co + dx * si;
-		dx = x;
-	}
-	return result;
-}
-
-template <typename T>
-inline double PerpendicDistFromLineSqrd(const Point<T>& pt,
-	const Point<T>& line1, const Point<T>& line2)
-{
-	double a = static_cast<double>(pt.x - line1.x);
-	double b = static_cast<double>(pt.y - line1.y);
-	double c = static_cast<double>(line2.x - line1.x);
-	double d = static_cast<double>(line2.y - line1.y);
-	if (c == 0 && d == 0) return 0;
-	return Sqr(a * d - c * b) / (c * c + d * d);
-}
-
-template <typename T>
-static void RDP(const Path<T> path, std::size_t begin,
-	std::size_t end, double epsSqrd, std::vector<bool>& flags)
-{
-	typename Path<T>::size_type idx = 0;
-	double max_d = 0;
-	while (end > begin && path[begin] == path[end]) flags[end--] = false;
-	for (typename Path<T>::size_type i = begin + 1; i < end; ++i)
-	{
-		//PerpendicDistFromLineSqrd - avoids expensive Sqrt()
-		double d = PerpendicDistFromLineSqrd(path[i], path[begin], path[end]);
-		if (d <= max_d) continue;
-		max_d = d;
-		idx = i;
-	}
-	if (max_d <= epsSqrd) return;
-	flags[idx] = true;
-	if (idx > begin + 1) RDP(path, begin, idx, epsSqrd, flags);
-	if (idx < end - 1) RDP(path, idx, end, epsSqrd, flags);
-}
-
-template <typename T>
-static Path<T> RamerDouglasPeucker(const Path<T>& path, double epsilon)
-{
-	const typename Path<T>::size_type len = path.size();
-	if (len < 5) return Path<T>(path);
-	std::vector<bool> flags(len);
-	flags[0] = true;
-	flags[len - 1] = true;
-	RDP(path, 0, len - 1, Sqr(epsilon), flags);
-	Path<T> result;
-	result.reserve(len);
-	for (typename Path<T>::size_type i = 0; i < len; ++i)
-		if (flags[i])
-			result.push_back(path[i]);
-	return result;
-}
-
-template <typename T>
-static Paths<T> RamerDouglasPeucker(const Paths<T>& paths, double epsilon)
-{
-	Paths<T> result;
-	result.reserve(paths.size());
-	for (const Path<T>& path : paths)
-		result.push_back(RamerDouglasPeucker<T>(path, epsilon));
-	return result;
 }
 
 }  //namespace

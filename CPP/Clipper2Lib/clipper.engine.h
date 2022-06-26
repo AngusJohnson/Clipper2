@@ -293,14 +293,14 @@ namespace Clipper2Lib {
 	class PolyPath {
 	private:
 		double scale_;
+		Path<T> polygon_;
+		std::vector<PolyPath*> childs_;
 	protected:
 		const PolyPath<T>* parent_;
 		PolyPath(const PolyPath<T>* parent, 
 			const Path<T>& path) : 
-			scale_(parent->scale_), parent_(parent), polygon(path) {}
+			scale_(parent->scale_), parent_(parent), polygon_(path) {}
 	public:
-		Path<T> polygon;
-		std::vector<PolyPath*> childs;
 
 		explicit PolyPath(int precision = 0) //NB only for root node
 		{  
@@ -315,24 +315,24 @@ namespace Clipper2Lib {
 		PolyPath& operator=(const PolyPath&) = delete;
 
 		void Clear() { 
-			for (PolyPath<T>* child : childs) delete child;
-			childs.resize(0); 
+			for (PolyPath<T>* child : childs_) delete child;
+			childs_.resize(0); 
 		}
 
 		void reserve(size_t size)
 		{
-			if (size > childs.size()) childs.reserve(size);
+			if (size > childs_.size()) childs_.reserve(size);
 		}
 
 		PolyPath<T>* AddChild(const Path<T>& path)
 		{
-			childs.push_back(new PolyPath<T>(this, path));
-			return childs.back();
+			childs_.push_back(new PolyPath<T>(this, path));
+			return childs_.back();
 		}
 
-		size_t ChildCount() const { return childs.size(); }
+		size_t ChildCount() const { return childs_.size(); }
 
-		const PolyPath<T>* operator [] (size_t index) const { return childs[index]; }
+		const PolyPath<T>* operator [] (size_t index) const { return childs_[index]; }
 
 		const PolyPath<T>* parent() const { return parent_; }
 
@@ -346,10 +346,14 @@ namespace Clipper2Lib {
 			return is_hole;
 		}
 
+		const Path<T>& polygon() const { return polygon_; }
+
+		const std::vector<PolyPath*>& childs() const { return childs_; }
+
 		double Area() const
 		{
-			double result = Clipper2Lib::Area<T>(polygon);
-			for (const PolyPath<T>* child : childs)
+			double result = Clipper2Lib::Area<T>(polygon_);
+			for (const PolyPath<T>* child : childs_)
 				result += child->Area();
 			return result;
 		}

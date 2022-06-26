@@ -9,8 +9,8 @@
 *******************************************************************************/
 
 #include <cmath>
+#include "clipper.h"
 #include "clipper.offset.h"
-#include "clipper.engine.h"
 
 namespace Clipper2Lib {
 
@@ -309,7 +309,7 @@ void ClipperOffset::DoGroupOffset(PathGroup& group, double delta)
 			//single vertex so build a circle or square ...
 			if (group.join_type_ == JoinType::Round)
 			{
-				double radius = std::abs(delta_);
+				double radius = absDelta;
 				if (group.end_type_ == EndType::Polygon) radius *= 0.5;
 				group.path_ = Ellipse(path[0], radius, radius);
 			}

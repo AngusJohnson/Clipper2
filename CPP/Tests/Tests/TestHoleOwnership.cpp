@@ -2,88 +2,56 @@
 #include "../../Clipper2Lib/clipper.h"
 #include "../../Utils/ClipFileLoad.h"
 
-struct ResultRegion {
-    ResultRegion(const Clipper2Lib::PolyPath64* exterior)
-        : exterior(exterior) {}
+using namespace Clipper2Lib;
 
-    const Clipper2Lib::PolyPath64* const exterior;
-    std::vector<const Clipper2Lib::PolyPath64*> holes;
-};
-
-std::vector<ResultRegion> ExtractResults(
-    const Clipper2Lib::PolyTree64& node,
-    const std::vector<ResultRegion>& previous = std::vector<ResultRegion>()
-) {
-    auto result = previous;
-
-    if (node.IsHole()) {
-        // associate the hole to its parent
-        const Clipper2Lib::PolyPath64* const parent = node.parent();
-        const auto is_parent = [&parent](const auto& i) {
-            return i.exterior == parent;
-        };
-        const auto i = std::find_if(result.begin(), result.end(), is_parent);
-        assert(i != result.end());
-        if (i != result.end()) {
-            i->holes.push_back(&node);
-        }
+//CheckChildrenAreInsideOwner: 
+//this is fully recursive because holes can also contain children
+bool CheckChildrenAreInsideOwner(const PolyPath64& outer)
+{
+  //nb: the outermost PolyPath has an empty polygon
+  if (!outer.polygon().empty() && outer.ChildCount() > 0)
+  {
+    //test PointInPolygon with each child's midpoint
+    for (const PolyPath64* child : outer.childs())
+    {
+      Rect64 child_rec = Bounds(child->polygon());
+      if (PointInPolygon(child_rec.MidPoint(), 
+        outer.polygon()) != PointInPolyResult::IsInside) 
+          return false;
     }
-    else {
-        if (!node.polygon.empty()) {
-            result.emplace_back(&node);
-        }
-    }
+  }
+  for (const PolyPath64* child : outer.childs())
+    if (!CheckChildrenAreInsideOwner(*child)) return false;
+  return true;
+}
 
-    for (const auto* child : node.childs) {
-        result = ExtractResults(*child, result);
-    }
-
-    return result;
-};
-
-TEST(Clipper2Tests, TestFromTextFile3) {
+TEST(Clipper2Tests, TestFromTextFile3)
+{
 #ifdef _WIN32
-    std::ifstream ifs("../../../Tests/PolytreeHoleOwner.txt");
+  std::ifstream ifs("../../../Tests/PolytreeHoleOwner.txt");
 #else
-    std::ifstream ifs("PolytreeHoleOwner.txt");
+  std::ifstream ifs("PolytreeHoleOwner.txt");
 #endif
-    ASSERT_TRUE(ifs);
-    ASSERT_TRUE(ifs.good());
-        
-    Clipper2Lib::Paths64 subject, subject_open, clip;
-    Clipper2Lib::PolyTree64 solution;
-    Clipper2Lib::Paths64 solution_open;
-    Clipper2Lib::ClipType ct;
-    Clipper2Lib::FillRule fr;
-    int64_t area, count;
+  ASSERT_TRUE(ifs);
+  ASSERT_TRUE(ifs.good());
 
-    bool success = false;
-    ASSERT_TRUE(LoadTestNum(ifs, 1, false, subject, subject_open, clip, area, count, ct, fr));
+  Paths64 subject, subject_open, clip;
+  PolyTree64 solution;
+  Paths64 solution_open;
+  ClipType ct;
+  FillRule fr;
+  int64_t area, count;
 
-    Clipper2Lib::Clipper64 c;
-    c.AddSubject(subject);
-    c.AddOpenSubject(subject_open);
-    c.AddClip(clip);
-    c.Execute(ct, fr, solution, solution_open);
+  bool success = false;
+  ASSERT_TRUE(LoadTestNum(ifs, 1, false, 
+    subject, subject_open, clip, area, count, ct, fr));
 
-    const auto results = ExtractResults(solution);
+  Clipper64 c;
+  c.AddSubject(subject);
+  c.AddOpenSubject(subject_open);
+  c.AddClip(clip);
+  c.Execute(ct, fr, solution, solution_open);
 
-    for (const auto& result : results) {
-        const auto parent_bounds = Clipper2Lib::Bounds({ result.exterior->polygon });
-        for (const auto& hole : result.holes) {
-            const auto hole_bounds = Clipper2Lib::Bounds({ hole->polygon });
+  EXPECT_TRUE(CheckChildrenAreInsideOwner(solution));
 
-            // the bounding rect of the hole should at least intersect the bounding rect of the parent
-            EXPECT_GE(hole_bounds.right,  parent_bounds.left);
-            EXPECT_LE(hole_bounds.left,   parent_bounds.right);
-            EXPECT_GE(hole_bounds.bottom, parent_bounds.top);
-            EXPECT_LE(hole_bounds.top,    parent_bounds.bottom);
-
-            // moreover, the bounding rect of the hole should not extend outside the bounding rect of the parent
-            EXPECT_GE(hole_bounds.left,   parent_bounds.left);
-            EXPECT_LE(hole_bounds.right,  parent_bounds.right);
-            EXPECT_GE(hole_bounds.top,    parent_bounds.top);
-            EXPECT_LE(hole_bounds.bottom, parent_bounds.bottom);
-        }
-    }
 }

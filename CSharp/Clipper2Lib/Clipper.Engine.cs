@@ -1,7 +1,7 @@
 ﻿/*******************************************************************************
 * Author    :  Angus Johnson                                                   *
 * Version   :  Clipper2 - beta                                                 *
-* Date      :  20 June 2022                                                    *
+* Date      :  26 June 2022                                                    *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  This is the main polygon clipping module                        *
@@ -1649,25 +1649,16 @@ namespace Clipper2Lib
       if (_hasOpenPaths && (IsOpen(ae1) || IsOpen(ae2)))
       {
         if (IsOpen(ae1) && IsOpen(ae2)) return null;
-        if (IsOpen(ae2))
-          SwapActives(ref ae1, ref ae2);
-        switch (_cliptype)
+        //the following line avoids duplicating quite a bit of code
+        if (IsOpen(ae2)) SwapActives(ref ae1, ref ae2);
+
+        if (_cliptype == ClipType.Union)
         {
-          case ClipType.Intersection:
-          case ClipType.Difference:
-            if (IsSamePolyType(ae1, ae2) || (Math.Abs(ae2.windCount) != 1)) return null;
-            break;
-          case ClipType.Union:
-            if (IsHotEdge(ae1) != ((Math.Abs(ae2.windCount) != 1) ||
-                                   (IsHotEdge(ae1) != (ae2.windCount != 0)))) return null;
-            //it just works!
-            break;
-          case ClipType.Xor:
-            if (Math.Abs(ae2.windCount) != 1) return null;
-            break;
-          case ClipType.None:
-            throw new ClipperLibException("Error in IntersectEdges - ClipType is None!");
+          if (Math.Abs(ae2.windCount) != 1 || Math.Abs(ae2.windCount2) != 0) 
+            return null;
         }
+        else if (IsSamePolyType(ae1, ae2) || Math.Abs(ae2.windCount) != 1) 
+          return null;
 
         //toggle contribution ...
         if (IsHotEdge(ae1))
@@ -1685,9 +1676,10 @@ namespace Clipper2Lib
           SetZ(ae1, ae2, ref resultOp.pt);
 #endif
         }
-
         return resultOp;
       }
+
+      //MANAGING CLOSED PATHS FROM HERE ON
 
       //UPDATE WINDING COUNTS...
 
@@ -2476,9 +2468,20 @@ namespace Clipper2Lib
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static bool AreReallyClose(Point64 pt1, Point64 pt2)
+    {
+      return (Math.Abs(pt1.X - pt2.X) < 2) && (Math.Abs(pt1.Y - pt2.Y) < 2);
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static bool IsValidClosedPath(OutPt? op)
     {
-      return (op != null) && (op.next != op) && (op.next != op.prev);
+      return (op != null && 
+        op.next != op && op.next != op.prev &&
+        //also treat inconsequential polygons as invalid
+        (op.next!.next != op.prev ||
+        !(AreReallyClose(op.pt, op.next.pt) &&
+        AreReallyClose(op.pt, op.prev.pt))));
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]

@@ -9,13 +9,14 @@
 /*
 
 Timer Usage:
-
-The Timer object will start immediately following its construction.
-It will stop when its destructor is called on leaving scope and
-the time interval will be sent to standard output.
+The Timer object will start immediately following its construction 
+(unless "start_paused" is true). It will stop either when its 
+destructor is called on leaving scope, or when pause() is called.
+The timer's pause() and resume() can be called an number of times and 
+the total interval while unpaused will be reported in standard output.
 
 The Timer's constructor takes two optional string parameters:
-  caption   : test sent to standard output just before timing commences.
+  caption   : test sent to standard output just as timing commences.
   time_text : text to be output to the left of the recorded time interval.
 
 Example:
@@ -25,46 +26,39 @@ Example:
 
   void main()
   {
-
-    //when this code block finishes, the time interval 
-    //will be sent to standard output.
     {
       Timer timer("Starting timer now.", "This operation took ");
       Sleep(1000);
     }
-
   }
 
 */
 
 struct Timer {
 private:
-  std::streamsize old_precision;
-  std::ios_base::fmtflags old_flags;
+  std::streamsize old_precision = std::cout.precision(0);
+  std::ios_base::fmtflags old_flags = std::cout.flags();
   bool paused_ = false;
-  std::chrono::high_resolution_clock::time_point time_started_ = {};
+  std::chrono::high_resolution_clock::time_point time_started_ = 
+    std::chrono::high_resolution_clock::now();
   std::chrono::high_resolution_clock::duration duration_ = {};
   std::string time_text_ = "";
   
-  void init(bool start_paused)
-  { 
-    old_precision = std::cout.precision(0);
-    old_flags = std::cout.flags();
-    paused_ = start_paused;
-    if (!start_paused)
-      time_started_ = std::chrono::high_resolution_clock::now();
+public:
+
+  Timer(bool start_paused = false): paused_(start_paused) {}
+
+  Timer(const char caption[], const char time_text[] = "",
+    bool start_paused = false) :
+    paused_(start_paused), time_text_(time_text)
+  {
+    std::cout << caption << std::endl;
   }
 
-public:
-  explicit Timer(bool start_paused = false)
-  { 
-    init(start_paused);
-  }
-  explicit Timer(const std::string& caption,
-    const std::string& time_text = "", bool start_paused = false)  
+  Timer(const std::string caption, const std::string time_text = "",
+    bool start_paused = false) :
+    paused_(start_paused), time_text_(time_text)
   {
-    init(start_paused);
-    time_text_ = time_text;
     if (caption != "") std::cout << caption << std::endl;
   }
 

@@ -324,6 +324,19 @@ namespace Clipper2Lib
     {
       return bottom <= top || right <= left;
     }
+
+    public Point64 MidPoint()
+    {
+      return new Point64((left + right) /2, (top + bottom)/2);
+    }
+
+    public bool PtIsInside(Point64 pt)
+    {
+      return pt.X > left && pt.X < right && 
+        pt.Y > top && pt.Y < bottom;
+    }
+
+
   }
 
   public struct RectD
@@ -365,6 +378,18 @@ namespace Clipper2Lib
     {
       return bottom <= top || right <= left;
     }
+
+    public PointD MidPoint()
+    {
+      return new PointD((left + right) / 2, (top + bottom) / 2);
+    }
+
+    public bool PtIsInside(PointD pt)
+    {
+      return pt.x > left && pt.x < right &&
+        pt.y > top && pt.y < bottom;
+    }
+
   }
 
   //Note: all clipping operations except for Difference are commutative.

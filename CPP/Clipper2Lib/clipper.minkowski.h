@@ -14,14 +14,14 @@
 #include <cstdlib>
 #include <vector>
 #include <string>
-#include "clipper.h"
+#include "clipper.core.h"
 
 namespace Clipper2Lib 
 {
 
   namespace detail
   {
-    static Paths64 Minkowski(const Path64& pattern, const Path64& path, bool isSum, bool isClosed)
+    inline Paths64 Minkowski(const Path64& pattern, const Path64& path, bool isSum, bool isClosed)
     {
       size_t delta = isClosed ? 0 : 1;
       size_t patLen = pattern.size(), pathLen = path.size();
@@ -86,12 +86,12 @@ namespace Clipper2Lib
 
   } //namespace internal
 
-  static Paths64 MinkowskiSum(const Path64& pattern, const Path64& path, bool isClosed)
+  inline Paths64 MinkowskiSum(const Path64& pattern, const Path64& path, bool isClosed)
   {
     return detail::Union(detail::Minkowski(pattern, path, true, isClosed), FillRule::NonZero);
   }
 
-  static PathsD MinkowskiSum(const PathD& pattern, const PathD& path, bool isClosed, int decimalPlaces = 2)
+  inline PathsD MinkowskiSum(const PathD& pattern, const PathD& path, bool isClosed, int decimalPlaces = 2)
   {
     double scale = pow(10, decimalPlaces);
     Path64 pat64 = ScalePath<int64_t, double>(pattern, scale);
@@ -100,12 +100,12 @@ namespace Clipper2Lib
     return ScalePaths<double, int64_t>(tmp, 1 / scale);
   }
 
-  static Paths64 MinkowskiDiff(const Path64& pattern, const Path64& path, bool isClosed)
+  inline Paths64 MinkowskiDiff(const Path64& pattern, const Path64& path, bool isClosed)
   {
     return detail::Union(detail::Minkowski(pattern, path, false, isClosed), FillRule::NonZero);
   }
 
-  static PathsD MinkowskiDiff(const PathD& pattern, const PathD& path, bool isClosed, int decimalPlaces = 2)
+  inline PathsD MinkowskiDiff(const PathD& pattern, const PathD& path, bool isClosed, int decimalPlaces = 2)
   {
     double scale = pow(10, decimalPlaces);
     Path64 pat64 = ScalePath<int64_t, double>(pattern, scale); 

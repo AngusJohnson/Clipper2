@@ -82,14 +82,17 @@ type
     function GetWidth: Int64; {$IFDEF INLINING} inline; {$ENDIF}
     function GetHeight: Int64; {$IFDEF INLINING} inline; {$ENDIF}
     function GetIsEmpty: Boolean; {$IFDEF INLINING} inline; {$ENDIF}
+    function GetMidPoint: TPoint64; {$IFDEF INLINING} inline; {$ENDIF}
   public
     Left   : Int64;
     Top    : Int64;
     Right  : Int64;
     Bottom : Int64;
+    function PtInside(const pt: TPoint64): Boolean;
     property Width: Int64 read GetWidth;
     property Height: Int64 read GetHeight;
     property IsEmpty: Boolean read GetIsEmpty;
+    property MidPoint: TPoint64 read GetMidPoint;
   end;
 
   TRectD = {$ifdef RECORD_METHODS}record{$else}object{$endif}
@@ -97,14 +100,17 @@ type
     function GetWidth: double; {$IFDEF INLINING} inline; {$ENDIF}
     function GetHeight: double; {$IFDEF INLINING} inline; {$ENDIF}
     function GetIsEmpty: Boolean; {$IFDEF INLINING} inline; {$ENDIF}
+    function GetMidPoint: TPointD; {$IFDEF INLINING} inline; {$ENDIF}
   public
     Left   : double;
     Top    : double;
     Right  : double;
     Bottom : double;
+    function PtInside(const pt: TPointD): Boolean;
     property Width: double read GetWidth;
     property Height: double read GetHeight;
     property IsEmpty: Boolean read GetIsEmpty;
+    property MidPoint: TPointD read GetMidPoint;
   end;
 
   TClipType = (ctNone, ctIntersection, ctUnion, ctDifference, ctXor);
@@ -267,6 +273,10 @@ function GetIntersectPoint(const ln1a, ln1b, ln2a, ln2b: TPoint64): TPointD;
 function RamerDouglasPeucker(const path: TPath64; epsilon: double): TPath64; overload;
 function RamerDouglasPeucker(const paths: TPaths64; epsilon: double): TPaths64; overload;
 
+procedure GetSinCos(angle: double; out sinA, cosA: double);
+function Ellipse(const rec: TRect64; steps: integer = 0): TPath64; overload;
+function Ellipse(const rec: TRectD; steps: integer = 0): TPathD; overload;
+
 const
   MaxInt64    = 9223372036854775807;
   NullRect64  : TRect64 = (left: 0; top: 0; right: 0; Bottom: 0);
@@ -295,6 +305,19 @@ function TRect64.GetIsEmpty: Boolean;
 begin
   result := (bottom <= top) or (right <= left);
 end;
+//------------------------------------------------------------------------------
+
+function TRect64.GetMidPoint: TPoint64;
+begin
+  result := Point64((Left + Right) div 2, (Top + Bottom) div 2);
+end;
+//------------------------------------------------------------------------------
+
+function TRect64.PtInside(const pt: TPoint64): Boolean;
+begin
+  result := (pt.X > Left) and (pt.X < Right) and
+    (pt.Y > Top) and (pt.Y < Bottom);
+end;
 
 //------------------------------------------------------------------------------
 // TRectD methods ...
@@ -315,6 +338,19 @@ end;
 function TRectD.GetIsEmpty: Boolean;
 begin
   result := (bottom <= top) or (right <= left);
+end;
+//------------------------------------------------------------------------------
+
+function TRectD.GetMidPoint: TPointD;
+begin
+  result := PointD((Left + Right) *0.5, (Top + Bottom) *0.5);
+end;
+//------------------------------------------------------------------------------
+
+function TRectD.PtInside(const pt: TPointD): Boolean;
+begin
+  result := (pt.X > Left) and (pt.X < Right) and
+    (pt.Y > Top) and (pt.Y < Bottom);
 end;
 
 //------------------------------------------------------------------------------
@@ -1495,6 +1531,56 @@ begin
       Result.Y := (ln1a.Y + ln1b.Y) * 0.5;
     end;
   end;
+end;
+//------------------------------------------------------------------------------
+
+procedure GetSinCos(angle: double; out sinA, cosA: double);
+  {$IFDEF INLINE} inline; {$ENDIF}
+{$IFNDEF FPC}
+var s, c: extended;
+{$ENDIF}
+begin
+{$IFDEF FPC}
+  Math.SinCos(angle, sinA, cosA);
+{$ELSE}
+  Math.SinCos(angle, s, c);
+  sinA := s; cosA := c;
+{$ENDIF}
+end;
+//------------------------------------------------------------------------------
+
+function Ellipse(const rec: TRect64; steps: integer): TPath64;
+begin
+  Result := Path64(Ellipse(RectD(rec), steps));
+end;
+//------------------------------------------------------------------------------
+
+function Ellipse(const rec: TRectD; steps: integer): TPathD;
+var
+  i: Integer;
+  sinA, cosA: double;
+  centre, radius, delta: TPointD;
+begin
+  result := nil;
+  if rec.IsEmpty then Exit;
+  with rec do
+  begin
+    centre := rec.MidPoint;
+    radius := PointD(Width * 0.5, Height  * 0.5);
+  end;
+  if (steps < 3) then
+    steps := Ceil(PI * sqrt(rec.width + rec.height));
+  GetSinCos(2 * Pi / Steps, sinA, cosA);
+  delta.x := cosA; delta.y := sinA;
+  SetLength(Result, Steps);
+  Result[0] := PointD(centre.X + radius.X, centre.Y);
+  for i := 1 to steps -1 do
+  begin
+    Result[i] := PointD(centre.X + radius.X * delta.x,
+      centre.Y + radius.y * delta.y);
+    delta :=  PointD(delta.X * cosA - delta.Y * sinA,
+      delta.Y * cosA + delta.X * sinA);
+  end; //rotates clockwise
 end;
 //------------------------------------------------------------------------------
 

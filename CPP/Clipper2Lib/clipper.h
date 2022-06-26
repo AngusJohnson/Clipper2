@@ -114,12 +114,12 @@ namespace Clipper2Lib
     return BooleanOp(ClipType::Xor, fillrule, subjects, clips);
   }
 
-  static bool IsFullOpenEndType(EndType et)
+  inline bool IsFullOpenEndType(EndType et)
   {
     return (et != EndType::Polygon) && (et != EndType::Joined);
   }
 
-  static Paths64 InflatePaths(const Paths64& paths, double delta, 
+  inline Paths64 InflatePaths(const Paths64& paths, double delta,
     JoinType jt, EndType et, double miter_limit = 2.0)
   {
     ClipperOffset clip_offset(miter_limit);
@@ -127,7 +127,7 @@ namespace Clipper2Lib
     return clip_offset.Execute(delta);
   }
 
-  static PathsD InflatePaths(const PathsD& paths, double delta,
+  inline PathsD InflatePaths(const PathsD& paths, double delta,
     JoinType jt, EndType et, double miter_limit = 2.0, double precision = 2)
   {
     if (precision < -8 || precision > 8)
@@ -175,7 +175,7 @@ namespace Clipper2Lib
     return result;
   }
 
-  static Rect64 Bounds(const Path64& path)
+  inline Rect64 Bounds(const Path64& path)
   {
     Rect64 rec = MaxInvalidRect64;
     for (const Point64& pt : path)
@@ -189,7 +189,7 @@ namespace Clipper2Lib
     return rec;
   }
   
-  static Rect64 Bounds(const Paths64& paths)
+  inline Rect64 Bounds(const Paths64& paths)
   {
     Rect64 rec = MaxInvalidRect64;
     for (const Path64& path : paths)
@@ -204,7 +204,7 @@ namespace Clipper2Lib
     return rec;
   }
 
-  static RectD Bounds(const PathD& path)
+  inline RectD Bounds(const PathD& path)
   {
     RectD rec = MaxInvalidRectD;
     for (const PointD& pt : path)
@@ -218,7 +218,7 @@ namespace Clipper2Lib
     return rec;
   }
 
-  static RectD Bounds(const PathsD& paths)
+  inline RectD Bounds(const PathsD& paths)
   {
     RectD rec = MaxInvalidRectD;
     for (const PathD& path : paths)
@@ -237,11 +237,11 @@ namespace Clipper2Lib
   {
 
     template <typename T>
-    static void AddPolyNodeToPaths(const PolyPath<T>& polytree, Paths<T>& paths)
+    inline void AddPolyNodeToPaths(const PolyPath<T>& polytree, Paths<T>& paths)
     {
-      if (!polytree.polygon.empty())
-        paths.push_back(polytree.polygon);
-      for (PolyPath<T>* child : polytree.childs)
+      if (!polytree.polygon().empty())
+        paths.push_back(polytree.polygon());
+      for (PolyPath<T>* child : polytree.childs())
         AddPolyNodeToPaths(*child, paths);
     }
 
@@ -342,7 +342,7 @@ namespace Clipper2Lib
     return result;
   }
 
-  static Path64 MakePath(const std::string& s, const std::string& skip_chars = "")
+  inline Path64 MakePath(const std::string& s, const std::string& skip_chars = "")
   {
     Path64 result;
     std::string::const_iterator s_iter = s.cbegin();
@@ -366,7 +366,7 @@ namespace Clipper2Lib
     return result;
   }
   
-  static PathD MakePathD(const std::string& s)
+  inline PathD MakePathD(const std::string& s)
   {
     PathD result;
     std::string::const_iterator s_iter = s.cbegin();
@@ -383,7 +383,7 @@ namespace Clipper2Lib
     return result;
   }
 
-  static Path64 TrimCollinear(const Path64& p, bool is_open_path = false)
+  inline Path64 TrimCollinear(const Path64& p, bool is_open_path = false)
   {
     size_t len = p.size();
     if (len < 3)
@@ -431,7 +431,7 @@ namespace Clipper2Lib
     return dst;
   }
 
-  static PathD TrimCollinear(const PathD& path, int precision, bool is_open_path = false)
+  inline PathD TrimCollinear(const PathD& path, int precision, bool is_open_path = false)
   {
     if (precision > 8 || precision < -8) 
       throw new Clipper2Exception("Error: Precision exceeds the allowed range.");
@@ -441,14 +441,15 @@ namespace Clipper2Lib
     return ScalePath<double, int64_t>(p, 1/scale);
   }
 
-  static PointInPolyResult PointInPolygon(const Point64& pt, const Path64& polygon)
+  template <typename T>
+  inline PointInPolyResult PointInPolygon(const Point<T>& pt, const Path<T>& polygon)
   {
     if (polygon.size() < 3) 
       return PointInPolyResult::IsOutside;
 
     int val = 0;
-    Path64::const_iterator cit = polygon.cbegin(); 
-    Path64::const_iterator cend = polygon.cend(), pit = cend -1;
+    Path<T>::const_iterator cit = polygon.cbegin();
+    Path<T>::const_iterator cend = polygon.cend(), pit = cend -1;
     bool is_above = pit->y < pt.y, first_pass = true;
 
     while (cit != cend)
@@ -502,6 +503,133 @@ namespace Clipper2Lib
       return PointInPolyResult::IsOutside;
     else
       return PointInPolyResult::IsInside;
+  }
+
+  template <typename T>
+  inline double Distance(const Point<T> pt1, const Point<T> pt2)
+  {
+    return std::sqrt(DistanceSqr(pt1, pt2));
+  }
+
+  template <typename T>
+  inline double Length(const Path<T>& path, bool is_closed_path = false)
+  {
+    double result = 0.0;
+    if (path.size() < 2) return result;
+    auto it = path.cbegin(), stop = path.end() - 1;
+    for (; it != stop; ++it)
+      result += Distance(*it, *(it + 1));
+    if (is_closed_path)
+      result += Distance(*stop, *path.cbegin());
+    return result;
+  }
+
+
+  template <typename T>
+  inline bool NearCollinear(const Point<T>& pt1, const Point<T>& pt2, const Point<T>& pt3, double sin_sqrd_min_angle_rads)
+  {
+    double cp = std::abs(CrossProduct(pt1, pt2, pt3));
+    return (cp * cp) / (DistanceSqr(pt1, pt2) * DistanceSqr(pt2, pt3)) < sin_sqrd_min_angle_rads;
+  }
+  
+  template <typename T>
+  inline Path<T> Ellipse(const Rect<T>& rect, int steps = 0,
+    bool orientation_is_reversed = DEFAULT_ORIENTATION_IS_REVERSED)
+  {
+    return Ellipse(rect.MidPoint(), rect.Width() / 2, rect.Height() / 2,
+      steps, orientation_is_reversed);
+  }
+
+  template <typename T>
+  inline Path<T> Ellipse(const Point<T>& center,
+    double radiusX, double radiusY = 0, int steps = 0,
+    bool orientation_is_reversed = DEFAULT_ORIENTATION_IS_REVERSED)
+  {
+    if (radiusX <= 0) return Path<T>();
+    if (radiusY <= 0) radiusY = radiusX;
+    if (steps <= 2)
+      steps = static_cast<int>(PI * sqrt((radiusX + radiusY) / 2));
+
+    //to ensure function returns a positive area
+    double si;
+    if (orientation_is_reversed)
+      si = -std::sin(2 * PI / steps);
+    else
+      si = std::sin(2 * PI / steps);
+
+    double co = std::cos(2 * PI / steps);
+    double dx = co, dy = si;
+    Path<T> result;
+    result.reserve(steps);
+    result.push_back(Point<T>(center.x + radiusX, static_cast<double>(center.y)));
+    for (int i = 1; i < steps; ++i)
+    {
+      result.push_back(Point<T>(center.x + radiusX * dx, center.y + radiusY * dy));
+      double x = dx * co - dy * si;
+      dy = dy * co + dx * si;
+      dx = x;
+    }
+    return result;
+  }
+
+  template <typename T>
+  inline double PerpendicDistFromLineSqrd(const Point<T>& pt,
+    const Point<T>& line1, const Point<T>& line2)
+  {
+    double a = static_cast<double>(pt.x - line1.x);
+    double b = static_cast<double>(pt.y - line1.y);
+    double c = static_cast<double>(line2.x - line1.x);
+    double d = static_cast<double>(line2.y - line1.y);
+    if (c == 0 && d == 0) return 0;
+    return Sqr(a * d - c * b) / (c * c + d * d);
+  }
+
+  template <typename T>
+  inline void RDP(const Path<T> path, std::size_t begin,
+    std::size_t end, double epsSqrd, std::vector<bool>& flags)
+  {
+    typename Path<T>::size_type idx = 0;
+    double max_d = 0;
+    while (end > begin && path[begin] == path[end]) flags[end--] = false;
+    for (typename Path<T>::size_type i = begin + 1; i < end; ++i)
+    {
+      //PerpendicDistFromLineSqrd - avoids expensive Sqrt()
+      double d = PerpendicDistFromLineSqrd(path[i], path[begin], path[end]);
+      if (d <= max_d) continue;
+      max_d = d;
+      idx = i;
+    }
+    if (max_d <= epsSqrd) return;
+    flags[idx] = true;
+    if (idx > begin + 1) RDP(path, begin, idx, epsSqrd, flags);
+    if (idx < end - 1) RDP(path, idx, end, epsSqrd, flags);
+  }
+
+  template <typename T>
+  inline Path<T> RamerDouglasPeucker(const Path<T>& path, double epsilon)
+  {
+    const typename Path<T>::size_type len = path.size();
+    if (len < 5) return Path<T>(path);
+    std::vector<bool> flags(len);
+    flags[0] = true;
+    flags[len - 1] = true;
+    RDP(path, 0, len - 1, Sqr(epsilon), flags);
+    Path<T> result;
+    result.reserve(len);
+    for (typename Path<T>::size_type i = 0; i < len; ++i)
+      if (flags[i])
+        result.push_back(path[i]);
+    return result;
+  }
+
+  template <typename T>
+  inline Paths<T> RamerDouglasPeucker(const Paths<T>& paths, double epsilon)
+  {
+    Paths<T> result;
+    result.reserve(paths.size());
+    for (const Path<T>& path : paths)
+      result.push_back(RamerDouglasPeucker<T>(path, epsilon));
+    return result;
   }
 
 }  //end Clipper2Lib namespace

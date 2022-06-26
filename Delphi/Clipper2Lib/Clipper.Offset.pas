@@ -242,7 +242,7 @@ end;
 procedure TClipperOffset.DoGroupOffset(pathGroup: TPathGroup; delta: double);
 var
   i, len, lowestIdx: Integer;
-  absDelta, arcTol, area, steps: Double;
+  r, absDelta, arcTol, area, steps: Double;
   IsClosedPaths: Boolean;
 begin
   if pathgroup.endType <> etPolygon then
@@ -296,16 +296,14 @@ begin
     begin
       if (pathgroup.endType = etRound) then
       begin
-        SetLength(fNorms, 2);
-        fNorms[0] := PointD(1,0);
-        fNorms[1] := PointD(-1,0);
-        DoRound(0, 1, TwoPi);
-        dec(fOutPathLen);
-        SetLength(fOutPath, fOutPathLen);
+        r := absDelta;
+				if (pathGroup.endType = etPolygon) then
+          r := r * 0.5;
+        with fInPath[0] do
+          fOutPath := Path64(Ellipse(RectD(X-r, Y-r, X+r, Y+r)));
       end else
       begin
-        fOutPathLen := 4;
-        SetLength(fOutPath, fOutPathLen);
+        SetLength(fOutPath, 4);
         with fInPath[0] do
         begin
           fOutPath[0] := Point64(X-fDelta,Y-fDelta);
@@ -314,6 +312,8 @@ begin
           fOutPath[3] := Point64(X-fDelta,Y+fDelta);
         end;
       end;
+      AppendPath(fOutPaths, fOutPath);
+      Continue;
     end else
     begin
       BuildNormals;
@@ -563,7 +563,7 @@ end;
 procedure TClipperOffset.DoRound(j, k: Integer; angle: double);
 var
   i, steps: Integer;
-  stepSin, stepCos: Extended;
+  stepSin, stepCos: double;
   pt: TPoint64;
   pt2: TPointD;
 begin
@@ -573,7 +573,7 @@ begin
   AddPoint(pt.X + pt2.X, pt.Y + pt2.Y);
 
   steps := Round(fStepsPerRad * abs(angle) + 0.501);
-  Math.SinCos(angle / steps, stepSin, stepCos);
+  GetSinCos(angle / steps, stepSin, stepCos);
   for i := 0 to steps -1 do
   begin
     pt2 := PointD(pt2.X * stepCos - stepSin * pt2.Y,

@@ -1,7 +1,7 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
 * Version   :  Clipper2 - beta                                                 *
-* Date      :  21 June 2022                                                    *
+* Date      :  26 June 2022                                                    *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  This is the main polygon clipping module                        *
@@ -551,9 +551,19 @@ namespace Clipper2Lib {
 	}
 
 
+	inline bool AreReallyClose(const Point64 pt1, const Point64 pt2)
+	{
+	  return (std::abs(pt1.x - pt2.x) < 2) && (std::abs(pt1.y - pt2.y) < 2);
+	}
+
+
 	inline bool IsValidClosedPath(const OutPt* op)
 	{
-		return (op && op->next != op && op->next != op->prev);
+		return (op && op->next != op && op->next != op->prev &&
+			//also treat inconsequential polygons as invalid
+			(op->next->next != op->prev ||
+			!(AreReallyClose(op->pt, op->next->pt) &&
+			AreReallyClose(op->pt, op->prev->pt))));
 	}
 
 
@@ -1839,6 +1849,7 @@ namespace Clipper2Lib {
 		if (has_open_paths_ && (IsOpen(e1) || IsOpen(e2)))
 		{
 			if (IsOpen(e1) && IsOpen(e2)) return nullptr;
+
 			Active* edge_o, * edge_c;
 			if (IsOpen(e1))
 			{
@@ -1851,23 +1862,14 @@ namespace Clipper2Lib {
 				edge_c = &e1;
 			}
 
-			switch (cliptype_)
+			if (abs(edge_c->wind_cnt) != 1) return nullptr;
+
+			if (cliptype_ == ClipType::Union)
 			{
-			case ClipType::Intersection:
-			case ClipType::Difference:
-				if (IsSamePolyType(*edge_o, *edge_c) || (abs(edge_c->wind_cnt) != 1)) return nullptr;
-				break;
-			case ClipType::Union:
-				if (IsHotEdge(*edge_o) != ((abs(edge_c->wind_cnt) != 1) ||
-					(IsHotEdge(*edge_o) != (edge_c->wind_cnt != 0)))) return nullptr;
-				break;
-			case ClipType::Xor:
-				if (abs(edge_c->wind_cnt) != 1) return nullptr;
-				break;
-			case ClipType::None:
-				succeeded_ = false;
-				break;
+				if (std::abs(e2.wind_cnt) != 1 || e2.wind_cnt2 != 0) return nullptr;
 			}
+			else if (IsSamePolyType(e1, e2) || (std::abs(e2.wind_cnt) != 1)) return nullptr;
+
 			//toggle contribution ...
 			if (IsHotEdge(*edge_o))
 			{
@@ -1884,6 +1886,9 @@ namespace Clipper2Lib {
 			return resultOp;
 		}
 
+
+		//MANAGING CLOSED PATHS FROM HERE ON
+		
 		//UPDATE WINDING COUNTS...
 
 		int old_e1_windcnt, old_e2_windcnt;
@@ -3504,8 +3509,9 @@ namespace Clipper2Lib {
 						}
 				}
 
-				//swap order if outer/owner paths are preceeded by their inner paths
-				if (outrec->owner->idx > outrec->idx)
+				//swap the order when a child preceeds its owner
+				//(because owners must preceed children in polytrees)
+				if (outrec->idx < outrec->owner->idx)
 				{
 					OutRec* tmp = outrec->owner;
 					outrec_list_[outrec->owner->idx] = outrec;
@@ -3526,7 +3532,8 @@ namespace Clipper2Lib {
 			}
 
 			Path64 path;
-			//closed paths should always return a Positive orientation
+			//closed paths will return a Positive orientation unless
+			//ReverseSolution or orientation_is_reversed_ are true
 			if (!BuildPath(outrec->pts,
 				ReverseSolution != orientation_is_reversed_, false, path)) continue;
 
@@ -3545,9 +3552,9 @@ namespace Clipper2Lib {
 
 	static void PolyPath64ToPolyPathD(const PolyPath64& polypath, PolyPathD& result)
 	{
-		for (const PolyPath64* child : polypath.childs)
+		for (const PolyPath64* child : polypath.childs())
 		{
-			PolyPathD* res_child = result.AddChild(Path64ToPathD(child->polygon));
+			PolyPathD* res_child = result.AddChild(Path64ToPathD(child->polygon()));
 			PolyPath64ToPolyPathD(*child, *res_child);
 		}
 	}
