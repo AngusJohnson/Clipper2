@@ -448,8 +448,8 @@ namespace Clipper2Lib
       return PointInPolyResult::IsOutside;
 
     int val = 0;
-    Path<T>::const_iterator cit = polygon.cbegin();
-    Path<T>::const_iterator cend = polygon.cend(), pit = cend -1;
+    typename Path<T>::const_iterator cit = polygon.cbegin();
+    typename Path<T>::const_iterator cend = polygon.cend(), pit = cend -1;
     bool is_above = pit->y < pt.y, first_pass = true;
 
     while (cit != cend)
