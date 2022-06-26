@@ -107,6 +107,15 @@ TEST(Clipper2Tests, TestMultiplePolygons)
       EXPECT_LE(relative_count_diff, 0.1);
       EXPECT_LE(relative_area_diff, 0.0005);
     }
+
+    //TODO: Test the polytree variant too
+    //Clipper2Lib::Paths64 solution_polytree, solution_polytree_open;
+    //Clipper2Lib::Clipper64 clipper_polytree;
+    //clipper_polytree.AddSubject(subject);
+    //clipper_polytree.AddOpenSubject(subject_open);
+    //clipper_polytree.AddClip(clip);
+    //clipper_polytree.Execute(ct, fr, solution_polytree, solution_polytree_open);
+
     ++test_number;
   }
   EXPECT_GE(test_number, 188);

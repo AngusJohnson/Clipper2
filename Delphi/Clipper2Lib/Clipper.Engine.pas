@@ -1666,65 +1666,61 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-function IsValidAelOrder(a1, a2: PActive): Boolean;
+function IsValidAelOrder(resident, newcomer: PActive): Boolean;
 var
-  a2BotY: Int64;
-  a2IsLeftBound: Boolean;
+  botY: Int64;
+  newcomerIsLeft: Boolean;
   d: double;
 begin
-  //nb: a2 is always the edge being inserted
-
-  if a2.currX <> a1.currX then
+  if newcomer.currX <> resident.currX then
   begin
-    Result := a2.currX > a1.currX;
+    Result := newcomer.currX > resident.currX;
     Exit;
   end;
 
   //get the turning direction  a1.top, a2.bot, a2.top
-  d := CrossProduct(a1.top, a2.bot, a2.top);
+  d := CrossProduct(resident.top, newcomer.bot, newcomer.top);
   if d <> 0 then
   begin
     Result := d < 0;
     Exit;
   end;
-    
-  //edges must be collinear to get here 
-  
-  //for starting open paths, place them according to
-  //the direction they're about to turn
-  if IsOpen(a1) and not IsMaxima(a1) and
-    (a1.bot.Y <= a2.bot.Y) and
-    not IsSamePolyType(a1, a2) and
-    (a1.top.Y > a2.top.Y) then
+
+  //edges must be collinear to get here
+
+  if not IsMaxima(resident) and
+    (resident.top.Y > newcomer.top.Y) then
   begin
-    Result := CrossProduct(a1.bot, a1.top, NextVertex(a1).pt) <= 0;
+    Result := CrossProduct(newcomer.bot,
+      resident.top, NextVertex(resident).pt) <= 0;
     Exit;
   end
-  else if IsOpen(a2) and not IsMaxima(a2) and
-    (a2.bot.Y <= a1.bot.Y) and not IsSamePolyType(a1, a2) and
-    (a2.top.Y > a1.top.Y) then
+  else if not IsMaxima(newcomer) and
+    (newcomer.top.Y > resident.top.Y) then
   begin
-    Result := CrossProduct(a2.bot, a2.top, NextVertex(a2).pt) >= 0;
+    Result := CrossProduct(newcomer.bot,
+      newcomer.top, NextVertex(newcomer).pt) >= 0;
     Exit;
   end;
 
-  a2BotY := a2.bot.Y;
-  a2IsLeftBound := IsLeftBound(a2);
-  if  not IsOpen(a1) and
-    (a1.bot.Y = a2BotY) and (a1.locMin.vertex.pt.Y = a2BotY) then
+  botY := newcomer.bot.Y;
+  newcomerIsLeft := IsLeftBound(newcomer);
+  if (resident.bot.Y = botY) and
+    (resident.locMin.vertex.pt.Y = botY) then
   begin
-    //a1 must also be new
-    if IsLeftBound(a1) <> a2IsLeftBound then
-      Result := a2IsLeftBound
-    else if (CrossProduct(PrevPrevVertex(a1).pt, a1.bot, a1.top) = 0) then
-      Result := true
+    //resident must also have just been inserted
+    if IsLeftBound(resident) <> newcomerIsLeft then
+      Result := newcomerIsLeft
+    else if (CrossProduct(PrevPrevVertex(resident).pt,
+      resident.bot, resident.top) = 0) then
+        Result := true
     else
       //compare turning direction of the alternate bound
-      Result := (CrossProduct(PrevPrevVertex(a1).pt,
-        a2.bot, PrevPrevVertex(a2).pt) > 0) = a2IsLeftBound;
+      Result := (CrossProduct(PrevPrevVertex(resident).pt,
+        newcomer.bot, PrevPrevVertex(newcomer).pt) > 0) = newcomerIsLeft;
   end
   else
-    Result := a2IsLeftBound;
+    Result := newcomerIsLeft;
 end;
 //------------------------------------------------------------------------------
 
@@ -2782,12 +2778,35 @@ begin
 end;
 //------------------------------------------------------------------------------
 
+function FindEdgeWithMatchingLocMin(e: PActive): PActive;
+begin
+  Result := e.nextInAEL;
+  while Assigned(Result) do
+  begin
+    if (Result.locMin = e.locMin) then Exit;
+    if not IsHorizontal(Result) and
+      not PointsEqual(e.bot, Result.bot) then Result := nil
+    else Result := Result.nextInAEL;
+  end;
+  Result := e.prevInAEL;
+  while Assigned(Result) do
+  begin
+    if (Result.locMin = e.locMin) then Exit;
+    if not IsHorizontal(Result) and
+      not PointsEqual(e.bot, Result.bot) then Result := nil
+    else
+      Result := Result.prevInAEL;
+  end;
+end;
+//------------------------------------------------------------------------------
+
 {$IFNDEF USINGZ}
 {$HINTS OFF}
 {$ENDIF}
 function TClipperBase.IntersectEdges(e1, e2: PActive; pt: TPoint64): POutPt;
 var
   e1WindCnt, e2WindCnt, e1WindCnt2, e2WindCnt2: Integer;
+  e3: PActive;
   op2: POutPt;
 begin
   Result := nil;
@@ -2815,7 +2834,23 @@ begin
       {$ENDIF}
       e1.outrec := nil;
     end
-    else
+    //horizontal edges can pass under open paths at a LocMins
+    else if PointsEqual(pt, e1.locMin.vertex.pt) and
+      (e1.locMin.vertex.flags * [vfOpenStart, vfOpenEnd] = []) then
+    begin
+      //find the other side of the LocMin and
+      //if it's 'hot' join up with it ...
+      e3 := FindEdgeWithMatchingLocMin(e1);
+      if IsHotEdge(e3) then
+      begin
+        e1.outrec := e3.outrec;
+        if e1.windDx > 0 then
+          SetSides(e3.outrec, e1, e3) else
+          SetSides(e3.outrec, e3, e1);
+        Result := e3.outrec.pts;
+      end else
+        Result := StartOpenPath(e1, pt);
+    end else
       Result := StartOpenPath(e1, pt);
     Exit;
   end;
@@ -3308,7 +3343,8 @@ var
   nextPt: TPoint64;
 begin
   nextPt := NextVertex(horzEdge).pt;
-  Result := (horzEdge.bot.X < horzEdge.top.X) <> (horzEdge.top.X < nextPt.X);
+  Result := (nextPt.Y = horzEdge.top.Y) and
+    (horzEdge.bot.X < horzEdge.top.X) <> (horzEdge.top.X < nextPt.X);
 end;
 //------------------------------------------------------------------------------
 
@@ -3659,12 +3695,21 @@ begin
 
         if (e.currX = horzEdge.top.X) and not IsHorizontal(e) then
         begin
-          //for edges at horzEdge's end, only stop when horzEdge's
+          pt := NextVertex(horzEdge).pt;
+
+          //to maximize the possibility of putting open edges into
+          //solutions, we'll only break if it's past HorzEdge's end
+          if IsOpen(E) and not IsSamePolyType(E, horzEdge) and
+            not IsHotEdge(e) then
+          begin
+            if (isLeftToRight and (TopX(E, pt.Y) > pt.X)) or
+              (not isLeftToRight and (TopX(E, pt.Y) < pt.X)) then Break;
+          end
+          //otherwise for edges at horzEdge's end, only stop when horzEdge's
           //outslope is greater than e's slope when heading right or when
           //horzEdge's outslope is less than e's slope when heading left.
-          pt := NextVertex(horzEdge).pt;
-          if (isLeftToRight and (TopX(E, pt.Y) >= pt.X)) or
-            (not isLeftToRight and (TopX(E, pt.Y) <= pt.X)) then Break;
+          else if (isLeftToRight and (TopX(E, pt.Y) >= pt.X)) or
+              (not isLeftToRight and (TopX(E, pt.Y) <= pt.X)) then Break;
         end;
       end;
 
@@ -3672,7 +3717,10 @@ begin
 
       if (isLeftToRight) then
       begin
-        op := IntersectEdges(horzEdge, e, pt);
+        if IsOpen(e) and (e.top.Y = Y) then
+          op := nil //pass over the top of horz. or maxpair open paths
+        else
+          op := IntersectEdges(horzEdge, e, pt);
         SwapPositionsInAEL(horzEdge, e);
 
         if IsHotEdge(horzEdge) and Assigned(op) and
@@ -3690,7 +3738,10 @@ begin
         e := horzEdge.nextInAEL;
       end else
       begin
-        op := IntersectEdges(e, horzEdge, pt);
+        if IsOpen(e) and (e.top.Y = Y) then
+          op := nil //pass over the top of horz. or maxpair open paths
+        else
+          op := IntersectEdges(e, horzEdge, pt);
         SwapPositionsInAEL(e, horzEdge);
 
         if IsHotEdge(horzEdge) and Assigned(op) and
@@ -3733,9 +3784,9 @@ begin
       AddOutPt(horzEdge, horzEdge.top);
     UpdateEdgeIntoAEL(horzEdge);
 
-    if PreserveCollinear and not horzIsOpen and
-      HorzIsSpike(horzEdge) then
-       TrimHorz(horzEdge, true);
+    if PreserveCollinear and
+      not horzIsOpen and HorzIsSpike(horzEdge) then
+        TrimHorz(horzEdge, true);
 
     isLeftToRight := ResetHorzDirection;
   end; //end while horizontal
@@ -4500,276 +4551,6 @@ end;
 procedure TPolyTreeD.SetScale(value: double);
 begin
   FScale := value;
-end;
-
-//------------------------------------------------------------------------------
-// TSutherlandHodgman
-//------------------------------------------------------------------------------
-
-function PtInRect(const Rect: TRect64; const P: TPoint64): Boolean;
-  {$IFDEF INLINING} inline; {$ENDIF}
-begin
-  Result := (P.X > Rect.Left) and (P.X < Rect.Right) and
-    (P.Y > Rect.Top) and (P.Y < Rect.Bottom);
-end;
-//------------------------------------------------------------------------------
-
-function PtInOrOnRect(const Rect: TRect64; const P: TPoint64): Boolean;
-  {$IFDEF INLINING} inline; {$ENDIF}
-begin
-  Result := (P.X >= Rect.Left) and (P.X <= Rect.Right) and
-    (P.Y >= Rect.Top) and (P.Y <= Rect.Bottom);
-end;
-//------------------------------------------------------------------------------
-
-//also check for edges that start and end outside the clip rect
-//but still breifly enter (intersect) the rect
-
-//possible positions around rect:
-type
-  TPos = (pInside = 0, pLeft = 1, pTop = 2, pLT = 3, pRight = 4,
-    pRT = 6, pBottom = 8, pLB = 9, pRB = 12);
-  //nb: no rect instersect is possible when ANDing start and end != 0;
-
-function GetRectPos(const pt: TPoint64; const rec: TRect64): TPos;
-begin
-  Result := pInside;
-  if pt.X <= rec.Left then
-    Result := TPos(Integer(Result) +1)
-  else if pt.X >= rec.Right then
-    Result := TPos(Integer(Result) +4);
-  if pt.Y <= rec.Top then
-    Result := TPos(Integer(Result) +2)
-  else if pt.Y >= rec.Bottom then
-    Result := TPos(Integer(Result) +8);
-end;
-//------------------------------------------------------------------------------
-
-function GetIntersectPt(const ln1a, ln1b, ln2a, ln2b: TPoint64): TPoint64;
-begin
-  Result := Point64(Clipper.Core.GetIntersectPoint(ln1a, ln1b, ln2a, ln2b));
-end;
-//------------------------------------------------------------------------------
-
-//A modified Sutherland-Hodgman algorthm
-function RectClipPaths(const paths: TPaths64; const rec: TRect64): TPaths64;
-
-  procedure EnterExit(const pt1, pt2: TPoint64;
-    pos1, pos2: TPos; const rec: TRect64);
-  begin
-
-  end;
-
-var
-  i,j, m,n, len, len2: integer;
-  recLT, recRT, recLB, recRB: TPoint64;
-  pt, prevPt: TPoint64;
-  lastPos, currPos, lasCrossingPos: TPos;
-  posAND: cardinal;
-  isInside: Boolean;
-begin
-  len := Length(paths);
-  SetLength(Result, len);
-  recLT := Point64(rec.Left,rec.Top);
-  recRT := Point64(rec.Right, rec.Top);
-  recLB := Point64(rec.Left, rec.Bottom);
-  recRB := Point64(rec.Right, rec.Bottom);
-
-  m := 0;
-  for i := 0 to len -1 do
-  begin
-    n := 0;
-    len2 := Length(paths[i]);
-    if len2 < 3 then Continue;
-    SetLength(Result[m], len2);
-    lastPos := GetRectPos(paths[i][0], rec);
-    lasCrossingPos := pInside;
-    if lastPos = pInside then
-    begin
-      Result[m][n] := paths[i][0];
-      inc(n);
-    end;
-    for j := 1 to len2 -1 do
-    begin
-      currPos := GetRectPos(paths[i][j], rec);
-      if currPos = pInside then
-      begin
-        if lastPos = pInside then
-          pt := paths[i][j]
-        else
-        begin
-          //crossing into rect
-
-          //todo - do extra stuff if lastCrossingPos <> pInside
-
-          prevPt := paths[i][j-1];
-          case lastPos of
-            pLeft: pt := GetIntersectPt(prevPt, pt, recLT, recLB);
-            pTop: pt := GetIntersectPt(prevPt, pt, recLT, recRT);
-            pRight: pt := GetIntersectPt(prevPt, pt, recRT, recRB);
-            pBottom: pt := GetIntersectPt(prevPt, pt, recLB, recRB);
-            pLT: if CrossProduct(prevPt, recLT, pt) > 0 then
-              pt := GetIntersectPt(prevPt, pt, recLT, recLB) else
-              pt := GetIntersectPt(prevPt, pt, recLT, recRT);
-            pRT: if CrossProduct(prevPt, recRT, pt) < 0 then
-              pt := GetIntersectPt(prevPt, pt, recRT, recRB) else
-              pt := GetIntersectPt(prevPt, pt, recLT, recRT);
-            pLB: if CrossProduct(prevPt, recLB, pt) < 0 then
-              pt := GetIntersectPt(prevPt, pt, recLT, recLB) else
-              pt := GetIntersectPt(prevPt, pt, recLB, recRB);
-            pRB: if CrossProduct(prevPt, recRB, pt) > 0 then
-              pt := GetIntersectPt(prevPt, pt, recRT, recRB) else
-              pt := GetIntersectPt(prevPt, pt, recLB, recRB);
-          end;
-          lasCrossingPos := pInside;
-          lastPos := pInside;
-        end;
-        Result[m][n] := pt;
-        inc(n);
-      end
-      else if lastPos = pInside then
-      begin
-        //crossing out of rect
-
-        //todo - do extra stuff if lastCrossingPos <> pInside
-
-        prevPt := paths[i][j-1];
-        case currPos of
-          pLT: if CrossProduct(prevPt, recLT, pt) < 0 then
-            lasCrossingPos := pLeft else
-            lasCrossingPos := pTop;
-          pRT: if CrossProduct(prevPt, recRT, pt) > 0 then
-            lasCrossingPos := pRight else
-            lasCrossingPos := pTop;
-          pLB: if CrossProduct(prevPt, recLB, pt) > 0 then
-            lasCrossingPos := pLeft else
-            lasCrossingPos := pBottom;
-          pRB: if CrossProduct(prevPt, recRB, pt) < 0 then
-            lasCrossingPos := pRight else
-            lasCrossingPos := pBottom;
-          else lasCrossingPos := currPos;
-        end;
-        case lasCrossingPos of
-          pLeft: pt := GetIntersectPt(prevPt, pt, recLT, recLB);
-          pTop: pt := GetIntersectPt(prevPt, pt, recLT, recRT);
-          pRight: pt := GetIntersectPt(prevPt, pt, recRT, recRB);
-          pBottom: pt := GetIntersectPt(prevPt, pt, recLB, recRB);
-        end;
-        Result[m][n] := pt;
-        inc(n);
-        lastPos := currPos;
-      end else
-      begin
-        posAND := Cardinal(currPos) and Cardinal(lastPos);
-        if posAND <> 0 then
-          Continue; //ie no chance the edge intersects the rect
-
-        pt := paths[i][j];
-        case LastPos of
-          pLeft:
-            case currPos of
-              pTop:
-                if CrossProduct(prevPt, recLT, pt) > 0 then
-                  EnterExit(prevPt, pt, pLeft, pTop, rec);
-              pRT:
-                if CrossProduct(prevPt, recRT, pt) < 0 then
-                  EnterExit(prevPt, pt, pLeft, pTop, rec) else
-                  EnterExit(prevPt, pt, pLeft, pRight, rec);
-              pRight:
-                EnterExit(prevPt, pt, pLeft, pRight, rec);
-              pRB:
-                if CrossProduct(prevPt, recRT, pt) < 0 then
-                  EnterExit(prevPt, pt, pLeft, pBottom, rec) else
-                  EnterExit(prevPt, pt, pLeft, pRight, rec);
-              pBottom:
-                if CrossProduct(prevPt, recLB, pt) < 0 then
-                  EnterExit(prevPt, pt, pLeft, pBottom, rec);
-            end;
-          pLT:
-            case currPos of
-              pRight:
-                if CrossProduct(prevPt, recLT, pt) < 0 then
-                  EnterExit(prevPt, pt, pLeft, pTop, rec) else
-                  EnterExit(prevPt, pt, pLeft, pRight, rec);
-              pRB:
-                if (CrossProduct(prevPt, recRB, pt) < 0) then
-                begin
-                  if (CrossProduct(prevPt, recLT, pt) > 0) then
-                    EnterExit(prevPt, pt, pLeft, pRight, rec)
-                  else if (CrossProduct(prevPt, recRT, pt) > 0) then
-                    EnterExit(prevPt, pt, pTop, pRight, rec);
-                end else
-                begin
-                  if (CrossProduct(prevPt, recLT, pt) < 0) then
-                    EnterExit(prevPt, pt, pTop, pBottom, rec)
-                  else if (CrossProduct(prevPt, recLB, pt) < 0) then
-                    EnterExit(prevPt, pt, pLeft, pBottom, rec);
-                end;
-              pBottom:
-                if CrossProduct(prevPt, recLT, pt) < 0 then
-                  EnterExit(prevPt, pt, pTop, pBottom, rec)
-                else if CrossProduct(prevPt, recLB, pt) < 0 then
-                  EnterExit(prevPt, pt, pLeft, pBottom, rec);
-            end;
-          pTop:
-            case currPos of
-              pRight: ;
-              pRB: ;
-              pBottom: ; //double intersection
-              pLB: ;
-              pLeft: ;
-            end;
-          pRT:
-            case currPos of
-              pBottom: ;
-              pLB: ;
-              pLeft: ;
-            end;
-          pRight:
-            case currPos of
-              pBottom: ;
-              pLB: ;
-              pLeft: ; //double intersection
-              pLT: ;
-              pTop: ;
-            end;
-          pRB:
-            case currPos of
-              pLeft: ;
-              pLT: ;
-              pTop: ;
-            end;
-          pBottom:
-            case currPos of
-              pLeft: ;
-              pLT: ;
-              pTop: ; //double intersection
-              pRT: ;
-              pRight: ;
-            end;
-          pLB:
-            case currPos of
-              pTop: ;
-              pRT: ;
-              pRight: ;
-            end;
-        end;
-
-
-//        //find intersect point and add
-//        lastPos := currPos;
-//        Result[m][n] := pt;
-//        inc(n);
-//        Continue;
-
-      end;
-
-    end;
-    if n = 0 then Continue;
-    SetLength(Result[m], n);
-    inc(m);
-  end;
-  SetLength(Result, m);
 end;
 //------------------------------------------------------------------------------
 
