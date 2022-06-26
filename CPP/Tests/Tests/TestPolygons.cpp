@@ -2,6 +2,21 @@
 #include "../../Clipper2Lib/clipper.h"
 #include "../../Utils/ClipFileLoad.h"
 
+void PolyTreeToPaths(const Clipper2Lib::PolyTree64& polytree, Clipper2Lib::Paths64& paths)
+{
+  paths.push_back(polytree.polygon());
+  for (const auto* child : polytree.childs()) {
+    PolyTreeToPaths(*child, paths);
+  }
+}
+
+Clipper2Lib::Paths64 PolyTreeToPaths(const Clipper2Lib::PolyTree64& polytree)
+{
+  Clipper2Lib::Paths64 paths;
+  PolyTreeToPaths(polytree, paths);
+  return paths;
+}
+
 TEST(Clipper2Tests, TestMultiplePolygons)
 {
 #ifdef _WIN32
@@ -32,7 +47,7 @@ TEST(Clipper2Tests, TestMultiplePolygons)
     c.AddClip(clip);
     c.Execute(ct, fr, solution, solution_open);
 
-    int64_t area2 = static_cast<int64_t>(Area(solution));
+    const int64_t area2 = static_cast<int64_t>(Area(solution));
     const int64_t count2 = solution.size() + solution_open.size();
     const int64_t count_diff = std::abs(count2 - count);
     const int64_t area_diff = std::abs(area2 - area);
@@ -108,13 +123,22 @@ TEST(Clipper2Tests, TestMultiplePolygons)
       EXPECT_LE(relative_area_diff, 0.0005);
     }
 
-    //TODO: Test the polytree variant too
-    //Clipper2Lib::Paths64 solution_polytree, solution_polytree_open;
-    //Clipper2Lib::Clipper64 clipper_polytree;
-    //clipper_polytree.AddSubject(subject);
-    //clipper_polytree.AddOpenSubject(subject_open);
-    //clipper_polytree.AddClip(clip);
-    //clipper_polytree.Execute(ct, fr, solution_polytree, solution_polytree_open);
+    // Make sure that the polytree variant gives results similar to the paths-only version.
+    Clipper2Lib::PolyTree64 solution_polytree;
+    Clipper2Lib::Paths64 solution_polytree_open;
+    Clipper2Lib::Clipper64 clipper_polytree;
+    clipper_polytree.AddSubject(subject);
+    clipper_polytree.AddOpenSubject(subject_open);
+    clipper_polytree.AddClip(clip);
+    clipper_polytree.Execute(ct, fr, solution_polytree, solution_polytree_open);
+
+    const auto solution_polytree_paths = PolyTreeToPaths(solution_polytree);
+
+    const int64_t area3 = static_cast<int64_t>(Area(solution_polytree_paths));
+    const auto count3 = solution_polytree_paths.size() + solution_polytree_open.size();
+
+    EXPECT_EQ(area2, area3);
+    EXPECT_NEAR(static_cast<double>(count2), static_cast<double>(count3), 1.01);
 
     ++test_number;
   }
