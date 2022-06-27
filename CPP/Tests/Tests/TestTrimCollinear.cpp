@@ -18,4 +18,16 @@ TEST(Clipper2Tests, TestTrimCollinear) {
   Path64 output3 = TrimCollinear(input3);
   EXPECT_EQ(output3.size(), 0);
 
+  Path64 input4 = MakePath("2,3, 3,4, 4,4, 4,5, 7,5, \
+    8,4, 8,3, 9,3, 8,3, 7,3, 6,3, 5,3, 4,3, 3,3, 2,3");
+  Path64 output4a = TrimCollinear(input4);
+  ASSERT_FALSE(output4a.empty());
+  const auto compare_x = [](const Point64& lhs, const Point64& rhs) {
+    return lhs.x < rhs.x;
+  };
+  const auto max_x = std::max_element(output4a.begin(), output4a.end(), compare_x);
+  EXPECT_GE(max_x->x, 8);
+
+  Path64 output4b = TrimCollinear(output4a);
+  EXPECT_EQ(output4a.size(), output4b.size());
 }
