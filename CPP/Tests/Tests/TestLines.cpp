@@ -64,5 +64,5 @@ TEST(Clipper2Tests, TestMultipleLines) {
     }
     ++test_number;
   }
-  EXPECT_GE(test_number, 18);
+  EXPECT_GE(test_number, 17);
 }

@@ -1,7 +1,7 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
 * Version   :  Clipper2 - beta                                                 *
-* Date      :  26 June 2022                                                    *
+* Date      :  3 July 2022                                                     *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  This is the main polygon clipping module                        *
@@ -93,10 +93,16 @@ namespace Clipper2Lib {
 	}
 
 
+	inline bool IsOpenEnd(const Vertex& v)
+	{
+		return (v.flags & (VertexFlags::OpenStart | VertexFlags::OpenEnd)) != 
+			VertexFlags::None;
+	}
+
+
 	inline bool IsOpenEnd(const Active& ae)
 	{
-		return ae.local_min->is_open &&
-			(ae.vertex_top->flags & (VertexFlags::OpenStart | VertexFlags::OpenEnd)) != VertexFlags::None;
+		return IsOpenEnd(*ae.vertex_top);
 	}
 
 
@@ -553,7 +559,7 @@ namespace Clipper2Lib {
 
 	inline bool AreReallyClose(const Point64& pt1, const Point64& pt2)
 	{
-	  return (std::abs(pt1.x - pt2.x) < 2) && (std::abs(pt1.y - pt2.y) < 2);
+	  return (std::llabs(pt1.x - pt2.x) < 2) && (std::llabs(pt1.y - pt2.y) < 2);
 	}
 
 
@@ -1107,44 +1113,43 @@ namespace Clipper2Lib {
 	}
 
 
-	bool IsValidAelOrder(const Active& a1, const Active& a2)
+	bool IsValidAelOrder(const Active& resident, const Active& newcomer)
 	{
-		//a2 is always the new edge being inserted
-		if (a2.curr_x != a1.curr_x)
-			return a2.curr_x > a1.curr_x;
+		if (newcomer.curr_x != resident.curr_x)
+			return newcomer.curr_x > resident.curr_x;
 
 		//get the turning direction  a1.top, a2.bot, a2.top
-		double d = CrossProduct(a1.top, a2.bot, a2.top);
-
-		if (d < 0) return true;
-		else if (d > 0) return false;
+		double d = CrossProduct(resident.top, newcomer.bot, newcomer.top);
+		if (d != 0) return d < 0;
 
 		//edges must be collinear to get here
-
 		//for starting open paths, place them according to
 		//the direction they're about to turn
-		if (IsOpen(a1) && !IsMaxima(a1) && (a1.bot.y <= a2.bot.y) &&
-			!IsSamePolyType(a1, a2) && (a1.top.y > a2.top.y))
-			return CrossProduct(a1.bot, a1.top, NextVertex(a1)->pt) <= 0;
-		else if (IsOpen(a2) && !IsMaxima(a2) && (a2.bot.y <= a1.bot.y) &&
-			!IsSamePolyType(a1, a2) && (a2.top.y > a1.top.y))
-			return CrossProduct(a2.bot, a2.top, NextVertex(a2)->pt) >= 0;
-
-		int64_t a2botY = a2.bot.y;
-		bool a1IsNewEdge = !IsOpen(a1) &&
-			(a1.bot.y == a2botY) && (a1.local_min->vertex->pt.y == a2botY);
-		if (a1IsNewEdge)
+		if (!IsMaxima(resident) && (resident.top.y > newcomer.top.y))
 		{
-			if (a1.is_left_bound != a2.is_left_bound)
-				return a2.is_left_bound;
-			else if (CrossProduct(PrevPrevVertex(a1)->pt, a1.bot, a1.top) == 0)
-				return true; //a1 is a spike so effectively we can ignore it 
-			else
-				//compare turning direction of alternate bound
-				return (CrossProduct(PrevPrevVertex(a1)->pt,
-					a2.bot, PrevPrevVertex(a2)->pt) > 0) == a2.is_left_bound;
+			return CrossProduct(newcomer.bot, 
+				resident.top, NextVertex(resident)->pt) <= 0;
 		}
-		return a2.is_left_bound;
+		else if (!IsMaxima(newcomer) && (newcomer.top.y > resident.top.y))		
+		{
+			return CrossProduct(newcomer.bot,
+				newcomer.top, NextVertex(newcomer)->pt) >= 0;
+		}
+			
+		int64_t y = newcomer.bot.y;
+		bool newcomerIsLeft = newcomer.is_left_bound;
+
+		if (resident.bot.y != y || resident.local_min->vertex->pt.y != y)
+			return newcomer.is_left_bound;
+		//resident must also have just been inserted
+		else if (resident.is_left_bound != newcomerIsLeft)
+			return newcomerIsLeft;
+		else if (CrossProduct(PrevPrevVertex(resident)->pt,
+			resident.bot, resident.top) == 0) return true;				
+		else
+			//compare turning direction of the alternate bound
+			return (CrossProduct(PrevPrevVertex(resident)->pt,
+				newcomer.bot, PrevPrevVertex(newcomer)->pt) > 0) == newcomerIsLeft;
 	}
 
 
@@ -1346,7 +1351,7 @@ namespace Clipper2Lib {
 		return IsHotEdge(e) && !IsOpen(e) &&
 			e.prev_in_ael && !IsOpen(*e.prev_in_ael) &&
 			IsHotEdge(*e.prev_in_ael) && (e.prev_in_ael->top.y < e.bot.y) &&
-			(std::abs(TopX(*e.prev_in_ael, curr_pt.y) - curr_pt.x) < 2) &&
+			(std::llabs(TopX(*e.prev_in_ael, curr_pt.y) - curr_pt.x) < 2) &&
 			(CrossProduct(e.prev_in_ael->top, curr_pt, e.top) == 0);
 	}
 
@@ -1368,7 +1373,7 @@ namespace Clipper2Lib {
 		return IsHotEdge(e) && !IsOpen(e) &&
 			e.next_in_ael && !IsOpen(*e.next_in_ael) &&
 			IsHotEdge(*e.next_in_ael) && (e.next_in_ael->top.y < e.bot.y) &&
-			(std::abs(TopX(*e.next_in_ael, curr_pt.y) - curr_pt.x) < 2) &&
+			(std::llabs(TopX(*e.next_in_ael, curr_pt.y) - curr_pt.x) < 2) &&
 			(CrossProduct(e.next_in_ael->top, curr_pt, e.top) == 0);
 	}
 
@@ -1652,8 +1657,7 @@ namespace Clipper2Lib {
 
 		double absArea2 = std::abs(area2);
 		if ((absArea2 >= 1) &&
-			((absArea2 > std::abs(abs(area1)) ||
-				((area2 > 0) == (area1 > 0)))))
+			((absArea2 > std::abs(area1) || ((area2 > 0) == (area1 > 0)))))
 		{
 			OutRec* newOutRec = new OutRec();
 			newOutRec->idx = outrec_list_.size();
@@ -1841,10 +1845,28 @@ namespace Clipper2Lib {
 	}
 
 
+	Active* FindEdgeWithMatchingLocMin(Active* e)
+	{
+		Active* result = e->next_in_ael;
+		while (result)
+		{
+			if (result->local_min == e->local_min) return result;
+			else if (!IsHorizontal(*result) && e->bot != result->bot) result = nullptr;
+			else result = result->next_in_ael;
+		}
+		result = e->prev_in_ael;
+		while (result) 
+		{
+			if (result->local_min == e->local_min) return result;
+			else if (!IsHorizontal(*result) && e->bot != result->bot) return nullptr;
+			else result = result->prev_in_ael;
+		}
+		return result;
+	}
+
+
 	OutPt* ClipperBase::IntersectEdges(Active& e1, Active& e2, const Point64& pt)
 	{
-		OutPt* resultOp = nullptr;
-
 		//MANAGE OPEN PATH INTERSECTIONS SEPARATELY ...
 		if (has_open_paths_ && (IsOpen(e1) || IsOpen(e2)))
 		{
@@ -1873,17 +1895,35 @@ namespace Clipper2Lib {
 			//toggle contribution ...
 			if (IsHotEdge(*edge_o))
 			{
-				resultOp = AddOutPt(*edge_o, pt);
+				OutPt* resultOp = AddOutPt(*edge_o, pt);
 #ifdef USINGZ
 				if (zfill_func_) SetZ(e1, e2, resultOp->pt);
 #endif
 				edge_o->outrec = nullptr;
+				return resultOp;
+			}
+		
+			//horizontal edges can pass under open paths at a LocMins
+			else if (pt == edge_o->local_min->vertex->pt &&
+				!IsOpenEnd(*edge_o->local_min->vertex))
+			{ 
+				//find the other side of the LocMin and
+				//if it's 'hot' join up with it ...
+				Active* e3 = FindEdgeWithMatchingLocMin(edge_o);
+				if (IsHotEdge(*e3))
+				{
+					edge_o->outrec = e3->outrec;
+					if (edge_o->wind_dx > 0)
+						SetSides(*e3->outrec, *edge_o, *e3); 
+					else
+						SetSides(*e3->outrec, *e3, *edge_o);
+					return e3->outrec->pts;
+				}
+				else
+					return StartOpenPath(*edge_o, pt);
 			}
 			else
-			{
-				resultOp = StartOpenPath(*edge_o, pt);
-			}
-			return resultOp;
+				return StartOpenPath(*edge_o, pt);
 		}
 
 
@@ -1954,8 +1994,9 @@ namespace Clipper2Lib {
 		{
 			return nullptr;
 		}
+		
 		//NOW PROCESS THE INTERSECTION ...
-
+		OutPt* resultOp = nullptr;
 		//if both edges are 'hot' ...
 		if (IsHotEdge(e1) && IsHotEdge(e2))
 		{
@@ -2357,7 +2398,8 @@ namespace Clipper2Lib {
 	inline bool HorzIsSpike(const Active& horzEdge)
 	{
 		Point64 nextPt = NextVertex(horzEdge)->pt;
-		return (horzEdge.bot.x < horzEdge.top.x) != (horzEdge.top.x < nextPt.x);
+		return (nextPt.y == horzEdge.bot.y) && 
+			(horzEdge.bot.x < horzEdge.top.x) != (horzEdge.top.x < nextPt.x);
 	}
 
 	bool TrimHorz(Active& horzEdge, bool preserveCollinear)
@@ -2475,11 +2517,26 @@ namespace Clipper2Lib {
 
 					if (e->curr_x == horz.top.x && !IsHorizontal(*e))
 					{
-						//for edges at horzEdge's end, only stop when horzEdge's
-						//outslope is greater than e's slope when heading right or when
 						pt = NextVertex(horz)->pt;
-						if ((is_left_to_right && TopX(*e, pt.y) >= pt.x) ||
-							(!is_left_to_right && TopX(*e, pt.y) <= pt.x)) break;
+
+						if (is_left_to_right)
+						{
+							//with open paths we'll only break once past horz's end
+							if (IsOpen(*e) && !IsSamePolyType(*e, horz) && !IsHotEdge(*e))
+							{
+								if (TopX(*e, pt.y) > pt.x) break;
+							}
+							//otherwise we'll only break when horz's outslope is greater than e's
+							else if (TopX(*e, pt.y) >= pt.x) break;
+						}
+						else
+						{
+							if (IsOpen(*e) && !IsSamePolyType(*e, horz) && !IsHotEdge(*e))
+							{
+								if (TopX(*e, pt.y) < pt.x) break;
+							}
+							else if (TopX(*e, pt.y) <= pt.x) break;
+						}
 					}
 				}
 
@@ -2487,7 +2544,10 @@ namespace Clipper2Lib {
 
 				if (is_left_to_right)
 				{
-					op = IntersectEdges(horz, *e, pt);
+					if (IsOpen(*e) && e->top.y == y)
+						op = nullptr; //pass over the top of horz. or maxpair open paths
+					else
+						op = IntersectEdges(horz, *e, pt);
 					SwapPositionsInAEL(horz, *e);
 
 
@@ -2506,7 +2566,10 @@ namespace Clipper2Lib {
 				}
 				else
 				{
-					op = IntersectEdges(*e, horz, pt);
+					if (IsOpen(*e) && e->top.y == y)
+						op = nullptr; //pass over the top of horz. or maxpair open paths
+					else
+						op = IntersectEdges(*e, horz, pt);
 					SwapPositionsInAEL(*e, horz);
 
 					if (IsHotEdge(horz) && op &&
@@ -2548,7 +2611,7 @@ namespace Clipper2Lib {
 				AddOutPt(horz, horz.top);
 			UpdateEdgeIntoAEL(&horz);
 
-			if (PreserveCollinear && !horzIsOpen && HorzIsSpike(horz))
+			if (PreserveCollinear && HorzIsSpike(horz))
 				TrimHorz(horz, true);
 
 			is_left_to_right = 

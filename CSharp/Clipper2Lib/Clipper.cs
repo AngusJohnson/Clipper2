@@ -1,7 +1,7 @@
 ﻿/*******************************************************************************
 * Author    :  Angus Johnson                                                   *
 * Version   :  Clipper2 - beta                                                 *
-* Date      :  20 June 2022                                                    *
+* Date      :  3 July 2022                                                     *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  This module contains simple functions that will likely cover    *
@@ -654,12 +654,6 @@ namespace Clipper2Lib
           last = path[i];
           result.Add(last);
         }
-        else if (result.Count > 1 && InternalClipper.CrossProduct(
-          result[^2], last, path[i]) == 0)
-        {
-          result.RemoveAt(result.Count - 1);
-          last = result[^1];
-        } 
       }
 
       if (isOpen)
@@ -667,9 +661,14 @@ namespace Clipper2Lib
       else if (InternalClipper.CrossProduct(
         last, path[len - 1], result[0]) != 0)
         result.Add(path[len - 1]);
-      else if (result.Count < 3)
-        result.Clear();
-
+      else
+      {
+        while (result.Count > 2 &&
+          InternalClipper.CrossProduct(result[^1], result[^2], result[0]) == 0)
+          result.RemoveAt(result.Count - 1);
+        if (result.Count < 3)
+          result.Clear();
+      }
       return result;      
     }
 

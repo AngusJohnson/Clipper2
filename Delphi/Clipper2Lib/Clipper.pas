@@ -353,11 +353,6 @@ begin
     begin
       inc(j);
       result[j] := p[i];
-    end
-    else if (j > 0) and
-      (CrossProduct(result[j-1], result[j], p[i]) = 0) then
-    begin
-      dec(j);
     end;
 
   if is_open_path then
@@ -369,10 +364,12 @@ begin
   begin
     inc(j);
     result[j] := p[len-1];
-  end
-  else if j < 2 then
-    j := -1;
-
+  end else
+  begin
+    while (j > 1) and
+      (CrossProduct(result[j-1], result[j], result[0]) = 0) do dec(j);
+    if j < 2 then j := -1;
+  end;
   SetLength(Result, j +1);
 end;
 //------------------------------------------------------------------------------

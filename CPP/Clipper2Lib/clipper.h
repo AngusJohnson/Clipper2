@@ -1,7 +1,7 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
 * Version   :  Clipper2 - beta                                                 *
-* Date      :  21 June 2022                                                    *
+* Date      :  2 July 2022                                                     *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  This module provides a simple interface to the Clipper Library  *
@@ -414,20 +414,19 @@ namespace Clipper2Lib
         prevIt = srcIt;
         dst.push_back(*prevIt);
       }
-      else if (!is_open_path && dst.size() > 1 &&
-        !CrossProduct(*(prevIt - 1), *prevIt, *srcIt))
-      {
-        dst.pop_back();
-        --prevIt;
-      }
     }
 
     if (is_open_path)
       dst.push_back(*srcIt);
     else if (CrossProduct(*prevIt, *stop, dst[0]))
       dst.push_back(*stop);
-    else if (dst.size() < 3)
-      return Path64();
+    else
+    {
+      while (dst.size() > 2 &&
+        !CrossProduct(dst.end()[-1], dst.end()[-2], dst[0]))
+          dst.pop_back();
+      if (dst.size() < 3) return Path64();
+    }
     return dst;
   }
 

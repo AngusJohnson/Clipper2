@@ -2,20 +2,7 @@
 #include "../../Clipper2Lib/clipper.h"
 #include "../../Utils/ClipFileLoad.h"
 
-void PolyTreeToPaths(const Clipper2Lib::PolyTree64& polytree, Clipper2Lib::Paths64& paths)
-{
-  paths.push_back(polytree.polygon());
-  for (const auto* child : polytree.childs()) {
-    PolyTreeToPaths(*child, paths);
-  }
-}
-
-Clipper2Lib::Paths64 PolyTreeToPaths(const Clipper2Lib::PolyTree64& polytree)
-{
-  Clipper2Lib::Paths64 paths;
-  PolyTreeToPaths(polytree, paths);
-  return paths;
-}
+using namespace Clipper2Lib;
 
 TEST(Clipper2Tests, TestMultiplePolygons)
 {
@@ -32,16 +19,16 @@ TEST(Clipper2Tests, TestMultiplePolygons)
 
   while (true)
   {
-    Clipper2Lib::Paths64 subject, subject_open, clip;
-    Clipper2Lib::Paths64 solution, solution_open;
-    Clipper2Lib::ClipType ct;
-    Clipper2Lib::FillRule fr;
+    Paths64 subject, subject_open, clip;
+    Paths64 solution, solution_open;
+    ClipType ct;
+    FillRule fr;
     int64_t area, count;
 
     if (!LoadTestNum(ifs, test_number, false,
       subject, subject_open, clip, area, count, ct, fr)) break;
    
-    Clipper2Lib::Clipper64 c;
+    Clipper64 c;
     c.AddSubject(subject);
     c.AddOpenSubject(subject_open);
     c.AddClip(clip);
@@ -124,9 +111,9 @@ TEST(Clipper2Tests, TestMultiplePolygons)
     }
 
     // Make sure that the polytree variant gives results similar to the paths-only version.
-    Clipper2Lib::PolyTree64 solution_polytree;
-    Clipper2Lib::Paths64 solution_polytree_open;
-    Clipper2Lib::Clipper64 clipper_polytree;
+    PolyTree64 solution_polytree;
+    Paths64 solution_polytree_open;
+    Clipper64 clipper_polytree;
     clipper_polytree.AddSubject(subject);
     clipper_polytree.AddOpenSubject(subject_open);
     clipper_polytree.AddClip(clip);

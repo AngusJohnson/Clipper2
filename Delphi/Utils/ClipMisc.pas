@@ -133,7 +133,7 @@ var
 begin
   if not Odd(points) then dec(points);
   if (points < 5) then points := 5;
-  tmp := Ellipse(rec, points);
+  tmp := Clipper.Core.Ellipse(rec, points);
   len := Length(tmp);
   SetLength(Result, len);
   jump := len div 2;

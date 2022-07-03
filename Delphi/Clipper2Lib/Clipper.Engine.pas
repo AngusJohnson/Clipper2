@@ -1705,22 +1705,20 @@ begin
 
   botY := newcomer.bot.Y;
   newcomerIsLeft := IsLeftBound(newcomer);
-  if (resident.bot.Y = botY) and
-    (resident.locMin.vertex.pt.Y = botY) then
-  begin
-    //resident must also have just been inserted
-    if IsLeftBound(resident) <> newcomerIsLeft then
+
+  if (resident.bot.Y <> botY) or
+    (resident.locMin.vertex.pt.Y <> botY) then
       Result := newcomerIsLeft
-    else if (CrossProduct(PrevPrevVertex(resident).pt,
-      resident.bot, resident.top) = 0) then
-        Result := true
-    else
-      //compare turning direction of the alternate bound
-      Result := (CrossProduct(PrevPrevVertex(resident).pt,
-        newcomer.bot, PrevPrevVertex(newcomer).pt) > 0) = newcomerIsLeft;
-  end
+  //resident must also have just been inserted
+  else if IsLeftBound(resident) <> newcomerIsLeft then
+    Result := newcomerIsLeft
+  else if (CrossProduct(PrevPrevVertex(resident).pt,
+    resident.bot, resident.top) = 0) then
+      Result := true
   else
-    Result := newcomerIsLeft;
+    //otherwise compare turning direction of the alternate bound
+    Result := (CrossProduct(PrevPrevVertex(resident).pt,
+      newcomer.bot, PrevPrevVertex(newcomer).pt) > 0) = newcomerIsLeft;
 end;
 //------------------------------------------------------------------------------
 
@@ -2834,6 +2832,7 @@ begin
       {$ENDIF}
       e1.outrec := nil;
     end
+
     //horizontal edges can pass under open paths at a LocMins
     else if PointsEqual(pt, e1.locMin.vertex.pt) and
       (e1.locMin.vertex.flags * [vfOpenStart, vfOpenEnd] = []) then

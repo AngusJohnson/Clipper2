@@ -1,7 +1,7 @@
 ﻿/*******************************************************************************
 * Author    :  Angus Johnson                                                   *
 * Version   :  Clipper2 - beta                                                 *
-* Date      :  26 June 2022                                                    *
+* Date      :  3 July 2022                                                     *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  This is the main polygon clipping module                        *
@@ -198,7 +198,7 @@ namespace Clipper2Lib
     public Active? jump;
     public Vertex? vertexTop;
     public LocalMinima localMin; //the bottom of an edge 'bound' (also Vatti)
-    internal bool leftBound;
+    internal bool isLeftBound;
   };
 
   public class ClipperBase
@@ -306,8 +306,13 @@ namespace Clipper2Lib
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static bool IsOpenEnd(Active ae)
     {
-      return ae.localMin.isOpen &&
-             (ae.vertexTop!.flags & (VertexFlags.OpenStart | VertexFlags.OpenEnd)) != VertexFlags.None;
+      return ae.localMin.isOpen && IsOpenEnd(ae.vertexTop!);
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static bool IsOpenEnd(Vertex v)
+    {
+      return (v.flags & (VertexFlags.OpenStart | VertexFlags.OpenEnd)) != VertexFlags.None;
     }
 
     private static Active? GetPrevHotEdge(Active ae)
@@ -449,7 +454,7 @@ namespace Clipper2Lib
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static bool IsLeftBound(Active ae)
     {
-      return ae.leftBound;
+      return ae.isLeftBound;
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -1181,49 +1186,44 @@ namespace Clipper2Lib
       }
     }
 
-    private bool IsValidAelOrder(Active a1, Active a2)
+    private bool IsValidAelOrder(Active resident, Active newcomer)
     {
-      //a2 is always the new edge being inserted
-      if (a2.curX != a1.curX)
-        return a2.curX > a1.curX;
+      if (newcomer.curX != resident.curX)
+        return newcomer.curX > resident.curX;
 
       //get the turning direction  a1.top, a2.bot, a2.top
-      double d = InternalClipper.CrossProduct(a1.top, a2.bot, a2.top);
-
-
-      if (d < 0) return true;
-      else if (d > 0) return false;
+      double d = InternalClipper.CrossProduct(resident.top, newcomer.bot, newcomer.top);
+      if (d != 0) return (d < 0);
 
       //edges must be collinear to get here
 
       //for starting open paths, place them according to
       //the direction they're about to turn
-      if (IsOpen(a1) && !IsMaxima(a1) && (a1.bot.Y <= a2.bot.Y) &&
-          !IsSamePolyType(a1, a2) && (a1.top.Y > a2.top.Y))
-        return InternalClipper.CrossProduct(
-            a1.bot, a1.top, NextVertex(a1).pt) <= 0;
-      else if (IsOpen(a2) && !IsMaxima(a2) && (a2.bot.Y <= a1.bot.Y) &&
-               !IsSamePolyType(a1, a2) && (a2.top.Y > a1.top.Y))
-        return InternalClipper.CrossProduct(
-            a2.bot, a2.top, NextVertex(a2).pt) >= 0;
-
-      long a2botY = a2.bot.Y;
-      bool a2IsLeftBound = IsLeftBound(a2);
-      bool a1IsNewEdge = !IsOpen(a1) &&
-                         (a1.bot.Y == a2botY) && (a1.localMin.vertex.pt.Y == a2botY);
-      if (a1IsNewEdge)
+      if (!IsMaxima(resident) && (resident.top.Y > newcomer.top.Y))
       {
-        if (IsLeftBound(a1) != a2IsLeftBound)
-          return a2IsLeftBound;
-        else if (InternalClipper.CrossProduct(PrevPrevVertex(a1).pt, a1.bot, a1.top) == 0)
-          return true; //a1 is a spike so effectively we can ignore it 
-        else
-          //compare turning direction of alternate bound
-          return (InternalClipper.CrossProduct(PrevPrevVertex(a1).pt,
-              a2.bot, PrevPrevVertex(a2).pt) > 0) == a2IsLeftBound;
+        return InternalClipper.CrossProduct(newcomer.bot, 
+          resident.top, NextVertex(resident).pt) <= 0;
+      }
+      else if (!IsMaxima(newcomer) && (newcomer.top.Y > resident.top.Y))
+      {
+        return InternalClipper.CrossProduct(newcomer.bot,
+          newcomer.top, NextVertex(newcomer).pt) >= 0;
       }
 
-      return a2IsLeftBound;
+      long y = newcomer.bot.Y;
+      bool newcomerIsLeft = newcomer.isLeftBound;
+
+      if (resident.bot.Y != y || resident.localMin.vertex.pt.Y != y)
+        return newcomer.isLeftBound;
+      //resident must also have just been inserted
+      else if (resident.isLeftBound != newcomerIsLeft)
+        return newcomerIsLeft;
+      else if (InternalClipper.CrossProduct(PrevPrevVertex(resident).pt,
+        resident.bot, resident.top) == 0) return true;
+      else
+        //compare turning direction of the alternate bound
+        return (InternalClipper.CrossProduct(PrevPrevVertex(resident).pt,
+          newcomer.bot, PrevPrevVertex(newcomer).pt) > 0) == newcomerIsLeft;
     }
 
     private void InsertLeftEdge(Active ae)
@@ -1332,7 +1332,7 @@ namespace Clipper2Lib
         }
 
         bool contributing;
-        leftBound!.leftBound = true;
+        leftBound!.isLeftBound = true;
         InsertLeftEdge(leftBound);
 
         if (IsOpen(leftBound))
@@ -1642,9 +1642,29 @@ namespace Clipper2Lib
       }
     }
 
+    private Active? FindEdgeWithMatchingLocMin(Active e)
+    {
+      Active? result = e.nextInAEL;
+      while (result != null)
+      {
+        if (ReferenceEquals(result.localMin, e.localMin)) return result;
+        else if (!IsHorizontal(result) && e.bot != result.bot) result = null;
+        else result = result.nextInAEL;
+      }
+      result = e.prevInAEL;
+      while (result != null)
+      {
+        if (ReferenceEquals(result.localMin, e.localMin)) return result;
+        else  if (!IsHorizontal(result) && e.bot != result.bot) return null;
+        else result = result.prevInAEL;
+      }
+      return result;
+    }
+
     private OutPt? IntersectEdges(Active ae1, Active ae2, Point64 pt)
     {
       OutPt? resultOp = null;
+
       //MANAGE OPEN PATH INTERSECTIONS SEPARATELY ...
       if (_hasOpenPaths && (IsOpen(ae1) || IsOpen(ae2)))
       {
@@ -1668,6 +1688,32 @@ namespace Clipper2Lib
           SetZ(ae1, ae2, ref resultOp.pt);
 #endif
           ae1.outrec = null;
+          return resultOp;
+        }
+        //horizontal edges can pass under open paths at a LocMins
+        else if (pt == ae1.localMin.vertex.pt &&
+          !IsOpenEnd(ae1.localMin.vertex))
+        {
+          //find the other side of the LocMin and
+          //if it's 'hot' join up with it ...
+          Active? ae3 = FindEdgeWithMatchingLocMin(ae1);
+          if (ae3 != null && IsHotEdge(ae3))
+          {
+            ae1.outrec = ae3.outrec;
+            if (ae1.windDx > 0)
+              SetSides(ae3.outrec!, ae1, ae3);
+            else
+              SetSides(ae3.outrec!, ae3, ae1);
+            return ae3.outrec!.pts;
+          }
+          else
+          {
+            resultOp = StartOpenPath(ae1, pt);
+#if USINGZ
+            SetZ(ae1, ae2, ref resultOp.pt);
+#endif
+            return resultOp;
+          }
         }
         else
         {
@@ -1675,8 +1721,8 @@ namespace Clipper2Lib
 #if USINGZ
           SetZ(ae1, ae2, ref resultOp.pt);
 #endif
+          return resultOp;
         }
-        return resultOp;
       }
 
       //MANAGING CLOSED PATHS FROM HERE ON
@@ -1749,7 +1795,7 @@ namespace Clipper2Lib
       {
         if ((oldE1WindCount != 0 && oldE1WindCount != 1) || (oldE2WindCount != 0 && oldE2WindCount != 1) ||
             (ae1.localMin.polytype != ae2.localMin.polytype && _cliptype != ClipType.Xor))
-        {
+        {          
           resultOp = AddLocalMaxPoly(ae1, ae2, pt);
 #if USINGZ
           if (resultOp != null)
@@ -2257,11 +2303,27 @@ namespace Clipper2Lib
 
             if (ae.curX == horz.top.X && !IsHorizontal(ae))
             {
-              //for edges at horzEdge's end, only stop when horzEdge's
-              //outslope is greater than e's slope when heading right or when
               pt = NextVertex(horz).pt;
-              if ((isLeftToRight && TopX(ae, pt.Y) >= pt.X) ||
-                  (!isLeftToRight && TopX(ae, pt.Y) <= pt.X)) break;
+              if (isLeftToRight)
+              {
+                //with open paths we'll only break once past horz's end
+                if (IsOpen(ae) && !IsSamePolyType(ae, horz) && !IsHotEdge(ae))
+                {
+                  if (TopX(ae, pt.Y) > pt.X) break;
+                }
+                //otherwise we'll only break when horz's outslope is greater than e's
+                else if (TopX(ae, pt.Y) >= pt.X) break;
+              }
+              else
+              {
+                //with open paths we'll only break once past horz's end
+                if (IsOpen(ae) && !IsSamePolyType(ae, horz) && !IsHotEdge(ae))
+                {
+                  if (TopX(ae, pt.Y) < pt.X) break;
+                }
+                //otherwise we'll only break when horz's outslope is greater than e's
+                else if (TopX(ae, pt.Y) <= pt.X) break;
+              }
             }
           }
 
@@ -2269,7 +2331,10 @@ namespace Clipper2Lib
 
           if (isLeftToRight)
           {
-            op = IntersectEdges(horz, ae, pt);
+            if (IsOpen(ae) && ae.top.Y == Y)
+              op = null;
+            else
+              op = IntersectEdges(horz, ae, pt);
             SwapPositionsInAEL(horz, ae);
 
             if (IsHotEdge(horz) && op != null && 
@@ -2288,7 +2353,10 @@ namespace Clipper2Lib
           }
           else
           {
-            op = IntersectEdges(ae, horz, pt);
+            if (IsOpen(ae) && ae.top.Y == Y)
+              op = null;
+            else
+              op = IntersectEdges(ae, horz, pt);
             SwapPositionsInAEL(ae, horz);
 
             if (IsHotEdge(horz) && op != null &&
@@ -2330,7 +2398,7 @@ namespace Clipper2Lib
           AddOutPt(horz, horz.top);
         UpdateEdgeIntoAEL(horz);
 
-        if (PreserveCollinear && !horzIsOpen && HorzIsSpike(horz))
+        if (PreserveCollinear && HorzIsSpike(horz))
           TrimHorz(horz, true);
 
         isLeftToRight = ResetHorzDirection(horz, maxPair, out leftX, out rightX);
