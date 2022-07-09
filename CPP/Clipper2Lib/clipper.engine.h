@@ -1,7 +1,7 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
 * Version   :  Clipper2 - beta                                                 *
-* Date      :  26 June 2022                                                    *
+* Date      :  9 July 2022                                                     *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  This is the main polygon clipping module                        *
@@ -222,7 +222,6 @@ namespace Clipper2Lib {
 		void DoTopOfScanbeam(const int64_t top_y);
 		Active *DoMaxima(Active &e);
 		void JoinOutrecPaths(Active &e1, Active &e2);
-		bool FixSides(Active& e, Active& e2);
 		void CompleteSplit(OutPt* op1, OutPt* op2, OutRec& outrec);
 		bool ValidateClosedPathEx(OutRec* outrec);
 		void CleanCollinear(OutRec* outrec);
@@ -336,7 +335,8 @@ namespace Clipper2Lib {
 
 		const PolyPath<T>* parent() const { return parent_; }
 
-		bool IsHole() const {
+		bool IsHole() const 
+		{
 			const PolyPath* pp = parent_;
 			bool is_hole = pp;
 			while (pp) {

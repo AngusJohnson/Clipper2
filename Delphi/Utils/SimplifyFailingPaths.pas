@@ -5,7 +5,7 @@ interface
 uses
   Windows, SysUtils, Classes, Clipper.Core;
 
-function DoSimplifyFailingPaths(clipOp: TClipType; fillRule: TFillRule;
+function DoSimplifyFailingPaths(aClipOp: TClipType; aFillRule: TFillRule;
   var subj, clip: TPaths64): Boolean;
 
 implementation
@@ -31,17 +31,15 @@ type
 
   TSimplifyOp = function (const paths: TPaths64): Boolean of object;
 
-function SplitPath(const path: TPath64;
-  splitCnt: integer):  TPaths64;
+function SplitPath(const path: TPath64; splitCnt: integer):  TPaths64;
 var
   i, j, len, splitSize: integer;
 begin
   Result := nil;
   len := Length(path);
+  if splitCnt > len then Exit;
   splitSize := len div splitCnt;
-  if splitSize = 0 then Exit;
   if splitSize * splitCnt < len then inc(splitSize);
-
   SetLength(result, splitCnt);
   j := 0;
   for i := 0 to splitCnt -1 do
@@ -88,14 +86,17 @@ begin
       end else
       begin
         dec(q);
-        splits := (len div q)+1;
-        tmp := SplitPath(paths[k], splits);
+        splits := (len div q) +1;
+        tmp := SplitPath(tmp2[k], splits);
       end;
       if tmp = nil then Break; //////////////////////////
 
       for i := 0 to splits -1 do
       begin
+        if tmp[i] = nil then Continue;
         opHasFailed := false;
+
+        //extract trial points from tmp2[k]
         tmp2[k] := nil;
         for j := 0 to High(tmp) do
           if (j <> i) and (tmp[j] <> nil) then
@@ -114,6 +115,7 @@ begin
           Result := true;
         end;
       end;
+      //recreate tmp2[k]
       tmp2[k] := nil;
       for j := 0 to High(tmp) do
         if (tmp[j] <> nil) then
@@ -174,12 +176,12 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-function DoSimplifyFailingPaths(clipOp: TClipType; fillRule: TFillRule;
+function DoSimplifyFailingPaths(aClipOp: TClipType; aFillRule: TFillRule;
   var subj, clip: TPaths64): Boolean;
 begin
   with TSimplifyFailingPaths.Create do
   try
-    Result := Simplify(ctUnion, Clipper.frEvenOdd, subj, clip);
+    Result := Simplify(aClipOp, aFillRule, subj, clip);
   finally
     free;
   end;

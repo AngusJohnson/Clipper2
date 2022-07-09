@@ -51,7 +51,7 @@ namespace Clipper2Lib.Benchmark
         [Benchmark]
         public void Intersection_N()
         {
-            Clipper c = new Clipper();
+            Clipper64 c = new Clipper64();
             c.AddSubject(_subj);
             c.AddClip(_clip);
             c.Execute(ClipType.Intersection, FillRule.NonZero, _solution);

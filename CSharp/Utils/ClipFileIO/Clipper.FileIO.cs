@@ -1,6 +1,6 @@
 ﻿/*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  22 May 2022                                                     *
+* Date      :  3 July 2022                                                     *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * License:                                                                     *
@@ -8,7 +8,6 @@
 * http://www.boost.org/LICENSE_1_0.txt                                         *
 *******************************************************************************/
 
-using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Diagnostics;
@@ -17,9 +16,7 @@ namespace Clipper2Lib
 {
 
   using Path64 = List<Point64>;
-  using PathD = List<PointD>;
   using Paths64 = List<List<Point64>>;
-  using PathsD = List<List<PointD>>;
 
   public class ClipperFileIO
   {
@@ -83,7 +80,7 @@ namespace Clipper2Lib
 
     public static bool LoadTestNum(string filename, int num,
       Paths64 subj, Paths64 subj_open, Paths64 clip,
-      out ClipType ct, out FillRule fillRule, out long area, out string caption)
+      out ClipType ct, out FillRule fillRule, out long area, out int count, out string caption)
     {
       if (subj == null) subj = new Paths64(); else subj.Clear();
       if (subj_open == null) subj_open = new Paths64(); else subj_open.Clear();
@@ -92,9 +89,10 @@ namespace Clipper2Lib
       fillRule = FillRule.EvenOdd;
       bool numFound = false, result = false;
       int GetIdx;
-      string numstr = num.ToString();
+      string numstr = num.ToString() + '.';
       caption = "";
       area = 0;
+      count = 0;
       StreamReader reader = new StreamReader(filename);
       if (reader == null) return false;
       while (true)
@@ -104,12 +102,13 @@ namespace Clipper2Lib
 
         if (s.IndexOf("CAPTION: ") == 0)
         {
+          if (numFound) break; //ie found the following caption
           numFound = (num == 0) || (s.IndexOf(numstr) > 0);
           if (numFound) { caption = s[9..]; result = true; }
           continue;
         }
-
-        if (!numFound) continue;
+        else if (!numFound) 
+          continue;
 
         if (s.IndexOf("CLIPTYPE: ") == 0)
         {
@@ -130,9 +129,15 @@ namespace Clipper2Lib
           continue;
         }
 
-        if (s.IndexOf("AREA: ") == 0)
+        if (s.IndexOf("SOL_AREA: ") == 0)
         {
-          area = long.Parse(s[6..]);
+          area = long.Parse(s[10..]);
+          continue;
+        }
+
+        if (s.IndexOf("SOL_COUNT: ") == 0)
+        {
+          count = int.Parse(s[11..]);
           continue;
         }
 
@@ -236,7 +241,7 @@ namespace Clipper2Lib
       return result;
     }
 
-    public static void OpenFile(string filename)
+    public static void OpenFileWithDefaultApp(string filename)
     {
       string path = Path.GetFullPath(filename);
       if (!File.Exists(path)) return;
@@ -245,28 +250,5 @@ namespace Clipper2Lib
       p.Start();
     }
 
-    public static void CreateDisplaySvg(string afilename, string caption,
-      Paths64 subj, Paths64 subj_open, Paths64 clip, Paths64 sol, Paths64 sol_open,
-      FillRule fillrule, bool displaySolutionCoords)
-    {
-      afilename = Path.GetFullPath(afilename);
-      if (File.Exists(afilename)) File.Delete(afilename);
-      SimpleSvgWriter svg = new SimpleSvgWriter(fillrule);
-      if (caption != "")
-        svg.AddText(caption, margin, margin, 14, SimpleSvgWriter.navy);
-      if (subj != null)
-        svg.AddPaths(subj, false, 0x110066FF, 0x33000099, 0.8);
-      if (subj_open != null)
-        svg.AddPaths(subj_open, true, 0, 0x66AA0000, 1.2);
-      if (clip != null)
-        svg.AddPaths(clip, false, 0x11996600, 0x55993300, 0.8);
-      if (sol != null)
-        svg.AddPaths(sol, false, 0x4000FF00, 0x80000000, 1.2,
-          displaySolutionCoords && sol.Count < 100);
-      if (sol_open != null)
-        svg.AddPaths(sol_open, true, 0, 0xFF00AAAA, 3.0);
-      svg.SaveToFile(afilename, displayWidth, displayHeight, margin);
-      OpenFile(afilename);
-    }
   }
 }

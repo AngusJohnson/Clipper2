@@ -1,6 +1,6 @@
 ﻿/*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  6 April 2022                                                    *
+* Date      :  3 July 2022                                                     *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * License:                                                                     *
@@ -16,7 +16,6 @@ using System.IO;
 namespace Clipper2Lib
 {
 
-  using PathD = List<PointD>;
   using Paths64 = List<List<Point64>>;
   using PathsD = List<List<PointD>>;
 
@@ -37,7 +36,7 @@ namespace Clipper2Lib
         svg.AddPaths(paths, false, 0x1800009C, 0xCCB3B3DA, 0.8, false);
     }
 
-    internal static void AddClip(SimpleSvgWriter svg, Paths64 paths)
+    public static void AddClip(SimpleSvgWriter svg, Paths64 paths)
     {
       svg.AddPaths(paths, false, 0x129C0000, 0xCCFFA07A, 0.8, false);
     }
