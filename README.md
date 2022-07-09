@@ -1,6 +1,6 @@
 # Clipper2
 ### A Polygon <a href="http://www.angusj.com/delphi/clipper/documentation/Docs/Units/ClipperLib/Types/ClipType.htm">Clipping</a> and <a href="http://www.angusj.com/delphi/clipper/documentation/Docs/Units/ClipperLib/Classes/ClipperOffset/_Body.htm">Offsetting</a> library (in C++, C# &amp; Delphi)<br>
-[![GitHub Actions C++ status](https://github.com/AngusJohnson/Clipper2/actions/workflows/actions_cpp.yml/badge.svg)](https://github.com/AngusJohnson/Clipper2/actions/workflows/actions_cpp.yml)&nbsp;[![License](https://img.shields.io/badge/License-Boost_1.0-lightblue.svg)](https://www.boost.org/LICENSE_1_0.txt)
+[![GitHub Actions C++ status](https://github.com/AngusJohnson/Clipper2/actions/workflows/actions_cpp.yml/badge.svg)](https://github.com/AngusJohnson/Clipper2/actions/workflows/actions_cpp.yml)&nbsp;[![C#](https://github.com/AngusJohnson/Clipper2/actions/workflows/actions_csharp.yml/badge.svg)](https://github.com/AngusJohnson/Clipper2/actions/workflows/actions_csharp.yml)&nbsp;[![License](https://img.shields.io/badge/License-Boost_1.0-lightblue.svg)](https://www.boost.org/LICENSE_1_0.txt)
 
 <b>Clipper2</b> is a major update of my original <a href="https://sourceforge.net/projects/polyclipping/"><b>Clipper</b></a> library which I'm now calling <b>Clipper1</b>. Clipper1 was written over 10 years ago and, while it still works very well, Clipper2 is better in just about every way: 
 <ul>
@@ -22,4 +22,33 @@ And Clipper2 has just about all the features of Clipper1 that sets Clipper apart
 
 There's more detail in the Docs folder above, but proper documentation is still a little way off.
 
-![clipper_performance](https://user-images.githubusercontent.com/5280692/166428830-d9242821-ac0e-4656-92f0-afa5fe10037f.png)
+### Example
+
+<pre>
+      //C++
+      Paths64 subject, clip, solution;
+      subject.push_back(MakePath("100, 50, 10, 79, 65, 2, 65, 98, 10, 21"));
+      clip.push_back(MakePath("98, 63, 4, 68, 77, 8, 52, 100, 19, 12"));
+      solution = Intersect(subject, clip, FillRule::NonZero);
+
+      //C#
+      Paths64 subj = new Paths64();
+      Paths64 clip = new Paths64();
+      subj.Add(Clipper.MakePath(new int[] { 100, 50, 10, 79, 65, 2, 65, 98, 10, 21 }));
+      clip.Add(Clipper.MakePath(new int[] { 98, 63, 4, 68, 77, 8, 52, 100, 19, 12 }));
+      Paths64 solution = Clipper.Intersect(subj, clip, FillRule.NonZero);
+      
+      //Delphi
+      var 
+        subject, clip, solution: TPaths64;
+      begin
+        SetLength(subject, 1);
+        subject[0] := MakePath([100, 50, 10, 79, 65, 2, 65, 98, 10, 21]);
+        SetLength(clip, 1);
+        clip[0] := MakePath([98, 63, 4, 68, 77, 8, 52, 100, 19, 12]);
+        solution := Intersect( subject, clip, frNonZero);</pre>
+![clipperB](https://user-images.githubusercontent.com/5280692/178123810-1719a1f5-25c3-4a9e-b419-e575ff056272.svg)
+
+
+### Clipper1 vs Clipper2 performance
+![clipper_performance2](https://user-images.githubusercontent.com/5280692/178123605-62e7ad87-cd71-4365-9296-c6e7ebfc7218.png)
