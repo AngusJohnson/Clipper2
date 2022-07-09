@@ -3,7 +3,7 @@ on:
   push:
   pull_request:
 jobs:
-  windows-latest C#:
+  windows-latest:
     runs-on: 'windows-latest'
     defaults:
       run:
