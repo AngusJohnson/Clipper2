@@ -1,0 +1,22 @@
+name: C#
+on:
+  push:
+  pull_request:
+jobs:
+  windows-latest C#:
+    runs-on: 'windows-latest'
+    defaults:
+      run:
+        working-directory: ./CSharp
+    steps:
+    - uses: actions/checkout@v2
+    - name: Setup .NET Core
+      uses: actions/setup-dotnet@v1
+      with: 
+        dotnet-version: '5.0.x'    
+    - name: Install Dependencies
+      run: dotnet restore
+    - name: Build Solution
+      run: dotnet build --configuration Release --no-restore
+    - name: Run Tests
+      run: dotnet test --no-restore --verbosity normal
