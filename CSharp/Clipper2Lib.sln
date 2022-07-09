@@ -14,7 +14,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Clipper2.SVG", "Utils\SVG\Clipper2.SVG.csproj", "{BC8E75BA-24E1-4D6A-AE54-0B1019C18EFE}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Clipper.FileIO.", "Utils\ClipFileIO\Clipper.FileIO..csproj", "{2EF8FB02-E3F6-46CE-954F-5E1B0AD64DB7}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Clipper.FileIO", "Utils\ClipFileIO\Clipper.FileIO.csproj", "{2EF8FB02-E3F6-46CE-954F-5E1B0AD64DB7}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ConsoleDemo", "Clipper2Lib.Examples\ConsoleDemo\ConsoleDemo.csproj", "{DBFB59C1-C08D-48DC-9A15-CD18B5897BE4}"
 EndProject
