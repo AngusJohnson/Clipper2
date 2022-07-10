@@ -86,10 +86,12 @@ if(PACKAGE_TESTS)
   package_add_test(test9 Tests/Tests/TestHoleOwnership2.cpp )
   
   install( FILES  ../Tests/PolytreeHoleOwner.txt DESTINATION . )
+  install( FILES  ../Tests/PolytreeHoleOwner2.txt DESTINATION . )
   install( FILES  ../Tests/Lines.txt DESTINATION . )
   install( FILES  ../Tests/Polygons.txt DESTINATION . )
 
   file(COPY ../Tests/PolytreeHoleOwner.txt DESTINATION ${CMAKE_BINARY_DIR} FILE_PERMISSIONS OWNER_READ GROUP_READ WORLD_READ )
+  file(COPY ../Tests/PolytreeHoleOwner2.txt DESTINATION ${CMAKE_BINARY_DIR} FILE_PERMISSIONS OWNER_READ GROUP_READ WORLD_READ )
   file(COPY ../Tests/Lines.txt DESTINATION ${CMAKE_BINARY_DIR} FILE_PERMISSIONS OWNER_READ GROUP_READ WORLD_READ )
   file(COPY ../Tests/Polygons.txt DESTINATION ${CMAKE_BINARY_DIR} FILE_PERMISSIONS OWNER_READ GROUP_READ WORLD_READ )
 endif()
