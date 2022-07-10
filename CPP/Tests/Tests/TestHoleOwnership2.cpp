@@ -87,9 +87,10 @@ TEST(Clipper2Tests, TestPolytreeHoleOwnership2)
     PolytreeContainsPoint(solution, point_of_interest);
 
   // the code below tests:
-  // 1. the total area of the solution should slightly smaller than the total area of the subject paths, and
+  // 1. the total area of the solution should be slightly smaller than the total area of the subject paths
   // 2. the area of the paths returned from PolyTreeToPaths matches the Polytree's area
   // 3. the "point of interest" should **not** be inside the polytree
+  // 4. all polytree hole points should be inside their corresponding (immediate) parents
 
   // 1. check subject vs solution areas
   EXPECT_LT(solution_paths_area, subject_area);
@@ -101,4 +102,24 @@ TEST(Clipper2Tests, TestPolytreeHoleOwnership2)
   // 3. check that the point of interest was inside a hole and hence 
   // the point of interest is not inside the solution's filling region
   EXPECT_FALSE(polytree_contains_poi);
+
+  // 4. check that all hole points are inside their corresponding (immediate) parents
+  std::deque<const PolyPath64*> queue;
+  queue.push_back(&solution);
+  while (!queue.empty()) {
+      const auto* polypath = queue.back();
+      queue.pop_back();
+
+      if (polypath->IsHole()) {
+          const auto* parent = polypath->parent();
+          for (const auto& point : polypath->polygon()) {
+              const auto insideParent = PointInPolygon(point, parent->polygon());
+              EXPECT_NE(insideParent, PointInPolygonResult::IsOutside);
+          }
+      }
+
+      for (const auto* child : polypath->childs()) {
+          queue.push_back(child);
+      }
+  }
 }
