@@ -16,7 +16,7 @@ And Clipper2 has just about all the features of Clipper1 that sets Clipper apart
 <li>being able to clip complex self-intersecting polygons</li>
 <li>support polygons with multiple filling rules (EvenOdd, NonZero, Positive, Negative)</li>
 <li>is numerically robust, and</li>
-<li>is free to use in both freeware and commercial applications</li>
+<li>is free to use even in commercial applications with a very simple license</li>
 </ul>
 <br>
 

@@ -8,7 +8,7 @@ void PolyPathContainsPoint(const PolyPath64& pp, const Point64 pt, int& counter)
 {
   if (pp.polygon().size() > 0)
   {
-    if (PointInPolygon(pt, pp.polygon()) != PointInPolyResult::IsOutside)
+    if (PointInPolygon(pt, pp.polygon()) != PointInPolygonResult::IsOutside)
     {
       if (pp.IsHole()) --counter;
       else  ++counter;
@@ -64,7 +64,7 @@ TEST(Clipper2Tests, TestPolytreeHoleOwnership2)
   // check that the point of interest is not inside any subject
   for (const auto& path : subject) {
     const auto result = PointInPolygon(point_of_interest, path);
-    EXPECT_EQ(result, PointInPolyResult::IsOutside);
+    EXPECT_EQ(result, PointInPolygonResult::IsOutside);
   }
 
   PolyTree64 solution;

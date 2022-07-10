@@ -441,10 +441,10 @@ namespace Clipper2Lib
   }
 
   template <typename T>
-  inline PointInPolyResult PointInPolygon(const Point<T>& pt, const Path<T>& polygon)
+  inline PointInPolygonResult PointInPolygon(const Point<T>& pt, const Path<T>& polygon)
   {
     if (polygon.size() < 3) 
-      return PointInPolyResult::IsOutside;
+      return PointInPolygonResult::IsOutside;
 
     int val = 0;
     typename Path<T>::const_iterator cit = polygon.cbegin();

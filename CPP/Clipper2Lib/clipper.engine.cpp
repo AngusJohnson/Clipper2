@@ -3414,10 +3414,10 @@ namespace Clipper2Lib {
 		}
 	}
 
-	PointInPolyResult PointInPolygon(const Point64& pt, OutPt* ops)
+	PointInPolygonResult PointInPolygon(const Point64& pt, OutPt* ops)
 	{
 		if (ops->next == ops || ops->next == ops->prev)
-			return PointInPolyResult::IsOutside;
+			return PointInPolygonResult::IsOutside;
 		
 		int val = 0;
 		OutPt *curr = ops, *prev = curr->prev;
@@ -3444,7 +3444,7 @@ namespace Clipper2Lib {
 					((pt.x < prev->pt.x) != (pt.x < curr->pt.x))))
 				{
 					ops->prev->next = ops; //reestablish the link
-					return PointInPolyResult::IsOn;
+					return PointInPolygonResult::IsOn;
 				}
 				curr = curr->next;
 				continue;
@@ -3462,7 +3462,7 @@ namespace Clipper2Lib {
 				if (d == 0)
 				{
 					ops->prev->next = ops; //reestablish the link
-					return PointInPolyResult::IsOn;
+					return PointInPolygonResult::IsOn;
 				}
 				if ((d < 0) == is_above) val = 1 - val;
 			}
@@ -3473,21 +3473,21 @@ namespace Clipper2Lib {
 
 		ops->prev->next = ops; //reestablish the link
 		return val == 0 ? 
-			PointInPolyResult::IsOutside : 
-			PointInPolyResult::IsInside;
+			PointInPolygonResult::IsOutside : 
+			PointInPolygonResult::IsInside;
 	}
 
 	bool Path1InsidePath2(OutPt* op1, OutPt* op2)
 	{
-		PointInPolyResult result = PointInPolyResult::IsOn;
+		PointInPolygonResult result = PointInPolygonResult::IsOn;
 		OutPt* op = op1;
 		do
 		{
 			result = PointInPolygon(op->pt, op2);
-			if (result != PointInPolyResult::IsOn) break;
+			if (result != PointInPolygonResult::IsOn) break;
 			op = op->next;
 		} while (op != op1);
-		return result == PointInPolyResult::IsInside;
+		return result == PointInPolygonResult::IsInside;
 	}
 
 	void ClipperBase::BuildTree(PolyPath64& polytree, Paths64& open_paths)

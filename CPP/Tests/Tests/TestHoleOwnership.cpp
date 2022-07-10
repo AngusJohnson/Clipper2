@@ -16,7 +16,7 @@ bool CheckChildrenAreInsideOwner(const PolyPath64& outer)
     {
       Rect64 child_rec = Bounds(child->polygon());
       if (PointInPolygon(child_rec.MidPoint(), 
-        outer.polygon()) != PointInPolyResult::IsInside) 
+        outer.polygon()) != PointInPolygonResult::IsInside) 
           return false;
     }
   }
