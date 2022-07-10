@@ -1,7 +1,7 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
 * Version   :  Clipper2 - beta                                                 *
-* Date      :  9 July 2022                                                     *
+* Date      :  10 July 2022                                                    *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  This module provides a simple interface to the Clipper Library  *
@@ -476,7 +476,7 @@ namespace Clipper2Lib
       {
         if (cit->x == pt.x || (cit->y == pit->y &&
           ((pt.x < pit->x) != (pt.x < pit->x))))
-          return PointInPolyResult::IsOn;
+          return PointInPolygonResult::IsOn;
         cit++;
         continue;
       }
@@ -491,7 +491,7 @@ namespace Clipper2Lib
       {
         double d = CrossProduct(*pit, *cit, pt);
         if (d == 0)
-          return PointInPolyResult::IsOn;
+          return PointInPolygonResult::IsOn;
         else if ((d < 0) == is_above) 
           val  = 1 - val;
       }      
@@ -499,9 +499,9 @@ namespace Clipper2Lib
       cit++;
     }
     if (val == 0)
-      return PointInPolyResult::IsOutside;
+      return PointInPolygonResult::IsOutside;
     else
-      return PointInPolyResult::IsInside;
+      return PointInPolygonResult::IsInside;
   }
 
   template <typename T>
