@@ -83,7 +83,8 @@ if(PACKAGE_TESTS)
   package_add_test(test6 Tests/Tests/TestHoleOwnership.cpp )
   package_add_test(test7 Tests/Tests/TestTrimCollinear.cpp )
   package_add_test(test8 Tests/Tests/TestOrientation.cpp )
-
+  package_add_test(test9 Tests/Tests/TestHoleOwnership2.cpp )
+  
   install( FILES  ../Tests/PolytreeHoleOwner.txt DESTINATION . )
   install( FILES  ../Tests/Lines.txt DESTINATION . )
   install( FILES  ../Tests/Polygons.txt DESTINATION . )
