@@ -3,7 +3,7 @@ unit Clipper.Core;
 (*******************************************************************************
 * Author    :  Angus Johnson                                                   *
 * Version   :  Clipper2 - beta                                                 *
-* Date      :  20 June 2022                                                    *
+* Date      :  11 July 2022                                                    *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  Core Clipper Library module                                     *
 *              Contains structures and functions used throughout the library   *
@@ -1627,8 +1627,7 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-function RamerDouglasPeucker(const path: TPath64;
-  epsilon: double): TPath64;
+function RamerDouglasPeucker(const path: TPath64; epsilon: double): TPath64;
 var
   i,j, len: integer;
   boolArray: TArrayOfBoolean;

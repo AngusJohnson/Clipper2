@@ -4,6 +4,29 @@
 
 using namespace Clipper2Lib;
 
+
+bool PolyPathFullyContainsChildren(const PolyPath64& pp)
+{
+  for (auto child : pp.childs())
+  {
+    for (const Point64& pt : child->polygon())
+      if (PointInPolygon(pt, pp.polygon()) == PointInPolygonResult::IsOutside)
+        return false;
+
+    if (child->ChildCount() > 0 && !PolyPathFullyContainsChildren(*child))
+      return false;
+  }
+  return true;
+}
+
+bool PolytreeFullyContainsChildren(const PolyTree64& polytree)
+{
+  for (const PolyPath64* child : polytree.childs())
+    if (child->ChildCount() > 0 && !PolyPathFullyContainsChildren(*child))
+      return false;
+  return true;
+}
+
 void PolyPathContainsPoint(const PolyPath64& pp, const Point64 pt, int& counter)
 {
   if (pp.polygon().size() > 0)
@@ -90,6 +113,7 @@ TEST(Clipper2Tests, TestPolytreeHoleOwnership2)
   // 1. the total area of the solution should slightly smaller than the total area of the subject paths, and
   // 2. the area of the paths returned from PolyTreeToPaths matches the Polytree's area
   // 3. the "point of interest" should **not** be inside the polytree
+  // 4. check that all child polygons are inside their parents
 
   // 1. check subject vs solution areas
   EXPECT_LT(solution_paths_area, subject_area);
@@ -101,4 +125,7 @@ TEST(Clipper2Tests, TestPolytreeHoleOwnership2)
   // 3. check that the point of interest was inside a hole and hence 
   // the point of interest is not inside the solution's filling region
   EXPECT_FALSE(polytree_contains_poi);
+
+  // 4. check that all children are inside their parents
+  EXPECT_TRUE(PolytreeFullyContainsChildren(solution));
 }

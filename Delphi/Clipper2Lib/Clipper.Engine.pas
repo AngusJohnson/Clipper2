@@ -3,7 +3,7 @@ unit Clipper.Engine;
 (*******************************************************************************
 * Author    :  Angus Johnson                                                   *
 * Version   :  Clipper2 - beta                                                 *
-* Date      :  9 July 2022                                                     *
+* Date      :  11 July 2022                                                    *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  This is the main polygon clipping module                        *
@@ -53,7 +53,7 @@ type
   PJoiner = ^TJoiner;
   PActive = ^TActive;
   TPolyPathBase = class;
-  TPolyTree     = class;
+  TPolyTree64   = class;
   TPolyTreeD    = class;
 
   //OutPt: vertex data structure for clipping solutions
@@ -268,7 +268,7 @@ type
     function  Execute(clipType: TClipType; fillRule: TFillRule;
       out closedSolutions, openSolutions: TPaths64): Boolean; overload; virtual;
     function  Execute(clipType: TClipType; fillRule: TFillRule;
-      var solutionTree: TPolyTree; out openSolutions: TPaths64): Boolean; overload; virtual;
+      var solutionTree: TPolyTree64; out openSolutions: TPaths64): Boolean; overload; virtual;
   {$IFDEF USINGZ}
     property  ZFillFunc;
   {$ENDIF}
@@ -308,7 +308,7 @@ type
   //solutions to clipping operations. While this structure is more complex than
   //the alternative TPaths structure, it does model path ownership (ie paths
   //that are contained by other paths). This will be useful to some users.
-  TPolyTree = class(TPolyPath64);
+  TPolyTree64 = class(TPolyPath64);
 
   //FLOATING POINT POLYGON COORDINATES (D suffix to indicate double precision)
   //To preserve numerical robustness, clipping must be done using integer
@@ -1002,12 +1002,10 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-function IsInsidePrevHotOutrec(prevHotEdge: PActive): Boolean;
+function OutrecIsAscending(hotEdge: PActive): Boolean;
   {$IFDEF INLINING} inline; {$ENDIF}
 begin
-  Result :=
-    (prevHotEdge.outrec.state = osOuter) =
-    (prevHotEdge = prevHotEdge.outrec.frontE);
+  Result := (hotEdge = hotEdge.outrec.frontE);
 end;
 //------------------------------------------------------------------------------
 
@@ -1021,47 +1019,6 @@ begin
   outRec.frontE := outRec.backE;
   outRec.backE := e2;
   outRec.pts := outRec.pts.next;
-end;
-//------------------------------------------------------------------------------
-
-procedure SetOwnerAndInnerOuterState(e: PActive);
-var
-  e2: PActive;
-  outRec: POutRec;
-begin
-  outRec := e.outrec;
-  if IsOpen(e) then
-  begin
-    outRec.owner := nil;
-    outRec.state := osOpen;
-    Exit;
-  end;
-
-  //set owner ...
-
-  //nb: e.windDx is the winding direction of the **input** paths
-  //and unrelated to the winding direction of output polygons.
-  //Output orientation is determined by e.outrec.frontE which is
-  //the ascending edge (see AddLocalMinPoly).
-  e2 := GetPrevHotEdge(e);
-  if not Assigned(e2) then
-  begin
-    outRec.owner := nil;
-    outRec.state := osOuter;
-  end
-  else if IsInsidePrevHotOutrec(e2) then
-  begin
-    outRec.owner := GetRealOutRec(e2.outrec);
-    if outRec.owner.state = osOuter then
-      outRec.state := osInner else
-      outRec.state := osOuter;
-  end else
-  begin
-    outRec.owner := e2.outrec.owner;
-    if Assigned(outRec.owner) and (outRec.owner.state = osOuter) then
-      outRec.state := osInner else
-      outRec.state := osOuter;
-  end;
 end;
 //------------------------------------------------------------------------------
 
@@ -1861,30 +1818,52 @@ function TClipperBase.AddLocalMinPoly(e1, e2: PActive;
   const pt: TPoint64; IsNew: Boolean = false): POutPt;
 var
   newOr: POutRec;
+  prevHotEdge: PActive;
 begin
   new(newOr);
   newOr.idx := FOutRecList.Add(newOr);
   newOr.pts := nil;
   newOr.split := nil;
   newOr.polypath := nil;
-
   e1.outrec := newOr;
-  SetOwnerAndInnerOuterState(e1);
   e2.outrec := newOr;
 
-  if IsOpen(e1) then
-  begin
-    if e1.windDx > 0 then
-      SetSides(newOr, e1, e2) else
-      SetSides(newOr, e2, e1);
-  end
   //Setting the owner and inner/outer states (above) is an essential
   //precursor to setting edge 'sides' (ie left and right sides of output
   //polygons) and hence the orientation of output paths ...
-  else if IsOuter(newOr) = IsNew then
-    SetSides(newOr, e1, e2)
-  else
-    SetSides(newOr, e2, e1);
+
+  if IsOpen(e1) then
+  begin
+    newOr.owner := nil;
+    newOr.state := osOpen;
+    if e1.windDx > 0 then
+      SetSides(newOr, e1, e2) else
+      SetSides(newOr, e2, e1);
+  end else
+  begin
+    prevHotEdge := GetPrevHotEdge(e1);
+    //e.windDx is the winding direction of the **input** paths
+    //and unrelated to the winding direction of output polygons.
+    //Output orientation is determined by e.outrec.frontE which is
+    //the ascending edge (see AddLocalMinPoly).
+    if not Assigned(prevHotEdge) then
+    begin
+      newOr.owner := nil;
+      newOr.state := osOuter;
+    end
+    else if OutrecIsAscending(prevHotEdge) then
+    begin
+      newOr.state := osInner;
+      newOr.owner := prevHotEdge.outrec;
+    end else
+    begin
+      newOr.state := osOuter;
+      newOr.owner := prevHotEdge.outrec;
+    end;
+    if IsOuter(newOr) = isNew then
+      SetSides(newOr, e1, e2) else
+      SetSides(newOr, e2, e1);
+  end;
 
   new(Result);
   newOr.pts := Result;
@@ -2073,6 +2052,10 @@ begin
   if (e1.outrec = e2.outrec) then
   begin
     outRec := e1.outrec;
+    outRec.owner := GetRealOutRec(outRec.owner);
+    if Assigned(outRec.owner) and not Assigned(outRec.owner.frontE) then
+      outRec.owner := outRec.owner.owner;
+
     outRec.pts := Result;
     UncoupleOutRec(e1);
     if not IsOpen(e1) then CleanCollinear(outRec);
@@ -2558,8 +2541,7 @@ begin
         op1.prev := op2;
         op2.next := op1;
 
-        if Assigned(or1.owner) or
-          (not Assigned(or2.owner) and (or1.idx < or2.idx)) then
+        if (or1.idx < or2.idx) then
         begin
           or2.state := or1.state;
           or1.pts := op1;
@@ -3997,9 +3979,13 @@ begin
       if not assigned(outRec.pts) then Continue;
 
       outRec.owner := GetRealOutRec(outRec.owner);
+
+      while assigned(outRec.owner) and
+        not Path1InsidePath2(outRec.pts, outRec.owner.pts) do
+          outRec.owner := GetRealOutRec(outRec.owner.owner);
+
       if assigned(outRec.owner) then
       begin
-
         if assigned(outRec.owner.split) then
         begin
           for j := 0 to High(outRec.owner.split) do
@@ -4155,7 +4141,7 @@ end;
 //------------------------------------------------------------------------------
 
 function TClipper64.Execute(clipType: TClipType; fillRule: TFillRule;
-  var solutionTree: TPolyTree; out openSolutions: TPaths64): Boolean;
+  var solutionTree: TPolyTree64; out openSolutions: TPaths64): Boolean;
 begin
   if not assigned(solutionTree) then
     Raise EClipperLibException(rsClipper_PolyTreeErr);

@@ -3,7 +3,7 @@ unit Clipper;
 (*******************************************************************************
 * Author    :  Angus Johnson                                                   *
 * Version   :  Clipper2 - beta                                                 *
-* Date      :  21 June 2022                                                    *
+* Date      :  11 July 2022                                                    *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  This module provides a simple interface to the Clipper Library  *
@@ -31,7 +31,7 @@ type
   TPathD      = Clipper.Core.TPathD;
   TPathsD     = Clipper.Core.TPathsD;
   TFillRule   = Clipper.Core.TFillRule;
-  TPolyTree   = Clipper.Engine.TPolyTree;
+  TPolyTree   = Clipper.Engine.TPolyTree64;
   TPolyTreeD  = Clipper.Engine.TPolyTreeD;
   TJoinType   = Clipper.Offset.TJoinType;
   TEndType    = Clipper.Offset.TEndType;
@@ -53,6 +53,8 @@ function BooleanOp(clipType: TClipType; fillRule: TFillRule;
   const subjects, clips: TPaths64): TPaths64; overload;
 function BooleanOp(clipType: TClipType; fillRule: TFillRule;
   const subjects, clips: TPathsD; decimalPrec: integer = 2): TPathsD; overload;
+procedure BooleanOp(clipType: TClipType; fillRule: TFillRule;
+  const subjects, clips: TPaths64; polytree: TPolyTree); overload;
 
 function Intersect(const subjects, clips: TPaths64;
   fillRule: TFillRule): TPaths64; overload;
@@ -203,6 +205,22 @@ begin
     AddSubject(subjects);
     AddClip(clips);
     Execute(clipType, fillRule, Result);
+  finally
+    Free;
+  end;
+end;
+//------------------------------------------------------------------------------
+
+procedure BooleanOp(clipType: TClipType; fillRule: TFillRule;
+  const subjects, clips: TPaths64; polytree: TPolyTree);
+var
+  dummy: TPaths64;
+begin
+  with TClipper64.Create do
+  try
+    AddSubject(subjects);
+    AddClip(clips);
+    Execute(clipType, fillRule, polytree, dummy);
   finally
     Free;
   end;

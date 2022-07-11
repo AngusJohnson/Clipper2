@@ -560,11 +560,9 @@ namespace Clipper2Lib {
 			AreReallyClose(op->pt, op->prev->pt))));
 	}
 
-	inline bool IsInsidePrevHotOutrec(const Active* prevHotEdge)
+	inline bool OutrecIsAscending(const Active* hotEdge)
 	{
-		return 
-			(prevHotEdge->outrec->state == OutRecState::Outer) ==
-			(prevHotEdge == prevHotEdge->outrec->front_edge);
+		return (hotEdge == hotEdge->outrec->front_edge);
 	}
 
 	inline void SwapFrontBackSides(OutRec& outrec)
@@ -574,47 +572,6 @@ namespace Clipper2Lib {
 		outrec.back_edge = tmp;
 		outrec.pts = outrec.pts->next;
 	}
-
-	void SetOwnerAndInnerOuterState(const Active& e)
-	{
-		OutRec* outrec = e.outrec;
-		if (IsOpen(e))
-		{
-			outrec->owner = nullptr;
-			outrec->state = OutRecState::Open;
-			return;
-		}
-
-		//set owner ...
-		//nb: e.windDx is the winding direction of the **input** paths
-		//and unrelated to the winding direction of output polygons.
-		//Output orientation is determined by e.outrec.frontE which is
-		//the ascending edge (see AddLocalMinPoly).
-		
-		Active* e2 = GetPrevHotEdge(e);
-		if (!e2)
-		{
-			outrec->owner = nullptr;
-			outrec->state = OutRecState::Outer;
-		}
-		else if (IsInsidePrevHotOutrec(e2))
-		{
-			outrec->owner = GetRealOutRec(e2->outrec);
-			if (outrec->owner->state == OutRecState::Outer)
-				outrec->state = OutRecState::Inner;
-			else
-				outrec->state = OutRecState::Outer;
-		}
-		else
-		{
-			outrec->owner = e2->outrec->owner;
-			if (outrec->owner && outrec->owner->state == OutRecState::Outer)
-				outrec->state = OutRecState::Inner;
-			else
-				outrec->state = OutRecState::Outer;
-		}
-	}
-
 
 	inline bool EdgesAdjacentInAEL(const IntersectNode& inode)
 	{
@@ -1342,29 +1299,50 @@ namespace Clipper2Lib {
 		outrec_list_.push_back(outrec);
 		outrec->pts = nullptr;
 		outrec->polypath = nullptr;
-
 		e1.outrec = outrec;
-		SetOwnerAndInnerOuterState(e1);
-		//flag when orientation needs to be rechecked later ...
 		e2.outrec = outrec;
+
+		//Setting the owner and inner/outer states (above) is an essential
+		//precursor to setting edge 'sides' (ie left and right sides of output
+		//polygons) and hence the orientation of output paths ...
 
 		if (IsOpen(e1))
 		{
+			outrec->owner = nullptr;
+			outrec->state = OutRecState::Open;
 			if (e1.wind_dx > 0)
 				SetSides(*outrec, e1, e2);
 			else
 				SetSides(*outrec, e2, e1);
-		}
+		}	 
 		else
 		{
-			//Setting the owner and inner/outer states (above) is an essential
-			//precursor to setting edge 'sides' (ie left and right sides of output
-			//polygons) and hence the orientation of output paths ...
+			Active* prevHotEdge = GetPrevHotEdge(e1);
+			//e.windDx is the winding direction of the **input** paths
+			//and unrelated to the winding direction of output polygons.
+			//Output orientation is determined by e.outrec.frontE which is
+			//the ascending edge (see AddLocalMinPoly).
+			if (!prevHotEdge) 
+			{
+				outrec->owner = nullptr;
+				outrec->state = OutRecState::Outer;
+			}
+			else if (OutrecIsAscending(prevHotEdge)) 
+			{
+				outrec->state = OutRecState::Inner;
+				outrec->owner = prevHotEdge->outrec;
+			}
+			else
+			{
+				outrec->state = OutRecState::Outer;
+				outrec->owner = prevHotEdge->outrec;
+			}
 			if (IsOuter(*outrec) == is_new)
 				SetSides(*outrec, e1, e2);
 			else
 				SetSides(*outrec, e2, e1);
 		}
+			
 		OutPt* op = new OutPt(pt, outrec);
 		outrec->pts = op;
 		return op;
@@ -1390,6 +1368,10 @@ namespace Clipper2Lib {
 		if (e1.outrec == e2.outrec)
 		{
 			OutRec& outrec = *e1.outrec;
+			outrec.owner = GetRealOutRec(outrec.owner);
+			if (outrec.owner && !outrec.owner->front_edge) 
+				outrec.owner = outrec.owner->owner;
+
 			outrec.pts = result;
 			UncoupleOutRec(e1);
 			if (!IsOpen(e1))
@@ -3210,9 +3192,7 @@ namespace Clipper2Lib {
 					or1->owner = GetRealOutRec(or1->owner);
 					or2->owner = GetRealOutRec(or2->owner);
 
-					if (or1->owner != or2 &&						
-						(or2->owner == or1 || or1->owner ||
-						(!or2->owner && or1->idx < or2->idx)))
+					if (or1->idx < or2->idx)
 					{
 						or1->pts = op1;
 						or2->pts = nullptr;
@@ -3266,12 +3246,7 @@ namespace Clipper2Lib {
 					op1->next = op2;
 					op2->prev = op1;
 
-					or1->owner = GetRealOutRec(or1->owner);
-					or2->owner = GetRealOutRec(or2->owner);
-
-					if (or1->owner != or2 &&
-						(or2->owner == or1 || or1->owner ||
-							(!or2->owner && or1->idx < or2->idx)))
+					if (or1->idx < or2->idx)
 					{
 						or1->pts = op1;
 						or2->pts = nullptr;
@@ -3501,6 +3476,10 @@ namespace Clipper2Lib {
 			if (!outrec || !outrec->pts) continue;
 
 			outrec->owner = GetRealOutRec(outrec->owner);
+			while (outrec->owner &&
+				!Path1InsidePath2(outrec->pts, outrec->owner->pts))
+					outrec->owner = GetRealOutRec(outrec->owner->owner);
+
 			if (outrec->owner)
 			{
 				if (outrec->owner->splits)

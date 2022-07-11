@@ -1,7 +1,7 @@
 ﻿/*******************************************************************************
 * Author    :  Angus Johnson                                                   *
 * Version   :  Clipper2 - beta                                                 *
-* Date      :  9 July 2022                                                     *
+* Date      :  11 July 2022                                                    *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  This is the main polygon clipping module                        *
@@ -72,6 +72,27 @@ namespace Clipper2Lib
       this.polytype = polytype;
       this.isOpen = isOpen;
     }
+
+    public static bool operator ==(LocalMinima lm1, LocalMinima lm2)
+    {
+      return ReferenceEquals(lm1.vertex, lm2.vertex);
+    }
+
+    public static bool operator !=(LocalMinima lm1, LocalMinima lm2)
+    {
+      return !(lm1 == lm2);
+    }
+
+    public override bool Equals(object obj)
+    {
+      return obj is LocalMinima && this == (LocalMinima) obj;
+    }
+
+    public override int GetHashCode()
+    {
+      return vertex.GetHashCode();
+    }
+
   };
 
   //IntersectNode: a structure representing 2 intersecting edges.
@@ -635,10 +656,9 @@ namespace Clipper2Lib
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private bool IsInsidePrevHotOutrec(Active prevHotEdge)
+    private bool OutrecIsAscending(Active hotEdge)
 	  {
-		  return (prevHotEdge.outrec!.state == OutRecState.Outer) ==
-			  (prevHotEdge == prevHotEdge.outrec.frontEdge);
+		  return (hotEdge == hotEdge.outrec!.frontEdge);
 	  }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -650,46 +670,6 @@ namespace Clipper2Lib
       outrec.frontEdge = outrec.backEdge;
       outrec.backEdge = ae2;
       outrec.pts = outrec.pts!.next;
-    }
-
-    private void SetOwnerAndInnerOuterState(Active ae)
-    {
-      OutRec outrec = ae.outrec!;
-      if (IsOpen(ae))
-      {
-        outrec.owner = null;
-        outrec.state = OutRecState.Open;
-        return;
-      }
-
-      //set owner ...
-      //nb: e.windDx is the winding direction of the **input** paths
-      //and unrelated to the winding direction of output polygons.
-      //Output orientation is determined by e.outrec.frontE which is
-      //the ascending edge (see AddLocalMinPoly).
-
-      Active? ae2 = GetPrevHotEdge(ae);
-      if (ae2 == null)
-      {
-        outrec.owner = null;
-        outrec.state = OutRecState.Outer;
-      }
-      else if (IsInsidePrevHotOutrec(ae2))
-      {
-        outrec.owner = GetRealOutRec(ae2.outrec);
-        if (outrec.owner!.state == OutRecState.Outer)
-          outrec.state = OutRecState.Inner;
-        else
-          outrec.state = OutRecState.Outer;
-      }
-      else
-      {
-        outrec.owner = ae2.outrec!.owner;
-        if (outrec.owner != null && outrec.owner.state == OutRecState.Outer)
-          outrec.state = OutRecState.Inner;
-        else
-          outrec.state = OutRecState.Outer;
-      }
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -1376,14 +1356,17 @@ namespace Clipper2Lib
       outrec.idx = _outrecList.Count - 1;
       outrec.pts = null;
       outrec.polypath = null;
-
       ae1.outrec = outrec;
-      SetOwnerAndInnerOuterState(ae1);
-      //flag when orientation needs to be rechecked later ...
       ae2.outrec = outrec;
+
+      //Setting the owner and inner/outer states (above) is an essential
+      //precursor to setting edge 'sides' (ie left and right sides of output
+      //polygons) and hence the orientation of output paths ...
 
       if (IsOpen(ae1))
       {
+        outrec.owner = null;
+        outrec.state = OutRecState.Open;
         if (ae1.windDx > 0)
           SetSides(outrec, ae1, ae2);
         else
@@ -1391,9 +1374,26 @@ namespace Clipper2Lib
       }
       else
       {
-        //Setting the owner and inner/outer states (above) is an essential
-        //precursor to setting edge 'sides' (i.e. left and right sides of output
-        //polygons) and hence the orientation of output paths ...
+        Active? prevHotEdge = GetPrevHotEdge(ae1);
+        //e.windDx is the winding direction of the **input** paths
+        //and unrelated to the winding direction of output polygons.
+        //Output orientation is determined by e.outrec.frontE which is
+        //the ascending edge (see AddLocalMinPoly).
+        if (prevHotEdge == null)
+        {
+          outrec.owner = null;
+          outrec.state = OutRecState.Outer;
+        }
+        else if (OutrecIsAscending(prevHotEdge))
+        {
+          outrec.state = OutRecState.Inner;
+          outrec.owner = prevHotEdge.outrec;
+        } else
+        {
+          outrec.state = OutRecState.Outer;
+          outrec.owner = prevHotEdge.outrec;
+        }
+
         if (IsOuter(outrec) == isNew)
           SetSides(outrec, ae1, ae2);
         else
@@ -1424,6 +1424,10 @@ namespace Clipper2Lib
       if (ae1.outrec == ae2.outrec)
       {
         OutRec outrec = ae1.outrec!;
+        outrec.owner = GetRealOutRec(outrec.owner);
+        if (outrec.owner != null && outrec.owner.frontEdge == null)
+          outrec.owner = outrec.owner.owner;
+
         outrec.pts = result;
         UncoupleOutRec(ae1);
         if (!IsOpen(ae1))
@@ -1569,14 +1573,14 @@ namespace Clipper2Lib
       Active? result = e.nextInAEL;
       while (result != null)
       {
-        if (ReferenceEquals(result.localMin, e.localMin)) return result;
+        if (result.localMin == e.localMin) return result;
         else if (!IsHorizontal(result) && e.bot != result.bot) result = null;
         else result = result.nextInAEL;
       }
       result = e.prevInAEL;
       while (result != null)
       {
-        if (ReferenceEquals(result.localMin, e.localMin)) return result;
+        if (result.localMin == e.localMin) return result;
         else  if (!IsHorizontal(result) && e.bot != result.bot) return null;
         else result = result.prevInAEL;
       }
@@ -3057,12 +3061,7 @@ namespace Clipper2Lib
             op1.prev = op2;
             op2.next = op1;
 
-            or1.owner = GetRealOutRec(or1.owner);
-            or2.owner = GetRealOutRec(or2.owner);
-
-            if (or1.owner != or2 &&
-              (or2.owner == or1 || or1.owner != null ||
-              (or2.owner == null && or1.idx < or2.idx)))
+            if (or1.idx < or2.idx)
             {
               or1.pts = op1;
               or2.pts = null;
@@ -3116,12 +3115,7 @@ namespace Clipper2Lib
             op1.next = op2;
             op2.prev = op1;
 
-            or1.owner = GetRealOutRec(or1.owner);
-            or2.owner = GetRealOutRec(or2.owner);
-
-            if (or1.owner != or2 &&
-              (or2.owner == or1 || or1.owner != null ||
-              (or2.owner == null && or1.idx < or2.idx)))
+            if (or1.idx < or2.idx)
             {
               or1.pts = op1;
               or2.pts = null;
@@ -3526,6 +3520,10 @@ namespace Clipper2Lib
         if (outrec.pts == null) continue;
 
         outrec.owner = GetRealOutRec(outrec.owner);
+        while (outrec.owner != null &&
+          !Path1InsidePath2(outrec.pts, outrec.owner.pts!))
+            outrec.owner = GetRealOutRec(outrec.owner.owner);
+
         if (outrec.owner != null)
         {
           if (outrec.owner.splits != null)
