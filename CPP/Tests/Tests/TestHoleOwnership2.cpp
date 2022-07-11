@@ -41,6 +41,24 @@ double GetPolytreeArea(const PolyPath64& pp)
   return result;
 }
 
+Paths64 Offset(const Path64& path, double delta)
+{
+  ClipperOffset co;
+  co.AddPath(path, JoinType::Round, EndType::Polygon);
+  return co.Execute(delta);
+}
+
+bool AnyPathContainsPoint(const Paths64& paths, const Point64& pt)
+{
+  return std::any_of(
+    paths.begin(),
+    paths.end(),
+    [&pt](const Path64& path) {
+      return PointInPolygon(pt, path) != PointInPolygonResult::IsOutside;
+    }
+  );
+}
+
 TEST(Clipper2Tests, TestPolytreeHoleOwnership2)
 {
 #ifdef _WIN32
@@ -107,19 +125,19 @@ TEST(Clipper2Tests, TestPolytreeHoleOwnership2)
   std::deque<const PolyPath64*> queue;
   queue.push_back(&solution);
   while (!queue.empty()) {
-      const auto* polypath = queue.back();
-      queue.pop_back();
+    const auto* polypath = queue.back();
+    queue.pop_back();
 
-      if (polypath->IsHole()) {
-          const auto* parent = polypath->parent();
-          for (const auto& point : polypath->polygon()) {
-              const auto insideParent = PointInPolygon(point, parent->polygon());
-              EXPECT_NE(insideParent, PointInPolygonResult::IsOutside);
-          }
+    if (polypath->IsHole()) {
+      const auto* parent = polypath->parent();
+      const auto dilated_parent = Offset(parent->polygon(), 3);
+      for (const auto& point : polypath->polygon()) {
+        EXPECT_TRUE(AnyPathContainsPoint(dilated_parent, point));
       }
+    }
 
-      for (const auto* child : polypath->childs()) {
-          queue.push_back(child);
-      }
+    for (const auto* child : polypath->childs()) {
+      queue.push_back(child);
+    }
   }
 }
