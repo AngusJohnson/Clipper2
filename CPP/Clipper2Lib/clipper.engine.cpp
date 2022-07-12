@@ -1,7 +1,7 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
 * Version   :  Clipper2 - beta                                                 *
-* Date      :  9 July 2022                                                     *
+* Date      :  12 July 2022                                                    *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  This is the main polygon clipping module                        *
@@ -3394,11 +3394,18 @@ namespace Clipper2Lib {
 		if (ops->next == ops || ops->next == ops->prev)
 			return PointInPolygonResult::IsOutside;
 		
-		int val = 0;
 		OutPt *curr = ops, *prev = curr->prev;
 		
-		prev->next = nullptr; //temporary!!!
+		while (prev->pt.y == pt.y)
+		{
+			if (prev == ops) return PointInPolygonResult::IsOutside;
+			prev = prev->prev;
+		}
+		
 		bool is_above = prev->pt.y < pt.y;
+		ops->prev->next = nullptr; //temporary!!!		
+		int val = 0;
+
 		do
 		{
 			if (is_above)

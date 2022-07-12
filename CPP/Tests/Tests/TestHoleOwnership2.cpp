@@ -117,7 +117,7 @@ TEST(Clipper2Tests, TestPolytreeHoleOwnership2)
 
   // 1. check subject vs solution areas
   EXPECT_LT(solution_paths_area, subject_area);
-  EXPECT_GT(solution_paths_area, (subject_area * 0.98)); //ie no more than 2% smaller
+  EXPECT_GT(solution_paths_area, (subject_area * 0.95)); //ie no more than 5% smaller
   
   // 2. check area from PolyTreeToPaths function matches the polytree's area
   EXPECT_NEAR(polytree_area, solution_paths_area, 0.0001);

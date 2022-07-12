@@ -3880,19 +3880,20 @@ var
   curr, prev: POutPt;
   isAbove: Boolean;
 begin
-  if (ops.next = ops) or (ops.next = ops.prev) then
-  begin
-    result := pipOutside;
-    Exit;
-  end;
+  result := pipOutside;
+  if (ops.next = ops) or (ops.next = ops.prev) then Exit;
+
+  prev := ops.prev;
+  while (prev.pt.Y = pt.Y) do
+    if prev = ops then Exit
+    else prev := prev.prev;
+
+  isAbove := prev.pt.Y < pt.Y;
+  curr := ops;
+  ops.prev.next := nil; //temporarily break the link !!
 
   Result := pipOn;
   val := 0;
-  prev := ops.prev;
-
-  prev.next := nil; //temporarily break the link !!
-  curr := ops;
-  isAbove := prev.pt.Y < pt.Y;
   repeat
     if isAbove then
     begin
@@ -3979,7 +3980,6 @@ begin
       if not assigned(outRec.pts) then Continue;
 
       outRec.owner := GetRealOutRec(outRec.owner);
-
       while assigned(outRec.owner) and
         not Path1InsidePath2(outRec.pts, outRec.owner.pts) do
           outRec.owner := GetRealOutRec(outRec.owner.owner);

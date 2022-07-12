@@ -1,7 +1,7 @@
 ﻿/*******************************************************************************
 * Author    :  Angus Johnson                                                   *
 * Version   :  Clipper2 - beta                                                 *
-* Date      :  3 July 2022                                                     *
+* Date      :  12 July 2022                                                    *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  This module contains simple functions that will likely cover    *
@@ -684,12 +684,16 @@ namespace Clipper2Lib
 
     public static PointInPolygonResult PointInPolygon(Point64 pt, Path64 polygon)
     {
-      int len = polygon.Count;
+      int len = polygon.Count, i = len - 1;
+
       if (len < 3) return PointInPolygonResult.IsOutside;
 
-      int val = 0, i = 0;
-      Point64 curr, prev = polygon[len - 1];
-      bool isAbove = prev.Y < pt.Y;
+      while (i >= 0 && polygon[i].Y == pt.Y) --i;
+      if (i < 0) return PointInPolygonResult.IsOutside;
+
+      int val = 0;
+      bool isAbove = polygon[i].Y < pt.Y;
+      i = 0;
 
       while (i < len)
       {
@@ -703,8 +707,11 @@ namespace Clipper2Lib
           if (i == len) break;
         }
 
-        if (i > 0) prev = polygon[i - 1];
+        Point64 curr, prev;
+
         curr = polygon[i];
+        if (i > 0) prev = polygon[i - 1];
+        else prev = polygon[len -1];
 
         if (curr.Y == pt.Y)
         {

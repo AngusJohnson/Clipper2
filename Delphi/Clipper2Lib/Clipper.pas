@@ -22,6 +22,7 @@ uses
 //just to use the following functions.
 type
   TClipper    = Clipper.Engine.TClipper64;
+  TClipper64  = Clipper.Engine.TClipper64;
   TPoint64    = Clipper.Core.TPoint64;
   TRect64     = Clipper.Core.TRect64;
   TPath64     = Clipper.Core.TPath64;
@@ -31,7 +32,7 @@ type
   TPathD      = Clipper.Core.TPathD;
   TPathsD     = Clipper.Core.TPathsD;
   TFillRule   = Clipper.Core.TFillRule;
-  TPolyTree   = Clipper.Engine.TPolyTree64;
+  TPolyTree64 = Clipper.Engine.TPolyTree64;
   TPolyTreeD  = Clipper.Engine.TPolyTreeD;
   TJoinType   = Clipper.Offset.TJoinType;
   TEndType    = Clipper.Offset.TEndType;
@@ -49,12 +50,18 @@ const
   etSquare    = Clipper.Offset.etSquare;
   etRound     = Clipper.Offset.etRound;
 
+  ctNone          = Clipper.Core.ctNone;
+  ctIntersection  = Clipper.Core.ctIntersection;
+  ctUnion         = Clipper.Core.ctUnion;
+  ctDifference    = Clipper.Core.ctDifference;
+  ctXor           = Clipper.Core.ctXor;
+
 function BooleanOp(clipType: TClipType; fillRule: TFillRule;
   const subjects, clips: TPaths64): TPaths64; overload;
 function BooleanOp(clipType: TClipType; fillRule: TFillRule;
   const subjects, clips: TPathsD; decimalPrec: integer = 2): TPathsD; overload;
 procedure BooleanOp(clipType: TClipType; fillRule: TFillRule;
-  const subjects, clips: TPaths64; polytree: TPolyTree); overload;
+  const subjects, clips: TPaths64; polytree: TPolyTree64); overload;
 
 function Intersect(const subjects, clips: TPaths64;
   fillRule: TFillRule): TPaths64; overload;
@@ -88,7 +95,7 @@ miterLimit: double = 2.0; precision: integer = 2): TPathsD; overload;
 function MinkowskiSum(const pattern, path: TPath64;
   pathIsClosed: Boolean): TPaths64;
 
-function PolyTreeToPaths(PolyTree: TPolyTree): TPaths64;
+function PolyTreeToPaths(PolyTree: TPolyTree64): TPaths64;
 function PolyTreeDToPathsD(PolyTree: TPolyTreeD): TPathsD;
 
 function MakePath(const ints: TArrayOfInteger): TPath64; overload;
@@ -153,7 +160,7 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-function PolyTreeToPaths(PolyTree: TPolyTree): TPaths64;
+function PolyTreeToPaths(PolyTree: TPolyTree64): TPaths64;
 begin
   Result := nil;
   AddPolyNodeToPaths(PolyTree, Result);
@@ -212,7 +219,7 @@ end;
 //------------------------------------------------------------------------------
 
 procedure BooleanOp(clipType: TClipType; fillRule: TFillRule;
-  const subjects, clips: TPaths64; polytree: TPolyTree);
+  const subjects, clips: TPaths64; polytree: TPolyTree64);
 var
   dummy: TPaths64;
 begin
@@ -408,25 +415,29 @@ end;
 function PointInPolygon(const pt: TPoint64;
   const polygon: TPath64): TPointInPolygonResult;
 var
-  len, val: Integer;
-  isAbove, firstPass: Boolean;
+  i, len, val: Integer;
+  isAbove: Boolean;
   d: Double; //used to avoid integer overflow
-  curr, prev, stop: PPoint64;
+  curr, prev, first, stop: PPoint64;
 begin
+  result := pipOutside;
   len := Length(polygon);
-  if len < 3 then
-  begin
-    result := pipOutside;
-    Exit;
-  end;
+  if len < 3 then Exit;
+
+  i := len -1;
+  first := @polygon[0];
+
+  while (i >= 0) and (polygon[i].Y = pt.Y) do dec(i);
+  if i < 0 then Exit;
+  isAbove := polygon[i].Y < pt.Y;
+
   Result := pipOn;
-  prev := @polygon[len-1];
-  stop := prev;
-  inc(stop);
-  curr := @polygon[0];
-  firstPass := true;
-  isAbove := prev.Y < pt.Y;
+  stop := @polygon[len -1];
+  inc(stop); //stop is just past the last point
+
+  curr := first;
   val := 0;
+
   while (curr <> stop) do
   begin
     if isAbove then
@@ -439,19 +450,10 @@ begin
       if (curr = stop) then break;
     end;
 
-    if firstPass then
-    begin
-      firstPass := false;
-      if curr <> @polygon[0] then
-      begin
-        prev := curr;
-        dec(prev);
-      end;
-    end else
-    begin
+    if curr = first then
+      prev := stop else
       prev := curr;
-      dec(prev);
-    end;
+    dec(prev);
 
     if (curr.Y = pt.Y) then
     begin

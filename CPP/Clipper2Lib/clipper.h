@@ -1,7 +1,7 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
 * Version   :  Clipper2 - beta                                                 *
-* Date      :  10 July 2022                                                    *
+* Date      :  12 July 2022                                                    *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  This module provides a simple interface to the Clipper Library  *
@@ -447,9 +447,15 @@ namespace Clipper2Lib
       return PointInPolygonResult::IsOutside;
 
     int val = 0;
-    typename Path<T>::const_iterator cit = polygon.cbegin();
+    typename Path<T>::const_iterator start = polygon.cbegin(), cit = start;
     typename Path<T>::const_iterator cend = polygon.cend(), pit = cend -1;
-    bool is_above = pit->y < pt.y, first_pass = true;
+
+    while (pit->y == pt.y)
+    {
+      if (pit == start) return PointInPolygonResult::IsOutside;
+      --pit;
+    }
+    bool is_above = pit->y < pt.y;
 
     while (cit != cend)
     {
@@ -464,13 +470,8 @@ namespace Clipper2Lib
         if (cit == cend) break;
       }
 
-      if (first_pass)
-      {
-        if (cit != polygon.cbegin()) pit = cit - 1;
-        first_pass = false;
-      }
-      else 
-        pit = cit - 1;
+      if (cit == start) pit = cend - 1;
+      else  pit = cit - 1;
 
       if (cit->y == pt.y)
       {
