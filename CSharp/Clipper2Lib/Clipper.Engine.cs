@@ -3491,6 +3491,24 @@ namespace Clipper2Lib
       return result == PointInPolygonResult.IsInside;
     }
 
+
+    private bool GetSplitOwner(OutRec outrec, OutRec owner)
+	  {
+      foreach (OutRec split in owner.splits!)
+      {
+        OutRec? realOwner = GetRealOutRec(split);
+			  if (realOwner == null) continue;
+			  else if (Path1InsidePath2(outrec.pts!, realOwner.pts!))
+			  {
+				  outrec.owner = realOwner;
+				  return true;
+			  }
+			  else if (realOwner.splits != null &&
+				  GetSplitOwner(outrec, realOwner)) return true;
+		  }
+      return false;
+    }
+
     protected bool BuildTree(PolyPathBase polytree, Paths64 solutionOpen)
     {
       polytree.Clear();
@@ -3510,17 +3528,7 @@ namespace Clipper2Lib
         if (outrec.owner != null)
         {
           if (outrec.owner.splits != null)
-          {
-            foreach (OutRec split in outrec.owner.splits)
-            {
-              if (split.pts != null &&
-                Path1InsidePath2(outrec.pts, split.pts))
-              {
-                outrec.owner = split;
-                break;
-              }
-            }
-          }
+            GetSplitOwner(outrec, outrec.owner);
 
           //swap order if outer/owner paths are preceeded by their inner paths
           if (outrec.owner.idx > outrec.idx)

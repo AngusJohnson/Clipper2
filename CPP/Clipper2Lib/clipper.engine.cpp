@@ -3442,6 +3442,23 @@ namespace Clipper2Lib {
 		return result == PointInPolygonResult::IsInside;
 	}
 
+	bool GetSplitOwner(OutRec& outrec, const OutRec* owner)
+	{
+		for (OutRec* realOwner : *owner->splits)
+		{
+			realOwner = GetRealOutRec(realOwner);
+			if (!realOwner) continue;
+			else if (Path1InsidePath2(outrec.pts, realOwner->pts))
+			{
+				outrec.owner = realOwner;
+				return true;
+			}
+			else if (realOwner->splits &&
+				GetSplitOwner(outrec, realOwner)) return true;
+		}
+		return false;
+	}
+
 	void ClipperBase::BuildTree(PolyPath64& polytree, Paths64& open_paths)
 	{
 		polytree.Clear();
@@ -3460,15 +3477,7 @@ namespace Clipper2Lib {
 			if (outrec->owner)
 			{
 				if (outrec->owner->splits)
-				{
-					for (OutRec* splitOr : *outrec->owner->splits)
-						if (splitOr->pts && 
-							Path1InsidePath2(outrec->pts, splitOr->pts))
-						{
-							outrec->owner = splitOr;
-							break;
-						}
-				}
+					GetSplitOwner(*outrec, outrec->owner);
 
 				//swap the order when a child preceeds its owner
 				//(because owners must preceed children in polytrees)

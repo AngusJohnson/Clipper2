@@ -46,6 +46,7 @@ bool PolytreeContainsPoint(const PolyPath64& pp, const Point64 pt)
   int counter = 0;
   for (auto child : pp.childs())
     PolyPathContainsPoint(*child, pt, counter);
+  EXPECT_GE(counter, 0); //ie 'pt' can't be inside more holes than outers
   return counter != 0;
 }
 
@@ -85,14 +86,14 @@ TEST(Clipper2Tests, TestPolytreeHoleOwnership2)
   Point64 point_of_interest_1(21887, 10420);
   Point64 point_of_interest_2(21887, 10430);
 
-  // check that the first point of interest is **not** inside a subject
+  // check that the first point of interest is not inside a **subject**
   for (const auto& path : subject)
   {
     const auto result = PointInPolygon(point_of_interest_1, path);
     EXPECT_EQ(result, PointInPolygonResult::IsOutside);
   }
 
-  // check that the second point of interest is **inside only one** subject
+  // check that the second point of interest is inside only one **subject**
   int poi2_counter = 0;
   for (const auto& path : subject)
   {

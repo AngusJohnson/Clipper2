@@ -2331,6 +2331,7 @@ begin
     if (area1 > 0) = (area2 > 0) then
       newOr.owner := OutRec.owner else
       newOr.owner := OutRec;
+
     UpdateOutrecOwner(newOr);
     CleanCollinear(newOr);
   end;
@@ -3938,6 +3939,29 @@ begin
 end;
 //------------------------------------------------------------------------------
 
+function GetSplitOwner(outrec, owner: POutRec): Boolean;
+var
+  i: integer;
+  realOwner: POutRec;
+begin
+  result := false;
+  for i := 0 to High(owner.split) do
+  begin
+    realOwner := GetRealOutRec(owner.split[i]);
+    if not Assigned(realOwner) then
+      Continue
+    else if Path1InsidePath2(OutRec.pts, realOwner.pts) then
+    begin
+      outRec.owner := realOwner;
+      Result := true;
+      break;
+    end
+    else if Assigned(realOwner.split) and
+      GetSplitOwner(outrec, realOwner) then break;
+  end;
+end;
+//------------------------------------------------------------------------------
+
 procedure TClipperBase.BuildTree(polytree: TPolyPathBase; out openPaths: TPaths64);
 var
   i,j         : Integer;
@@ -3964,16 +3988,7 @@ begin
       if assigned(outRec.owner) then
       begin
         if assigned(outRec.owner.split) then
-        begin
-          for j := High(outRec.owner.split) downto 0 do
-            if Assigned(outRec.owner.split[j].pts) and
-              Path1InsidePath2(OutRec.pts,
-                outRec.owner.split[j].pts) then
-            begin
-              outRec.owner := outRec.owner.split[j];
-              break;
-            end;
-        end;
+          GetSplitOwner(outRec, outRec.owner);
 
         //swap order if outer/owner paths are preceeded by their inner paths
         if (outRec.owner.idx > outRec.idx) then
