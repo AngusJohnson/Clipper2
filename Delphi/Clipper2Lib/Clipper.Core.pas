@@ -187,6 +187,7 @@ function RectD(const rec64: TRect64): TRectD; overload;
 function GetBounds(const paths: TArrayOfPaths): TRect64; overload;
 function GetBounds(const paths: TPaths64): TRect64; overload;
 function GetBounds(const paths: TPathsD): TRectD; overload;
+function GetBounds(const path: TPath64): TRect64; overload;
 
 procedure InflateRect(var rec: TRect64; dx, dy: Int64); overload;
   {$IFDEF INLINING} inline; {$ENDIF}
@@ -1183,6 +1184,32 @@ begin
   if Result.Left >= Result.Right then Result := nullRectD;
 end;
 //------------------------------------------------------------------------------
+
+function GetBounds(const path: TPath64): TRect64;
+var
+  i, len: Integer;
+  p: PPoint64;
+begin
+  len := Length(path);
+  if len = 0 then
+  begin
+    Result := NullRect64;
+    Exit;
+  end;
+
+  Result := Rect64(MaxInt64, MaxInt64, -MaxInt64, -MaxInt64);
+  p := @path[0];
+  for i := 0 to High(path) do
+  begin
+    if p.X < Result.Left then Result.Left := p.X;
+    if p.X > Result.Right then Result.Right := p.X;
+    if p.Y < Result.Top then Result.Top := p.Y;
+    if p.Y > Result.Bottom then Result.Bottom := p.Y;
+    inc(p);
+  end;
+end;
+//------------------------------------------------------------------------------
+
 
 procedure InflateRect(var rec: TRect64; dx, dy: Int64);
 begin

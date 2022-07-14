@@ -1,7 +1,7 @@
 ﻿/*******************************************************************************
 * Author    :  Angus Johnson                                                   *
 * Version   :  Clipper2 - beta                                                 *
-* Date      :  20 June 2022                                                    *
+* Date      :  14 July 2022                                                    *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  Core structures and functions for the Clipper Library           *
@@ -425,14 +425,6 @@ namespace Clipper2Lib
     Inside,
     Outside,
     OnEdge
-  };
-
-  internal enum OutRecState
-  {
-    Undefined,
-    Open,
-    Outer,
-    Inner
   };
 
   public static class InternalClipper
