@@ -84,7 +84,11 @@ TEST(Clipper2Tests, TestPolytreeHoleOwnership2)
   ASSERT_TRUE(LoadTestNum(ifs, 1, false, subject, subject_open, clip, area, count, ct, fr));
 
   Point64 point_of_interest_1(21887, 10420);
-  Point64 point_of_interest_2(21887, 10430);
+
+  std::vector<Point64> points_of_interest_2 = {
+      Point64(21887, 10430),
+      Point64(21843, 10520)
+  };
 
   // check that the first point of interest is not inside a **subject**
   for (const auto& path : subject)
@@ -93,15 +97,17 @@ TEST(Clipper2Tests, TestPolytreeHoleOwnership2)
     EXPECT_EQ(result, PointInPolygonResult::IsOutside);
   }
 
-  // check that the second point of interest is inside only one **subject**
-  int poi2_counter = 0;
-  for (const auto& path : subject)
+  // check that each of the second points of interest is inside only one **subject**
+  for (const auto& point_of_interest_2 : points_of_interest_2)
   {
-    if (PointInPolygon(point_of_interest_2, path) == PointInPolygonResult::IsInside)
-      ++poi2_counter;
+    int poi2_counter = 0;
+    for (const auto& path : subject)
+    {
+      if (PointInPolygon(point_of_interest_2, path) == PointInPolygonResult::IsInside)
+        ++poi2_counter;
+    }
+    EXPECT_EQ(poi2_counter, 1);
   }
-  EXPECT_EQ(poi2_counter, 1);
-
 
   PolyTree64 solution;
   Paths64 solution_open;
@@ -122,15 +128,12 @@ TEST(Clipper2Tests, TestPolytreeHoleOwnership2)
   const bool polytree_contains_poi_1 =
     PolytreeContainsPoint(solution, point_of_interest_1);
 
-  const bool polytree_contains_poi_2 =
-    PolytreeContainsPoint(solution, point_of_interest_2);
-
   // the code below tests:
   // 1. the total area of the solution should slightly smaller than the total area of the subject paths, and
   // 2. the area of the paths returned from PolyTreeToPaths matches the Polytree's area
   // 3. the first "point of interest" should **not** be inside the polytree
   // 4. check that all child polygons are inside their parents
-  // 5. the second "point of interest" should be inside the polytree
+  // 5. each of the second "points of interest" should be inside the polytree
 
   // 1. check subject vs solution areas
   EXPECT_LT(solution_paths_area, subject_area);
@@ -146,6 +149,11 @@ TEST(Clipper2Tests, TestPolytreeHoleOwnership2)
   // 4. check that all children are inside their parents
   EXPECT_TRUE(PolytreeFullyContainsChildren(solution));
 
-  // 5. check that the second point of interest is inside the solution
-  EXPECT_TRUE(polytree_contains_poi_2);
+  // 5. check that each of the second points of interest is inside the solution
+  for (const auto& point_of_interest_2 : points_of_interest_2)
+  {
+    const bool polytree_contains_poi_2 =
+      PolytreeContainsPoint(solution, point_of_interest_2);
+    EXPECT_TRUE(polytree_contains_poi_2);
+  }
 }
