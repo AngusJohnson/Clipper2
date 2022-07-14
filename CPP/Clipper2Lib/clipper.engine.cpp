@@ -3459,6 +3459,14 @@ namespace Clipper2Lib {
 		return false;
 	}
 
+	void GetRealOwner(OutRec* outrec)
+	{
+		outrec->owner = GetRealOutRec(outrec->owner);
+		while (outrec->owner &&
+			!Path1InsidePath2(outrec->pts, outrec->owner->pts))
+				outrec->owner = GetRealOutRec(outrec->owner->owner);
+	}
+
 	void ClipperBase::BuildTree(PolyPath64& polytree, Paths64& open_paths)
 	{
 		polytree.Clear();
@@ -3469,11 +3477,7 @@ namespace Clipper2Lib {
 		{
 			if (!outrec || !outrec->pts) continue;
 
-			outrec->owner = GetRealOutRec(outrec->owner);
-			while (outrec->owner &&
-				!Path1InsidePath2(outrec->pts, outrec->owner->pts))
-					outrec->owner = GetRealOutRec(outrec->owner->owner);
-
+			GetRealOwner(outrec);
 			if (outrec->owner)
 			{
 				if (outrec->owner->splits)
@@ -3490,6 +3494,7 @@ namespace Clipper2Lib {
 					outrec->idx = tmp->idx;
 					tmp->idx = tmp_idx;
 					outrec = tmp;
+					GetRealOwner(outrec);
 				}
 			}
 		

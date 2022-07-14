@@ -3948,9 +3948,9 @@ begin
   for i := 0 to High(owner.split) do
   begin
     realOwner := GetRealOutRec(owner.split[i]);
-    if not Assigned(realOwner) then
-      Continue
-    else if Path1InsidePath2(OutRec.pts, realOwner.pts) then
+    if not Assigned(realOwner) then Continue;
+
+    if Path1InsidePath2(OutRec.pts, realOwner.pts) then
     begin
       outRec.owner := realOwner;
       Result := true;
@@ -3959,6 +3959,15 @@ begin
     else if Assigned(realOwner.split) and
       GetSplitOwner(outrec, realOwner) then break;
   end;
+end;
+//------------------------------------------------------------------------------
+
+procedure GetRealOwner(outRec: POutRec);
+begin
+  outRec.owner := GetRealOutRec(outRec.owner);
+  while assigned(outRec.owner) and
+    not Path1InsidePath2(outRec.pts, outRec.owner.pts) do
+      outRec.owner := GetRealOutRec(outRec.owner.owner);
 end;
 //------------------------------------------------------------------------------
 
@@ -3980,11 +3989,7 @@ begin
       outRec := FOutRecList[i];
       if not assigned(outRec.pts) then Continue;
 
-      outRec.owner := GetRealOutRec(outRec.owner);
-      while assigned(outRec.owner) and
-        not Path1InsidePath2(outRec.pts, outRec.owner.pts) do
-          outRec.owner := GetRealOutRec(outRec.owner.owner);
-
+      GetRealOwner(outRec);
       if assigned(outRec.owner) then
       begin
         if assigned(outRec.owner.split) then
@@ -3999,6 +4004,7 @@ begin
           FOutRecList[j] := outRec;
           outRec := FOutRecList[i];
           outRec.idx := i;
+          GetRealOwner(outRec);
         end;
       end;
 
