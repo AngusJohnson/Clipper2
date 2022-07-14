@@ -1,7 +1,7 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
 * Version   :  Clipper2 - beta                                                 *
-* Date      :  9 July 2022                                                     *
+* Date      :  14 July 2022                                                    *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  This is the main polygon clipping module                        *
@@ -75,8 +75,6 @@ namespace Clipper2Lib {
 		}
 	};
 
-	enum class OutRecState { Undefined = 0, Open = 1, Outer = 2, Inner = 4};
-
 	template <typename T>
 	class PolyPath;
 
@@ -101,7 +99,7 @@ namespace Clipper2Lib {
 		Active* back_edge = nullptr;
 		OutPt* pts = nullptr;
 		PolyPath64* polypath = nullptr;
-		OutRecState state = OutRecState::Undefined;
+		bool is_open = false;
 		~OutRec() { if (splits) delete splits; };
 	};
 
@@ -223,7 +221,7 @@ namespace Clipper2Lib {
 		Active *DoMaxima(Active &e);
 		void JoinOutrecPaths(Active &e1, Active &e2);
 		void CompleteSplit(OutPt* op1, OutPt* op2, OutRec& outrec);
-		bool ValidateClosedPathEx(OutRec* outrec);
+		bool ValidateClosedPathEx(OutPt*& outrec);
 		void CleanCollinear(OutRec* outrec);
 		void FixSelfIntersects(OutRec* outrec);
 		OutPt* DoSplitOp(OutPt* outRecOp, OutPt* splitOp);

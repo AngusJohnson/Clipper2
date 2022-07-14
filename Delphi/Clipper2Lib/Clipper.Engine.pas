@@ -3,7 +3,7 @@ unit Clipper.Engine;
 (*******************************************************************************
 * Author    :  Angus Johnson                                                   *
 * Version   :  Clipper2 - beta                                                 *
-* Date      :  11 July 2022                                                    *
+* Date      :  14 July 2022                                                    *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  This is the main polygon clipping module                        *
@@ -66,7 +66,6 @@ type
     joiner   : PJoiner;
   end;
 
-  TOutRecState = (osUndefined, osOpen, osOuter, osInner);
   TOutRecArray = array of POutRec;
 
   //OutRec: path data structure for clipping solutions
@@ -78,7 +77,7 @@ type
     backE    : PActive;
     pts      : POutPt;
     polypath : TPolyPathBase;
-    state    : TOutRecState;
+    isOpen   : Boolean;
   end;
 
   //Joiner: structure used in merging "touching" solution polygons
@@ -397,24 +396,6 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-function IsOpen(outrec: POutRec): Boolean; overload; {$IFDEF INLINING} inline; {$ENDIF}
-begin
-  Result := outrec.state = osOpen;
-end;
-//------------------------------------------------------------------------------
-
-function IsOuter(outrec: POutRec): Boolean; {$IFDEF INLINING} inline; {$ENDIF}
-begin
-  Result := outrec.state = osOuter;
-end;
-//------------------------------------------------------------------------------
-
-function IsInner(outrec: POutRec): Boolean; {$IFDEF INLINING} inline; {$ENDIF}
-begin
-  Result := outrec.state = osInner;
-end;
-//------------------------------------------------------------------------------
-
 function IsHotEdge(e: PActive): Boolean; {$IFDEF INLINING} inline; {$ENDIF}
 begin
   Result := assigned(e.outrec);
@@ -451,10 +432,10 @@ end;
 function IsValidClosedPath(op: POutPt): Boolean; {$IFDEF INLINING} inline; {$ENDIF}
 begin
   result := assigned(op) and
-    (op.next <> op) and (op.next <> op.prev) and
+    (op.next <> op) and (op.next <> op.prev) and not
 			//also treat inconsequential polygons as invalid
-      ((op.next.next <> op.prev) or
-        not (AreReallyClose(op.pt, op.next.pt) and
+      ((op.next.next = op.prev) and
+        (AreReallyClose(op.pt, op.next.pt) or
         AreReallyClose(op.pt, op.prev.pt)));
 end;
 //------------------------------------------------------------------------------
@@ -1835,34 +1816,31 @@ begin
   if IsOpen(e1) then
   begin
     newOr.owner := nil;
-    newOr.state := osOpen;
+    newOr.isOpen := true;
     if e1.windDx > 0 then
       SetSides(newOr, e1, e2) else
       SetSides(newOr, e2, e1);
   end else
   begin
     prevHotEdge := GetPrevHotEdge(e1);
+    newOr.isOpen := false;
     //e.windDx is the winding direction of the **input** paths
     //and unrelated to the winding direction of output polygons.
     //Output orientation is determined by e.outrec.frontE which is
     //the ascending edge (see AddLocalMinPoly).
-    if not Assigned(prevHotEdge) then
+    if Assigned(prevHotEdge) then
     begin
-      newOr.owner := nil;
-      newOr.state := osOuter;
-    end
-    else if OutrecIsAscending(prevHotEdge) then
-    begin
-      newOr.state := osInner;
       newOr.owner := prevHotEdge.outrec;
+      if OutrecIsAscending(prevHotEdge) = isNew then
+        SetSides(newOr, e2, e1) else
+        SetSides(newOr, e1, e2);
     end else
     begin
-      newOr.state := osOuter;
-      newOr.owner := prevHotEdge.outrec;
+      newOr.owner := nil;
+      if isNew then
+        SetSides(newOr, e1, e2) else
+        SetSides(newOr, e2, e1);
     end;
-    if IsOuter(newOr) = isNew then
-      SetSides(newOr, e1, e2) else
-      SetSides(newOr, e2, e1);
   end;
 
   new(Result);
@@ -1903,8 +1881,10 @@ var
   op2, startOp: POutPt;
 begin
   outRec := GetRealOutRec(outRec);
-  if not Assigned(outRec) or (outRec.state = osOpen) or
-    Assigned(outRec.frontE) or not ValidateClosedPathEx(outRec.pts) then
+  if not Assigned(outRec) or
+    outRec.isOpen or
+    Assigned(outRec.frontE) or
+    not ValidateClosedPathEx(outRec.pts) then
       Exit;
 
   startOp := outRec.pts;
@@ -1985,7 +1965,7 @@ procedure TClipperBase.FixSelfIntersects(var op: POutPt);
       FillChar(newOutRec^, SizeOf(TOutRec), 0);
       newOutRec.idx := FOutRecList.Add(newOutRec);
       newOutRec.owner := prevOp.outrec.owner;
-      newOutRec.state := prevOp.outrec.state;
+      newOutRec.isOpen := false;
       newOutRec.polypath := nil;
       newOutRec.split := nil;
       splitOp.outrec := newOutRec;
@@ -2053,8 +2033,8 @@ begin
   begin
     outRec := e1.outrec;
     outRec.owner := GetRealOutRec(outRec.owner);
-    if Assigned(outRec.owner) and not Assigned(outRec.owner.frontE) then
-      outRec.owner := outRec.owner.owner;
+    while Assigned(outRec.owner) and not Assigned(outRec.owner.frontE) do
+      outRec.owner := GetRealOutRec(outRec.owner.owner);
 
     outRec.pts := Result;
     UncoupleOutRec(e1);
@@ -2108,6 +2088,15 @@ begin
     if Assigned(e1.outrec.backE) then
       e1.outrec.backE.outrec := e1.outrec;
   end;
+
+  e1.outrec.owner := GetRealOutRec(e1.outrec.owner);
+  e2.outrec.owner := GetRealOutRec(e2.outrec.owner);
+
+  if not assigned(e2.outrec.owner) then
+    e1.outrec.owner := nil
+  else if assigned(e1.outrec.owner) and
+    (e2.outrec.owner.idx < e1.outrec.owner.idx) then
+      e1.outrec.owner := e2.outrec.owner;
 
   //after joining, the e2.OutRec mustn't contains vertices
   e2.outrec.frontE := nil;
@@ -2300,12 +2289,12 @@ var
 begin
   area1 := Area(op1, FOrientationIsReversed);
   area2 := Area(op2, FOrientationIsReversed);
-  if Abs(area1) < 1 then
+  if Abs(area1) < 2 then
   begin
     SafeDisposeOutPts(op1);
     op1 := nil;
   end
-  else if Abs(area2) < 1 then
+  else if Abs(area2) < 2 then
   begin
     SafeDisposeOutPts(op2);
     op2 := nil;
@@ -2340,16 +2329,8 @@ begin
     end;
 
     if (area1 > 0) = (area2 > 0) then
-    begin
-      newOr.owner := OutRec.owner;
-      newOr.state := OutRec.state;
-    end else
-    begin
+      newOr.owner := OutRec.owner else
       newOr.owner := OutRec;
-      if OutRec.state = osOuter then
-        newOr.state := osInner else
-        newOr.state := osOuter;
-    end;
     UpdateOutrecOwner(newOr);
     CleanCollinear(newOr);
   end;
@@ -2481,13 +2462,13 @@ begin
     Exit
   else if not IsValidClosedPath(op2) then
   begin
-    CleanCollinear(or2);
+    SafeDisposeOutPts(op2);
     Exit;
   end
   else if not Assigned(or1.pts) or
     not IsValidClosedPath(op1) then
   begin
-    CleanCollinear(or1);
+    SafeDisposeOutPts(op1);
     Result := or2; //ie tidy or2 in calling function;
     Exit;
   end
@@ -2543,13 +2524,11 @@ begin
 
         if (or1.idx < or2.idx) then
         begin
-          or2.state := or1.state;
           or1.pts := op1;
           or2.pts := nil;
           or2.owner := or1
         end else
         begin
-          or1.state := or2.state;
           or2.pts := op1;
           or1.pts := nil;
           or1.owner := or2;
@@ -2668,7 +2647,7 @@ begin
   new(newOr);
   newOr.idx := FOutRecList.Add(newOr);
   newOr.owner := nil;
-  newOr.state := osOpen;
+  newOr.isOpen := true;
   newOr.pts := nil;
   newOr.split := nil;
   newOr.polypath := nil;
@@ -3582,9 +3561,7 @@ begin
             AddOutPt(horzEdge, horzEdge.top);
             UpdateEdgeIntoAEL(horzEdge);
           end;
-          if isLeftToRight then
-            op := AddLocalMaxPoly(horzEdge, e, horzEdge.top) else
-            op := AddLocalMaxPoly(e, horzEdge, horzEdge.top);
+          op := AddLocalMaxPoly(e, horzEdge, horzEdge.top);
           if Assigned(op) and not IsOpen(horzEdge) and
             PointsEqual(op.pt, horzEdge.top) then
               AddTrialHorzJoin(op);
@@ -3849,7 +3826,7 @@ begin
       outRec := FOutRecList[i];
       if not assigned(outRec.pts) then Continue;
 
-      if IsOpen(outRec) then
+      if outRec.isOpen then
       begin
         if BuildPath(outRec.pts, FReverseSolution,
           true, openPaths[cntOpen]) then
@@ -4010,7 +3987,7 @@ begin
         end;
       end;
 
-      if IsOpen(outRec) then
+      if outRec.isOpen then
       begin
         if BuildPath(outRec.pts,
           FReverseSolution, true, path) then

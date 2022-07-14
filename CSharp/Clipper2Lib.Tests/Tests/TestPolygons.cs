@@ -42,9 +42,9 @@ namespace Clipper2Lib.UnitTests
         }
 
         if (count > 0 && Math.Abs(solution.Count - count) > 2 && 
-            Math.Abs(solution.Count - count)/count > 0.02)
+            (double)Math.Abs(solution.Count - count)/count > 0.02)
         {
-          Assert.IsTrue(Math.Abs(solution.Count - count) < 2,
+          Assert.IsTrue(Math.Abs(solution.Count - count) < 4,
             string.Format("Incorrect count in test {0}", i));
         }
 
