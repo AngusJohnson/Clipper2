@@ -72,7 +72,7 @@ type
   TOutRec = record
     idx      : Integer;
     owner    : POutRec;
-    split    : TOutRecArray;
+    splits   : TOutRecArray;
     frontE   : PActive;
     backE    : PActive;
     pts      : POutPt;
@@ -1804,7 +1804,7 @@ begin
   new(newOr);
   newOr.idx := FOutRecList.Add(newOr);
   newOr.pts := nil;
-  newOr.split := nil;
+  newOr.splits := nil;
   newOr.polypath := nil;
   e1.outrec := newOr;
   e2.outrec := newOr;
@@ -1967,7 +1967,7 @@ procedure TClipperBase.FixSelfIntersects(var op: POutPt);
       newOutRec.owner := prevOp.outrec.owner;
       newOutRec.isOpen := false;
       newOutRec.polypath := nil;
-      newOutRec.split := nil;
+      newOutRec.splits := nil;
       splitOp.outrec := newOutRec;
       splitOp.next.outrec := newOutRec;
       new(newOp);
@@ -2032,10 +2032,6 @@ begin
   if (e1.outrec = e2.outrec) then
   begin
     outRec := e1.outrec;
-    outRec.owner := GetRealOutRec(outRec.owner);
-    while Assigned(outRec.owner) and not Assigned(outRec.owner.frontE) do
-      outRec.owner := GetRealOutRec(outRec.owner.owner);
-
     outRec.pts := Result;
     UncoupleOutRec(e1);
     if not IsOpen(e1) then CleanCollinear(outRec);
@@ -2089,14 +2085,15 @@ begin
       e1.outrec.backE.outrec := e1.outrec;
   end;
 
-  e1.outrec.owner := GetRealOutRec(e1.outrec.owner);
-  e2.outrec.owner := GetRealOutRec(e2.outrec.owner);
-
-  if not assigned(e2.outrec.owner) then
-    e1.outrec.owner := nil
-  else if assigned(e1.outrec.owner) and
-    (e2.outrec.owner.idx < e1.outrec.owner.idx) then
-      e1.outrec.owner := e2.outrec.owner;
+  //an owner must have a lower idx otherwise
+  //it won't be a valid owner
+  if assigned(e2.outrec.owner) and
+    (e2.outrec.owner.idx < e1.outrec.idx) then
+  begin
+    if not assigned(e1.outrec.owner) or
+      (e2.outrec.owner.idx < e1.outrec.owner.idx) then
+        e1.outrec.owner := e2.outrec.owner;
+  end;
 
   //after joining, the e2.OutRec mustn't contains vertices
   e2.outrec.frontE := nil;
@@ -2309,13 +2306,13 @@ begin
     FillChar(newOr^, SizeOf(TOutRec), 0);
     newOr.idx := FOutRecList.Add(newOr);
     newOr.polypath := nil;
-    newOr.split := nil;
+    newOr.splits := nil;
 
     if (FUsingPolytree) then
     begin
-      i := Length(OutRec.split);
-      SetLength(OutRec.split, i +1);
-      OutRec.split[i] := newOr;
+      i := Length(OutRec.splits);
+      SetLength(OutRec.splits, i +1);
+      OutRec.splits[i] := newOr;
     end;
 
     if Abs(area1) >= Abs(area2) then
@@ -2650,7 +2647,7 @@ begin
   newOr.owner := nil;
   newOr.isOpen := true;
   newOr.pts := nil;
-  newOr.split := nil;
+  newOr.splits := nil;
   newOr.polypath := nil;
   if e.windDx > 0 then
   begin
@@ -3939,25 +3936,40 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-function GetSplitOwner(outrec, owner: POutRec): Boolean;
+function DeepCheckOwner(outrec, owner: POutRec): Boolean;
 var
   i: integer;
-  realOwner: POutRec;
+  split: POutRec;
 begin
+  //while looking for the correct owner, check the owner's splits
+  //**before** the owner itself because splits can occur internally, and
+  //checking the owner first would miss the inner split's true ownership
   result := false;
-  for i := 0 to High(owner.split) do
+  for i := 0 to High(owner.splits) do
   begin
-    realOwner := GetRealOutRec(owner.split[i]);
-    if not Assigned(realOwner) then Continue;
-
-    if Path1InsidePath2(OutRec.pts, realOwner.pts) then
+    split := GetRealOutRec(owner.splits[i]);
+    if not Assigned(split) or (split = outrec) then
+      Continue
+    else if Assigned(split.splits) and
+      DeepCheckOwner(outrec, split) then
     begin
-      outRec.owner := realOwner;
       Result := true;
-      break;
+      Exit;
     end
-    else if Assigned(realOwner.split) and
-      GetSplitOwner(outrec, realOwner) then break;
+    else if Path1InsidePath2(OutRec.pts, split.pts) then
+    begin
+      outRec.owner := split;
+      Result := true;
+      Exit;
+    end;
+  end;
+
+  if owner <> outrec.owner then Exit;
+  while assigned(outrec.owner) and not Result do
+  begin
+    if Path1InsidePath2(outrec.pts, outrec.owner.pts) then
+      Result := true else
+      outrec.owner := GetRealOutRec(outrec.owner.owner);
   end;
 end;
 //------------------------------------------------------------------------------
@@ -3989,23 +4001,22 @@ begin
       outRec := FOutRecList[i];
       if not assigned(outRec.pts) then Continue;
 
-      GetRealOwner(outRec);
+      outRec.owner := GetRealOutRec(outRec.owner);
       if assigned(outRec.owner) then
-      begin
-        if assigned(outRec.owner.split) then
-          GetSplitOwner(outRec, outRec.owner);
+        DeepCheckOwner(outRec, outRec.owner);
 
-        //swap order if outer/owner paths are preceeded by their inner paths
-        if (outRec.owner.idx > outRec.idx) then
-        begin
-          j := outRec.owner.idx;
-          outRec.idx := j;
-          FOutRecList[i] := FOutRecList[j];
-          FOutRecList[j] := outRec;
-          outRec := FOutRecList[i];
-          outRec.idx := i;
-          GetRealOwner(outRec);
-        end;
+      //swap order if outer/owner paths are preceeded by their inner paths
+      if assigned(outRec.owner) and (outRec.owner.idx > outRec.idx) then
+      begin
+        j := outRec.owner.idx;
+        outRec.idx := j;
+        FOutRecList[i] := FOutRecList[j];
+        FOutRecList[j] := outRec;
+        outRec := FOutRecList[i];
+        outRec.idx := i;
+        outRec.owner := GetRealOutRec(outRec.owner);
+        if Assigned(outRec.owner) then
+          DeepCheckOwner(outRec, outRec.owner);
       end;
 
       if outRec.isOpen then
@@ -4159,7 +4170,7 @@ begin
 end;
 
 //------------------------------------------------------------------------------
-//  TPolyPathBase methods
+// TPolyPathBase methods
 //------------------------------------------------------------------------------
 
 constructor TPolyPathBase.Create;
@@ -4215,7 +4226,7 @@ begin
 end;
 
 //------------------------------------------------------------------------------
-// TPolyPath method
+//TPolyPath method
 //------------------------------------------------------------------------------
 
 function TPolyPath64.AddChild(const path: TPath64): TPolyPathBase;
@@ -4227,7 +4238,7 @@ begin
 end;
 
 //------------------------------------------------------------------------------
-//  TClipperD methods
+// TClipperD methods
 //------------------------------------------------------------------------------
 
 constructor TClipperD.Create(roundingDecimalPrecision: integer;

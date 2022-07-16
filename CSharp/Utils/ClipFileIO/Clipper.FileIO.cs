@@ -87,9 +87,9 @@ namespace Clipper2Lib
       if (clip == null) clip = new Paths64(); else clip.Clear();
       ct = ClipType.Intersection;
       fillRule = FillRule.EvenOdd;
-      bool numFound = false, result = false;
+      bool result = false;
       int GetIdx;
-      string numstr = num.ToString() + '.';
+      if (num < 1) num = 1;
       caption = "";
       area = 0;
       count = 0;
@@ -99,16 +99,16 @@ namespace Clipper2Lib
       {
         string s = reader.ReadLine();
         if (s == null) break;
-
+        
         if (s.IndexOf("CAPTION: ") == 0)
         {
-          if (numFound) break; //ie found the following caption
-          numFound = (num == 0) || (s.IndexOf(numstr) > 0);
-          if (numFound) { caption = s[9..]; result = true; }
+          num--;
+          if (num != 0) continue;
+          caption = s[9..]; 
+          result = true;
           continue;
         }
-        else if (!numFound) 
-          continue;
+        else if (num > 0) continue;
 
         if (s.IndexOf("CLIPTYPE: ") == 0)
         {

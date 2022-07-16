@@ -453,8 +453,6 @@ namespace Clipper2Lib {
 
 	};
 
-	using Clipper = Clipper64;
-
 }  // namespace 
 
 #endif  //clipper_engine_h

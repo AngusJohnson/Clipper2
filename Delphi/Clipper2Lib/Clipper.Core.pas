@@ -17,22 +17,22 @@ interface
 uses
   SysUtils, Math;
 
-//The classic Cartesian plane is defined by an X-axis that's positive toward
-//the right and a Y-axis that's positive upwards. However, many modern
-//graphics libraries use an inverted Y-axis (where Y is positive downward).
-//This effectively flips polygons upside down, with winding directions that
-//were clockwise becoming anti-clockwise, and areas that were positive
-//becoming negative. Nevertheless, in Cartesian coordinates the area of a
-//convex polygon is defined to be positive if the points are arranged in a
-//counterclockwise order, and negative if they are in clockwise order
-//(see https://mathworld.wolfram.com/PolygonArea.html). If this "normal"
-//winding direction is inconvenient for whatever reason the following
-//constant can be changed to accommodate this. Note however that winding
-//direction is only important when using Clipper's Positive and Negative
-//filling rules. (Reversing orientation has no effect on NonZero an EvenOdd
-//filling.) The constant below is intended as "set and perhaps not quite
-//forget". While this sets the default orientation, the Clipper class
-//constructor contains a parameter which can override this default setting.
+// The classic Cartesian plane is defined by an X-axis that's positive toward
+// the right and a Y-axis that's positive upwards. However, many modern
+// graphics libraries use an inverted Y-axis (where Y is positive downward).
+// This effectively flips polygons upside down, with winding directions that
+// were clockwise becoming anti-clockwise, and areas that were positive
+// becoming negative. Nevertheless, in Cartesian coordinates the area of a
+// convex polygon is defined to be positive if the points are arranged in a
+// counterclockwise order, and negative if they are in clockwise order
+// (see https://mathworld.wolfram.com/PolygonArea.html). If this "normal"
+// winding direction is inconvenient for whatever reason the following
+// constant can be changed to accommodate this. Note however that winding
+// direction is only important when using Clipper's Positive and Negative
+// filling rules. (Reversing orientation has no effect on NonZero an EvenOdd
+// filling.) The constant below is intended as "set and perhaps not quite
+// forget". While this sets the default orientation, the Clipper class
+// constructor contains a parameter which can override this default setting.
 
 const DEFAULT_ORIENTATION_IS_REVERSED = false;
 
@@ -53,12 +53,12 @@ type
 {$ENDIF}
   end;
 
-  //Path: a simple data structure representing a series of vertices, whether
-  //open (poly-line) or closed (polygon). Paths may be simple or complex (self
-  //intersecting). For simple polygons, consisting of a single non-intersecting
-  //path, path orientation is unimportant. However, for complex polygons and
-  //for overlapping polygons, various 'filling rules' define which regions will
-  //be inside (filled) and which will be outside (unfilled).
+  // Path: a simple data structure representing a series of vertices, whether
+  // open (poly-line) or closed (polygon). Paths may be simple or complex (self
+  // intersecting). For simple polygons, consisting of a single non-intersecting
+  // path, path orientation is unimportant. However, for complex polygons and
+  // for overlapping polygons, various 'filling rules' define which regions will
+  // be inside (filled) and which will be outside (unfilled).
 
   TPath64  = array of TPoint64;
   TPaths64 = array of TPath64;
@@ -68,9 +68,9 @@ type
   TPathsD = array of TPathD;
   TArrayOfPathsD = array of TPathsD;
 
-  //The most commonly used filling rules for polygons are EvenOdd and NonZero.
-  //https://en.wikipedia.org/wiki/Even-odd_rule
-  //https://en.wikipedia.org/wiki/Nonzero-rule
+  // The most commonly used filling rules for polygons are EvenOdd and NonZero.
+  // https://en.wikipedia.org/wiki/Even-odd_rule
+  // https://en.wikipedia.org/wiki/Nonzero-rule
   TFillRule = (frEvenOdd, frNonZero, frPositive, frNegative);
 
   TArrayOfBoolean = array of Boolean;
@@ -422,7 +422,7 @@ end;
 
 function ValueBetween(val, end1, end2: Int64): Boolean;
 begin
-  //nb: accommodates axis aligned between where end1 == end2
+  // nb: accommodates axis aligned between where end1 == end2
   Result := ((val <> end1) = (val <> end2)) and
     ((val > end1) = (val < end2));
 end;
@@ -727,7 +727,7 @@ var
 begin
   if (dx = 0) and (dy = 0) then
   begin
-    result := path; //nb: reference counted
+    result := path; // nb: reference counted
     Exit;
   end;
 
@@ -746,7 +746,7 @@ var
 begin
   if (dx = 0) and (dy = 0) then
   begin
-    result := path; //nb: reference counted
+    result := path; // nb: reference counted
     Exit;
   end;
 
@@ -765,7 +765,7 @@ var
 begin
   if (dx = 0) and (dy = 0) then
   begin
-    result := paths; //nb: reference counted
+    result := paths; // nb: reference counted
     Exit;
   end;
 
@@ -1302,8 +1302,8 @@ end;
 
 function UnionRect(const rec, rec2: TRect64): TRect64;
 begin
-  //nb: don't use rec.IsEmpty as this will
-  //reject open axis-aligned flat paths
+  // nb: don't use rec.IsEmpty as this will
+  // reject open axis-aligned flat paths
   if (rec.Width <= 0) and (rec.Height <= 0) then result := rec2
   else if (rec2.Width <= 0) and (rec2.Height <= 0) then result := rec
   else
@@ -1318,8 +1318,8 @@ end;
 
 function UnionRect(const rec, rec2: TRectD): TRectD;
 begin
-  //nb: don't use rec.IsEmpty as this will
-  //reject open axis-aligned flat paths
+  // nb: don't use rec.IsEmpty as this will
+  // reject open axis-aligned flat paths
   if (rec.Width <= 0) and (rec.Height <= 0) then result := rec2
   else if (rec2.Width <= 0) and (rec2.Height <= 0) then result := rec
   else
@@ -1338,7 +1338,7 @@ var
   d: double;
   p1,p2: PPoint64;
 begin
-  //shoelace formula
+  // shoelace formula
   Result := 0.0;
   highI := High(path);
   if highI < 2 then Exit;
@@ -1346,7 +1346,7 @@ begin
   p2 := @path[0];
   for i := 0 to highI do
   begin
-    d := (p1.Y + p2.Y); //needed for Delphi7
+    d := (p1.Y + p2.Y); // needed for Delphi7
     Result := Result + d * (p1.X - p2.X);
     p1 := p2; inc(p2);
   end;
@@ -1371,7 +1371,7 @@ var
   i, highI: Integer;
   p1,p2: PPointD;
 begin
-  //https://en.wikipedia.org/wiki/Shoelace_formula
+  // https://en.wikipedia.org/wiki/Shoelace_formula
   Result := 0.0;
   highI := High(path);
   if highI < 2 then Exit;
@@ -1434,7 +1434,7 @@ end;
 
 function DotProduct(const pt1, pt2, pt3: TPoint64): double;
 var
-  x1,x2,y1,y2: double; //avoids potential int overflow
+  x1,x2,y1,y2: double; // avoids potential int overflow
 begin
   x1 := pt2.X - pt1.X;
   y1 := pt2.Y - pt1.Y;
@@ -1446,7 +1446,7 @@ end;
 
 function SqrInt64(val: Int64): double; {$IFDEF INLINING} inline; {$ENDIF}
 begin
-  Result := val; //force conversion
+  Result := val; // force conversion
   Result := Result * Result;
 end;
 //------------------------------------------------------------------------------
@@ -1467,9 +1467,9 @@ function DistanceFromLineSqrd(const pt, linePt1, linePt2: TPoint64): double;
 var
   a,b,c: double;
 begin
-  //perpendicular distance of point (x0,y0) = (a*x0 + b*y0 + C)/Sqrt(a*a + b*b)
-  //where ax + by +c = 0 is the equation of the line
-  //see https://en.wikipedia.org/wiki/Distance_from_a_point_to_a_line
+  // perpendicular distance of point (x0,y0) = (a*x0 + b*y0 + C)/Sqrt(a*a + b*b)
+  // where ax + by +c = 0 is the equation of the line
+  // see https://en.wikipedia.org/wiki/Distance_from_a_point_to_a_line
 	a := (linePt1.Y - linePt2.Y);
 	b := (linePt2.X - linePt1.X);
 	c := a * linePt1.X + b * linePt1.Y;
@@ -1517,7 +1517,7 @@ end;
 
 function SegmentsIntersect(const s1a, s1b, s2a, s2b: TPoint64): boolean;
 begin
-  //nb: result excludes overlapping collinear segments
+  // nb: result excludes overlapping collinear segments
   result := (CrossProduct(s1a, s2a, s2b) * CrossProduct(s1b, s2a, s2b) < 0) and
     (CrossProduct(s2a, s1a, s1b) * CrossProduct(s2b, s1a, s1b) < 0);
 end;
@@ -1527,10 +1527,10 @@ function GetIntersectPoint(const ln1a, ln1b, ln2a, ln2b: TPoint64): TPointD;
 var
   m1,b1,m2,b2: double;
 begin
-  //see http://astronomy.swin.edu.au/~pbourke/geometry/lineline2d/
+  // see http://astronomy.swin.edu.au/~pbourke/geometry/lineline2d/
   if (ln1B.X = ln1A.X) then
   begin
-    if (ln2B.X = ln2A.X) then exit; //parallel lines
+    if (ln2B.X = ln2A.X) then exit; // parallel lines
     m2 := (ln2B.Y - ln2A.Y)/(ln2B.X - ln2A.X);
     b2 := ln2A.Y - m2 * ln2A.X;
     Result.X := ln1A.X;
@@ -1607,7 +1607,7 @@ begin
       centre.Y + radius.y * delta.y);
     delta :=  PointD(delta.X * cosA - delta.Y * sinA,
       delta.Y * cosA + delta.X * sinA);
-  end; //rotates clockwise
+  end; // rotates clockwise
 end;
 //------------------------------------------------------------------------------
 
@@ -1641,7 +1641,7 @@ begin
     end;
   for i := startIdx +1 to endIdx -1 do
   begin
-    //PerpendicDistFromLineSqrd - avoids expensive Sqrt()
+    // PerpendicDistFromLineSqrd - avoids expensive Sqrt()
     d := PerpendicDistFromLineSqrd(path[i], path[startIdx], path[endIdx]);
     if d <= maxD then Continue;
     maxD := d;
@@ -1665,7 +1665,7 @@ begin
     result := Copy(path, 0, len);
     Exit;
   end;
-  SetLength(boolArray, len); //already zero initialized
+  SetLength(boolArray, len); // already zero initialized
   boolArray[0] := true;
   boolArray[len -1] := true;
   RDP(path, 0, len -1, Sqr(epsilon), boolArray);

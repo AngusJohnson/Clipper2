@@ -4,27 +4,6 @@
 
 using namespace Clipper2Lib;
 
-//CheckChildrenAreInsideOwner: 
-//this is fully recursive because holes can also contain children
-bool CheckChildrenAreInsideOwner(const PolyPath64& outer)
-{
-  //nb: the outermost PolyPath has an empty polygon
-  if (!outer.polygon().empty() && outer.ChildCount() > 0)
-  {
-    //test PointInPolygon with each child's midpoint
-    for (const PolyPath64* child : outer.childs())
-    {
-      Rect64 child_rec = Bounds(child->polygon());
-      if (PointInPolygon(child_rec.MidPoint(), 
-        outer.polygon()) != PointInPolygonResult::IsInside) 
-          return false;
-    }
-  }
-  for (const PolyPath64* child : outer.childs())
-    if (!CheckChildrenAreInsideOwner(*child)) return false;
-  return true;
-}
-
 TEST(Clipper2Tests, TestPolytreeHoleOwnership1)
 {
 #ifdef _WIN32
@@ -52,6 +31,6 @@ TEST(Clipper2Tests, TestPolytreeHoleOwnership1)
   c.AddClip(clip);
   c.Execute(ct, fr, solution, solution_open);
 
-  EXPECT_TRUE(CheckChildrenAreInsideOwner(solution));
+  EXPECT_TRUE(CheckPolytreeFullyContainsChildren(solution));
 
 }

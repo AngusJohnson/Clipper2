@@ -5,28 +5,6 @@
 using namespace Clipper2Lib;
 
 
-bool PolyPathFullyContainsChildren(const PolyPath64& pp)
-{
-  for (auto child : pp.childs())
-  {
-    for (const Point64& pt : child->polygon())
-      if (PointInPolygon(pt, pp.polygon()) == PointInPolygonResult::IsOutside)
-        return false;
-
-    if (child->ChildCount() > 0 && !PolyPathFullyContainsChildren(*child))
-      return false;
-  }
-  return true;
-}
-
-bool PolytreeFullyContainsChildren(const PolyTree64& polytree)
-{
-  for (const PolyPath64* child : polytree.childs())
-    if (child->ChildCount() > 0 && !PolyPathFullyContainsChildren(*child))
-      return false;
-  return true;
-}
-
 void PolyPathContainsPoint(const PolyPath64& pp, const Point64 pt, int& counter)
 {
   if (pp.polygon().size() > 0)
@@ -83,69 +61,76 @@ TEST(Clipper2Tests, TestPolytreeHoleOwnership2)
 
   ASSERT_TRUE(LoadTestNum(ifs, 1, false, subject, subject_open, clip, area, count, ct, fr));
 
-  Point64 point_of_interest_1(21887, 10420);
-  Point64 point_of_interest_2(21887, 10430);
+  const std::vector<Point64> points_of_interest_outside = {
+     Point64(21887, 10420),
+     Point64(21726, 10825),
+     Point64(21662, 10845),
+     Point64(21617, 10890)
+  };
 
-  // check that the first point of interest is not inside a **subject**
-  for (const auto& path : subject)
+  // confirm that each 'points_of_interest_outside' is outside every subject,
+  for (const auto& poi_outside : points_of_interest_outside)
   {
-    const auto result = PointInPolygon(point_of_interest_1, path);
-    EXPECT_EQ(result, PointInPolygonResult::IsOutside);
+    int outside_subject_count = 0;
+    for (const auto& path : subject)
+      if (PointInPolygon(poi_outside, path) != PointInPolygonResult::IsOutside)
+        ++outside_subject_count;
+    EXPECT_EQ(outside_subject_count, 0);
   }
 
-  // check that the second point of interest is inside only one **subject**
-  int poi2_counter = 0;
-  for (const auto& path : subject)
+  const std::vector<Point64> points_of_interest_inside = {
+     Point64(21887, 10430),
+     Point64(21843, 10520),
+     Point64(21810, 10686),
+     Point64(21900, 10461)
+  };
+
+  // confirm that each 'points_of_interest_inside' is inside a subject,
+  // and inside only one subject (to exclude possible subject holes)
+  for (const auto& poi_inside : points_of_interest_inside)
   {
-    if (PointInPolygon(point_of_interest_2, path) == PointInPolygonResult::IsInside)
-      ++poi2_counter;
+    int inside_subject_count = 0;
+    for (const auto& path : subject)
+    {
+      if (PointInPolygon(poi_inside, path) != PointInPolygonResult::IsOutside)
+        ++inside_subject_count;
+    }
+    EXPECT_EQ(inside_subject_count, 1);
   }
-  EXPECT_EQ(poi2_counter, 1);
 
-
-  PolyTree64 solution;
+  PolyTree64 solution_tree;
   Paths64 solution_open;
   Clipper64 c;
   c.AddSubject(subject);
   c.AddOpenSubject(subject_open);
   c.AddClip(clip);
-  c.Execute(ct, FillRule::Negative, solution, solution_open);
+  c.Execute(ct, FillRule::Negative, solution_tree, solution_open);
 
-  const auto solution_paths = PolyTreeToPaths(solution);
+  const auto solution_paths = PolyTreeToPaths(solution_tree);
 
   ASSERT_FALSE(solution_paths.empty());
 
-  const auto subject_area = Area(subject, true);
-  const double polytree_area = GetPolytreeArea(solution);
-  const auto solution_paths_area = Area(solution_paths);
+  const double subject_area         = Area(subject, true);
+  const double solution_tree_area   = GetPolytreeArea(solution_tree);
+  const double solution_paths_area  = Area(solution_paths);
 
-  const bool polytree_contains_poi_1 =
-    PolytreeContainsPoint(solution, point_of_interest_1);
-
-  const bool polytree_contains_poi_2 =
-    PolytreeContainsPoint(solution, point_of_interest_2);
-
-  // the code below tests:
-  // 1. the total area of the solution should slightly smaller than the total area of the subject paths, and
-  // 2. the area of the paths returned from PolyTreeToPaths matches the Polytree's area
-  // 3. the first "point of interest" should **not** be inside the polytree
-  // 4. check that all child polygons are inside their parents
-  // 5. the second "point of interest" should be inside the polytree
-
-  // 1. check subject vs solution areas
+  // 1a. check solution_paths_area  is smaller than subject_area
   EXPECT_LT(solution_paths_area, subject_area);
-  EXPECT_GT(solution_paths_area, (subject_area * 0.95)); //ie no more than 5% smaller
+  // 1b. but not too much smaller
+  EXPECT_GT(solution_paths_area, (subject_area * 0.95)); 
 
-  // 2. check area from PolyTreeToPaths function matches the polytree's area
-  EXPECT_NEAR(polytree_area, solution_paths_area, 0.0001);
+  // 2. check solution_tree's area matches solution_paths' area
+  EXPECT_NEAR(solution_tree_area, solution_paths_area, 0.0001);
 
-  // 3. the first point of interest is inside a hole and hence 
-  // should not be inside the solution's filling region
-  EXPECT_FALSE(polytree_contains_poi_1);
+  // 3. check that all children are inside their parents
+  EXPECT_TRUE(CheckPolytreeFullyContainsChildren(solution_tree));
 
-  // 4. check that all children are inside their parents
-  EXPECT_TRUE(PolytreeFullyContainsChildren(solution));
+  // 4. confirm all 'point_of_interest_outside' are outside polytree
+  for (const auto& poi_outside : points_of_interest_outside)
+    EXPECT_FALSE(PolytreeContainsPoint(solution_tree, poi_outside));
 
-  // 5. check that the second point of interest is inside the solution
-  EXPECT_TRUE(polytree_contains_poi_2);
+  // 5. confirm all 'point_of_interest_inside' are inside polytree
+  for (const auto& poi_inside : points_of_interest_inside)
+    EXPECT_TRUE(PolytreeContainsPoint(solution_tree, poi_inside));
+
 }

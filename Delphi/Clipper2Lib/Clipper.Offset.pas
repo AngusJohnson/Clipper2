@@ -21,11 +21,11 @@ type
 
   TJoinType = (jtSquare, jtRound, jtMiter);
   TEndType = (etPolygon, etJoined, etButt, etSquare, etRound);
-  //etButt   : offsets both sides of a path, with square blunt ends
-  //etSquare : offsets both sides of a path, with square extended ends
-  //etRound  : offsets both sides of a path, with round extended ends
-  //etJoined : offsets both sides of a path, with joined ends
-  //etPolygon: offsets only one side of a closed path
+  // etButt   : offsets both sides of a path, with square blunt ends
+  // etSquare : offsets both sides of a path, with square extended ends
+  // etRound  : offsets both sides of a path, with round extended ends
+  // etJoined : offsets both sides of a path, with joined ends
+  // etPolygon: offsets only one side of a closed path
 
   TPathGroup = class
 	  paths     : TPaths64;
@@ -80,15 +80,15 @@ type
     procedure Clear;
     function Execute(delta: Double): TPaths64;
 
-    //MiterLimit: needed for mitered offsets (see offset_triginometry3.svg)
+    // MiterLimit: needed for mitered offsets (see offset_triginometry3.svg)
     property MiterLimit: Double read fMiterLimit write fMiterLimit;
-    //ArcTolerance: needed for rounded offsets (See offset_triginometry2.svg)
+    // ArcTolerance: needed for rounded offsets (See offset_triginometry2.svg)
     property ArcTolerance: Double read fArcTolerance write fArcTolerance;
-    //MergeGroups: A path group is one or more paths added via the AddPath or
-    //AddPaths methods. By default these path groups will be offset
-    //independently of other groups and this may cause overlaps (intersections).
-    //However, when MergeGroups is enabled, any overlapping offsets will be
-    //merged (via a clipping union operation) to remove overlaps.
+    // MergeGroups: A path group is one or more paths added via the AddPath or
+    // AddPaths methods. By default these path groups will be offset
+    // independently of other groups and this may cause overlaps (intersections).
+    // However, when MergeGroups is enabled, any overlapping offsets will be
+    // merged (via a clipping union operation) to remove overlaps.
     property MergeGroups: Boolean read fMergeGroups write fMergeGroups;
     property PreserveCollinear: Boolean
       read fPreserveCollinear write fPreserveCollinear;
@@ -251,11 +251,11 @@ begin
   IsClosedPaths := (pathgroup.endType in [etPolygon, etJoined]);
   if IsClosedPaths then
   begin
-    //the lowermost polygon must be an outer polygon. So we can use that as the
-    //designated orientation for outer polygons (needed for tidy-up clipping)
+    // the lowermost polygon must be an outer polygon. So we can use that as the
+    // designated orientation for outer polygons (needed for tidy-up clipping)
     lowestIdx := GetLowestPolygonIdx(pathgroup.paths);
     if lowestIdx < 0 then Exit;
-    //nb: don't use the default orientation here ...
+    // nb: don't use the default orientation here ...
     area := Clipper.Core.Area(pathgroup.paths[lowestIdx], false);
     if area = 0 then Exit;
     pathgroup.reversed := (area < 0);
@@ -269,12 +269,12 @@ begin
 
   if fArcTolerance > 0 then
     arcTol := fArcTolerance else
-    arcTol := Log10(2 + absDelta) * 0.25; //empirically derived
+    arcTol := Log10(2 + absDelta) * 0.25; // empirically derived
 
-  //calculate a sensible number of steps (for 360 deg for the given offset
+  // calculate a sensible number of steps (for 360 deg for the given offset
   if (pathgroup.joinType = jtRound) or (pathgroup.endType = etRound) then
   begin
-    //get steps per 180 degrees (see offset_triginometry2.svg)
+    // get steps per 180 degrees (see offset_triginometry2.svg)
     steps := PI / ArcCos(1 - arcTol / absDelta);
     fStepsPerRad := steps  * InvTwoPi;
   end;
@@ -335,11 +335,11 @@ begin
 
   if not fMergeGroups then
   begin
-    //clean up self-intersections ...
+    // clean up self-intersections ...
     with TClipper64.Create(false) do
     try
       PreserveCollinear := fPreserveCollinear;
-      //the solution should retain the orientation of the input
+      // the solution should retain the orientation of the input
       ReverseSolution := fReverseSolution <> pathGroup.reversed;
       AddSubject(fOutPaths);
       if pathGroup.reversed then
@@ -349,7 +349,7 @@ begin
       free;
     end;
   end;
-  //finally copy the working 'outPaths' to the solution
+  // finally copy the working 'outPaths' to the solution
   AppendPaths(fSolution, fOutPaths);
 end;
 //------------------------------------------------------------------------------
@@ -419,14 +419,14 @@ begin
   fNorms[highI].X := -fNorms[k].X;
   fNorms[highI].Y := -fNorms[k].Y;
 
- //cap the end first ...
+ // cap the end first ...
   case endType of
     etButt: DoButtEnd(highI);
     etRound: DoRound(highI, k, PI);
     else DoSquare(highI, k);
   end;
 
-  //reverse normals ...
+  // reverse normals ...
   for i := highI -1 downto 1 do
   begin
     fNorms[i].X := -fNorms[i-1].X;
@@ -438,7 +438,7 @@ begin
   for i := highI -1 downto 1 do
     OffsetPoint(i, k);
 
-  //now cap the start ...
+  // now cap the start ...
   case endType of
     etButt: DoButtStart;
     etRound: DoRound(0, 1, PI);
@@ -459,7 +459,7 @@ begin
   fMinLenSqrd := 1;
   if abs(delta) < Tolerance then
   begin
-    //if delta ~= 0, just copy paths to Result
+    // if delta ~= 0, just copy paths to Result
     for i := 0 to fInGroups.Count -1 do
       with TPathGroup(fInGroups[i]) do
           AppendPaths(fSolution, paths);
@@ -467,12 +467,12 @@ begin
     Exit;
   end;
 
-  //Miter Limit: see offset_triginometry3.svg
+  // Miter Limit: see offset_triginometry3.svg
   if fMiterLimit > 1 then
     fTmpLimit := 2 / Sqr(fMiterLimit) else
     fTmpLimit := 2.0;
 
-  //nb: delta will depend on whether paths are polygons or open
+  // nb: delta will depend on whether paths are polygons or open
   for i := 0 to fInGroups.Count -1 do
   begin
     group := TPathGroup(fInGroups[i]);
@@ -481,11 +481,11 @@ begin
 
   if fMergeGroups and (fInGroups.Count > 0) then
   begin
-    //clean up self-intersections ...
+    // clean up self-intersections ...
     with TClipper64.Create(false) do
     try
       PreserveCollinear := fPreserveCollinear;
-      //the solution should retain the orientation of the input
+      // the solution should retain the orientation of the input
 
       ReverseSolution :=
         fReverseSolution <> TPathGroup(fInGroups[0]).reversed;
@@ -525,9 +525,9 @@ end;
 
 procedure TClipperOffset.DoSquare(j, k: Integer);
 begin
-  //Two vertices, one using the prior offset's (k) normal one the current (j).
-  //Do a 'normal' offset (by delta) and then another by 'de-normaling' the
-  //normal hence parallel to the direction of the respective edges.
+  // Two vertices, one using the prior offset's (k) normal one the current (j).
+  // Do a 'normal' offset (by delta) and then another by 'de-normaling' the
+  // normal hence parallel to the direction of the respective edges.
   if (fDelta > 0) then
   begin
     AddPoint(
@@ -553,7 +553,7 @@ procedure TClipperOffset.DoMiter(j, k: Integer; cosAplus1: Double);
 var
   q: Double;
 begin
-  //see offset_triginometry4.svg
+  // see offset_triginometry4.svg
   q := fDelta / cosAplus1;
   AddPoint(fInPath[j].X + (fNorms[k].X + fNorms[j].X)*q,
     fInPath[j].Y + (fNorms[k].Y + fNorms[j].Y)*q);
@@ -567,7 +567,7 @@ var
   pt: TPoint64;
   pt2: TPointD;
 begin
-	//even though angle may be negative this is a convex join
+	// even though angle may be negative this is a convex join
   pt := fInPath[j];
   pt2 := PointD(fNorms[k].X * fDelta, fNorms[k].Y * fDelta);
   AddPoint(pt.X + pt2.X, pt.Y + pt2.Y);
@@ -590,17 +590,17 @@ var
   sinA, cosA: Double;
   p1, p2: TPoint64;
 begin
-  //A: angle between adjoining edges (on left side WRT winding direction).
-  //A == 0 deg (or A == 360 deg): collinear edges heading in same direction
-  //A == 180 deg: collinear edges heading in opposite directions (ie a 'spike')
-  //sin(A) < 0: convex on left.
-  //cos(A) > 0: angles on both left and right sides > 90 degrees
+  // A: angle between adjoining edges (on left side WRT winding direction).
+  // A == 0 deg (or A == 360 deg): collinear edges heading in same direction
+  // A == 180 deg: collinear edges heading in opposite directions (ie a 'spike')
+  // sin(A) < 0: convex on left.
+  // cos(A) > 0: angles on both left and right sides > 90 degrees
   sinA := (fNorms[k].X * fNorms[j].Y - fNorms[j].X * fNorms[k].Y);
 
   if (sinA > 1.0) then sinA := 1.0
   else if (sinA < -1.0) then sinA := -1.0;
 
-  if sinA * fDelta < 0 then //ie a concave offset
+  if sinA * fDelta < 0 then // ie a concave offset
   begin
     p1 := Point64(
       fInPath[j].X + fNorms[k].X * fDelta,
@@ -611,22 +611,22 @@ begin
     AddPoint(p1);
     if not PointsEqual(p1, p2) then
     begin
-      AddPoint(fInPath[j]); //this aids with clipping removal later
+      AddPoint(fInPath[j]); // this aids with clipping removal later
       AddPoint(p2);
     end;
   end else
   begin
     cosA := DotProduct(fNorms[j], fNorms[k]);
-    //convex offsets here ...
+    // convex offsets here ...
     case fJoinType of
       jtMiter:
-        //see offset_triginometry3.svg
+        // see offset_triginometry3.svg
         if (1 + cosA < fTmpLimit) then
           DoSquare(j, k) else
           DoMiter(j, k, 1 + cosA);
       jtSquare:
         begin
-          //angles >= 90 deg. don't need squaring
+          // angles >= 90 deg. don't need squaring
           if cosA >= 0 then
             DoMiter(j, k, 1 + cosA) else
             DoSquare(j, k);

@@ -10,6 +10,7 @@ New features include:
 </ul> 
 <br>
 
+<!--
 There are also changes in how the library is used, including:
 1. The <code>cInt</code> type used for path coordinates has been replaced with native 64bit integer types (<code>long</code>, <code>Int64</code> or <code>int64_t</code>).
 2. The <code>IntPoint</code> and <code>IntRect</code> types have also been renamed <code>Point64</code> and <code>Rect64</code> respectively. There's support for floating point coordinates, with the new PointD and RectD classes indicating *double* float values.
@@ -20,7 +21,11 @@ There are also changes in how the library is used, including:
 7. While the Clipper class remains integral to all clipping routines, most clipping can now be performed using simple functions that hide Clipper class construction and use.
 8. The <code>Polytree</code> class now only contains closed paths (ie polygons) since open paths can't contain polygons and open paths in solutions are now returned via Execute's OpenSolutions parameter.
 9. The scale of the <code>delta</code> parameter has changed when offestting *open* paths. This value now represents the <i>total</i> offset width so it's now equivalent to <code>line width</code>.
- 
+-->
+
+## Partially completed HTML help:
+
+http://www.angusj.com/clipper2/Docs/Overview.htm
 
 ## Additional notes:
 

@@ -335,7 +335,7 @@ void ClipperOffset::DoGroupOffset(PathGroup& group, double delta)
 	if (!merge_groups_)
 	{
 		//clean up self-intersections ...
-		Clipper c(false);
+		Clipper64 c(false);
 		c.PreserveCollinear = false;
 		//the solution should retain the orientation of the input
 		c.ReverseSolution = reverse_solution_ != group.is_reversed_;
@@ -378,7 +378,7 @@ Paths64 ClipperOffset::Execute(double delta)
 	if (merge_groups_ && groups_.size() > 0)
 	{
 		//clean up self-intersections ...
-		Clipper c(false);
+		Clipper64 c(false);
 		c.PreserveCollinear = false;
 		//the solution should retain the orientation of the input
 		c.ReverseSolution = reverse_solution_ != groups_[0].is_reversed_;

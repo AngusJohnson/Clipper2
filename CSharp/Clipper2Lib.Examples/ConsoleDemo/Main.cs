@@ -1,7 +1,7 @@
 ﻿/*******************************************************************************
 *                                                                              *
 * Author    :  Angus Johnson                                                   *
-* Date      :  3 July 2022                                                     *
+* Date      :  17 July 2022                                                    *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * License   :  http://www.boost.org/LICENSE_1_0.txt                            *
@@ -21,42 +21,43 @@ namespace ClipperDemo1
 
   public class Application
   {
-
     public static void Main()
     {
-      Paths64 subj = new Paths64();
+
+      Random rand = new Random();
+      Paths64 subject = new Paths64();
       Paths64 clip = new Paths64();
       FillRule fillrule = FillRule.NonZero;
 
-      subj.Add(Clipper.MakePath(new int[] { 100, 50, 10, 79, 65, 2, 65, 98, 10, 21 }));
+      subject.Add(Clipper.MakePath(new int[] { 100, 50, 10, 79, 65, 2, 65, 98, 10, 21 }));
       clip.Add(Clipper.MakePath(new int[] { 98, 63, 4, 68, 77, 8, 52, 100, 19, 12 }));
-      Paths64 solution = Clipper.Intersect(subj, clip, fillrule);
+      Paths64 solution = Clipper.Intersect(subject, clip, fillrule);
 
       SimpleSvgWriter svg = new SimpleSvgWriter();
-      SvgUtils.AddSubject(svg, subj, true);
+      SvgUtils.AddSubject(svg, subject, true);
       SvgUtils.AddClip(svg, clip);
-      SvgUtils.SaveToFile(svg, "..\\..\\..\\clipperA.svg", fillrule, 800, 600, 20);
+      SvgUtils.SaveToFile(svg, "..\\..\\..\\clipperA.svg", fillrule, 400, 300, 20);
       ClipperFileIO.OpenFileWithDefaultApp("..\\..\\..\\clipperA.svg");
 
       svg.ClearAll();
-      SvgUtils.AddSubject(svg, subj, true);
+      SvgUtils.AddSubject(svg, subject, true);
       SvgUtils.AddClip(svg, clip);
       SvgUtils.AddSolution(svg, solution, false, true);
-      SvgUtils.SaveToFile(svg, "..\\..\\..\\clipperB.svg", fillrule, 800, 600, 20);
+      SvgUtils.SaveToFile(svg, "..\\..\\..\\clipperB.svg", fillrule, 400, 300, 20);
       ClipperFileIO.OpenFileWithDefaultApp("..\\..\\..\\clipperB.svg");
 
-      subj = LoadPathsFromResource("ConsoleDemo.subj.bin");
+      subject = LoadPathsFromResource("ConsoleDemo.subj.bin");
       clip = LoadPathsFromResource("ConsoleDemo.clip.bin");
-      solution = Clipper.Intersect(subj, clip, fillrule);
+      solution = Clipper.Intersect(subject, clip, fillrule);
 
       svg.ClearAll();
-      SvgUtils.AddSubject(svg, subj, true);
+      SvgUtils.AddSubject(svg, subject, true);
       SvgUtils.AddClip(svg, clip);
       SvgUtils.SaveToFile(svg, "..\\..\\..\\clipperC.svg", fillrule, 800, 600, 20);
       ClipperFileIO.OpenFileWithDefaultApp("..\\..\\..\\clipperC.svg");
 
       svg.ClearAll();
-      SvgUtils.AddSubject(svg, subj, true);
+      SvgUtils.AddSubject(svg, subject, true);
       SvgUtils.AddClip(svg, clip);
       SvgUtils.AddSolution(svg, solution, false, true);
       SvgUtils.SaveToFile(svg, "..\\..\\..\\clipperD.svg", fillrule, 800, 600, 20);

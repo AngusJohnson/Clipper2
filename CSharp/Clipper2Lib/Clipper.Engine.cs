@@ -1410,10 +1410,6 @@ namespace Clipper2Lib
       if (ae1.outrec == ae2.outrec)
       {
         OutRec outrec = ae1.outrec!;
-        outrec.owner = GetRealOutRec(outrec.owner);
-        while (outrec.owner != null && outrec.owner.frontEdge == null)
-          outrec.owner = GetRealOutRec(outrec.owner.owner);
-
         outrec.pts = result;
         UncoupleOutRec(ae1);
         if (!IsOpen(ae1))
@@ -1468,14 +1464,15 @@ namespace Clipper2Lib
           ae1.outrec.backEdge!.outrec = ae1.outrec;
       }
 
-      ae1.outrec.owner = GetRealOutRec(ae1.outrec.owner);
-      ae2.outrec.owner = GetRealOutRec(ae2.outrec.owner);
-
-      if (ae2.outrec.owner == null)
-        ae1.outrec.owner = null;
-      else if (ae1.outrec.owner != null &&
-        ae2.outrec.owner.idx < ae1.outrec.owner.idx) 
-          ae1.outrec.owner = ae2.outrec.owner;
+      //an owner must have a lower idx otherwise
+      //it won't be a valid owner
+      if (ae2.outrec.owner != null &&
+        ae2.outrec.owner.idx < ae1.outrec.idx)
+      {
+        if (ae1.outrec.owner == null ||
+          ae2.outrec.owner.idx < ae1.outrec.owner.idx)
+            ae1.outrec.owner = ae2.outrec.owner;
+      }
 
       //after joining, the ae2.OutRec must contains no vertices ...
       ae2.outrec.frontEdge = null;
@@ -3491,20 +3488,34 @@ namespace Clipper2Lib
       return result == PointInPolygonResult.IsInside;
     }
 
-    private bool GetSplitOwner(OutRec outrec, OutRec owner)
+    private bool DeepCheckOwner(OutRec outrec, OutRec owner)
 	  {
-      foreach (OutRec split in owner.splits!)
+      //while looking for the correct owner, check the owner's splits
+      //**before** the owner itself because splits can occur internally, and
+      //checking the owner first would miss the inner split's true ownership
+      if (owner.splits != null)
+        foreach (OutRec asplit in owner.splits!)
+        {
+          OutRec? split = GetRealOutRec(asplit);
+          if (split == null || split == outrec) 
+            continue;
+          else if (split.pts != null && DeepCheckOwner(outrec, split))
+            return true;
+          else if (Path1InsidePath2(outrec.pts!, split.pts!))
+			    {
+				    outrec.owner = split;
+				    return true;
+			    }
+		    }
+
+      if (owner != outrec.owner) return false;
+      while (outrec.owner != null)
       {
-        OutRec? realOwner = GetRealOutRec(split);
-			  if (realOwner == null) continue;
-			  else if (Path1InsidePath2(outrec.pts!, realOwner.pts!))
-			  {
-				  outrec.owner = realOwner;
-				  return true;
-			  }
-			  else if (realOwner.splits != null &&
-				  GetSplitOwner(outrec, realOwner)) return true;
-		  }
+        if (Path1InsidePath2(outrec.pts!, outrec.owner.pts!))
+          return true;
+        else
+          outrec.owner = GetRealOutRec(outrec.owner.owner);
+      }
       return false;
     }
 
@@ -3527,23 +3538,22 @@ namespace Clipper2Lib
         OutRec outrec = _outrecList[i];
         if (outrec.pts == null) continue;
 
-        GetRealOwner(outrec);
+        outrec.owner = GetRealOutRec(outrec.owner);
         if (outrec.owner != null)
-        {
-          if (outrec.owner.splits != null)
-            GetSplitOwner(outrec, outrec.owner);
+          DeepCheckOwner(outrec, outrec.owner);
 
-          //swap order if outer/owner paths are preceeded by their inner paths
-          if (outrec.owner.idx > outrec.idx)
-          {
-            int j = outrec.owner.idx;
-            outrec.owner.idx = i;
-            outrec.idx = j;
-            _outrecList[i] = _outrecList[j];
-            _outrecList[j] = outrec;
-            outrec = _outrecList[i];
-            GetRealOwner(outrec);
-          }
+        //swap order if outer/owner paths are preceeded by their inner paths
+        if (outrec.owner != null && outrec.owner.idx > outrec.idx)
+        {
+          int j = outrec.owner.idx;
+          outrec.owner.idx = i;
+          outrec.idx = j;
+          _outrecList[i] = _outrecList[j];
+          _outrecList[j] = outrec;
+          outrec = _outrecList[i];
+          outrec.owner = GetRealOutRec(outrec.owner);
+          if (outrec.owner != null)
+            DeepCheckOwner(outrec, outrec.owner);
         }
 
         if (outrec.isOpen)
@@ -3649,7 +3659,7 @@ namespace Clipper2Lib
       return Execute(clipType, fillRule, solutionClosed, new Paths64());
     }
 
-    public bool Execute(ClipType clipType, FillRule fillRule, PolyTree polytree, Paths64 openPaths)
+    public bool Execute(ClipType clipType, FillRule fillRule, PolyTree64 polytree, Paths64 openPaths)
     {
       polytree.Clear();
       openPaths.Clear();
@@ -3668,7 +3678,7 @@ namespace Clipper2Lib
       return _succeeded;
     }
 
-    public bool Execute(ClipType clipType, FillRule fillRule, PolyTree polytree)
+    public bool Execute(ClipType clipType, FillRule fillRule, PolyTree64 polytree)
     {
       return Execute(clipType, fillRule, polytree, new Paths64());
     }
@@ -3879,17 +3889,26 @@ namespace Clipper2Lib
     }
   } // PolyPathBase class
 
-  public class PolyPath : PolyPathBase
+  public class PolyPath64 : PolyPathBase
   {
     public Path64? Polygon { get; private set; } //polytree root's polygon == null
 
-    public PolyPath(PolyPathBase? parent = null) : base(parent) {}
+    public PolyPath64(PolyPathBase? parent = null) : base(parent) {}
+
     internal override PolyPathBase AddChild(Path64 p)
     {
-      PolyPathBase newChild = new PolyPath(this);
-      (newChild as PolyPath)!.Polygon = p;
+      PolyPathBase newChild = new PolyPath64(this);
+      (newChild as PolyPath64)!.Polygon = p;
       _childs.Add(newChild);
       return newChild;
+    }
+
+    public double Area()
+    {
+      double result = Polygon == null ? 0 : Clipper.Area(Polygon);
+      foreach (PolyPath64 child in _childs)
+			result += child.Area();
+      return result;
     }
   }
 
@@ -3908,9 +3927,17 @@ namespace Clipper2Lib
       _childs.Add(newChild);
       return newChild;
     }
+
+    public double Area()
+    {
+      double result = Polygon == null ? 0 : Clipper.Area(Polygon);
+      foreach (PolyPath64 child in _childs)
+        result += child.Area();
+      return result;
+    }
   }
 
-  public class PolyTree : PolyPath {}
+  public class PolyTree64 : PolyPath64 {}
 
   public class PolyTreeD : PolyPathD
   {

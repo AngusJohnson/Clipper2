@@ -1,7 +1,7 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
 * Version   :  Clipper2 - beta                                                 *
-* Date      :  14 July 2022                                                    *
+* Date      :  17 July 2022                                                    *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  This is the main polygon clipping module                        *
@@ -1346,15 +1346,10 @@ namespace Clipper2Lib {
 		OutPt* result = AddOutPt(e1, pt);
 		if (e1.outrec == e2.outrec)
 		{
-			OutRec& outrec = *e1.outrec;
-			outrec.owner = GetRealOutRec(outrec.owner);
-			while (outrec.owner && !outrec.owner->front_edge) 
-				outrec.owner = GetRealOutRec(outrec.owner->owner);
-
+			OutRec& outrec = *e1.outrec;		
 			outrec.pts = result;
 			UncoupleOutRec(e1);
-			if (!IsOpen(e1))
-				CleanCollinear(&outrec);
+			if (!IsOpen(e1)) CleanCollinear(&outrec);
 			result = outrec.pts;
 		}
 		//and to preserve the winding orientation of outrec ...
@@ -1404,13 +1399,13 @@ namespace Clipper2Lib {
 				e1.outrec->back_edge->outrec = e1.outrec;
 		}
 
-		e1.outrec->owner = GetRealOutRec(e1.outrec->owner);
-		e2.outrec->owner = GetRealOutRec(e2.outrec->owner);
-		if (!e2.outrec->owner)
-			e1.outrec->owner = nullptr;
-		else if (e1.outrec->owner &&
-			e2.outrec->owner->idx < e1.outrec->owner->idx) 
-			e1.outrec->owner = e2.outrec->owner;
+		//an owner must have a lower idx otherwise
+		//it can't be a valid owner
+		if (e2.outrec->owner && e2.outrec->owner->idx < e1.outrec->idx)
+		{
+			if (!e1.outrec->owner || e2.outrec->owner->idx < e1.outrec->owner->idx)
+				e1.outrec->owner = e2.outrec->owner;
+		}
 
 		//after joining, the e2.OutRec must contains no vertices ...
 		e2.outrec->front_edge = nullptr;
@@ -3442,19 +3437,34 @@ namespace Clipper2Lib {
 		return result == PointInPolygonResult::IsInside;
 	}
 
-	bool GetSplitOwner(OutRec& outrec, const OutRec* owner)
+	bool DeepCheckOwner(OutRec* outrec, OutRec* owner)
 	{
-		for (OutRec* realOwner : *owner->splits)
+		if (owner && owner->splits)
 		{
-			realOwner = GetRealOutRec(realOwner);
-			if (!realOwner) continue;
-			else if (Path1InsidePath2(outrec.pts, realOwner->pts))
+			//check the owner's splits before the owner as
+			//outrec may be owned by an 'internal' split 
+			//(just as owner's splits are 'owned' by owner)
+			for (OutRec* split : *owner->splits)
 			{
-				outrec.owner = realOwner;
-				return true;
+				split = GetRealOutRec(split); //may not be necessary
+				if (!split || split == outrec)
+					continue;
+				else if (split->splits && DeepCheckOwner(outrec, split))
+					return true;
+				else if (Path1InsidePath2(outrec->pts, split->pts))
+				{
+					outrec->owner = split;
+					return true;
+				}
 			}
-			else if (realOwner->splits &&
-				GetSplitOwner(outrec, realOwner)) return true;
+		}
+
+		if (owner != outrec->owner) return false;
+		while (outrec->owner)
+		{
+			if (Path1InsidePath2(outrec->pts, outrec->owner->pts))
+				return true;
+			outrec->owner = GetRealOutRec(outrec->owner->owner);
 		}
 		return false;
 	}
@@ -3477,12 +3487,12 @@ namespace Clipper2Lib {
 		{
 			if (!outrec || !outrec->pts) continue;
 
-			GetRealOwner(outrec);
+			outrec->owner = GetRealOutRec(outrec->owner);
+			if (outrec->owner)
+				DeepCheckOwner(outrec, outrec->owner);
+
 			if (outrec->owner)
 			{
-				if (outrec->owner->splits)
-					GetSplitOwner(*outrec, outrec->owner);
-
 				//swap the order when a child preceeds its owner
 				//(because owners must preceed children in polytrees)
 				if (outrec->idx < outrec->owner->idx)
@@ -3494,7 +3504,9 @@ namespace Clipper2Lib {
 					outrec->idx = tmp->idx;
 					tmp->idx = tmp_idx;
 					outrec = tmp;
-					GetRealOwner(outrec);
+					outrec->owner = GetRealOutRec(outrec->owner);
+					if (outrec->owner)
+						DeepCheckOwner(outrec, outrec->owner);
 				}
 			}
 		

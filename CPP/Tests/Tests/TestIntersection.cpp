@@ -5,7 +5,7 @@ using namespace Clipper2Lib;
 
 TEST(Clipper2Tests, TestIntersectionUsingPolyTree) 
 {
-    Clipper clipper;
+    Clipper64 clipper;
 
     Paths64 subject; 
     subject.push_back( MakePath("0,0  0,5  5,5  5,0") );

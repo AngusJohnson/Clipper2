@@ -17,9 +17,9 @@ interface
 uses
   Math, SysUtils, Clipper.Core, Clipper.Engine, Clipper.Offset;
 
-//Redeclare here a number of structures defined in
-//other units so those units won't need to be declared
-//just to use the following functions.
+// Redeclare here a number of structures defined in
+// other units so those units won't need to be declared
+// just to use the following functions.
 type
   TClipper    = Clipper.Engine.TClipper64;
   TClipper64  = Clipper.Engine.TClipper64;
@@ -417,7 +417,7 @@ function PointInPolygon(const pt: TPoint64;
 var
   i, len, val: Integer;
   isAbove: Boolean;
-  d: Double; //used to avoid integer overflow
+  d: Double; // used to avoid integer overflow
   curr, prev, first, stop: PPoint64;
 begin
   result := pipOutside;
@@ -433,7 +433,7 @@ begin
 
   Result := pipOn;
   stop := @polygon[len -1];
-  inc(stop); //stop is just past the last point
+  inc(stop); // stop is just past the last point
 
   curr := first;
   val := 0;
@@ -464,13 +464,13 @@ begin
     end;
 
     if (pt.X < curr.X) and (pt.X < prev.X) then
-      //we're only interested in edges crossing on the left
+      // we're only interested in edges crossing on the left
     else if((pt.X > prev.X) and (pt.X > curr.X)) then
-      val := 1 - val //toggle val
+      val := 1 - val // toggle val
     else
     begin
       d := CrossProduct(prev^, curr^, pt);
-      if d = 0 then Exit; //ie point on path
+      if d = 0 then Exit; // ie point on path
       if (d < 0) = isAbove then val := 1 - val;
     end;
 

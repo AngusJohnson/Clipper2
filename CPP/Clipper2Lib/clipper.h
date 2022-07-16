@@ -233,7 +233,72 @@ namespace Clipper2Lib
     return rec;
   }
 
-  namespace details 
+  template <typename T>
+  inline PointInPolygonResult PointInPolygon(const Point<T>& pt, const Path<T>& polygon)
+  {
+    if (polygon.size() < 3)
+      return PointInPolygonResult::IsOutside;
+
+    int val = 0;
+    typename Path<T>::const_iterator start = polygon.cbegin(), cit = start;
+    typename Path<T>::const_iterator cend = polygon.cend(), pit = cend - 1;
+
+    while (pit->y == pt.y)
+    {
+      if (pit == start) return PointInPolygonResult::IsOutside;
+      --pit;
+    }
+    bool is_above = pit->y < pt.y;
+
+    while (cit != cend)
+    {
+      if (is_above)
+      {
+        while (cit != cend && cit->y < pt.y) ++cit;
+        if (cit == cend) break;
+      }
+      else
+      {
+        while (cit != cend && cit->y > pt.y) ++cit;
+        if (cit == cend) break;
+      }
+
+      if (cit == start) pit = cend - 1;
+      else  pit = cit - 1;
+
+      if (cit->y == pt.y)
+      {
+        if (cit->x == pt.x || (cit->y == pit->y &&
+          ((pt.x < pit->x) != (pt.x < pit->x))))
+          return PointInPolygonResult::IsOn;
+        cit++;
+        continue;
+      }
+
+      if (pt.x < cit->x && pt.x < pit->x)
+      {
+        //we're only interested in edges crossing on the left
+      }
+      else if (pt.x > pit->x && pt.x > cit->x)
+        val = 1 - val; //toggle val
+      else
+      {
+        double d = CrossProduct(*pit, *cit, pt);
+        if (d == 0)
+          return PointInPolygonResult::IsOn;
+        else if ((d < 0) == is_above)
+          val = 1 - val;
+      }
+      is_above = !is_above;
+      cit++;
+    }
+    if (val == 0)
+      return PointInPolygonResult::IsOutside;
+    else
+      return PointInPolygonResult::IsInside;
+  }
+
+  namespace details
   {
 
     template <typename T>
@@ -245,7 +310,21 @@ namespace Clipper2Lib
         AddPolyNodeToPaths(*child, paths);
     }
 
-    inline bool GetInt(std::string::const_iterator& iter, const 
+    inline bool PolyPathFullyContainsChildren(const PolyPath64& pp)
+    {
+      for (auto child : pp.childs())
+      {
+        for (const Point64& pt : child->polygon())
+          if (PointInPolygon(pt, pp.polygon()) == PointInPolygonResult::IsOutside)
+            return false;
+
+        if (child->ChildCount() > 0 && !PolyPathFullyContainsChildren(*child))
+          return false;
+      }
+      return true;
+    }
+
+    inline bool GetInt(std::string::const_iterator& iter, const
       std::string::const_iterator& end_iter, int64_t& val)
     {
       val = 0;
@@ -340,6 +419,14 @@ namespace Clipper2Lib
     Paths<T> result;
     details::AddPolyNodeToPaths(polytree, result);
     return result;
+  }
+
+  inline bool CheckPolytreeFullyContainsChildren(const PolyTree64& polytree)
+  {
+    for (const PolyPath64* child : polytree.childs())
+      if (child->ChildCount() > 0 && !details::PolyPathFullyContainsChildren(*child))
+        return false;
+    return true;
   }
 
   inline Path64 MakePath(const std::string& s, const std::string& skip_chars = "")
@@ -438,71 +525,6 @@ namespace Clipper2Lib
     Path64 p = ScalePath<int64_t, double>(path, scale);
     p = TrimCollinear(p, is_open_path);
     return ScalePath<double, int64_t>(p, 1/scale);
-  }
-
-  template <typename T>
-  inline PointInPolygonResult PointInPolygon(const Point<T>& pt, const Path<T>& polygon)
-  {
-    if (polygon.size() < 3) 
-      return PointInPolygonResult::IsOutside;
-
-    int val = 0;
-    typename Path<T>::const_iterator start = polygon.cbegin(), cit = start;
-    typename Path<T>::const_iterator cend = polygon.cend(), pit = cend -1;
-
-    while (pit->y == pt.y)
-    {
-      if (pit == start) return PointInPolygonResult::IsOutside;
-      --pit;
-    }
-    bool is_above = pit->y < pt.y;
-
-    while (cit != cend)
-    {
-      if (is_above)
-      {
-        while (cit != cend && cit->y < pt.y) ++cit;
-        if (cit == cend) break;
-      }
-      else
-      {
-        while (cit != cend && cit->y > pt.y) ++cit;
-        if (cit == cend) break;
-      }
-
-      if (cit == start) pit = cend - 1;
-      else  pit = cit - 1;
-
-      if (cit->y == pt.y)
-      {
-        if (cit->x == pt.x || (cit->y == pit->y &&
-          ((pt.x < pit->x) != (pt.x < pit->x))))
-          return PointInPolygonResult::IsOn;
-        cit++;
-        continue;
-      }
-      
-      if (pt.x < cit->x && pt.x < pit->x)
-      {
-        //we're only interested in edges crossing on the left
-      }
-      else if (pt.x > pit->x && pt.x > cit->x)
-        val = 1 - val; //toggle val
-      else
-      {
-        double d = CrossProduct(*pit, *cit, pt);
-        if (d == 0)
-          return PointInPolygonResult::IsOn;
-        else if ((d < 0) == is_above) 
-          val  = 1 - val;
-      }      
-      is_above = !is_above;
-      cit++;
-    }
-    if (val == 0)
-      return PointInPolygonResult::IsOutside;
-    else
-      return PointInPolygonResult::IsInside;
   }
 
   template <typename T>

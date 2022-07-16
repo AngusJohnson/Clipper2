@@ -489,19 +489,19 @@ namespace Clipper2Lib
       return result;
     }
 
-    private static void AddPolyNodeToPaths(PolyPath polyPath, Paths64 paths)
+    private static void AddPolyNodeToPaths(PolyPath64 polyPath, Paths64 paths)
     {
       if (polyPath.Polygon!.Count > 0)
         paths.Add(polyPath.Polygon);
       for (int i = 0; i < polyPath.ChildCount; i++)
-        AddPolyNodeToPaths((PolyPath) polyPath._childs[i], paths);
+        AddPolyNodeToPaths((PolyPath64) polyPath._childs[i], paths);
     }
 
-    public static Paths64 PolyTreeToPaths(PolyTree polyTree)
+    public static Paths64 PolyTreeToPaths(PolyTree64 polyTree)
     {
       Paths64 result = new Paths64();
       for (int i = 0; i < polyTree.ChildCount; i++)
-        AddPolyNodeToPaths((PolyPath) polyTree._childs[i], result);
+        AddPolyNodeToPaths((PolyPath64) polyTree._childs[i], result);
       return result;
     }
 

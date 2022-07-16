@@ -125,7 +125,7 @@ namespace Clipper2Lib {
   inline void SvgAddSolution(SvgWriter& svg, const Paths64& path, bool show_coords)
   {
     svg.AddPaths(TransformPaths<double, int64_t>(path),
-      false, 0xFF80ff9C, 0xFF003300, 0.8, show_coords);
+      false, 0x9980ff9C, 0xFF003300, 0.8, show_coords);
   }
 
 
