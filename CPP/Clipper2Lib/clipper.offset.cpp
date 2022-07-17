@@ -166,7 +166,7 @@ void ClipperOffset::OffsetPoint(PathGroup& group, Path64& path, size_t j, size_t
 		group.path_.push_back(p1);
 		if (p1 != p2)
 		{
-			group.path_.push_back(path[j]); //this aids with clipping removal later
+			group.path_.push_back(path[j]); // this aids with clipping removal later
 			group.path_.push_back(p2);
 		}
 	}
@@ -273,7 +273,7 @@ void ClipperOffset::DoGroupOffset(PathGroup& group, double delta)
 		//the lowermost polygon must be an outer polygon. So we can use that as the
 		//designated orientation for outer polygons (needed for tidy-up clipping)
 		Paths64::size_type lowestIdx = GetLowestPolygonIdx(group.paths_in_);
-    //nb: don't use the default orientation here ...
+    // nb: don't use the default orientation here ...
 		double area = Area(group.paths_in_[lowestIdx], false);
 		if (area == 0) return;	
 		group.is_reversed_ = (area < 0);
@@ -287,7 +287,7 @@ void ClipperOffset::DoGroupOffset(PathGroup& group, double delta)
 	join_type_ = group.join_type_;
 
 	double arcTol = (arc_tolerance_ > floating_point_tolerance ? arc_tolerance_
-		: std::log10(2 + absDelta) * default_arc_tolerance); //empirically derived
+		: std::log10(2 + absDelta) * default_arc_tolerance); // empirically derived
 
 //calculate a sensible number of steps (for 360 deg for the given offset
 	if (group.join_type_ == JoinType::Round || group.end_type_ == EndType::Round)
@@ -303,7 +303,7 @@ void ClipperOffset::DoGroupOffset(PathGroup& group, double delta)
 		Path64::size_type cnt = path.size();
 		if (cnt == 0) continue;
 
-		if (cnt == 1) //single point - only valid with open paths
+		if (cnt == 1) // single point - only valid with open paths
 		{
 			group.path_ = Path64();
 			//single vertex so build a circle or square ...
@@ -392,4 +392,4 @@ Paths64 ClipperOffset::Execute(double delta)
 	return solution;
 }
 
-} //namespace
+} // namespace

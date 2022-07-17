@@ -84,7 +84,7 @@ namespace Clipper2Lib
       return result;
     }
 
-  } //namespace internal
+  } // namespace internal
 
   inline Paths64 MinkowskiSum(const Path64& pattern, const Path64& path, bool isClosed)
   {
@@ -114,6 +114,6 @@ namespace Clipper2Lib
     return ScalePaths<double, int64_t>(tmp, 1 / scale);
   }
 
-} //Clipper2Lib namespace
+} // Clipper2Lib namespace
 
 #endif  // CLIPPER_MINKOWSKI_H

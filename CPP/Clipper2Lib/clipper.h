@@ -1,7 +1,7 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
 * Version   :  Clipper2 - beta                                                 *
-* Date      :  12 July 2022                                                    *
+* Date      :  17 July 2022                                                    *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  This module provides a simple interface to the Clipper Library  *
@@ -271,16 +271,16 @@ namespace Clipper2Lib
         if (cit->x == pt.x || (cit->y == pit->y &&
           ((pt.x < pit->x) != (pt.x < pit->x))))
           return PointInPolygonResult::IsOn;
-        cit++;
+        ++cit;
         continue;
       }
 
       if (pt.x < cit->x && pt.x < pit->x)
       {
-        //we're only interested in edges crossing on the left
+        // we're only interested in edges crossing on the left
       }
       else if (pt.x > pit->x && pt.x > cit->x)
-        val = 1 - val; //toggle val
+        val = 1 - val; // toggle val
       else
       {
         double d = CrossProduct(*pit, *cit, pt);
@@ -383,7 +383,7 @@ namespace Clipper2Lib
         if (*iter == ' ') ++iter;
         else if (*iter == ',')
         {
-          if (comma_seen) return; //don't skip 2 commas!
+          if (comma_seen) return; // don't skip 2 commas!
           comma_seen = true;
           ++iter;
         }
@@ -395,13 +395,13 @@ namespace Clipper2Lib
     {
       while (*chrs > 0 && c != *chrs) ++chrs;
       if (!*chrs) return false;
-      *chrs = ' '; //only match once per char
+      *chrs = ' '; // only match once per char
       return true;
     }
 
 
     inline void SkipUserDefinedChars(std::string::const_iterator& iter,
-      const std::string::const_iterator& end_iter, const std::string skip_chars)
+      const std::string::const_iterator& end_iter, const std::string& skip_chars)
     {
       const size_t MAX_CHARS = 16;
       char buff[MAX_CHARS] = {0};
@@ -411,7 +411,7 @@ namespace Clipper2Lib
       return;
     }
 
-  } //end details namespace 
+  } // end details namespace 
 
   template <typename T>
   inline Paths<T> PolyTreeToPaths(const PolyTree<T>& polytree)
@@ -572,7 +572,7 @@ namespace Clipper2Lib
     if (steps <= 2)
       steps = static_cast<int>(PI * sqrt((radiusX + radiusY) / 2));
 
-    //to ensure function returns a positive area
+    // to ensure function returns a positive area
     double si;
     if (orientation_is_reversed)
       si = -std::sin(2 * PI / steps);
@@ -615,7 +615,7 @@ namespace Clipper2Lib
     while (end > begin && path[begin] == path[end]) flags[end--] = false;
     for (typename Path<T>::size_type i = begin + 1; i < end; ++i)
     {
-      //PerpendicDistFromLineSqrd - avoids expensive Sqrt()
+      // PerpendicDistFromLineSqrd - avoids expensive Sqrt()
       double d = PerpendicDistFromLineSqrd(path[i], path[begin], path[end]);
       if (d <= max_d) continue;
       max_d = d;
@@ -654,6 +654,6 @@ namespace Clipper2Lib
     return result;
   }
 
-}  //end Clipper2Lib namespace
+}  // end Clipper2Lib namespace
 
 #endif  // CLIPPER_H

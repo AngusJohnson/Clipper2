@@ -135,11 +135,11 @@ namespace Clipper2Lib
 
       if (MergeGroups && _pathGroups.Count > 0)
       {
-        //clean up self-intersections ...
+        // clean up self-intersections ...
         Clipper64 c = new Clipper64(false)
         {
           PreserveCollinear = PreserveCollinear,
-          //the solution should retain the orientation of the input
+          // the solution should retain the orientation of the input
           ReverseSolution = ReverseSolution != _pathGroups[0]._pathsReversed
         };
         c.AddSubject(solution);
@@ -219,7 +219,7 @@ namespace Clipper2Lib
 
     private void DoRound(PathGroup group, Point64 pt, PointD normal1, PointD normal2, double angle)
     {
-      //even though angle may be negative this is a convex join
+      // even though angle may be negative this is a convex join
       PointD pt2 = new PointD(normal2.x * _delta, normal2.y * _delta);
       int steps = (int) Math.Round(_stepsPerRad * Math.Abs(angle) + 0.501);
       group._outPath.Add(new Point64(pt.X + pt2.x, pt.Y + pt2.y));
@@ -248,11 +248,11 @@ namespace Clipper2Lib
 
     private void OffsetPoint(PathGroup group, Path64 path, int j, ref int k)
     {
-      //A: angle between adjoining edges (on left side WRT winding direction).
-      //A == 0 deg (or A == 360 deg): collinear edges heading in same direction
-      //A == 180 deg: collinear edges heading in opposite directions (i.e. a 'spike')
-      //sin(A) < 0: convex on left.
-      //cos(A) > 0: angles on both left and right sides > 90 degrees
+      // A: angle between adjoining edges (on left side WRT winding direction).
+      // A == 0 deg (or A == 360 deg): collinear edges heading in same direction
+      // A == 180 deg: collinear edges heading in opposite directions (i.e. a 'spike')
+      // sin(A) < 0: convex on left.
+      // cos(A) > 0: angles on both left and right sides > 90 degrees
       double sinA = _normals[k].x * _normals[j].y - _normals[j].x * _normals[k].y;
       if (sinA > 1.0) sinA = 1.0;
       else if (sinA < -1.0) sinA = -1.0;
@@ -268,7 +268,7 @@ namespace Clipper2Lib
         group._outPath.Add(p1);
         if (p1 != p2)
         {
-          group._outPath.Add(path[j]); //this aids with clipping removal later
+          group._outPath.Add(path[j]); // this aids with clipping removal later
           group._outPath.Add(p2);
         }
       }
@@ -339,7 +339,7 @@ namespace Clipper2Lib
           break;
       }
 
-      //reverse normals ...
+      // reverse normals ...
       for (int i = cnt - 2; i > 0; i--)
         _normals[i] = new PointD(-_normals[i - 1].x, -_normals[i - 1].y);
       _normals[0] = new PointD(-_normals[1].x, -_normals[1].y);
@@ -348,7 +348,7 @@ namespace Clipper2Lib
       for (int i = cnt - 2; i > 0; i--)
         OffsetPoint(group, path, i, ref k);
 
-      //now cap the start ...
+      // now cap the start ...
       switch (endType)
       {
         case EndType.Butt:
@@ -382,11 +382,11 @@ namespace Clipper2Lib
 
       if (isClosedPaths)
       {
-        //the lowermost polygon must be an outer polygon. So we can use that as the
-        //designated orientation for outer polygons (needed for tidy-up clipping)
+        // the lowermost polygon must be an outer polygon. So we can use that as the
+        // designated orientation for outer polygons (needed for tidy-up clipping)
         int lowestIdx = GetLowestPolygonIdx(group._inPaths);
         if (lowestIdx < 0) return;
-        //nb: don't use the default orientation here ...
+        // nb: don't use the default orientation here ...
         double area = Clipper.Area(group._inPaths[lowestIdx], false);
         if (area == 0) return;
         group._pathsReversed = (area < 0);
@@ -402,12 +402,12 @@ namespace Clipper2Lib
 
       double arcTol = (ArcTolerance > InternalClipper.floatingPointTolerance
           ? ArcTolerance
-          : Math.Log10(2 + absDelta) * DefaultArcTolerance); //empirically derived
+          : Math.Log10(2 + absDelta) * DefaultArcTolerance); // empirically derived
 
-      //calculate a sensible number of steps (for 360 deg for the given offset
+      // calculate a sensible number of steps (for 360 deg for the given offset
       if (group._joinType == JoinType.Round || group._endType == EndType.Round)
       {
-        //get steps per 180 degrees (see offset_triginometry2.svg)
+        // get steps per 180 degrees (see offset_triginometry2.svg)
         _stepsPerRad = Math.PI / Math.Acos(1 - arcTol / absDelta) / TwoPi;
       }
 
@@ -420,7 +420,7 @@ namespace Clipper2Lib
         if (cnt == 1)
         {
           group._outPath = new Path64();
-          //single vertex so build a circle or square ...
+          // single vertex so build a circle or square ...
           if (group._endType == EndType.Round)
           {
             DoRound(group, path[0], new PointD(1.0, 0.0), new PointD(-1.0, 0.0), TwoPi);
@@ -446,11 +446,11 @@ namespace Clipper2Lib
 
       if (!MergeGroups)
       {
-        //clean up self-intersections
+        // clean up self-intersections
         Clipper64 c = new Clipper64(false)
         {
           PreserveCollinear = PreserveCollinear,
-          //the solution should retain the orientation of the input
+          // the solution should retain the orientation of the input
           ReverseSolution = ReverseSolution != group._pathsReversed
         };
         c.AddSubject(group._outPaths);
@@ -464,4 +464,4 @@ namespace Clipper2Lib
     }
   }
 
-} //namespace
+} // namespace

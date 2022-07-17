@@ -20,7 +20,10 @@ And Clipper2 has just about all the features of Clipper1 that sets Clipper apart
 </ul>
 <br>
 
-There's more detail in the Docs folder above, but proper documentation is still a little way off.
+### Documentation
+
+There's more detail in the <a href="https://github.com/AngusJohnson/Clipper2/tree/main/Docs"><b>Docs</b></a> folder above and in the partially completed online <a href="http://www.angusj.com/clipper2/Docs/Overview.htm"><b>HTML help</b></a>.
+<br><br>
 
 ### Example
 

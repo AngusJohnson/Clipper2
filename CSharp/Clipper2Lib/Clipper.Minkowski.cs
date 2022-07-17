@@ -93,4 +93,4 @@ namespace Clipper2Lib
 
   }
 
-} //namespace
+} // namespace

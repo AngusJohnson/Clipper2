@@ -20,8 +20,8 @@ using System.Runtime.CompilerServices;
 namespace Clipper2Lib
 {
 
-  //PRE-COMPILER CONDITIONAL ...
-  //USINGZ: For user defined Z-coordinates. See Clipper.SetZ
+  // PRE-COMPILER CONDITIONAL ...
+  // USINGZ: For user defined Z-coordinates. See Clipper.SetZ
 
   using Path64 = List<Point64>;
   using Paths64 = List<List<Point64>>;
@@ -135,7 +135,7 @@ namespace Clipper2Lib
     public static double Area(Path64 path, 
       bool OrientationIsReversed = InternalClipper.DEFAULT_ORIENTATION_IS_REVERSED)
     {
-      //https://en.wikipedia.org/wiki/Shoelace_formula
+      // https://en.wikipedia.org/wiki/Shoelace_formula
       double a = 0.0;
       int cnt = path.Count;
       if (cnt < 3) return 0.0;
@@ -256,7 +256,7 @@ namespace Clipper2Lib
       return result;
     }
 
-    //Unlike ScalePath, both ScalePath64 & ScalePathD also involve type conversion
+    // Unlike ScalePath, both ScalePath64 & ScalePathD also involve type conversion
     public static Path64 ScalePath64(PathD path, double scale)
     {
       int cnt = path.Count;
@@ -293,7 +293,7 @@ namespace Clipper2Lib
       return res;
     }
 
-    //The static functions Path64 and PathD convert path types without scaling
+    // The static functions Path64 and PathD convert path types without scaling
     public static Path64 Path64(PathD path)
     {
       Path64 result = new Path64(path.Count);
@@ -548,7 +548,7 @@ namespace Clipper2Lib
       while (end > begin && path[begin] == path[end]) flags[end--] = false;
       for (int i = begin + 1; i < end; ++i)
       {
-        //PerpendicDistFromLineSqrd - avoids expensive Sqrt()
+        // PerpendicDistFromLineSqrd - avoids expensive Sqrt()
         double d = PerpendicDistFromLineSqrd(path[i], path[begin], path[end]);
         if (d <= max_d) continue;
         max_d = d;
@@ -589,7 +589,7 @@ namespace Clipper2Lib
       while (end > begin && path[begin] == path[end]) flags[end--] = false;
       for (int i = begin + 1; i < end; ++i)
       {
-        //PerpendicDistFromLineSqrd - avoids expensive Sqrt()
+        // PerpendicDistFromLineSqrd - avoids expensive Sqrt()
         double d = PerpendicDistFromLineSqrd(path[i], path[begin], path[end]);
         if (d <= max_d) continue;
         max_d = d;
@@ -724,11 +724,11 @@ namespace Clipper2Lib
 
         if (pt.X < curr.X && pt.X < prev.X)
         {
-          //we're only interested in edges crossing on the left
+          // we're only interested in edges crossing on the left
         }
         else if (pt.X > prev.X && pt.X > curr.X)
         {
-          val = 1 - val; //toggle val
+          val = 1 - val; // toggle val
         }
         else
         {
@@ -747,4 +747,4 @@ namespace Clipper2Lib
     }
   }
 
-} //namespace
+} // namespace

@@ -35,8 +35,8 @@ namespace Clipper2Lib
 	//direction is only important when using Clipper's Positive and Negative 
 	//filling rules. (Reversing orientation has no effect on NonZero an EvenOdd 
 	//filling.) The constant below is intended as "set and perhaps not quite 
-  //forget". While this sets the default orientation, the Clipper class
-  //constructor contains a parameter which can override this default setting.
+  // forget". While this sets the default orientation, the Clipper class
+  // constructor contains a parameter which can override this default setting.
 	static bool const DEFAULT_ORIENTATION_IS_REVERSED = false;
 	
 	static double const PI = 3.141592653589793238;
@@ -478,6 +478,6 @@ inline bool IsPositive(const Path<T>& poly,
 	return Area<T>(poly, orientation_is_reversed) >= 0;
 }
 
-}  //namespace
+}  // namespace
 
 #endif  // CLIPPER_CORE_H

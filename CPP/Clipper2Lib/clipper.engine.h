@@ -130,7 +130,7 @@ namespace Clipper2Lib {
 		Active* next_in_sel = nullptr;
 		Active* jump = nullptr;
 		Vertex* vertex_top = nullptr;
-		LocalMinima* local_min = nullptr;  //the bottom of an edge 'bound' (also Vatti)
+		LocalMinima* local_min = nullptr;  // the bottom of an edge 'bound' (also Vatti)
 		bool is_left_bound = false;
 	};
 
@@ -240,12 +240,12 @@ namespace Clipper2Lib {
 		void BuildPaths(Paths64& solutionClosed, Paths64* solutionOpen);
 		void BuildTree(PolyPath64& polytree, Paths64& open_paths);
 #ifdef USINGZ
-		ZFillCallback zfill_func_; //custom callback 
+		ZFillCallback zfill_func_; // custom callback 
 		void SetZ(const Active& e1, const Active& e2, Point64& pt);
 #endif
 	protected:
 		bool orientation_is_reversed_ = true;
-		void CleanUp();  //unlike Clear, CleanUp preserves added paths
+		void CleanUp();  // unlike Clear, CleanUp preserves added paths
 		void AddPath(const Path64& path, PathType polytype, bool is_open);
 		void AddPaths(const Paths64& paths, PathType polytype, bool is_open);
 
@@ -299,7 +299,7 @@ namespace Clipper2Lib {
 			scale_(parent->scale_), polygon_(path), parent_(parent){}
 	public:
 
-		explicit PolyPath(int precision = 0) //NB only for root node
+		explicit PolyPath(int precision = 0) // NB only for root node
 		{  
 			scale_ = std::pow(10, precision);
 			parent_ = nullptr;
@@ -455,4 +455,4 @@ namespace Clipper2Lib {
 
 }  // namespace 
 
-#endif  //clipper_engine_h
+#endif  // clipper_engine_h
