@@ -3,7 +3,7 @@ unit Clipper.Core;
 (*******************************************************************************
 * Author    :  Angus Johnson                                                   *
 * Version   :  Clipper2 - beta                                                 *
-* Date      :  11 July 2022                                                    *
+* Date      :  17 July 2022                                                    *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  Core Clipper Library module                                     *
 *              Contains structures and functions used throughout the library   *
@@ -228,10 +228,10 @@ function ScalePathsD(const paths: TPathsD; sx, sy: double): TPathsD; overload;
 function ScalePathsD(const paths: TPaths64; scale: double): TPathsD; overload;
 function ScalePathsD(const paths: TPathsD; scale: double): TPathsD; overload;
 
-function OffsetPath(const path: TPath64; dx, dy: Int64): TPath64; overload;
-function OffsetPath(const path: TPathD; dx, dy: double): TPathD; overload;
-function OffsetPaths(const paths: TPaths64; dx, dy: Int64): TPaths64; overload;
-function OffsetPaths(const paths: TPathsD; dx, dy: double): TPathsD; overload;
+function TranslatePath(const path: TPath64; dx, dy: Int64): TPath64; overload;
+function TranslatePath(const path: TPathD; dx, dy: double): TPathD; overload;
+function TranslatePaths(const paths: TPaths64; dx, dy: Int64): TPaths64; overload;
+function TranslatePaths(const paths: TPathsD; dx, dy: double): TPathsD; overload;
 
 function Path64(const pathD: TPathD): TPath64;
 function PathD(const path: TPath64): TPathD;
@@ -721,7 +721,7 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-function OffsetPath(const path: TPath64; dx, dy: Int64): TPath64;
+function TranslatePath(const path: TPath64; dx, dy: Int64): TPath64;
 var
   i: integer;
 begin
@@ -740,7 +740,7 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-function OffsetPath(const path: TPathD; dx, dy: double): TPathD;
+function TranslatePath(const path: TPathD; dx, dy: double): TPathD;
 var
   i: integer;
 begin
@@ -759,7 +759,7 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-function OffsetPaths(const paths: TPaths64; dx, dy: Int64): TPaths64;
+function TranslatePaths(const paths: TPaths64; dx, dy: Int64): TPaths64;
 var
   i,j: integer;
 begin
@@ -782,7 +782,7 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-function OffsetPaths(const paths: TPathsD; dx, dy: double): TPathsD;
+function TranslatePaths(const paths: TPathsD; dx, dy: double): TPathsD;
 var
   i,j: integer;
 begin

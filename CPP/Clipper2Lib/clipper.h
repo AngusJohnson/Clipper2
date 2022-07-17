@@ -139,7 +139,7 @@ namespace Clipper2Lib
     return ScalePaths<double, int64_t>(tmp, 1 / scale);
   }
 
-  inline Path64 OffsetPath(const Path64& path, int64_t dx, int64_t dy)
+  inline Path64 TranslatePath(const Path64& path, int64_t dx, int64_t dy)
   {
     Path64 result;
     result.reserve(path.size());
@@ -148,7 +148,7 @@ namespace Clipper2Lib
     return result;
   }
 
-  inline PathD OffsetPath(const PathD& path, double dx, double dy)
+  inline PathD TranslatePath(const PathD& path, double dx, double dy)
   {
     PathD result;
     result.reserve(path.size());
@@ -157,21 +157,21 @@ namespace Clipper2Lib
     return result;
   }
 
-  inline Paths64 OffsetPaths(const Paths64& paths, int64_t dx, int64_t dy)
+  inline Paths64 TranslatePaths(const Paths64& paths, int64_t dx, int64_t dy)
   {
     Paths64 result;
     result.reserve(paths.size());
     for (const Path64& path : paths)
-      result.push_back(OffsetPath(path, dx, dy));
+      result.push_back(TranslatePath(path, dx, dy));
     return result;
   }
 
-  inline PathsD OffsetPaths(const PathsD& paths, double dx, double dy)
+  inline PathsD TranslatePaths(const PathsD& paths, double dx, double dy)
   {
     PathsD result;
     result.reserve(paths.size());
     for (const PathD& path : paths)
-      result.push_back(OffsetPath(path, dx, dy));
+      result.push_back(TranslatePath(path, dx, dy));
     return result;
   }
 

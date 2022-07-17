@@ -1,7 +1,7 @@
 ﻿/*******************************************************************************
 * Author    :  Angus Johnson                                                   *
 * Version   :  Clipper2 - beta                                                 *
-* Date      :  12 July 2022                                                    *
+* Date      :  17 July 2022                                                    *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  This module contains simple functions that will likely cover    *
@@ -326,7 +326,15 @@ namespace Clipper2Lib
       return result;
     }
 
-    public static Paths64 OffsetPaths(Paths64 paths, long dx, long dy)
+    public static Path64 TranslatePath(Path64 path, long dx, long dy)
+    {
+      Path64 result = new Path64(path.Count);
+      foreach (Point64 pt in path)
+        result.Add(new Point64(pt.X + dx, pt.Y + dy));
+      return result;
+    }
+
+    public static Paths64 TranslatePaths(Paths64 paths, long dx, long dy)
     {
       Paths64 result = new Paths64(paths.Count);
       foreach (Path64 path in paths)
@@ -334,7 +342,7 @@ namespace Clipper2Lib
       return result;
     }
 
-    public static PathD OffsetPath(PathD path, long dx, long dy)
+    public static PathD TranslatePath(PathD path, double dx, double dy)
     {
       PathD result = new PathD(path.Count);
       foreach (PointD pt in path)
@@ -342,11 +350,11 @@ namespace Clipper2Lib
       return result;
     }
 
-    public static PathsD OffsetPaths(PathsD paths, long dx, long dy)
+    public static PathsD TranslatePaths(PathsD paths, double dx, double dy)
     {
       PathsD result = new PathsD(paths.Count);
       foreach (PathD path in paths)
-        result.Add(OffsetPath(path, dx, dy));
+        result.Add(TranslatePath(path, dx, dy));
       return result;
     }
 
