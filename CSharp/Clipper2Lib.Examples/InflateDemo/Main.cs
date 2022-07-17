@@ -45,7 +45,7 @@ namespace ClipperDemo1
       //different join types within the same offset operation
       ClipperOffset co = new ClipperOffset();
       co.AddPaths(p, JoinType.Miter, EndType.Joined);
-      p = Clipper.OffsetPaths(p, 120, 100);
+      p = Clipper.TranslatePaths(p, 120, 100);
       pp.AddRange(p);
       co.AddPaths(p, JoinType.Round, EndType.Joined);
       p = co.Execute(20);

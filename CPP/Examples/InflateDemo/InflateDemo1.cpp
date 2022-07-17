@@ -36,7 +36,7 @@ int main(int argc, char* argv[])
   //different join types within the same offset operation
   ClipperOffset co;
   co.AddPaths(p, JoinType::Miter, EndType::Joined);
-  p = OffsetPaths(p, 120, 100);
+  p = TranslatePaths(p, 120, 100);
   pp.insert(pp.end(), p.begin(), p.end());
   co.AddPaths(p, JoinType::Round, EndType::Joined);
   p = co.Execute(20);
