@@ -16,17 +16,21 @@ namespace Clipper2Lib.UnitTests
       ClipType clipType;
       FillRule fillrule;
       long area;
-      int count;
+      int i = 0, count;
       string caption;
-      for (int i = 1; i <= 187; i++)
+      while (true)
       {
+        i++;
         Clipper64 c64 = new Clipper64();
         Paths64 subj = new Paths64(), subj_open = new Paths64(), clip = new Paths64();
         Paths64 solution = new Paths64(), solution_open = new Paths64();
 
-        Assert.IsTrue(ClipperFileIO.LoadTestNum("..\\..\\..\\..\\..\\Tests\\Polygons.txt",
-          i, subj, subj_open, clip, out clipType, out fillrule,  out area, out count, out caption),
-          string.Format("Loading test {0} failed.", i));
+        if (!ClipperFileIO.LoadTestNum("..\\..\\..\\..\\..\\Tests\\Polygons.txt",
+          i, subj, subj_open, clip, out clipType, out fillrule, out area, out count, out caption))
+        {          
+          Assert.IsTrue(i > 180, string.Format("Loading test polygon {0} failed.", i));
+          break;
+        }
 
         c64.AddSubject(subj);
         c64.AddOpenSubject(subj_open);
