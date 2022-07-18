@@ -3,7 +3,7 @@ unit Clipper.Engine;
 (*******************************************************************************
 * Author    :  Angus Johnson                                                   *
 * Version   :  Clipper2 - beta                                                 *
-* Date      :  14 July 2022                                                    *
+* Date      :  18 July 2022                                                    *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  This is the main polygon clipping module                        *
@@ -3949,7 +3949,7 @@ begin
   for i := 0 to High(owner.splits) do
   begin
     split := GetRealOutRec(owner.splits[i]);
-    if not Assigned(split) or (split = outrec) then
+    if not Assigned(split) or (split = owner) or (split = outrec) then
       Continue
     else if Assigned(split.splits) and
       DeepCheckOwner(outrec, split) then

@@ -1,7 +1,7 @@
 ﻿/*******************************************************************************
 * Author    :  Angus Johnson                                                   *
 * Version   :  Clipper2 - beta                                                 *
-* Date      :  14 July 2022                                                    *
+* Date      :  18 July 2022                                                    *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  This is the main polygon clipping module                        *
@@ -3497,7 +3497,7 @@ namespace Clipper2Lib
         foreach (OutRec asplit in owner.splits!)
         {
           OutRec? split = GetRealOutRec(asplit);
-          if (split == null || split == outrec) 
+          if (split == null || split == owner || split == outrec) 
             continue;
           else if (split.pts != null && DeepCheckOwner(outrec, split))
             return true;
