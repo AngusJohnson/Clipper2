@@ -302,15 +302,14 @@ namespace Clipper2Lib
   {
 
     template <typename T>
-    inline void AddPolyNodeToPaths(const PolyPath<T>& polytree, Paths<T>& paths)
+    inline void InternalPolyNodeToPaths(const PolyPath<T>& polypath, Paths<T>& paths)
     {
-      if (!polytree.polygon().empty())
-        paths.push_back(polytree.polygon());
-      for (PolyPath<T>* child : polytree.childs())
-        AddPolyNodeToPaths(*child, paths);
+      paths.push_back(polypath.polygon());
+      for (PolyPath<T>* child : polypath.childs())
+        InternalPolyNodeToPaths(*child, paths);
     }
 
-    inline bool PolyPathFullyContainsChildren(const PolyPath64& pp)
+    inline bool InternalPolyPathContainsChildren(const PolyPath64& pp)
     {
       for (auto child : pp.childs())
       {
@@ -318,7 +317,7 @@ namespace Clipper2Lib
           if (PointInPolygon(pt, pp.polygon()) == PointInPolygonResult::IsOutside)
             return false;
 
-        if (child->ChildCount() > 0 && !PolyPathFullyContainsChildren(*child))
+        if (child->ChildCount() > 0 && !InternalPolyPathContainsChildren(*child))
           return false;
       }
       return true;
@@ -417,14 +416,15 @@ namespace Clipper2Lib
   inline Paths<T> PolyTreeToPaths(const PolyTree<T>& polytree)
   {
     Paths<T> result;
-    details::AddPolyNodeToPaths(polytree, result);
+    for (const auto* child : polytree.childs())
+      details::InternalPolyNodeToPaths(*child, result);
     return result;
   }
 
   inline bool CheckPolytreeFullyContainsChildren(const PolyTree64& polytree)
   {
     for (const PolyPath64* child : polytree.childs())
-      if (child->ChildCount() > 0 && !details::PolyPathFullyContainsChildren(*child))
+      if (child->ChildCount() > 0 && !details::InternalPolyPathContainsChildren(*child))
         return false;
     return true;
   }
