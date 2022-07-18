@@ -4,7 +4,9 @@
 
 void PolyTreeToPaths(const Clipper2Lib::PolyTree64& polytree, Clipper2Lib::Paths64& paths)
 {
-  paths.push_back(polytree.polygon());
+  if (!polytree.polygon().empty()) {
+    paths.push_back(polytree.polygon());
+  }
   for (const auto* child : polytree.childs()) {
     PolyTreeToPaths(*child, paths);
   }
@@ -144,7 +146,7 @@ TEST(Clipper2Tests, TestMultiplePolygons)
     const auto count3 = solution_polytree_paths.size() + solution_polytree_open.size();
 
     EXPECT_EQ(area2, area3);
-    EXPECT_NEAR(static_cast<double>(count2), static_cast<double>(count3), 1.01);
+    EXPECT_EQ(count2, count3);
 
     ++test_number;
   }
