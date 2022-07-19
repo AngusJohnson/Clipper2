@@ -40,8 +40,8 @@ namespace Clipper2Lib.UnitTests
         if (area > 0)
         {
           double area2 = Clipper.Area(solution);
-          double a = area2 / area2;
-          Assert.IsTrue(a > 0.995 && a < 1.005,
+          double a = area / area2;
+          Assert.IsTrue(Math.Abs(area - area2) < 2 || (a > 0.995 && a < 1.005),
             string.Format("Incorrect area in test {0}", i));
         }
 

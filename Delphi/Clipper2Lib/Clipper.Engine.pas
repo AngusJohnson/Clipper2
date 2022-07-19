@@ -3,7 +3,7 @@ unit Clipper.Engine;
 (*******************************************************************************
 * Author    :  Angus Johnson                                                   *
 * Version   :  Clipper2 - beta                                                 *
-* Date      :  18 July 2022                                                    *
+* Date      :  19 July 2022                                                    *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  This is the main polygon clipping module                        *
@@ -2282,16 +2282,18 @@ procedure TClipperBase.CompleteSplit(op1, op2: POutPt; OutRec: POutRec);
 var
   i: integer;
   area1, area2: double;
+  signsChange: Boolean;
   newOr: POutRec;
 begin
   area1 := Area(op1, FOrientationIsReversed);
   area2 := Area(op2, FOrientationIsReversed);
-  if Abs(area1) < 2 then
+  signsChange := (area1 > 0) = (area2 < 0);
+  if (area1 = 0) or (signsChange and (Abs(area1) < 2)) then
   begin
     SafeDisposeOutPts(op1);
     op1 := nil;
   end
-  else if Abs(area2) < 2 then
+  else if (area2 = 0) or (signsChange and (Abs(area2) < 2)) then
   begin
     SafeDisposeOutPts(op2);
     op2 := nil;
@@ -2406,14 +2408,6 @@ begin
       if op = outRec.pts then outRec.pts := op.prev;
       op := DisposeOutPt(op);
       op := op.prev;
-    end
-    else if not Assigned(op.prev.joiner) and
-    (op.prev <> guard) and
-    (DistanceSqr(op.pt, op.prev.pt) < 2.1) then
-    begin
-      if op.prev = outRec.pts then outRec.pts := op;
-      DisposeOutPt(op.prev);
-      Result := true;
     end else
       break;
   end;
@@ -2426,14 +2420,6 @@ begin
       if op = outRec.pts then outRec.pts := op.prev;
       op := DisposeOutPt(op);
       op := op.prev;
-    end
-    else if not Assigned(op.next.joiner) and
-      (op.next <> guard) and
-      (DistanceSqr(op.pt, op.next.pt) < 2.1) then
-    begin
-      if op.next = outRec.pts then outRec.pts := op;
-      DisposeOutPt(op.next);
-      Result := true;
     end else
       break;
   end;

@@ -1,7 +1,7 @@
 ﻿/*******************************************************************************
 * Author    :  Angus Johnson                                                   *
 * Version   :  Clipper2 - beta                                                 *
-* Date      :  18 July 2022                                                    *
+* Date      :  19 July 2022                                                    *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  This is the main polygon clipping module                        *
@@ -2929,13 +2929,6 @@ namespace Clipper2Lib
           op = DisposeOutPt(op)!;
           op = op.prev;
         }
-        else if (op.prev.joiner == null && op.prev != guard &&
-          (DistanceSqr(op.pt, op.prev.pt) < 2.1))
-        {
-          if (op.prev == outRec.pts) outRec.pts = op;
-          DisposeOutPt(op.prev);
-          result = true;
-        }
         else
           break;
       }
@@ -2948,13 +2941,6 @@ namespace Clipper2Lib
           if (op == outRec.pts) outRec.pts = op.prev;
           op = DisposeOutPt(op)!;
           op = op.prev;
-        }
-        else if (op.next.joiner == null && op.next != guard &&
-          (DistanceSqr(op.pt, op.next.pt) < 2.1))
-        {
-          if (op.next == outRec.pts) outRec.pts = op;
-          DisposeOutPt(op.next);
-          result = true;
         }
         else
           break;
@@ -3188,12 +3174,14 @@ namespace Clipper2Lib
     {
       double area1 = Area(op1!, OrientationIsReversed);
       double area2 = Area(op2!, OrientationIsReversed);
-      if (Math.Abs(area1) < 2)
+      bool signs_change = (area1 > 0) == (area2 < 0);
+
+      if (area1 == 0 || (signs_change && Math.Abs(area1) < 2))
       {
         SafeDisposeOutPts(op1!);
         op1 = null;
       }
-      else if (Math.Abs(area2) < 2)
+      else if (area2 == 0 || (signs_change && Math.Abs(area2) < 2))
       {
         SafeDisposeOutPts(op2!);
         op2 = null;

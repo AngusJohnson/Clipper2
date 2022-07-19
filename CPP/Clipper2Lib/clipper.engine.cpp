@@ -1,7 +1,7 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
 * Version   :  Clipper2 - beta                                                 *
-* Date      :  18 July 2022                                                    *
+* Date      :  19 July 2022                                                    *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  This is the main polygon clipping module                        *
@@ -1634,12 +1634,14 @@ namespace Clipper2Lib {
 	{
 		double area1 = Area(op1, orientation_is_reversed_);
 		double area2 = Area(op2, orientation_is_reversed_);
-		if (std::abs(area1) < 2)
+		bool signs_change = (area1 > 0) == (area2 < 0);
+
+		if (area1 == 0 || (signs_change && std::abs(area1) < 2))
 		{
 			SafeDisposeOutPts(op1);
 			outrec.pts = op2;
 		}
-		else if (std::abs(area2) < 2)
+		else if (area2 == 0 || (signs_change && std::abs(area2) < 2))
 		{
 			SafeDisposeOutPts(op2);
 			outrec.pts = op1;
@@ -2990,13 +2992,6 @@ namespace Clipper2Lib {
 				op = DisposeOutPt(op);
 				op = op->prev;
 			}
-			else if (!op->prev->joiner && op->prev != guard &&
-				(DistanceSqr(op->pt, op->prev->pt) < 2.1))
-			{
-				if (op->prev == outRec.pts) outRec.pts = op;
-				DisposeOutPt(op->prev);
-				result = true;
-			}
 			else
 				break;
 		}
@@ -3009,13 +3004,6 @@ namespace Clipper2Lib {
 				if (op == outRec.pts) outRec.pts = op->prev;
 				op = DisposeOutPt(op);
 				op = op->prev;
-			}
-			else if (!op->next->joiner && op->next != guard &&
-				(DistanceSqr(op->pt, op->next->pt) < 2.1))
-			{
-				if (op->next == outRec.pts) outRec.pts = op;
-				DisposeOutPt(op->next);
-				result = true;
 			}
 			else
 				break;
@@ -3335,21 +3323,19 @@ namespace Clipper2Lib {
 		for (OutRec* outrec : outrec_list_)
 		{
 			if (outrec->pts == nullptr) continue;
+
+			Path64 path;
 			if (solutionOpen && outrec->is_open)
 			{
-				Path64 path;
 				if (BuildPath(outrec->pts, ReverseSolution, true, path))
 					solutionOpen->emplace_back(std::move(path));
-				path.resize(0);
 			}
 			else
 			{
-				Path64 path;
 				//closed paths should always return a Positive orientation
 				if (BuildPath(outrec->pts, 
 					ReverseSolution != orientation_is_reversed_, false, path))
 					solutionClosed.emplace_back(std::move(path));
-				path.resize(0);
 			}
 		}
 	}

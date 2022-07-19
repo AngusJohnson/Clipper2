@@ -114,7 +114,7 @@ TEST(Clipper2Tests, TestPolytreeHoleOwnership2)
   const double solution_tree_area   = GetPolytreeArea(solution_tree);
   const double solution_paths_area  = Area(solution_paths);
 
-  // 1a. check solution_paths_area  is smaller than subject_area
+  // 1a. check solution_paths_area is smaller than subject_area
   EXPECT_LT(solution_paths_area, subject_area);
   // 1b. but not too much smaller
   EXPECT_GT(solution_paths_area, (subject_area * 0.95)); 
