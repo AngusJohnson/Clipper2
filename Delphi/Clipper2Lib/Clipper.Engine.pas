@@ -3,7 +3,7 @@ unit Clipper.Engine;
 (*******************************************************************************
 * Author    :  Angus Johnson                                                   *
 * Version   :  Clipper2 - beta                                                 *
-* Date      :  19 July 2022                                                    *
+* Date      :  21 July 2022                                                    *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  This is the main polygon clipping module                        *
@@ -2506,6 +2506,9 @@ begin
         op1.prev := op2;
         op2.next := op1;
 
+        SafeDeleteOutPtJoiners(op2);
+        DisposeOutPt(op2);
+
         if (or1.idx < or2.idx) then
         begin
           or1.pts := op1;
@@ -2552,8 +2555,12 @@ begin
         opB := op2.prev;
         opA.prev := opB;
         opB.next := opA;
-        op2.prev := op1;
         op1.next := op2;
+        op2.prev := op1;
+
+        SafeDeleteOutPtJoiners(op2);
+        DisposeOutPt(op2);
+
         if or1.idx < or2.idx then
         begin
           or1.pts := op1;
@@ -3951,7 +3958,7 @@ begin
     end;
   end;
 
-  if owner <> outrec.owner then Exit;
+  if owner <> outrec.owner then Exit; //only continue at very top of recursion
   while assigned(outrec.owner) and not Result do
   begin
     if Path1InsidePath2(outrec.pts, outrec.owner.pts) then

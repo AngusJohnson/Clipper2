@@ -23,7 +23,7 @@ TEST(Clipper2Tests, TestMultipleLines) {
     int64_t area, count;
 
     if (!LoadTestNum(ifs, test_number,
-      false, subject, subject_open, clip, area, count, ct, fr)) break;
+      subject, subject_open, clip, area, count, ct, fr)) break;
 
     Clipper2Lib::Clipper64 c;
     c.AddSubject(subject);

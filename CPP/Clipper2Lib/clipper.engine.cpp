@@ -1,7 +1,7 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
 * Version   :  Clipper2 - beta                                                 *
-* Date      :  19 July 2022                                                    *
+* Date      :  21 July 2022                                                    *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  This is the main polygon clipping module                        *
@@ -1348,6 +1348,7 @@ namespace Clipper2Lib {
 		{
 			OutRec& outrec = *e1.outrec;		
 			outrec.pts = result;
+
 			UncoupleOutRec(e1);
 			if (!IsOpen(e1)) CleanCollinear(&outrec);
 			result = outrec.pts;
@@ -1367,7 +1368,6 @@ namespace Clipper2Lib {
 
 		return result;
 	}
-
 
 	void ClipperBase::JoinOutrecPaths(Active& e1, Active& e2)
 	{
@@ -2958,6 +2958,7 @@ namespace Clipper2Lib {
 		delete joiner;
 	}
 
+
 	void ClipperBase::ProcessJoinerList()
 	{
 		for (Joiner* j : joiner_list_)
@@ -3078,7 +3079,6 @@ namespace Clipper2Lib {
 		return true;
 	}
 
-
 	OutRec* ClipperBase::ProcessJoin(Joiner* joiner)
 	{
 		OutPt* op1 = joiner->op1, * op2 = joiner->op2;
@@ -3146,8 +3146,8 @@ namespace Clipper2Lib {
 					op1->prev = op2;
 					op2->next = op1;
 
-					or1->owner = GetRealOutRec(or1->owner);
-					or2->owner = GetRealOutRec(or2->owner);
+					SafeDeleteOutPtJoiners(op2);
+					DisposeOutPt(op2);
 
 					if (or1->idx < or2->idx)
 					{
@@ -3200,6 +3200,9 @@ namespace Clipper2Lib {
 					opB->next = opA;
 					op1->next = op2;
 					op2->prev = op1;
+
+					SafeDeleteOutPtJoiners(op2);
+					DisposeOutPt(op2);
 
 					if (or1->idx < or2->idx)
 					{
@@ -3433,7 +3436,7 @@ namespace Clipper2Lib {
 		{
 			for (OutRec* split : *owner->splits)
 			{
-				split = GetRealOutRec(split); // may not be necessary
+				split = GetRealOutRec(split); 
 				if (!split || split == owner || split == outrec)
 					continue;
 				else if (split->splits && DeepCheckOwner(outrec, split))

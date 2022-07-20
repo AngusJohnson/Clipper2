@@ -42,125 +42,79 @@ bool GetPath(const string& line, Paths64& paths)
   return true;
 }
 
-bool GetPaths(stringstream& ss, Paths64& paths)
+void GetPaths(ifstream& source, Paths64& paths) 
 {
-  bool line_found = true;
-  stringstream::pos_type pos;
-  paths.clear();
-  std::string line;
-  while (line_found)
+  while (true)
   {
-    pos = ss.tellg();
-    if (!getline(ss, line)) line_found = false;
-    else if (!GetPath(line, paths)) break;
+    string line;
+    stringstream::pos_type last_read_line_pos = source.tellg();
+    if (getline(source, line) && GetPath(line, paths))
+      continue;
+    source.seekg(last_read_line_pos, ios_base::beg);
+    break;
   }
-  //go to the beginning of the line just read
-  ss.seekg(pos, ios_base::beg);
-  return line_found;
 }
 
-bool LoadTestNum(ifstream &source, int test_num, bool seek_from_start,
+bool LoadTestNum(ifstream &source, int test_num,
   Paths64 &subj, Paths64 &subj_open, Paths64 &clip, 
   int64_t& area, int64_t& count, ClipType &ct, FillRule &fr)
 {
   string line;
   area = 0; count = 0;
-  bool found = false;
-  if (seek_from_start) source.seekg(0, ios_base::beg);
-  stringstream::pos_type last_read_line_pos = source.tellg();
-  while (std::getline(source, line))
-  {
-    size_t line_pos = line.find("CAPTION:");
-    if (line_pos == string::npos) continue;
+  if (test_num <= 0) test_num = 1;
+  source.seekg(0, ios_base::beg);
+  subj.clear(); subj_open.clear(); clip.clear();
 
-    string::const_iterator s_it = (line.cbegin() + 8), s_end = line.cend();
-    int64_t num;
-    if (test_num > 0 && GetInt(s_it, s_end, num))
+  while (std::getline(source, line))
+  {    
+    if (test_num)
     {
-      if (num > test_num) return false;
-      if (num != test_num) continue;
+      if (line.find("CAPTION:") != string::npos) --test_num;
+      continue;
     }
 
-    found = true;
-    subj.clear(); subj_open.clear(); clip.clear();
-    while (std::getline(source, line))
-    {            
-      s_end = line.cend();
+    if (line.find("CAPTION:") != string::npos) break;
 
-      if (line.find("CAPTION:") != string::npos)
-      {
-        source.seekg(last_read_line_pos, ios_base::beg);
-        return (!subj.empty() || !subj_open.empty() || !clip.empty());
-      }
-      last_read_line_pos = source.tellg();
-
-      if (line.find("INTERSECTION") != string::npos) 
-      {
-        ct = ClipType::Intersection; continue;
-      }
-      else if (line.find("UNION") != string::npos) 
-      {
-        ct = ClipType::Union; continue;
-      }
-      else if (line.find("DIFFERENCE") != string::npos) 
-      {
-        ct = ClipType::Difference; continue;
-      }
-      else if (line.find("XOR") != string::npos) 
-      {
-        ct = ClipType::Xor; continue;
-      }
-
-      if (line.find("EVENODD") != string::npos) 
-      {
-        fr = FillRule::EvenOdd; continue;
-      }
-      else if (line.find("NONZERO") != string::npos) 
-      {
-        fr = FillRule::NonZero ; continue;
-      }
-      else if (line.find("POSITIVE") != string::npos) 
-      {
-        fr = FillRule::Positive; continue;
-      }
-      else if (line.find("NEGATIVE") != string::npos)
-      {
-        fr = FillRule::Negative; continue;
-      }
-      
-      else if (line.find("SOL_AREA") != string::npos)
-      {
-        s_it = (line.cbegin() + 10);
-        GetInt(s_it, s_end, area); 
-        continue;
-      }
-      else if (line.find("SOL_COUNT") != string::npos)
-      {
-        s_it = (line.cbegin() + 11);
-        GetInt(s_it, s_end, count);
-        continue;
-      }
-
-      for (;;)
-      {
-        if (line.find("SUBJECTS_OPEN") != string::npos)
-        {
-          while (getline(source, line) && GetPath(line, subj_open));
-          continue;
-        }
-        else if (line.find("SUBJECTS") != string::npos)
-        {
-          while (getline(source, line) && GetPath(line, subj));
-          continue;
-        }
-        if (line.find("CLIPS") != string::npos)
-        {
-          while (getline(source, line) && GetPath(line, clip));
-          continue;
-        }
-        break;
-      }
-    } //inner while still lines (found)
-  } //outer while still lines (not found)
-  return found;
+    else if (line.find("INTERSECTION") != string::npos) 
+      ct = ClipType::Intersection; 
+    else if (line.find("UNION") != string::npos) 
+      ct = ClipType::Union; 
+    else if (line.find("DIFFERENCE") != string::npos) 
+      ct = ClipType::Difference; 
+    else if (line.find("XOR") != string::npos) 
+      ct = ClipType::Xor; 
+    else if (line.find("EVENODD") != string::npos) 
+      fr = FillRule::EvenOdd; 
+    else if (line.find("NONZERO") != string::npos) 
+      fr = FillRule::NonZero ; 
+    else if (line.find("POSITIVE") != string::npos) 
+      fr = FillRule::Positive; 
+    else if (line.find("NEGATIVE") != string::npos)
+      fr = FillRule::Negative; 
+    else if (line.find("SOL_AREA") != string::npos)
+    {
+      string::const_iterator s_it, s_end = line.cend();
+      s_it = (line.cbegin() + 10);
+      GetInt(s_it, s_end, area); 
+    }
+    else if (line.find("SOL_COUNT") != string::npos)
+    {
+      string::const_iterator s_it, s_end = line.cend();
+      s_it = (line.cbegin() + 11);
+      GetInt(s_it, s_end, count);
+    }
+    else if (line.find("SUBJECTS_OPEN") != string::npos)
+    {
+      GetPaths(source, subj_open);
+    }
+    else if (line.find("SUBJECTS") != string::npos)
+    {
+      GetPaths(source, subj);
+    }
+    else if (line.find("CLIPS") != string::npos)
+    {
+      GetPaths(source, clip);
+    }
+  }
+  return !test_num;
 }

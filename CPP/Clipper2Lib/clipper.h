@@ -1,7 +1,7 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
 * Version   :  Clipper2 - beta                                                 *
-* Date      :  17 July 2022                                                    *
+* Date      :  21 July 2022                                                    *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  This module provides a simple interface to the Clipper Library  *
@@ -43,6 +43,16 @@ namespace Clipper2Lib
     clipper.AddClip(clips);
     clipper.Execute(cliptype, fillrule, result);
     return result;
+  }
+
+  inline void BooleanOp(ClipType cliptype, FillRule fillrule,
+    const Paths64& subjects, const Paths64& clips, PolyTree64& solution)
+  {
+    Paths64 sol_open;
+    Clipper64 clipper;
+    clipper.AddSubject(subjects);
+    clipper.AddClip(clips);
+    clipper.Execute(cliptype, fillrule, solution, sol_open);
   }
 
   inline PathsD BooleanOp(ClipType cliptype, FillRule fillrule,
@@ -558,7 +568,9 @@ namespace Clipper2Lib
   inline Path<T> Ellipse(const Rect<T>& rect, int steps = 0,
     bool orientation_is_reversed = DEFAULT_ORIENTATION_IS_REVERSED)
   {
-    return Ellipse(rect.MidPoint(), rect.Width() / 2, rect.Height() / 2,
+    return Ellipse(rect.MidPoint(), 
+      static_cast<double>(rect.Width()) *0.5, 
+      static_cast<double>(rect.Height()) * 0.5,
       steps, orientation_is_reversed);
   }
 
