@@ -23,7 +23,7 @@ TEST(Clipper2Tests, TestMultiplePolygons)
     Clipper2Lib::FillRule fr;
     int64_t area, count;
 
-    if (!LoadTestNum(ifs, test_number, false,
+    if (!LoadTestNum(ifs, test_number, 
       subject, subject_open, clip, area, count, ct, fr)) break;
    
     Clipper2Lib::Clipper64 c;

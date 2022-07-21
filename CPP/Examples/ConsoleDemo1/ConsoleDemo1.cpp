@@ -167,7 +167,7 @@ void RunSavedTests(const std::string& filename,
     FillRule fr;
     int64_t area, count;
 
-    if (LoadTestNum(ifs, i, false, subject, subject_open, clip, 
+    if (LoadTestNum(ifs, i, subject, subject_open, clip, 
       area, count, ct, fr)) 
     {
       Clipper64 c;

@@ -22,8 +22,7 @@ TEST(Clipper2Tests, TestPolytreeHoleOwnership1)
   int64_t area, count;
 
   bool success = false;
-  ASSERT_TRUE(LoadTestNum(ifs, 1, false, 
-    subject, subject_open, clip, area, count, ct, fr));
+  ASSERT_TRUE(LoadTestNum(ifs, 1, subject, subject_open, clip, area, count, ct, fr));
 
   Clipper64 c;
   c.AddSubject(subject);
