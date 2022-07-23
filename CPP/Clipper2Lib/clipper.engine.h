@@ -346,6 +346,7 @@ namespace Clipper2Lib {
 
 	void Polytree64ToPolytreeD(const PolyPath64& polytree, PolyPathD& result);
 
+
 	class Clipper64 : public ClipperBase
 	{
 	public:
@@ -386,10 +387,12 @@ namespace Clipper2Lib {
 
 	class ClipperD : public ClipperBase {
 	private:
-		const double scale_ = 1.0;
+		double scale_ = 1.0;
 	public:
-		explicit ClipperD(int precision = 0) :
-      scale_(std::pow(10, precision)) {}
+		explicit ClipperD(int precision = 0) : ClipperBase() 
+		{
+			scale_ = std::pow(10, precision);
+		}
 
 		void AddSubject(const PathsD& subjects)
 		{
