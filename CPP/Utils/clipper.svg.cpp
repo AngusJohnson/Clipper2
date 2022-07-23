@@ -1,6 +1,6 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  16 May 2022                                                     *
+* Date      :  23 July 2022                                                    *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * License   :  http://www.boost.org/LICENSE_1_0.txt                            *
@@ -71,33 +71,33 @@ namespace Clipper2Lib {
   }
   //------------------------------------------------------------------------------
 
-  void SvgWriter::AddPath(const PathD &path, bool is_open,
+  void SvgWriter::AddPath(const PathD &path, bool is_open, FillRule fillrule,
     unsigned brush_color, unsigned pen_color, double pen_width, bool show_coords)
   {
     if (path.size() == 0) return;
     PathsD p;
     p.push_back(path);
-    path_infos.push_back(new PathInfo(p, is_open, 
+    path_infos.push_back(new PathInfo(p, is_open, fillrule,
       brush_color, pen_color, pen_width, show_coords));
   }
   //------------------------------------------------------------------------------
 
-  void SvgWriter::AddPaths(const Paths64& paths, bool is_open, 
+  void SvgWriter::AddPaths(const Paths64& paths, bool is_open, FillRule fillrule,
     unsigned brush_color, unsigned pen_color, double pen_width, bool show_coords)
   {
     if (paths.size() == 0) return;
     PathsD tmp = ScalePaths<double, int64_t>(paths, scale_);
-    PathInfo* pi = new PathInfo(tmp, is_open,
+    PathInfo* pi = new PathInfo(tmp, is_open, fillrule,
       brush_color, pen_color, pen_width, show_coords);
     path_infos.push_back(pi);
   }
   //------------------------------------------------------------------------------
 
-  void SvgWriter::AddPaths(const PathsD &paths, bool is_open,
+  void SvgWriter::AddPaths(const PathsD &paths, bool is_open, FillRule fillrule,
     unsigned brush_color, unsigned pen_color, double pen_width, bool show_coords)
   {
     if (paths.size() == 0) return;
-    path_infos.push_back(new PathInfo(paths, is_open, 
+    path_infos.push_back(new PathInfo(paths, is_open, fillrule, 
       brush_color, pen_color, pen_width, show_coords));
   }
   //------------------------------------------------------------------------------
@@ -109,7 +109,19 @@ namespace Clipper2Lib {
   }
   //------------------------------------------------------------------------------
 
-  bool SvgWriter::SaveToFile(const std::string &filename, 
+  PathsD SimulateNegativeFill(const PathsD paths)
+  {
+    return Union(paths, FillRule::Negative);
+  }
+  //------------------------------------------------------------------------------
+
+  PathsD SimulatePositiveFill(const PathsD paths)
+  {
+    return Union(paths, FillRule::Positive);
+  }
+  //------------------------------------------------------------------------------
+
+  bool SvgWriter::SaveToFile(const std::string &filename,
     int max_width, int max_height, int margin)
   {
     RectD rec = MaxInvalidRectD;
@@ -146,9 +158,42 @@ namespace Clipper2Lib {
       max_height << svg_xml_header_3;
     setlocale(LC_NUMERIC, "C");
     file.precision(2);
+    
+    for (PathInfo* pi : path_infos)
+    {
+      if (pi->is_open_path || GetAlphaAsFrac(pi->brush_color_) == 0 ||
+        (pi->fillrule_ != FillRule::Positive && pi->fillrule_ != FillRule::Negative))
+          continue;
+
+      PathsD ppp = pi->fillrule_ == 
+        FillRule::Positive ? SimulatePositiveFill(pi->paths_) : SimulateNegativeFill(pi->paths_);
+
+      file << "  <path d=\"";
+      for (PathD& path : ppp)
+      {
+        if (path.size() < 2 || (path.size() == 2 && !pi->is_open_path)) continue;
+        file << " M " << (static_cast<double>(path[0].x) * scale + offsetX) <<
+          " " << (static_cast<double>(path[0].y) * scale + offsetY);
+        for (PointD& pt : path)
+          file << " L " << (pt.x * scale + offsetX) << " "
+          << (pt.y * scale + offsetY);
+        if (!pi->is_open_path)  file << " z";
+      }
+
+      file << svg_xml_0 << ColorToHtml(pi->brush_color_) <<
+        svg_xml_1 << GetAlphaAsFrac(pi->brush_color_) <<
+        svg_xml_2 << "evenodd" <<
+        svg_xml_3 << ColorToHtml(0) <<
+        svg_xml_4 << GetAlphaAsFrac(0.0) <<
+        svg_xml_5 << pi->pen_width_ << svg_xml_6;
+    }
 
     for (PathInfo* pi : path_infos) 
     {
+      unsigned brushColor =
+        (pi->fillrule_ == FillRule::Positive || pi->fillrule_ == FillRule::Negative) ?
+        0 : pi->brush_color_;
+
       file << "  <path d=\"";      
       for (PathD& path : pi->paths_)
       {
@@ -161,10 +206,9 @@ namespace Clipper2Lib {
         if(!pi->is_open_path)  file << " z";
       }
 
-      file << svg_xml_0 << ColorToHtml(pi->brush_color_) <<
-        svg_xml_1 << GetAlphaAsFrac(pi->brush_color_) <<
-        svg_xml_2 <<
-        (fill_rule_ == FillRule::NonZero ? "nonzero" : "evenodd") <<
+      file << svg_xml_0 << ColorToHtml(brushColor) <<
+        svg_xml_1 << GetAlphaAsFrac(brushColor) <<
+        svg_xml_2 << (pi->fillrule_ == FillRule::NonZero ? "nonzero" : "evenodd") <<
         svg_xml_3 << ColorToHtml(pi->pen_color_) <<
         svg_xml_4 << GetAlphaAsFrac(pi->pen_color_) <<
         svg_xml_5 << pi->pen_width_ << svg_xml_6;
@@ -341,7 +385,8 @@ namespace Clipper2Lib {
       }
     }
     if (pp.size() > 3) ppp.push_back(pp);
-    path_infos.push_back(new PathInfo(ppp, false, 0, 0xFF000000, 1, false));
+    //todo - fix fillrule
+    path_infos.push_back(new PathInfo(ppp, false, FillRule::EvenOdd, 0, 0xFF000000, 1, false));
     return  (ppp.size() > 0);
   }
 

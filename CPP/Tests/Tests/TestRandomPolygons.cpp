@@ -113,7 +113,7 @@ TEST(Clipper2Tests, TestRandomPolygons)
 {
   std::default_random_engine rng(42);
 
-  for (int i = 0; i < 1000; ++i)
+  for (int i = 0; i < 750; ++i)
   {
     const auto max_complexity = std::max(1, i / 10);
 
@@ -145,7 +145,6 @@ TEST(Clipper2Tests, TestRandomPolygons)
     clipper_polytree.Execute(ct, fr, solution_polytree, solution_polytree_open);
 
     const auto solution_polytree_paths = PolyTreeToPaths(solution_polytree);
-
     const auto area_polytree = static_cast<int64_t>(Area(solution_polytree_paths));
     const auto count_polytree = solution_polytree_paths.size() + solution_polytree_open.size();
 

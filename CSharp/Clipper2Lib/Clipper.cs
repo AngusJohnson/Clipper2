@@ -1,7 +1,7 @@
 ﻿/*******************************************************************************
 * Author    :  Angus Johnson                                                   *
 * Version   :  Clipper2 - beta                                                 *
-* Date      :  17 July 2022                                                    *
+* Date      :  23 July 2022                                                    *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  This module contains simple functions that will likely cover    *
@@ -132,8 +132,7 @@ namespace Clipper2Lib
       tmp = co.Execute(delta * scale);
       return ScalePathsD(tmp, 1/scale);
     }
-    public static double Area(Path64 path, 
-      bool OrientationIsReversed = InternalClipper.DEFAULT_ORIENTATION_IS_REVERSED)
+    public static double Area(Path64 path)
     {
       // https://en.wikipedia.org/wiki/Shoelace_formula
       double a = 0.0;
@@ -145,23 +144,18 @@ namespace Clipper2Lib
         a += (double) (prevPt.Y + pt.Y) * (prevPt.X - pt.X);
         prevPt = pt;
       }
-      if (OrientationIsReversed)
-        return a * -0.5; 
-      else
-        return a * 0.5;
+      return a * 0.5;
     }
 
-    public static double Area(Paths64 paths,
-      bool OrientationIsReversed = InternalClipper.DEFAULT_ORIENTATION_IS_REVERSED)
+    public static double Area(Paths64 paths)
     {
       double a = 0.0;
-      foreach (Path64 path in paths)
-        a += Area(path, OrientationIsReversed);
+      foreach (Path64 path in paths) 
+        a += Area(path);
       return a;
     }
 
-    public static double Area(PathD path,
-      bool OrientationIsReversed = InternalClipper.DEFAULT_ORIENTATION_IS_REVERSED)
+    public static double Area(PathD path)
     {
       double a = 0.0;
       int cnt = path.Count;
@@ -172,33 +166,27 @@ namespace Clipper2Lib
         a += (prevPt.y + pt.y) * (prevPt.x - pt.x);
         prevPt = pt;
       }
-      if (OrientationIsReversed)
-        return a * -0.5;
-      else
-        return a * 0.5;
+      return a * 0.5;
     }
 
-    public static double Area(PathsD paths,
-      bool orientation_is_reversed = InternalClipper.DEFAULT_ORIENTATION_IS_REVERSED)
+    public static double Area(PathsD paths)
     {
       double a = 0.0;
       foreach (PathD path in paths)
-        a += Area(path, orientation_is_reversed);
+        a += Area(path);
       return a;
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static bool IsPositive(Path64 poly,
-      bool orientation_is_reversed = InternalClipper.DEFAULT_ORIENTATION_IS_REVERSED)
+    public static bool IsPositive(Path64 poly)
     {
-      return Area(poly, orientation_is_reversed) >= 0;
+      return Area(poly) >= 0;
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static bool IsPositive(PathD poly,
-      bool orientation_is_reversed = InternalClipper.DEFAULT_ORIENTATION_IS_REVERSED)
+    public static bool IsPositive(PathD poly)
     {
-      return Area(poly, orientation_is_reversed) >= 0;
+      return Area(poly) >= 0;
     }
 
     public static Path64 OffsetPath(Path64 path, long dx, long dy)

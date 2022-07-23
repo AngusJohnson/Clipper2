@@ -110,7 +110,7 @@ TEST(Clipper2Tests, TestPolytreeHoleOwnership2)
 
   ASSERT_FALSE(solution_paths.empty());
 
-  const double subject_area         = Area(subject, true);
+  const double subject_area         = -Area(subject); //negate (see fillrule)
   const double solution_tree_area   = GetPolytreeArea(solution_tree);
   const double solution_paths_area  = Area(solution_paths);
 

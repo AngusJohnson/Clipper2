@@ -274,7 +274,7 @@ void ClipperOffset::DoGroupOffset(PathGroup& group, double delta)
 		//designated orientation for outer polygons (needed for tidy-up clipping)
 		Paths64::size_type lowestIdx = GetLowestPolygonIdx(group.paths_in_);
     // nb: don't use the default orientation here ...
-		double area = Area(group.paths_in_[lowestIdx], false);
+		double area = Area(group.paths_in_[lowestIdx]);
 		if (area == 0) return;	
 		group.is_reversed_ = (area < 0);
 		if (group.is_reversed_) delta = -delta;
@@ -335,7 +335,7 @@ void ClipperOffset::DoGroupOffset(PathGroup& group, double delta)
 	if (!merge_groups_)
 	{
 		//clean up self-intersections ...
-		Clipper64 c(false);
+		Clipper64 c;
 		c.PreserveCollinear = false;
 		//the solution should retain the orientation of the input
 		c.ReverseSolution = reverse_solution_ != group.is_reversed_;
@@ -378,7 +378,7 @@ Paths64 ClipperOffset::Execute(double delta)
 	if (merge_groups_ && groups_.size() > 0)
 	{
 		//clean up self-intersections ...
-		Clipper64 c(false);
+		Clipper64 c;
 		c.PreserveCollinear = false;
 		//the solution should retain the orientation of the input
 		c.ReverseSolution = reverse_solution_ != groups_[0].is_reversed_;

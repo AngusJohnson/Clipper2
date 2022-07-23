@@ -1,7 +1,7 @@
 ﻿/*******************************************************************************
 * Author    :  Angus Johnson                                                   *
 * Version   :  Clipper2 - beta                                                 *
-* Date      :  21 June 2022                                                    *
+* Date      :  23 July 2022                                                    *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  Offsets both open and closed paths (i.e. polylines & polygons). *
@@ -136,7 +136,7 @@ namespace Clipper2Lib
       if (MergeGroups && _pathGroups.Count > 0)
       {
         // clean up self-intersections ...
-        Clipper64 c = new Clipper64(false)
+        Clipper64 c = new Clipper64()
         {
           PreserveCollinear = PreserveCollinear,
           // the solution should retain the orientation of the input
@@ -387,7 +387,7 @@ namespace Clipper2Lib
         int lowestIdx = GetLowestPolygonIdx(group._inPaths);
         if (lowestIdx < 0) return;
         // nb: don't use the default orientation here ...
-        double area = Clipper.Area(group._inPaths[lowestIdx], false);
+        double area = Clipper.Area(group._inPaths[lowestIdx]);
         if (area == 0) return;
         group._pathsReversed = (area < 0);
         if (group._pathsReversed)
@@ -447,7 +447,7 @@ namespace Clipper2Lib
       if (!MergeGroups)
       {
         // clean up self-intersections
-        Clipper64 c = new Clipper64(false)
+        Clipper64 c = new Clipper64()
         {
           PreserveCollinear = PreserveCollinear,
           // the solution should retain the orientation of the input

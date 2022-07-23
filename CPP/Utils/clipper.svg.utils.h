@@ -23,8 +23,9 @@ namespace Clipper2Lib {
 
   static const unsigned subj_brush_clr = 0x1800009C;
   static const unsigned subj_stroke_clr = 0xCCB3B3DA;
-  static const unsigned clip_brush_clr = 0x129C0000;
+  static const unsigned clip_brush_clr = 0x129C0000; 
   static const unsigned clip_stroke_clr = 0xCCFFA07A;
+  static const unsigned solution_brush_clr = 0x6666FF66;
 
   inline bool FileExists(const std::string& name)
   {
@@ -43,104 +44,80 @@ namespace Clipper2Lib {
   //    we can't displaying these paths accurately in SVG
   //    without (safely) changing the fill rule
 
-  inline void SvgAddSubject(SvgWriter& svg, const PathsD& path)
+  inline void SvgAddSubject(SvgWriter& svg, const PathsD& path, FillRule fillrule)
   {
     if (svg.Fill_Rule() == FillRule::Positive ||
       svg.Fill_Rule() == FillRule::Negative)
     {
-      svg.AddPaths(path, false, 0x0, subj_stroke_clr, 0.8, false);
+      svg.AddPaths(path, false, fillrule, 0x0, subj_stroke_clr, 0.8, false);
       PathsD tmp = Union(path, svg.Fill_Rule());
-      svg.AddPaths(tmp, false, subj_brush_clr, subj_stroke_clr, 0.8, false);
+      svg.AddPaths(tmp, false, fillrule, subj_brush_clr, subj_stroke_clr, 0.8, false);
     } 
     else
-      svg.AddPaths(path, false, subj_brush_clr, subj_stroke_clr, 0.8, false);
+      svg.AddPaths(path, false, fillrule, subj_brush_clr, subj_stroke_clr, 0.8, false);
   }
 
 
-  inline void SvgAddSubject(SvgWriter& svg, const Paths64& paths)
+  inline void SvgAddSubject(SvgWriter& svg, const Paths64& paths, FillRule fillrule)
   {
     PathsD tmp = TransformPaths<double, int64_t>(paths);
-    if (svg.Fill_Rule() == FillRule::Positive ||
-      svg.Fill_Rule() == FillRule::Negative)
-    {
-      svg.AddPaths(tmp, false, 0x0, subj_stroke_clr, 0.8, false);
-      tmp = Union(tmp, svg.Fill_Rule());
-      svg.AddPaths(tmp, false, subj_brush_clr, subj_stroke_clr, 0.8, false);
-    }
-    else 
-      svg.AddPaths(tmp, false, subj_brush_clr, subj_stroke_clr, 0.8, false);
+    svg.AddPaths(tmp, false, fillrule, subj_brush_clr, subj_stroke_clr, 0.8, false);
   }
 
 
   inline void SvgAddOpenSubject(SvgWriter& svg,
-    const PathsD& path, bool is_joined = false)
+    const PathsD& path, FillRule fillrule = FillRule::EvenOdd, bool is_joined = false)
   {
-    svg.AddPaths(path, !is_joined, subj_brush_clr, subj_stroke_clr, 1.3, false);
+    svg.AddPaths(path, !is_joined, fillrule, subj_brush_clr, subj_stroke_clr, 1.3, false);
   }
 
 
   inline void SvgAddOpenSubject(SvgWriter& svg,
-    const Paths64& path, bool is_joined = false)
+    const Paths64& path, FillRule fillrule = FillRule::EvenOdd, bool is_joined = false)
   {
     svg.AddPaths(TransformPaths<double, int64_t>(path),
-      !is_joined, 0x0, 0xCCB3B3DA, 1.3, false);
+      !is_joined, fillrule, 0x0, 0xCCB3B3DA, 1.3, false);
   }
 
 
-  inline void SvgAddClip(SvgWriter& svg, const PathsD& path)
+  inline void SvgAddClip(SvgWriter& svg, const PathsD& path, FillRule fillrule)
   {
-    if (svg.Fill_Rule() == FillRule::Positive ||
-      svg.Fill_Rule() == FillRule::Negative)
-    {
-      svg.AddPaths(path, false, 0x0, clip_stroke_clr, 0.8, false);
-      PathsD tmp = Union(path, svg.Fill_Rule());
-      svg.AddPaths(tmp, false, clip_brush_clr, clip_stroke_clr, 0.8, false);
-    }
-    else
-      svg.AddPaths(path, false, clip_brush_clr, clip_stroke_clr, 0.8, false);
+    svg.AddPaths(path, false, fillrule, clip_brush_clr, clip_stroke_clr, 0.8, false);
   }
 
 
-  inline void SvgAddClip(SvgWriter& svg, const Paths64& paths)
+  inline void SvgAddClip(SvgWriter& svg, const Paths64& paths, FillRule fillrule)
   {
     PathsD tmp = TransformPaths<double, int64_t>(paths);
-    if (svg.Fill_Rule() == FillRule::Positive ||
-      svg.Fill_Rule() == FillRule::Negative)
-    {
-      svg.AddPaths(tmp, false, 0x0, clip_stroke_clr, 0.8, false);
-      tmp = Union(tmp, svg.Fill_Rule());
-      svg.AddPaths(tmp, false, clip_brush_clr, clip_stroke_clr, 0.8, false);
-    }
-    else
-      svg.AddPaths(tmp, false, clip_brush_clr, clip_stroke_clr, 0.8, false);
+    svg.AddPaths(tmp, false, fillrule, clip_brush_clr, clip_stroke_clr, 0.8, false);
   }
 
 
-  inline void SvgAddSolution(SvgWriter& svg, const PathsD& path, bool show_coords)
+  inline void SvgAddSolution(SvgWriter& svg, const PathsD& path, FillRule fillrule, bool show_coords)
   {
-    svg.AddPaths(path, false, 0xFF80ff9C, 0xFF003300, 0.8, show_coords);
+    svg.AddPaths(path, false, fillrule, solution_brush_clr, 0xFF003300, 1.2, show_coords);
   }
 
 
-  inline void SvgAddSolution(SvgWriter& svg, const Paths64& path, bool show_coords)
+  inline void SvgAddSolution(SvgWriter& svg, const Paths64& path, FillRule fillrule, bool show_coords)
   {
     svg.AddPaths(TransformPaths<double, int64_t>(path),
-      false, 0x9980ff9C, 0xFF003300, 0.8, show_coords);
+      false, fillrule, solution_brush_clr, 0xFF003300, 1.2, show_coords);
   }
 
 
-  inline void SvgAddOpenSolution(SvgWriter& svg, const PathsD& path,
+  inline void SvgAddOpenSolution(SvgWriter& svg, const PathsD& path, FillRule fillrule,
     bool show_coords, bool is_joined = false)
   {
-    svg.AddPaths(path, !is_joined, 0x0, 0xFF006600, 1.8, show_coords);
+    svg.AddPaths(path, !is_joined, fillrule, 0x0, 0xFF006600, 1.8, show_coords);
   }
 
 
-  inline void SvgAddOpenSolution(SvgWriter& svg, const Paths64& path,
-    bool show_coords, bool is_joined = false)
+  inline void SvgAddOpenSolution(SvgWriter& svg, const Paths64& path, 
+    FillRule fillrule, bool show_coords, bool is_joined = false)
   {
     svg.AddPaths(TransformPaths<double, int64_t>(path),
-      !is_joined, 0x0, 0xFF006600, 1.8, show_coords);
+      !is_joined, fillrule, 0x0, 0xFF006600, 1.8, show_coords);
   }
 
 

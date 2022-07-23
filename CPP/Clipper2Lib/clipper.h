@@ -1,7 +1,7 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
 * Version   :  Clipper2 - beta                                                 *
-* Date      :  21 July 2022                                                    *
+* Date      :  23 July 2022                                                    *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  This module provides a simple interface to the Clipper Library  *
@@ -56,10 +56,12 @@ namespace Clipper2Lib
   }
 
   inline PathsD BooleanOp(ClipType cliptype, FillRule fillrule,
-    const PathsD& subjects, const PathsD& clips)
+    const PathsD& subjects, const PathsD& clips, int decimal_prec = 2)
   {
+    if (decimal_prec > 8 || decimal_prec < -8)
+      throw Clipper2Exception("invalid decimal precision");
     PathsD result;
-    ClipperD clipper;
+    ClipperD clipper(decimal_prec);
     clipper.AddSubject(subjects);
     clipper.AddClip(clips);
     clipper.Execute(cliptype, fillrule, result);
@@ -71,9 +73,9 @@ namespace Clipper2Lib
     return BooleanOp(ClipType::Intersection, fillrule, subjects, clips);
   }
   
-  inline PathsD Intersect(const PathsD& subjects, const PathsD& clips, FillRule fillrule)
+  inline PathsD Intersect(const PathsD& subjects, const PathsD& clips, FillRule fillrule, int decimal_prec = 2)
   {
-    return BooleanOp(ClipType::Intersection, fillrule, subjects, clips);
+    return BooleanOp(ClipType::Intersection, fillrule, subjects, clips, decimal_prec);
   }
 
   inline Paths64 Union(const Paths64& subjects, const Paths64& clips, FillRule fillrule)
@@ -81,9 +83,9 @@ namespace Clipper2Lib
     return BooleanOp(ClipType::Union, fillrule, subjects, clips);
   }
 
-  inline PathsD Union(const PathsD& subjects, const PathsD& clips, FillRule fillrule)
+  inline PathsD Union(const PathsD& subjects, const PathsD& clips, FillRule fillrule, int decimal_prec = 2)
   {
-    return BooleanOp(ClipType::Union, fillrule, subjects, clips);
+    return BooleanOp(ClipType::Union, fillrule, subjects, clips, decimal_prec);
   }
 
   inline Paths64 Union(const Paths64& subjects, FillRule fillrule)
@@ -95,10 +97,12 @@ namespace Clipper2Lib
     return result;
   }
 
-  inline PathsD Union(const PathsD& subjects, FillRule fillrule)
+  inline PathsD Union(const PathsD& subjects, FillRule fillrule, int decimal_prec = 2)
   {
+    if (decimal_prec > 8 || decimal_prec < -8)
+      throw Clipper2Exception("invalid decimal precision");
     PathsD result;
-    ClipperD clipper;
+    ClipperD clipper(decimal_prec);
     clipper.AddSubject(subjects);
     clipper.Execute(ClipType::Union, fillrule, result);
     return result;
@@ -109,9 +113,9 @@ namespace Clipper2Lib
     return BooleanOp(ClipType::Difference, fillrule, subjects, clips);
   }
 
-  inline PathsD Difference(const PathsD& subjects, const PathsD& clips, FillRule fillrule)
+  inline PathsD Difference(const PathsD& subjects, const PathsD& clips, FillRule fillrule, int decimal_prec = 2)
   {
-    return BooleanOp(ClipType::Difference, fillrule, subjects, clips);
+    return BooleanOp(ClipType::Difference, fillrule, subjects, clips, decimal_prec);
   }
 
   inline Paths64 Xor(const Paths64& subjects, const Paths64& clips, FillRule fillrule)
@@ -119,9 +123,9 @@ namespace Clipper2Lib
     return BooleanOp(ClipType::Xor, fillrule, subjects, clips);
   }
 
-  inline PathsD Xor(const PathsD& subjects, const PathsD& clips, FillRule fillrule)
+  inline PathsD Xor(const PathsD& subjects, const PathsD& clips, FillRule fillrule, int decimal_prec = 2)
   {
-    return BooleanOp(ClipType::Xor, fillrule, subjects, clips);
+    return BooleanOp(ClipType::Xor, fillrule, subjects, clips, decimal_prec);
   }
 
   inline bool IsFullOpenEndType(EndType et)
@@ -279,7 +283,7 @@ namespace Clipper2Lib
       if (cit->y == pt.y)
       {
         if (cit->x == pt.x || (cit->y == pit->y &&
-          ((pt.x < pit->x) != (pt.x < pit->x))))
+          ((pt.x < pit->x) != (pt.x < cit->x))))
           return PointInPolygonResult::IsOn;
         ++cit;
         continue;
@@ -326,7 +330,6 @@ namespace Clipper2Lib
         for (const Point64& pt : child->polygon())
           if (PointInPolygon(pt, pp.polygon()) == PointInPolygonResult::IsOutside)
             return false;
-
         if (child->ChildCount() > 0 && !InternalPolyPathContainsChildren(*child))
           return false;
       }
@@ -565,32 +568,23 @@ namespace Clipper2Lib
   }
   
   template <typename T>
-  inline Path<T> Ellipse(const Rect<T>& rect, int steps = 0,
-    bool orientation_is_reversed = DEFAULT_ORIENTATION_IS_REVERSED)
+  inline Path<T> Ellipse(const Rect<T>& rect, int steps = 0)
   {
     return Ellipse(rect.MidPoint(), 
       static_cast<double>(rect.Width()) *0.5, 
-      static_cast<double>(rect.Height()) * 0.5,
-      steps, orientation_is_reversed);
+      static_cast<double>(rect.Height()) * 0.5, steps);
   }
 
   template <typename T>
   inline Path<T> Ellipse(const Point<T>& center,
-    double radiusX, double radiusY = 0, int steps = 0,
-    bool orientation_is_reversed = DEFAULT_ORIENTATION_IS_REVERSED)
+    double radiusX, double radiusY = 0, int steps = 0)
   {
     if (radiusX <= 0) return Path<T>();
     if (radiusY <= 0) radiusY = radiusX;
     if (steps <= 2)
       steps = static_cast<int>(PI * sqrt((radiusX + radiusY) / 2));
 
-    // to ensure function returns a positive area
-    double si;
-    if (orientation_is_reversed)
-      si = -std::sin(2 * PI / steps);
-    else
-      si = std::sin(2 * PI / steps);
-
+    double si = std::sin(2 * PI / steps);
     double co = std::cos(2 * PI / steps);
     double dx = co, dy = si;
     Path<T> result;

@@ -1,7 +1,7 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
 * Version   :  Clipper2 - beta                                                 *
-* Date      :  21 July 2022                                                    *
+* Date      :  23 July 2022                                                    *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  This is the main polygon clipping module                        *
@@ -453,34 +453,26 @@ namespace Clipper2Lib {
 	}
 
 
-	double Area(OutPt* op, bool orientation_is_reversed)
+	double Area(OutPt* op)
 	{
 		//https://en.wikipedia.org/wiki/Shoelace_formula
-		double area = 0.0;
+		double result = 0.0;
 		OutPt* op2 = op;
 		do
 		{
-			area += static_cast<double>(op2->prev->pt.y + op2->pt.y) *
+			result += static_cast<double>(op2->prev->pt.y + op2->pt.y) *
 				static_cast<double>(op2->prev->pt.x - op2->pt.x);
 			op2 = op2->next;
 		} while (op2 != op);
-		if (orientation_is_reversed)
-			return area * 0.5;
-		else
-			return area * -0.5;
+		return result * 0.5;
 	}
 
 	inline double AreaTriangle(const Point64& pt1, 
-		const Point64& pt2, const Point64& pt3, bool orientation_is_reversed)
+		const Point64& pt2, const Point64& pt3)
 	{
-		if (orientation_is_reversed)
-			return static_cast<double>(pt3.y + pt1.y) * static_cast<double>(pt3.x - pt1.x) +
-				static_cast<double>(pt1.y + pt2.y) * static_cast<double>(pt1.x - pt2.x) +
-				static_cast<double>(pt2.y + pt3.y) * static_cast<double>(pt2.x - pt3.x);
-		else
-			return -(static_cast<double>(pt3.y + pt1.y) * static_cast<double>(pt3.x - pt1.x) +
-				static_cast<double>(pt1.y + pt2.y) * static_cast<double>(pt1.x - pt2.x) +
-				static_cast<double>(pt2.y + pt3.y) * static_cast<double>(pt2.x - pt3.x));
+		return (static_cast<double>(pt3.y + pt1.y) * static_cast<double>(pt3.x - pt1.x) +
+			static_cast<double>(pt1.y + pt2.y) * static_cast<double>(pt1.x - pt2.x) +
+			static_cast<double>(pt2.y + pt3.y) * static_cast<double>(pt2.x - pt3.x));
 	}
 
 	void ReverseOutPts(OutPt* op)
@@ -801,84 +793,56 @@ namespace Clipper2Lib {
 	{
 		switch (fillrule_)
 		{
-		case FillRule::EvenOdd:
-			break; 
 		case FillRule::NonZero:
-			if (abs(e.wind_cnt) != 1) return false;
-			break;
-		default:
-		{
-			if (fillrule_ == fillpos)
-			{
-				if (e.wind_cnt != 1) return false;
-			}
-			else /*(fillrule_ == fillneg)*/ 
-				if (e.wind_cnt != -1) return false;
-		}
+			if (abs(e.wind_cnt) != 1) return false; break;
+		case FillRule::Positive:
+			if (e.wind_cnt != 1) return false; break;
+		case FillRule::Negative:
+			if (e.wind_cnt != -1) return false; break;
 		}
 
 		switch (cliptype_)
 		{
+
 		case ClipType::Intersection:
 			switch (fillrule_)
 			{
-			case FillRule::EvenOdd:
-			case FillRule::NonZero: 
-				return (e.wind_cnt2 != 0);
+			case FillRule::Positive:
+				return (e.wind_cnt2 > 0);
+			case FillRule::Negative:
+				return (e.wind_cnt2 < 0);
 			default:
-				if (fillrule_ == fillpos) 
-					return (e.wind_cnt2 > 0);
-				else 
-					return (e.wind_cnt2 < 0);
+				return (e.wind_cnt2 != 0);
 			}
 			break;
 
 		case ClipType::Union:
 			switch (fillrule_)
 			{
-			case FillRule::EvenOdd:
-			case FillRule::NonZero: 
-				return (e.wind_cnt2 == 0);
+			case FillRule::Positive:
+				return (e.wind_cnt2 <= 0);
+			case FillRule::Negative:
+				return (e.wind_cnt2 >= 0);
 			default:
-				if (fillrule_ == fillpos)
-					return (e.wind_cnt2 <= 0);
-				else
-					return (e.wind_cnt2 >= 0);
+				return (e.wind_cnt2 == 0);
 			}
 			break;
 
 		case ClipType::Difference:
+			bool result;
+			switch (fillrule_)
+			{
+			case FillRule::Positive: result = (e.wind_cnt2 <= 0); break;
+			case FillRule::Negative:result = (e.wind_cnt2 >= 0); break;
+			default: result = (e.wind_cnt2 == 0);
+			}
 			if (GetPolyType(e) == PathType::Subject)
-				switch (fillrule_)
-				{
-				case FillRule::EvenOdd:
-				case FillRule::NonZero: 
-					return (e.wind_cnt2 == 0);
-				default:
-					if (fillrule_ == fillpos)
-						return (e.wind_cnt2 <= 0);
-					else
-						return (e.wind_cnt2 >= 0);
-				}
+				return result; 
 			else
-				switch (fillrule_)
-				{
-				case FillRule::EvenOdd:
-				case FillRule::NonZero: 
-					return (e.wind_cnt2 != 0);
-				default:
-					if (fillrule_ == fillpos)
-						return (e.wind_cnt2 > 0);
-					else
-						return (e.wind_cnt2 < 0);
-				}
+				return !result;
 			break;
 
-		case ClipType::Xor:
-			return true;  // XOr is always contributing unless open
-
-		default:
-			return false;
+		case ClipType::Xor: return true;  break;
 		}
 		return false;  // we should never get here
 	}
@@ -886,16 +850,28 @@ namespace Clipper2Lib {
 
 	inline bool ClipperBase::IsContributingOpen(const Active& e) const
 	{
+		bool is_in_clip, is_in_subj;
+		switch (fillrule_)
+		{
+		case FillRule::Positive: 
+			is_in_clip = e.wind_cnt2 > 0; 
+			is_in_subj = e.wind_cnt > 0;
+			break;
+		case FillRule::Negative: 
+			is_in_clip = e.wind_cnt2 < 0; 
+			is_in_subj = e.wind_cnt < 0;
+			break;
+		default: 
+			is_in_clip = e.wind_cnt2 != 0;
+			is_in_subj = e.wind_cnt != 0;
+		}
+
 		switch (cliptype_)
 		{
-		case ClipType::Intersection: return (e.wind_cnt2 != 0);
-		case ClipType::Union: return (e.wind_cnt == 0 && e.wind_cnt2 == 0);
-		case ClipType::Difference: return (e.wind_cnt2 == 0);
-		case ClipType::Xor: return (e.wind_cnt != 0) != (e.wind_cnt2 != 0);
-		default:
-			return false;  // delphi2cpp translation note: no warnings
+		case ClipType::Intersection: return is_in_clip;
+		case ClipType::Union: return (!is_in_subj && !is_in_clip);
+		default: return !is_in_clip;
 		}
-		return false;  // stops compiler error
 	}
 
 
@@ -1525,9 +1501,8 @@ namespace Clipper2Lib {
 		if (zfill_func_)
 			zfill_func_(prevOp->pt, splitOp->pt, splitOp->next->pt, nextNextOp->pt, ip);
 #endif
-		double area1 = Area(outRecOp, orientation_is_reversed_);
-		double area2 = AreaTriangle(ip, 
-			splitOp->pt, splitOp->next->pt, orientation_is_reversed_);
+		double area1 = Area(outRecOp);
+		double area2 = AreaTriangle(ip, splitOp->pt, splitOp->next->pt);
 
 		if (ip == prevOp->pt || ip == nextNextOp->pt)
 		{
@@ -1632,8 +1607,8 @@ namespace Clipper2Lib {
 
 	void ClipperBase::CompleteSplit(OutPt* op1, OutPt* op2, OutRec& outrec)
 	{
-		double area1 = Area(op1, orientation_is_reversed_);
-		double area2 = Area(op2, orientation_is_reversed_);
+		double area1 = Area(op1);
+		double area2 = Area(op2);
 		bool signs_change = (area1 > 0) == (area2 < 0);
 
 		if (area1 == 0 || (signs_change && std::abs(area1) < 2))
@@ -1767,13 +1742,23 @@ namespace Clipper2Lib {
 				edge_c = &e1;
 			}
 
-			if (abs(edge_c->wind_cnt) != 1) return nullptr;
-
-			if (cliptype_ == ClipType::Union)
+			if (abs(edge_c->wind_cnt) != 1) return nullptr;			
+			switch (cliptype_)
 			{
-				if (std::abs(e2.wind_cnt) != 1 || e2.wind_cnt2 != 0) return nullptr;
+			case ClipType::Union: if (!IsHotEdge(*edge_c)) 
+				return nullptr; 
+				break;
+			default: 
+				if (edge_c->local_min->polytype == PathType::Subject) 
+					return nullptr;
 			}
-			else if (IsSamePolyType(e1, e2) || (std::abs(e2.wind_cnt) != 1)) return nullptr;
+
+			switch (fillrule_)
+			{
+			case FillRule::Positive: if (edge_c->wind_cnt != 1) return nullptr; break;
+			case FillRule::Negative: if (edge_c->wind_cnt != -1) return nullptr; break;
+			default: if (std::abs(edge_c->wind_cnt) != 1) return nullptr; break;
+			}
 
 			//toggle contribution ...
 			if (IsHotEdge(*edge_o))
@@ -1782,6 +1767,8 @@ namespace Clipper2Lib {
 #ifdef USINGZ
 				if (zfill_func_) SetZ(e1, e2, resultOp->pt);
 #endif
+				if (IsFront(*edge_o)) edge_o->outrec->front_edge = nullptr;
+				else edge_o->outrec->back_edge = nullptr;
 				edge_o->outrec = nullptr;
 				return resultOp;
 			}
@@ -1793,7 +1780,7 @@ namespace Clipper2Lib {
 				//find the other side of the LocMin and
 				//if it's 'hot' join up with it ...
 				Active* e3 = FindEdgeWithMatchingLocMin(edge_o);
-				if (IsHotEdge(*e3))
+				if (e3 && IsHotEdge(*e3))
 				{
 					edge_o->outrec = e3->outrec;
 					if (edge_o->wind_dx > 0)
@@ -2426,10 +2413,7 @@ namespace Clipper2Lib {
 
 				if (is_left_to_right)
 				{
-					if (IsOpen(*e) && e->top.y == y)
-						op = nullptr; // pass over the top of horz. or maxpair open paths
-					else
-						op = IntersectEdges(horz, *e, pt);
+					op = IntersectEdges(horz, *e, pt);
 					SwapPositionsInAEL(horz, *e);
 
 
@@ -2448,10 +2432,7 @@ namespace Clipper2Lib {
 				}
 				else
 				{
-					if (IsOpen(*e) && e->top.y == y)
-						op = nullptr; // pass over the top of horz. or maxpair open paths
-					else
-						op = IntersectEdges(*e, horz, pt);
+					op = IntersectEdges(*e, horz, pt);
 					SwapPositionsInAEL(*e, horz);
 
 					if (IsHotEdge(horz) && op &&
@@ -2493,7 +2474,7 @@ namespace Clipper2Lib {
 				AddOutPt(horz, horz.top);
 			UpdateEdgeIntoAEL(&horz);
 
-			if (PreserveCollinear && HorzIsSpike(horz))
+			if (PreserveCollinear && !horzIsOpen && HorzIsSpike(horz))
 				TrimHorz(horz, true);
 
 			is_left_to_right = 
@@ -2677,7 +2658,7 @@ namespace Clipper2Lib {
 	void ClipperBase::AddTrialHorzJoin(OutPt* op)
 	{
 		//make sure 'op' isn't added more than once
-		if (!OutPtInTrialHorzList(op))
+		if (!op->outrec->is_open && !OutPtInTrialHorzList(op))
 			horz_joiners_ = new Joiner(op, nullptr, horz_joiners_);
 	}
 
@@ -3103,8 +3084,8 @@ namespace Clipper2Lib {
 		CheckDisposeAdjacent(op1, op2, *or1);
 		CheckDisposeAdjacent(op2, op1, *or2);
 		if (op1->next == op2 || op2->next == op1) return or1;
-
 		OutRec* result = or1;
+
 		for (; ; )
 		{
 			if (!IsValidPath(op1) || !IsValidPath(op2) ||
@@ -3336,8 +3317,7 @@ namespace Clipper2Lib {
 			else
 			{
 				//closed paths should always return a Positive orientation
-				if (BuildPath(outrec->pts, 
-					ReverseSolution != orientation_is_reversed_, false, path))
+				if (BuildPath(outrec->pts, ReverseSolution, false, path))
 					solutionClosed.emplace_back(std::move(path));
 			}
 		}
@@ -3437,7 +3417,7 @@ namespace Clipper2Lib {
 			for (OutRec* split : *owner->splits)
 			{
 				split = GetRealOutRec(split); 
-				if (!split || split == owner || split == outrec)
+				if (!split || split->idx <= owner->idx || split == outrec)
 					continue;
 				else if (split->splits && DeepCheckOwner(outrec, split))
 					return true;
@@ -3511,8 +3491,7 @@ namespace Clipper2Lib {
 			Path64 path;
 			//closed outer paths should always return a Positive orientation
 			//except when ReverseSolution == true
-			if (!BuildPath(outrec->pts,
-				ReverseSolution != orientation_is_reversed_, false, path)) continue;
+			if (!BuildPath(outrec->pts, ReverseSolution, false, path)) continue;
 
 			PolyPath64* owner_polypath;
 			if (outrec->owner && outrec->owner->polypath)

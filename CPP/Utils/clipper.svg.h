@@ -1,6 +1,6 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  16 June 2022                                                    *
+* Date      :  23 July 2022                                                    *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * License   :  http://www.boost.org/LICENSE_1_0.txt                            *
@@ -19,16 +19,18 @@ namespace Clipper2Lib {
     private:
         PathsD paths_;
         bool is_open_path;
+        FillRule fillrule_;
         unsigned brush_color_;
         unsigned pen_color_;
         double pen_width_;
         bool show_coords_;
 
     public:
-        PathInfo(const PathsD& paths, bool is_open,
+        PathInfo(const PathsD& paths, bool is_open, FillRule fillrule,
             unsigned brush_clr, unsigned pen_clr, double pen_width, bool show_coords) :
-            paths_(paths), is_open_path(is_open), brush_color_(brush_clr),
-            pen_color_(pen_clr), pen_width_(pen_width), show_coords_(show_coords) {};
+            paths_(paths), is_open_path(is_open), fillrule_(fillrule),
+            brush_color_(brush_clr), pen_color_(pen_clr), 
+            pen_width_(pen_width), show_coords_(show_coords) {};
         friend class SvgWriter;
         friend class SvgReader;
     };
@@ -74,9 +76,8 @@ namespace Clipper2Lib {
       PathInfoList path_infos;
       void DrawCircle(std::ofstream& file, double x, double y, double radius);
   public:
-    SvgWriter(FillRule fill_rule, int precision = 0)
+    explicit SvgWriter(int precision = 0)
     { 
-      fill_rule_ = fill_rule;
       coords_style.font_name = "Verdana";
       coords_style.font_color = 0xFF000000; 
       coords_style.font_size = 11; 
@@ -89,12 +90,12 @@ namespace Clipper2Lib {
     FillRule Fill_Rule() { return fill_rule_; }
     void SetCoordsStyle(const std::string &font_name, unsigned font_color, unsigned font_size);
     void AddText(const std::string &text, unsigned font_color, unsigned font_size, int x, int y);
-    void AddPath(const PathD& path, bool is_open, unsigned brush_color,
-      unsigned pen_color, double pen_width, bool show_coords);
-    void AddPaths(const PathsD& paths, bool is_open, unsigned brush_color,
-      unsigned pen_color, double pen_width, bool show_coords);
-    void AddPaths(const Paths64& paths, bool is_open, unsigned brush_color,
-      unsigned pen_color, double pen_width, bool show_coords);
+    void AddPath(const PathD& path, bool is_open, FillRule fillrule, 
+      unsigned brush_color, unsigned pen_color, double pen_width, bool show_coords);
+    void AddPaths(const PathsD& paths, bool is_open, FillRule fillrule, 
+      unsigned brush_color, unsigned pen_color, double pen_width, bool show_coords);
+    void AddPaths(const Paths64& paths, bool is_open, FillRule fillrule, 
+      unsigned brush_color, unsigned pen_color, double pen_width, bool show_coords);
     bool SaveToFile(const std::string &filename, int max_width, int max_height, int margin);
   };
 

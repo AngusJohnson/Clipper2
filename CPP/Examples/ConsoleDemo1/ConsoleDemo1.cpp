@@ -11,13 +11,10 @@
 using namespace Clipper2Lib;
 
 const int display_width = 800, display_height = 600;
-enum class TestType { All, Simple, SavedTests, Benchmark, MemoryLeak};
+enum class TestType { All, Simple, Benchmark, MemoryLeak};
 
 Path64 MakeRandomPoly(int width, int height, unsigned vertCnt);
 void DoSimpleTest(bool show_solution_coords = false);
-void RunSavedTests(const std::string& filename,
-  const int start_num, const int end_num,
-  bool svg_draw, bool show_solution_coords);
 void DoBenchmark(int edge_cnt_start, int edge_cnt_end, int increment);
 void DoMemoryLeakTest();
 void System(const std::string &filename);
@@ -28,22 +25,17 @@ int main()
   srand((unsigned)time(0));
 
   //////////////////////////////////////////////////////////////////////////
-  //test_type options:  Simple; Benchmark; All; MemoryLeak; SavedTests;
-  TestType test_type = TestType::Simple;
+  //test_type options:  Simple; Benchmark; All; MemoryLeak; 
+  TestType test_type = TestType::All;
   //////////////////////////////////////////////////////////////////////////
 
   switch (test_type)
   {
   case TestType::All:
+
   case TestType::Simple:
     DoSimpleTest();
     if (test_type == TestType::Simple) break;
-
-  case TestType::SavedTests:
-    RunSavedTests("../../../Tests/tests.txt", 1, 0xFFFF, false, false);
-    //or test just one of the samples in tests.txt 
-    //DoTestsFromFile("../../Tests/tests.txt", 16, 16, true, true);
-    if (test_type == TestType::SavedTests) break;
 
   case TestType::Benchmark:
     std::cout << std::endl << "==========" << std::endl;
@@ -101,7 +93,7 @@ void DoSimpleTest(bool show_solution_coords)
   //SVG IMAGE #1
   //Use Minkowski to draw a stylised "C2"
   
-  SvgWriter svg(fr);
+  SvgWriter svg;
   //create a circular shape to use as the 'paint brush' shape
   Path64 pattern = Ellipse<int64_t>(Point64(), 25, 25);
   //or alternatively create a diagonal brush shape
@@ -114,7 +106,7 @@ void DoSimpleTest(bool show_solution_coords)
   path.erase(path.end() - 4, path.end());
   //use MinkowskiSum to 'draw' the "C" using the pattern
   solution = MinkowskiSum(pattern, path, false);
-  SvgAddSolution(svg, solution, false);
+  SvgAddSolution(svg, solution, fr, false);
   //and design "2"
   path = Ellipse<int64_t>(Point64(240, 180), 75, 65);
   std::rotate(path.begin(), path.begin() + 6, path.end());
@@ -125,7 +117,7 @@ void DoSimpleTest(bool show_solution_coords)
   //use MinkowskiSum to 'draw' the "2" using the pattern
   solution = MinkowskiSum(pattern, path, false);
   //save and display
-  SvgAddSolution(svg, solution, false);
+  SvgAddSolution(svg, solution, fr, false);
   SvgSaveToFile(svg, "solution1.svg", 450, 450, 10);
   System("solution1.svg");
 
@@ -141,73 +133,18 @@ void DoSimpleTest(bool show_solution_coords)
   solution = Intersect(subject, clip, fr);
   solution = InflatePaths(solution, -10, JoinType::Round, EndType::Polygon);
 
-  SvgWriter svg2(fr);
-  SvgAddSubject(svg2, subject);
-  SvgAddClip(svg2, clip);
-  SvgAddSolution(svg2, solution, false);
+  SvgWriter svg2;
+  SvgAddSubject(svg2, subject, fr);
+  SvgAddClip(svg2, clip, fr);
+  SvgAddSolution(svg2, solution, fr, false);
   SvgSaveToFile(svg2, "solution2.svg", 450, 450, 10);
   System("solution2.svg");
 }
 
-void RunSavedTests(const std::string& filename,
-  const int start_num, const int end_num, bool svg_draw, bool show_solution_coords)
-{
-  std::ifstream ifs(filename);
-  if (!ifs) return;
-
-  svg_draw = svg_draw && (end_num - start_num <= 50);
-  std::cout << std::endl << "Running stored tests (from " << start_num <<
-    " to " << end_num << ")" << std::endl << std::endl;
-
-  for (int i = start_num; i <= end_num; ++i)
-  {
-    Paths64 subject, subject_open, clip;
-    Paths64 solution, solution_open;
-    ClipType ct;
-    FillRule fr;
-    int64_t area, count;
-
-    if (LoadTestNum(ifs, i, subject, subject_open, clip, 
-      area, count, ct, fr)) 
-    {
-      Clipper64 c;
-      c.AddSubject(subject);
-      c.AddOpenSubject(subject_open);
-      c.AddClip(clip);
-      c.Execute(ct, fr, solution, solution_open);
-      int64_t area2 = static_cast<int64_t>(Area(solution));
-      int64_t count2 = solution.size();
-      int64_t count_diff = std::llabs(count2 - count);
-      if (count && count_diff > 2 && count_diff/ static_cast<double>(count) > 0.02)
-        std::cout << "  Test " << i << " path counts differ: Saved val= " <<
-        count << "; New val=" << count2 << std::endl;
-      int64_t area_diff = std::llabs(area2 - area);
-      if (area && (area_diff > 2) && (area_diff/static_cast<double>(area)) > 0.02)
-        std::cout << "  Test " << i << " path areas differ: Saved val= " <<
-        area << "; New val=" << area2 << std::endl;
-      if (svg_draw)
-      {
-        std::string filename2 = "test_" + std::to_string(i) + ".svg";
-
-        SvgWriter svg(fr);
-        SvgAddSubject(svg, subject);
-        SvgAddOpenSubject(svg, subject_open);
-        SvgAddClip(svg, clip);
-        SvgAddSolution(svg, solution, show_solution_coords);
-        SvgAddOpenSolution(svg, solution_open, show_solution_coords);
-        SvgSaveToFile(svg, filename2, display_width, display_height, 20);
-        System(filename2.c_str());
-      }
-    }
-    else break;
-  }
-  std::cout << std::endl;
-}
-
 void DoBenchmark(int edge_cnt_start, int edge_cnt_end, int increment)
 {
-  ClipType ct_benchmark = ClipType::Intersection;
-  FillRule fr_benchmark = FillRule::NonZero;//EvenOdd;//Positive;//
+  ClipType ct = ClipType::Intersection;
+  FillRule fr = FillRule::NonZero;//EvenOdd;//Positive;//
 
   Paths64 subject, clip, solution;
 
@@ -223,15 +160,15 @@ void DoBenchmark(int edge_cnt_start, int edge_cnt_end, int increment)
     std::cout << "Edge Count: " << i << " = ";
     {
       Timer t;
-      solution = BooleanOp(ct_benchmark, fr_benchmark, subject, clip);
+      solution = BooleanOp(ct, fr, subject, clip);
       if (solution.empty()) break;
     }
   }
 
-  SvgWriter svg(fr_benchmark);
-  SvgAddSubject(svg, subject);
-  SvgAddClip(svg, clip);
-  SvgAddSolution(svg, solution, false);
+  SvgWriter svg;
+  SvgAddSubject(svg, subject, fr);
+  SvgAddClip(svg, clip, fr);
+  SvgAddSolution(svg, solution, fr, false);
   SvgSaveToFile(svg, "solution3.svg", display_width, display_height, 20);
   System("solution3.svg");
 }

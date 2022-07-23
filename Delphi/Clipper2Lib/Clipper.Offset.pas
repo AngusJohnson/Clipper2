@@ -3,7 +3,7 @@ unit Clipper.Offset;
 (*******************************************************************************
 * Author    :  Angus Johnson                                                   *
 * Version   :  Clipper2 - beta                                                 *
-* Date      :  20 June 2022                                                    *
+* Date      :  23 July 2022                                                    *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  Offset paths and clipping solutions                             *
@@ -256,7 +256,7 @@ begin
     lowestIdx := GetLowestPolygonIdx(pathgroup.paths);
     if lowestIdx < 0 then Exit;
     // nb: don't use the default orientation here ...
-    area := Clipper.Core.Area(pathgroup.paths[lowestIdx], false);
+    area := Clipper.Core.Area(pathgroup.paths[lowestIdx]);
     if area = 0 then Exit;
     pathgroup.reversed := (area < 0);
     if pathgroup.reversed then delta := -delta;
@@ -336,7 +336,7 @@ begin
   if not fMergeGroups then
   begin
     // clean up self-intersections ...
-    with TClipper64.Create(false) do
+    with TClipper64.Create do
     try
       PreserveCollinear := fPreserveCollinear;
       // the solution should retain the orientation of the input
@@ -482,7 +482,7 @@ begin
   if fMergeGroups and (fInGroups.Count > 0) then
   begin
     // clean up self-intersections ...
-    with TClipper64.Create(false) do
+    with TClipper64.Create do
     try
       PreserveCollinear := fPreserveCollinear;
       // the solution should retain the orientation of the input

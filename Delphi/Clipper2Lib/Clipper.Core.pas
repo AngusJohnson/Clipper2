@@ -3,7 +3,7 @@ unit Clipper.Core;
 (*******************************************************************************
 * Author    :  Angus Johnson                                                   *
 * Version   :  Clipper2 - beta                                                 *
-* Date      :  17 July 2022                                                    *
+* Date      :  23 July 2022                                                    *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  Core Clipper Library module                                     *
 *              Contains structures and functions used throughout the library   *
@@ -16,25 +16,6 @@ interface
 
 uses
   SysUtils, Math;
-
-// The classic Cartesian plane is defined by an X-axis that's positive toward
-// the right and a Y-axis that's positive upwards. However, many modern
-// graphics libraries use an inverted Y-axis (where Y is positive downward).
-// This effectively flips polygons upside down, with winding directions that
-// were clockwise becoming anti-clockwise, and areas that were positive
-// becoming negative. Nevertheless, in Cartesian coordinates the area of a
-// convex polygon is defined to be positive if the points are arranged in a
-// counterclockwise order, and negative if they are in clockwise order
-// (see https://mathworld.wolfram.com/PolygonArea.html). If this "normal"
-// winding direction is inconvenient for whatever reason the following
-// constant can be changed to accommodate this. Note however that winding
-// direction is only important when using Clipper's Positive and Negative
-// filling rules. (Reversing orientation has no effect on NonZero an EvenOdd
-// filling.) The constant below is intended as "set and perhaps not quite
-// forget". While this sets the default orientation, the Clipper class
-// constructor contains a parameter which can override this default setting.
-
-const DEFAULT_ORIENTATION_IS_REVERSED = false;
 
 type
   PPoint64  = ^TPoint64;
@@ -119,21 +100,15 @@ type
 
   EClipperLibException = class(Exception);
 
-function Area(const path: TPath64;
-  orientationIsReversed: Boolean = DEFAULT_ORIENTATION_IS_REVERSED): Double; overload;
-function Area(const paths: TPaths64;
-  orientationIsReversed: Boolean = DEFAULT_ORIENTATION_IS_REVERSED): Double; overload;
+function Area(const path: TPath64): Double; overload;
+function Area(const paths: TPaths64): Double; overload;
   {$IFDEF INLINING} inline; {$ENDIF}
-function Area(const path: TPathD;
-  orientationIsReversed: Boolean = DEFAULT_ORIENTATION_IS_REVERSED): Double; overload;
-function Area(const paths: TPathsD;
-  orientationIsReversed: Boolean = DEFAULT_ORIENTATION_IS_REVERSED): Double; overload;
+function Area(const path: TPathD): Double; overload;
+function Area(const paths: TPathsD): Double; overload;
   {$IFDEF INLINING} inline; {$ENDIF}
-function IsPositive(const path: TPath64;
-  orientationIsReversed: Boolean = DEFAULT_ORIENTATION_IS_REVERSED): Boolean; overload;
+function IsPositive(const path: TPath64): Boolean; overload;
   {$IFDEF INLINING} inline; {$ENDIF}
-function IsPositive(const path: TPathD;
-  orientationIsReversed: Boolean = DEFAULT_ORIENTATION_IS_REVERSED): Boolean; overload;
+function IsPositive(const path: TPathD): Boolean; overload;
   {$IFDEF INLINING} inline; {$ENDIF}
 
 function CrossProduct(const pt1, pt2, pt3: TPoint64): double; overload;
@@ -1332,7 +1307,7 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-function Area(const path: TPath64; orientationIsReversed: Boolean): Double;
+function Area(const path: TPath64): Double;
 var
   i, highI: Integer;
   d: double;
@@ -1350,23 +1325,21 @@ begin
     Result := Result + d * (p1.X - p2.X);
     p1 := p2; inc(p2);
   end;
-  if orientationIsReversed then
-    Result := Result * -0.5 else
-    Result := Result * 0.5;
+  Result := Result * 0.5;
 end;
 //------------------------------------------------------------------------------
 
-function Area(const paths: TPaths64; orientationIsReversed: Boolean): Double;
+function Area(const paths: TPaths64): Double;
 var
   i: integer;
 begin
   Result := 0;
   for i := 0 to High(paths) do
-    Result := Result + Area(paths[i], orientationIsReversed);
+    Result := Result + Area(paths[i]);
 end;
 //------------------------------------------------------------------------------
 
-function Area(const path: TPathD; orientationIsReversed: Boolean): Double;
+function Area(const path: TPathD): Double;
 var
   i, highI: Integer;
   p1,p2: PPointD;
@@ -1382,31 +1355,29 @@ begin
     Result := Result + (p1.Y + p2.Y) * (p1.X - p2.X);
     p1 := p2; inc(p2);
   end;
-  if orientationIsReversed then
-    Result := Result * -0.5 else
-    Result := Result * 0.5;
+  Result := Result * 0.5;
 end;
 //------------------------------------------------------------------------------
 
-function Area(const paths: TPathsD; orientationIsReversed: Boolean): Double;
+function Area(const paths: TPathsD): Double;
 var
   i: integer;
 begin
   Result := 0;
   for i := 0 to High(paths) do
-    Result := Result + Area(paths[i], orientationIsReversed);
+    Result := Result + Area(paths[i]);
 end;
 //------------------------------------------------------------------------------
 
-function IsPositive(const path: TPath64; orientationIsReversed: Boolean): Boolean;
+function IsPositive(const path: TPath64): Boolean;
 begin
-  Result := (Area(path, orientationIsReversed) >= 0);
+  Result := (Area(path) >= 0);
 end;
 //------------------------------------------------------------------------------
 
-function IsPositive(const path: TPathD; orientationIsReversed: Boolean): Boolean;
+function IsPositive(const path: TPathD): Boolean;
 begin
-  Result := (Area(path, orientationIsReversed) >= 0);
+  Result := (Area(path) >= 0);
 end;
 //------------------------------------------------------------------------------
 

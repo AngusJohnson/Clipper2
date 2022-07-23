@@ -240,11 +240,10 @@ namespace Clipper2Lib {
 		void BuildPaths(Paths64& solutionClosed, Paths64* solutionOpen);
 		void BuildTree(PolyPath64& polytree, Paths64& open_paths);
 #ifdef USINGZ
-		ZFillCallback zfill_func_; // custom callback 
+		ZFillCallback zfill_func_ = nullptr; // custom callback 
 		void SetZ(const Active& e1, const Active& e2, Point64& pt);
 #endif
 	protected:
-		bool orientation_is_reversed_ = true;
 		void CleanUp();  // unlike Clear, CleanUp preserves added paths
 		void AddPath(const Path64& path, PathType polytype, bool is_open);
 		void AddPaths(const Paths64& paths, PathType polytype, bool is_open);
@@ -258,20 +257,6 @@ namespace Clipper2Lib {
 	public:
 #ifdef USINGZ
 		void ZFillFunction(ZFillCallback zFillFunc) { zfill_func_ = zFillFunc; }
-		ClipperBase(bool use_reverse_orientation = DEFAULT_ORIENTATION_REVERSED)
-		{ 
-			ReverseSolution = use_reverse_orientation;
-			if (use_reverse_orientation)
-				fillpos = FillRule::Negative;
-			zfill_func_ = nullptr;
-		};
-#else
-		explicit ClipperBase(bool orientation_is_reversed = DEFAULT_ORIENTATION_IS_REVERSED)
-		{
-			orientation_is_reversed_ = orientation_is_reversed;
-			if (orientation_is_reversed_)
-				fillpos = FillRule::Negative;
-		}
 #endif
 		virtual ~ClipperBase();
 		bool PreserveCollinear = true;
@@ -404,8 +389,8 @@ namespace Clipper2Lib {
 		const double scale_;
 	public:
 		explicit ClipperD(int precision = 0,
-      bool use_reverse_orientation = DEFAULT_ORIENTATION_IS_REVERSED) : 
-      ClipperBase(use_reverse_orientation), scale_(std::pow(10, precision)) {}
+      bool use_reverse_orientation = false) :
+      ClipperBase(), scale_(std::pow(10, precision)) {}
 
 		void AddSubject(const PathsD& subjects)
 		{

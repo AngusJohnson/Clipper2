@@ -3,7 +3,7 @@ unit Clipper.Engine;
 (*******************************************************************************
 * Author    :  Angus Johnson                                                   *
 * Version   :  Clipper2 - beta                                                 *
-* Date      :  21 July 2022                                                    *
+* Date      :  23 July 2022                                                    *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  This is the main polygon clipping module                        *
@@ -162,7 +162,6 @@ type
     FLocMinList         : TList;
     FVertexArrayList    : TList;
     FJoinerList         : TList;
-    FFillPos            : TFillRule;
     // FActives: see AEL above
     FActives            : PActive;
     // FSel: see SEL above.
@@ -173,7 +172,6 @@ type
     FLocMinListSorted   : Boolean;
     FSucceeded          : Boolean;
     FReverseSolution    : Boolean;
-    FOrientationIsReversed : Boolean;
   {$IFDEF USINGZ}
     FZFunc              : TZCallback64;
   {$ENDIF}
@@ -243,8 +241,7 @@ type
   {$ENDIF}
     property  Succeeded : Boolean read FSucceeded;
   public
-    constructor Create(OrientationIsReversed: Boolean =
-      DEFAULT_ORIENTATION_IS_REVERSED); virtual;
+    constructor Create; virtual;
     destructor Destroy; override;
     procedure Clear;
     function GetBounds: TRect64;
@@ -329,8 +326,7 @@ type
     procedure AddOpenSubject(const pathsD: TPathsD); overload;
     procedure AddClip(const pathD: TPathD); overload;
     procedure AddClip(const pathsD: TPathsD); overload;
-    constructor Create(roundingDecimalPrecision: integer = 2;
-      OrientationIsReversed: Boolean = DEFAULT_ORIENTATION_IS_REVERSED);
+    constructor Create(roundingDecimalPrecision: integer = 2);
       reintroduce; overload;
     function Execute(clipType: TClipType; fillRule: TFillRule;
       out closedSolutions: TPathsD): Boolean; overload;
@@ -931,7 +927,7 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-function Area(op: POutPt; reverseOrientation : Boolean): Double;
+function Area(op: POutPt): Double;
 var
   op2: POutPt;
   d: double;
@@ -945,14 +941,11 @@ begin
     Result := Result + d * (op2.prev.pt.X - op2.pt.X);
     op2 := op2.next;
   until op2 = op;
-  if reverseOrientation then
-    Result := Result * -0.5 else
-    Result := Result * 0.5;
+  Result := Result * 0.5;
 end;
 //------------------------------------------------------------------------------
 
-function AreaTriangle(const pt1, pt2, pt3: TPoint64;
-  reverseOrientation : Boolean): double;
+function AreaTriangle(const pt1, pt2, pt3: TPoint64): double;
 var
   d1,d2,d3,d4,d5,d6: double;
 begin
@@ -962,9 +955,7 @@ begin
   d4 := (pt1.x - pt2.x);
   d5 := (pt2.y + pt3.y);
   d6 := (pt2.x - pt3.x);
-  if reverseOrientation then
-    result := -(d1 * d2 + d3 *d4 + d5 *d6) else
-    result := d1 * d2 + d3 *d4 + d5 *d6;
+  result := d1 * d2 + d3 *d4 + d5 *d6;
 end;
 //------------------------------------------------------------------------------
 
@@ -1142,8 +1133,7 @@ end;
 // TClipperBase methods ...
 //------------------------------------------------------------------------------
 
-constructor TClipperBase.Create(OrientationIsReversed: Boolean);
-
+constructor TClipperBase.Create;
 begin
   FLocMinList       := TList.Create;
   FOutRecList       := TList.Create;
@@ -1152,11 +1142,6 @@ begin
   FVertexArrayList  := TList.Create;
   FPreserveCollinear  := true;
   FReverseSolution    := false;
-
-  FOrientationIsReversed := OrientationIsReversed;
-  if FOrientationIsReversed then
-    FFillPos := frNegative else
-    FFillPos := frPositive;
 end;
 //------------------------------------------------------------------------------
 
@@ -1386,50 +1371,33 @@ function TClipperBase.IsContributingClosed(e: PActive): Boolean;
 begin
   Result := false;
   case FFillRule of
-    frNonZero:
-      if abs(e.windCnt) <> 1 then Exit;
-    frPositive, frNegative:
-      if FFillRule = FFillPos then
-      begin
-        if (e.windCnt <> 1) then Exit;
-      end else
-        if (e.windCnt <> -1) then Exit;
+    frNonZero: if abs(e.windCnt) <> 1 then Exit;
+    frPositive: if (e.windCnt <> 1) then Exit;
+    frNegative: if (e.windCnt <> -1) then Exit;
   end;
 
   case FClipType of
     ctIntersection:
       case FFillRule of
-        frEvenOdd, frNonZero: Result := (e.windCnt2 <> 0);
-      else
-        if FFillRule = FFillPos then
-          Result := (e.windCnt2 > 0) else
-          Result := (e.windCnt2 < 0);
+        frPositive: Result := (e.windCnt2 > 0);
+        frNegative: Result := (e.windCnt2 < 0);
+        else Result := (e.windCnt2 <> 0);
       end;
     ctUnion:
       case FFillRule of
-        frEvenOdd, frNonZero: Result := (e.windCnt2 = 0);
-      else
-        if FFillRule = FFillPos then
-          Result := (e.windCnt2 <= 0) else
-          Result := (e.windCnt2 >= 0);
+        frPositive: Result := (e.windCnt2 <= 0);
+        frNegative: Result := (e.windCnt2 >= 0);
+        else Result := (e.windCnt2 = 0);
       end;
     ctDifference:
-      if GetPolyType(e) = ptSubject then
+      begin
         case FFillRule of
-          frEvenOdd, frNonZero: Result := (e.windCnt2 = 0);
-        else
-          if FFillRule = FFillPos then
-            Result := (e.windCnt2 <= 0) else
-            Result := (e.windCnt2 >= 0);
-        end
-      else
-        case FFillRule of
-          frEvenOdd, frNonZero: Result := (e.windCnt2 <> 0);
-        else
-          if FFillRule = FFillPos then
-            Result := (e.windCnt2 > 0) else
-            Result := (e.windCnt2 < 0);
+          frPositive: Result := (e.windCnt2 <= 0);
+          frNegative: Result := (e.windCnt2 >= 0);
+          else Result := (e.windCnt2 = 0);
         end;
+        if GetPolyType(e) <> ptSubject then Result := not Result;
+      end;
     ctXor:
         Result := true;
   end;
@@ -1437,16 +1405,31 @@ end;
 //------------------------------------------------------------------------------
 
 function TClipperBase.IsContributingOpen(e: PActive): Boolean;
+var
+  isInSubj, isInClip: Boolean;
 begin
+    case FFillRule of
+      frPositive:
+        begin
+          isInSubj := e.windCnt > 0;
+          isInClip := e.windCnt2 > 0;
+        end;
+      frNegative:
+        begin
+          isInSubj := e.windCnt < 0;
+          isInClip := e.windCnt2 < 0;
+        end;
+      else
+        begin
+          isInSubj := e.windCnt <> 0;
+          isInClip := e.windCnt2 <> 0;
+        end;
+    end;
+
     case FClipType of
-      ctIntersection:
-        Result := (e.windCnt2 <> 0);
-      ctXor:
-        Result := (e.windCnt <> 0) <> (e.windCnt2 <> 0);
-      ctDifference:
-        Result := (e.windCnt2 = 0);
-      else // ctUnion:
-        Result := (e.windCnt = 0) and (e.windCnt2 = 0);
+      ctIntersection: Result := isInClip;
+      ctUnion: Result := not isInSubj and not isInClip;
+      else Result := not isInClip;
     end;
 end;
 //------------------------------------------------------------------------------
@@ -1933,9 +1916,8 @@ procedure TClipperBase.FixSelfIntersects(var op: POutPt);
     if Assigned(FZFunc) then
       FZFunc(prevOp.Pt, splitOp.Pt, splitOp.Next.Pt, nextNextOp.Pt, ip.Pt);
   {$ENDIF}
-    area1 := Area(op, FOrientationIsReversed);
-    area2 := AreaTriangle(ip,
-      splitOp.pt, splitOp.next.pt, FOrientationIsReversed);
+    area1 := Area(op);
+    area2 := AreaTriangle(ip, splitOp.pt, splitOp.next.pt);
 
     if PointsEqual(ip, prevOp.pt) or
       PointsEqual(ip, nextNextOp.pt) then
@@ -2285,8 +2267,8 @@ var
   signsChange: Boolean;
   newOr: POutRec;
 begin
-  area1 := Area(op1, FOrientationIsReversed);
-  area2 := Area(op2, FOrientationIsReversed);
+  area1 := Area(op1);
+  area2 := Area(op2);
   signsChange := (area1 > 0) = (area2 < 0);
   if (area1 = 0) or (signsChange and (Abs(area1) < 2)) then
   begin
@@ -2723,23 +2705,25 @@ begin
     // the following line avoids duplicating quite a bit of code
     if IsOpen(e2) then SwapActives(e1, e2);
 
-    if FClipType = ctUnion then
-    begin
-      if (abs(e2.WindCnt) <> 1) or (e2.WindCnt2 <> 0) then Exit;
-    end
-    else if IsSamePolyType(e1, e2) or (abs(e2.windCnt) <> 1) then
-      Exit;
+    case FClipType of
+      ctUnion: if not IsHotEdge(e2) then Exit;
+      else if e2.locMin.polytype = ptSubject then Exit;
+    end;
+    case FFillRule of
+      frPositive: if e2.windCnt <> 1 then Exit;
+      frNegative: if e2.windCnt <> -1 then Exit;
+      else if (abs(e2.windCnt) <> 1) then Exit;
+    end;
 
     // toggle contribution ...
     if IsHotEdge(e1) then
     begin
       Result := AddOutPt(e1, pt);
-      {$IFDEF USINGZ}
-      SetZ(e1, e2, Result.pt);
-      {$ENDIF}
+      if IsFront(e1) then
+        e1.outrec.frontE := nil else
+        e1.outrec.backE := nil;
       e1.outrec := nil;
     end
-
     // horizontal edges can pass under open paths at a LocMins
     else if PointsEqual(pt, e1.locMin.vertex.pt) and
       (e1.locMin.vertex.flags * [vfOpenStart, vfOpenEnd] = []) then
@@ -2747,17 +2731,24 @@ begin
       // find the other side of the LocMin and
       // if it's 'hot' join up with it ...
       e3 := FindEdgeWithMatchingLocMin(e1);
-      if IsHotEdge(e3) then
+      if assigned(e3) and IsHotEdge(e3) then
       begin
         e1.outrec := e3.outrec;
         if e1.windDx > 0 then
           SetSides(e3.outrec, e1, e3) else
           SetSides(e3.outrec, e3, e1);
         Result := e3.outrec.pts;
-      end else
+        Exit;
+      end
+      else
         Result := StartOpenPath(e1, pt);
-    end else
+    end
+    else
       Result := StartOpenPath(e1, pt);
+
+    {$IFDEF USINGZ}
+    SetZ(e1, e2, Result.pt);
+    {$ENDIF}
     Exit;
   end;
 
@@ -2792,22 +2783,20 @@ begin
   end;
 
   case FFillRule of
-      frEvenOdd, frNonZero:
-        begin
-          e1WindCnt := abs(e1.windCnt);
-          e2WindCnt := abs(e2.windCnt);
-        end;
-      else
+    frPositive:
       begin
-        if FFillRule = FFillPos then
-        begin
-          e1WindCnt := e1.windCnt;
-          e2WindCnt := e2.windCnt;
-        end else
-        begin
-          e1WindCnt := -e1.windCnt;
-          e2WindCnt := -e2.windCnt;
-        end;
+        e1WindCnt := e1.windCnt;
+        e2WindCnt := e2.windCnt;
+      end;
+    frNegative:
+      begin
+        e1WindCnt := -e1.windCnt;
+        e2WindCnt := -e2.windCnt;
+      end;
+    else
+      begin
+        e1WindCnt := abs(e1.windCnt);
+        e2WindCnt := abs(e2.windCnt);
       end;
   end;
 
@@ -2842,7 +2831,6 @@ begin
         not IsHorizontal(e1) and not IsHorizontal(e2) and
         (CrossProduct(e1.bot, Result.pt, e2.bot) = 0) then
           AddJoin(Result, op2);
-
     end else
     begin
       // can't treat as maxima & minima
@@ -2873,25 +2861,25 @@ begin
     {$ENDIF}
     SwapOutRecs(e1, e2);
   end
-  else // neither edge is 'hot'
+
+  // else neither edge is 'hot'
+  else
   begin
     case FFillRule of
-      frEvenOdd, frNonZero:
+      frPositive:
+        begin
+          e1WindCnt2 := e1.windCnt2;
+          e2WindCnt2 := e2.windCnt2;
+        end;
+      frNegative:
+        begin
+          e1WindCnt2 := -e1.windCnt2;
+          e2WindCnt2 := -e2.windCnt2;
+        end;
+      else
         begin
           e1WindCnt2 := abs(e1.windCnt2);
           e2WindCnt2 := abs(e2.windCnt2);
-        end;
-        else
-        begin
-          if FFillRule = FFillPos then
-          begin
-            e1WindCnt2 := e1.windCnt2;
-            e2WindCnt2 := e2.windCnt2;
-          end else
-          begin
-            e1WindCnt2 := -e1.windCnt2;
-            e2WindCnt2 := -e2.windCnt2;
-          end;
         end;
     end;
 
@@ -3275,7 +3263,7 @@ end;
 procedure TClipperBase.AddTrialHorzJoin(op: POutPt);
 begin
   // make sure 'op' isn't added more than once
-  if not OutPtInTrialHorzList(op) then
+  if not (op.outrec.isOpen) and not OutPtInTrialHorzList(op) then
     FHorzTrials := MakeDummyJoiner(op, FHorzTrials);
 end;
 //------------------------------------------------------------------------------
@@ -3595,10 +3583,8 @@ begin
 
       if (isLeftToRight) then
       begin
-        if IsOpen(e) and (e.top.Y = Y) then
-          op := nil // pass over the top of horz. or maxpair open paths
-        else
-          op := IntersectEdges(horzEdge, e, pt);
+        op := IntersectEdges(horzEdge, e, pt);
+        //nb: Op.outrec will differ from horzEdge.outrec when IsOpen(e)
         SwapPositionsInAEL(horzEdge, e);
 
         if IsHotEdge(horzEdge) and Assigned(op) and
@@ -3616,10 +3602,8 @@ begin
         e := horzEdge.nextInAEL;
       end else
       begin
-        if IsOpen(e) and (e.top.Y = Y) then
-          op := nil // pass over the top of horz. or maxpair open paths
-        else
-          op := IntersectEdges(e, horzEdge, pt);
+        op := IntersectEdges(e, horzEdge, pt);
+        //nb: Op.outrec will differ from horzEdge.outrec when IsOpen(e)
         SwapPositionsInAEL(e, horzEdge);
 
         if IsHotEdge(horzEdge) and Assigned(op) and
@@ -3826,8 +3810,7 @@ begin
       begin
         // closed paths should always return a Positive orientation
         // except when ReverseSolution == true
-        if BuildPath(outRec.pts,
-          FReverseSolution <> FOrientationIsReversed,
+        if BuildPath(outRec.pts, FReverseSolution,
           false, closedPaths[cntClosed]) then
             inc(cntClosed);
       end;
@@ -4026,9 +4009,8 @@ begin
 
       // closed outer paths should always return a Positive orientation
       // except when ReverseSolution == true
-      if not BuildPath(outRec.pts,
-        FReverseSolution <> FOrientationIsReversed, false, path) then
-          Continue;
+      if not BuildPath(outRec.pts, FReverseSolution, false, path) then
+        Continue;
 
       if assigned(outRec.owner) and
         assigned(outRec.owner.polypath) then
@@ -4235,10 +4217,9 @@ end;
 // TClipperD methods
 //------------------------------------------------------------------------------
 
-constructor TClipperD.Create(roundingDecimalPrecision: integer;
-  OrientationIsReversed: Boolean);
+constructor TClipperD.Create(roundingDecimalPrecision: integer);
 begin
-  inherited Create(OrientationIsReversed);
+  inherited Create;
   if (roundingDecimalPrecision < -8) or
     (roundingDecimalPrecision > 8) then
       Raise EClipperLibException(rsClipper_RoundingErr);
