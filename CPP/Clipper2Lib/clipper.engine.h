@@ -191,7 +191,7 @@ namespace Clipper2Lib {
 		inline bool IsContributingOpen(const Active &e) const;
 		void SetWindCountForClosedPathEdge(Active &edge);
 		void SetWindCountForOpenPathEdge(Active &e);
-		virtual void InsertLocalMinimaIntoAEL(int64_t bot_y);
+		void InsertLocalMinimaIntoAEL(int64_t bot_y);
 		void InsertLeftEdge(Active &e);
 		inline void PushHorz(Active &e);
 		inline bool PopHorz(Active *&e);
@@ -236,7 +236,7 @@ namespace Clipper2Lib {
 		void DeleteJoin(Joiner* joiner);
 		void ProcessJoinerList();
 		OutRec* ProcessJoin(Joiner* joiner);
-		virtual bool ExecuteInternal(ClipType ct, FillRule ft, bool use_polytrees);
+		bool ExecuteInternal(ClipType ct, FillRule ft, bool use_polytrees);
 		void BuildPaths(Paths64& solutionClosed, Paths64* solutionOpen);
 		void BuildTree(PolyPath64& polytree, Paths64& open_paths);
 #ifdef USINGZ
@@ -272,7 +272,7 @@ namespace Clipper2Lib {
 	//paths that contain (or own) other paths. This will be useful to some users.
 
 	template <typename T>
-	class PolyPath {
+	class PolyPath final {
 	private:
 		double scale_;
 		Path<T> polygon_;
@@ -290,7 +290,7 @@ namespace Clipper2Lib {
 			parent_ = nullptr;
 		}
 
-		virtual ~PolyPath() { Clear(); };
+		~PolyPath() { Clear(); };
 		
 		//https://en.cppreference.com/w/cpp/language/rule_of_three
 		PolyPath(const PolyPath&) = delete;
