@@ -557,6 +557,8 @@ namespace Clipper2Lib {
 	// ClipperBase methods ...
 	//------------------------------------------------------------------------------
 
+	using namespace Internal;
+
 	ClipperBase::~ClipperBase()
 	{
 		Clear();
