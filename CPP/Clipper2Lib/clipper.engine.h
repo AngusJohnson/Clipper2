@@ -386,10 +386,10 @@ namespace Clipper2Lib {
 
 	class ClipperD : public ClipperBase {
 	private:
-		const double scale_;
+		const double scale_ = 1.0;
 	public:
 		explicit ClipperD(int precision = 0) :
-      ClipperBase(), scale_(std::pow(10, precision)) {}
+      scale_(std::pow(10, precision)) {}
 
 		void AddSubject(const PathsD& subjects)
 		{
