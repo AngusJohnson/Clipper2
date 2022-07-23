@@ -78,6 +78,7 @@ namespace Clipper2Lib {
   public:
     explicit SvgWriter(int precision = 0)
     { 
+      fill_rule_ = FillRule::NonZero;
       coords_style.font_name = "Verdana";
       coords_style.font_color = 0xFF000000; 
       coords_style.font_size = 11; 
