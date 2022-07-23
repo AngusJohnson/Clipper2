@@ -388,8 +388,7 @@ namespace Clipper2Lib {
 	private:
 		const double scale_;
 	public:
-		explicit ClipperD(int precision = 0,
-      bool use_reverse_orientation = false) :
+		explicit ClipperD(int precision = 0) :
       ClipperBase(), scale_(std::pow(10, precision)) {}
 
 		void AddSubject(const PathsD& subjects)

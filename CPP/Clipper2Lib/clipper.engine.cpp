@@ -793,17 +793,23 @@ namespace Clipper2Lib {
 	{
 		switch (fillrule_)
 		{
+		case FillRule::EvenOdd:
+			break;
 		case FillRule::NonZero:
-			if (abs(e.wind_cnt) != 1) return false; break;
+			if (abs(e.wind_cnt) != 1) return false; 
+			break;
 		case FillRule::Positive:
-			if (e.wind_cnt != 1) return false; break;
+			if (e.wind_cnt != 1) return false; 
+			break;
 		case FillRule::Negative:
-			if (e.wind_cnt != -1) return false; break;
+			if (e.wind_cnt != -1) return false; 
+			break;
 		}
 
 		switch (cliptype_)
 		{
-
+		case ClipType::None: 
+			return false;
 		case ClipType::Intersection:
 			switch (fillrule_)
 			{
@@ -832,9 +838,14 @@ namespace Clipper2Lib {
 			bool result;
 			switch (fillrule_)
 			{
-			case FillRule::Positive: result = (e.wind_cnt2 <= 0); break;
-			case FillRule::Negative:result = (e.wind_cnt2 >= 0); break;
-			default: result = (e.wind_cnt2 == 0);
+			case FillRule::Positive: 
+				result = (e.wind_cnt2 <= 0); 
+				break;
+			case FillRule::Negative:
+				result = (e.wind_cnt2 >= 0); 
+				break;
+			default: 
+				result = (e.wind_cnt2 == 0);
 			}
 			if (GetPolyType(e) == PathType::Subject)
 				return result; 
@@ -1745,8 +1756,8 @@ namespace Clipper2Lib {
 			if (abs(edge_c->wind_cnt) != 1) return nullptr;			
 			switch (cliptype_)
 			{
-			case ClipType::Union: if (!IsHotEdge(*edge_c)) 
-				return nullptr; 
+			case ClipType::Union: 
+				if (!IsHotEdge(*edge_c)) return nullptr; 
 				break;
 			default: 
 				if (edge_c->local_min->polytype == PathType::Subject) 
