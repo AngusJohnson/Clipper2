@@ -48,14 +48,14 @@ public:
 
   Timer(bool start_paused = false): paused_(start_paused) {}
 
-  Timer(const char caption[], const char time_text[] = "",
+  explicit Timer(const char caption[], const char time_text[] = "",
     bool start_paused = false) :
     paused_(start_paused), time_text_(time_text)
   {
     std::cout << caption << std::endl;
   }
 
-  Timer(const std::string caption, const std::string time_text = "",
+  explicit Timer(const std::string& caption, const std::string& time_text = "",
     bool start_paused = false) :
     paused_(start_paused), time_text_(time_text)
   {

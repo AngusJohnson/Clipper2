@@ -4,7 +4,7 @@
 
 using namespace Clipper2Lib;
 
-TEST(Clipper2Tests, TestPolytreeHoleOwnership1)
+TEST(Clipper2Tests, TestPolytreeHoles1)
 {
 #ifdef _WIN32
   std::ifstream ifs("../../../Tests/PolytreeHoleOwner.txt");

@@ -3,7 +3,7 @@ unit Clipper.Engine;
 (*******************************************************************************
 * Author    :  Angus Johnson                                                   *
 * Version   :  Clipper2 - beta                                                 *
-* Date      :  23 July 2022                                                    *
+* Date      :  27 July 2022                                                    *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  This is the main polygon clipping module                        *
@@ -77,6 +77,8 @@ type
     backE    : PActive;
     pts      : POutPt;
     polypath : TPolyPathBase;
+    bounds   : TRect64;
+    path     : TPath64;
     isOpen   : Boolean;
   end;
 
@@ -221,7 +223,7 @@ type
     function  ProcessJoin(joiner: PJoiner): POutRec;
     function  ValidateClosedPathEx(var op: POutPt): Boolean;
     procedure CompleteSplit(op1, op2: POutPt; OutRec: POutRec);
-    procedure SafeDisposeOutPts(op: POutPt);
+    procedure SafeDisposeOutPts(var op: POutPt);
     procedure CleanCollinear(outRec: POutRec);
     procedure FixSelfIntersects(var op: POutPt);
   protected
@@ -233,6 +235,7 @@ type
     procedure ClearSolution; // unlike Clear, CleanUp preserves added paths
     procedure ExecuteInternal(clipType: TClipType;
       fillRule: TFillRule; usingPolytree: Boolean);
+    function DeepCheckOwner(outrec, owner: POutRec): Boolean;
     function  BuildPaths(out closedPaths, openPaths: TPaths64): Boolean;
     procedure BuildTree(polytree: TPolyPathBase; out openPaths: TPaths64);
   {$IFDEF USINGZ}
@@ -1461,8 +1464,8 @@ begin
   end else
   begin
     // NonZero, positive, or negative filling here ...
-    // if e's WindCnt is in the SAME direction as its WindDx, then polygon
-    // filling will be on the right of 'e'.
+    // when e2's WindCnt is in the SAME direction as its WindDx,
+    // then polygon will fill on the right of 'e2' (and 'e' will be inside)
     // nb: neither e2.WindCnt nor e2.WindDx should ever be 0.
     if (e2.windCnt * e2.windDx < 0) then
     begin
@@ -1694,6 +1697,8 @@ begin
         if IsHeadingLeftHorz(rightB) then SwapActives(leftB, rightB);
       end
       else if (leftB.dx < rightB.dx) then SwapActives(leftB, rightB);
+      //so when leftB has windDx == 1, the polygon will be oriented
+      //counter-clockwise in Cartesian coords (clockwise with inverted Y).
     end
     else if not assigned(leftB) then
     begin
@@ -1836,7 +1841,7 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-procedure TClipperBase.SafeDisposeOutPts(op: POutPt);
+procedure TClipperBase.SafeDisposeOutPts(var op: POutPt);
 var
   tmpOp: POutPt;
   outRec: POutRec;
@@ -1846,8 +1851,6 @@ begin
     outRec.frontE.outrec := nil;
   if Assigned(outRec.backE) then
     outRec.backE.outrec := nil;
-  outRec.pts := nil;
-
   op.prev.next := nil;
   while Assigned(op) do
   begin
@@ -1856,6 +1859,7 @@ begin
     op := op.next;
     Dispose(tmpOp);
   end;
+  outRec.pts := nil; //must do this last (due to var parameter)
 end;
 //------------------------------------------------------------------------------
 
@@ -2018,6 +2022,10 @@ begin
     UncoupleOutRec(e1);
     if not IsOpen(e1) then CleanCollinear(outRec);
     Result := outRec.pts;
+    outRec.owner := GetRealOutRec(outRec.owner);
+    if FUsingPolytree and Assigned(outRec.owner) and
+      not Assigned(outRec.owner.frontE) then
+        outRec.owner := GetRealOutRec(outRec.owner.owner);
   end
   // and to preserve the winding orientation of Outrec ...
   else if IsOpen(e1) then
@@ -2270,20 +2278,18 @@ begin
   area1 := Area(op1);
   area2 := Area(op2);
   signsChange := (area1 > 0) = (area2 < 0);
+
+  // delete trivial splits (with zero or almost zero areas)
   if (area1 = 0) or (signsChange and (Abs(area1) < 2)) then
   begin
     SafeDisposeOutPts(op1);
-    op1 := nil;
+    OutRec.pts := op2;
   end
   else if (area2 = 0) or (signsChange and (Abs(area2) < 2)) then
   begin
     SafeDisposeOutPts(op2);
-    op2 := nil;
-  end;
-  if not Assigned(op1) then
-    OutRec.pts := op2
-  else if not Assigned(op2) then
-    OutRec.pts := op1
+    OutRec.pts := op1;
+  end
   else
   begin
     new(newOr);
@@ -2926,7 +2932,6 @@ begin
   if Result then Exit;
   if Assigned(op) then
     SafeDisposeOutPts(op);
-  op := nil;
 end;
 //------------------------------------------------------------------------------
 
@@ -3824,99 +3829,48 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-function PointInPolygon(const pt: TPoint64; ops: POutPt): TPointInPolygonResult;
-var
-  val: Integer;
-  d: Double; // used to avoid integer overflow
-  curr, prev: POutPt;
-  isAbove: Boolean;
-begin
-  result := pipOutside;
-  if (ops.next = ops) or (ops.next = ops.prev) then Exit;
-
-  prev := ops.prev;
-  while (prev.pt.Y = pt.Y) do
-    if prev = ops then Exit
-    else prev := prev.prev;
-
-  isAbove := prev.pt.Y < pt.Y;
-  curr := ops;
-  ops.prev.next := nil; // temporarily break the link !!
-
-  Result := pipOn;
-  val := 0;
-  repeat
-    if isAbove then
-    begin
-      while Assigned(curr) and (curr.pt.Y < pt.Y) do
-        curr := curr.next;
-      if not Assigned(curr) then break;
-    end else
-    begin
-      while Assigned(curr) and (curr.pt.Y > pt.Y) do
-        curr := curr.next;
-      if not Assigned(curr) then break;
-    end;
-    prev := curr.prev;
-
-    if (curr.pt.Y = pt.Y) then
-    begin
-      if (curr.pt.X = pt.X) or ((curr.pt.Y = prev.pt.Y) and
-        ((pt.X < prev.pt.X) <> (pt.X < curr.pt.X))) then
-      begin
-        // ie point on path
-        ops.prev.next := ops; // reestablish the link
-        Exit;
-      end;
-      curr := curr.next;
-      Continue;
-    end;
-
-    if (pt.X < curr.pt.X) and (pt.X < prev.pt.X) then
-      // we're only interested in edges crossing on the left
-    else if((pt.X > prev.pt.X) and (pt.X > curr.pt.X)) then
-      val := 1 - val // toggle val
-    else
-    begin
-      d := CrossProduct(prev.pt, curr.pt, pt);
-      if d = 0 then
-      begin
-        // ie point on path
-        ops.prev.next := ops; // reestablish the link
-        Exit;
-      end;
-      if (d < 0) = isAbove then val := 1 - val;
-    end;
-    isAbove := not isAbove;
-    curr := curr.next;
-  until not Assigned(curr);
-  if val = 0 then
-     result := pipOutside else
-     result := pipInside;
-  ops.prev.next := ops; // reestablish the link
-end;
-//------------------------------------------------------------------------------
-
-function Path1InsidePath2(const op1, op2: POutPt): Boolean;
+function Path1InsidePath2(const or1, or2: POutRec): Boolean;
 var
   op: POutPt;
   pipResult: TPointInPolygonResult;
 begin
-  op := op1;
+  op := or1.pts;
   repeat
-    pipResult := PointInPolygon(op.pt, op2);
+    pipResult := PointInPolygon(op.pt, or2.path);
     if pipResult <> pipOn then Break;
     op := op.next;
-  until op = op1;
+  until op = or1.pts;
   Result := pipResult = pipInside;
 end;
 //------------------------------------------------------------------------------
 
-function DeepCheckOwner(outrec, owner: POutRec): Boolean;
+function GetBounds(op: POutPt): TRect64;
+var
+  op2: POutPt;
+begin
+  result := Rect64(op.pt.x, op.pt.y, op.pt.x, op.pt.y);
+  op2 := op.next;
+  while (op2 <> op) do
+  begin
+    if (op2.pt.x < result.left) then result.left := op2.pt.X
+    else if (op2.pt.x > result.right) then result.right := op2.pt.X;
+    if (op2.pt.y < result.top) then result.top := op2.pt.Y
+    else if (op2.pt.y > result.bottom) then result.bottom := op2.pt.Y;
+    op2 := op2.next;
+  end;
+end;
+//------------------------------------------------------------------------------
+
+function TClipperBase.DeepCheckOwner(outrec, owner: POutRec): Boolean;
 var
   i: integer;
   split: POutRec;
+  isInsideOwnerBounds: Boolean;
 begin
+  if (owner.bounds.IsEmpty) then
+    owner.bounds := Clipper.Engine.GetBounds(owner.pts);
+  isInsideOwnerBounds := owner.bounds.Contains(outrec.bounds);
+
   // while looking for the correct owner, check the owner's
   // splits **before** checking the owner itself because
   // splits can occur internally, and checking the owner
@@ -3924,16 +3878,24 @@ begin
   result := false;
   for i := 0 to High(owner.splits) do
   begin
-    split := GetRealOutRec(owner.splits[i]);
-    if not Assigned(split) or (split = owner) or (split = outrec) then
-      Continue
-    else if Assigned(split.splits) and
-      DeepCheckOwner(outrec, split) then
+    split :=GetRealOutRec(owner.splits[i]);
+    if not Assigned(split) or
+      (split.idx <= owner.idx) or (split = outrec) then
+        Continue;
+
+    if Assigned(split.splits) and DeepCheckOwner(outrec, split) then
     begin
       Result := true;
       Exit;
-    end
-    else if Path1InsidePath2(OutRec.pts, split.pts) then
+    end;
+
+    if split.bounds.IsEmpty then
+      split.bounds := Clipper.Engine.GetBounds(split.pts);
+    if Length(split.path) = 0 then
+      BuildPath(split.pts, FReverseSolution, false, split.path);
+
+    if split.bounds.Contains(OutRec.bounds) and
+      Path1InsidePath2(OutRec, split) then
     begin
       outRec.owner := split;
       Result := true;
@@ -3941,22 +3903,21 @@ begin
     end;
   end;
 
-  if owner <> outrec.owner then Exit; //only continue at very top of recursion
-  while assigned(outrec.owner) and not Result do
-  begin
-    if Path1InsidePath2(outrec.pts, outrec.owner.pts) then
-      Result := true else
-      outrec.owner := GetRealOutRec(outrec.owner.owner);
-  end;
-end;
-//------------------------------------------------------------------------------
+  // only continue when not inside recursion
+  if (owner <> outrec.owner) then Exit;
 
-procedure GetRealOwner(outRec: POutRec);
-begin
-  outRec.owner := GetRealOutRec(outRec.owner);
-  while assigned(outRec.owner) and
-    not Path1InsidePath2(outRec.pts, outRec.owner.pts) do
-      outRec.owner := GetRealOutRec(outRec.owner.owner);
+  while true do
+  begin
+    if isInsideOwnerBounds and
+      Path1InsidePath2(outrec, outrec.owner) then
+    begin
+      Result := true;
+      Exit;
+    end;
+    outrec.owner := outrec.owner.owner;
+    if not assigned(outrec.owner) then Exit;
+    isInsideOwnerBounds := outrec.owner.bounds.Contains(outrec.bounds);
+  end;
 end;
 //------------------------------------------------------------------------------
 
@@ -3965,7 +3926,7 @@ var
   i,j         : Integer;
   cntOpen     : Integer;
   outRec      : POutRec;
-  path        : TPath64;
+  openPath    : TPath64;
   ownerPP     : TPolyPathBase;
 begin
   try
@@ -3973,17 +3934,36 @@ begin
     if FHasOpenPaths then
       setLength(openPaths, FOutRecList.Count);
     cntOpen := 0;
+
     for i := 0 to FOutRecList.Count -1 do
     begin
       outRec := FOutRecList[i];
       if not assigned(outRec.pts) then Continue;
 
-      outRec.owner := GetRealOutRec(outRec.owner);
+      if outRec.isOpen then
+      begin
+        if BuildPath(outRec.pts,
+          FReverseSolution, true, openPath) then
+        begin
+          openPaths[cntOpen] := openPath;
+          inc(cntOpen);
+        end;
+        Continue;
+      end;
+
+      if not BuildPath(outRec.pts, FReverseSolution, false, outRec.path) then
+        Continue;
+
+      if outrec.bounds.IsEmpty then
+        outrec.bounds := Clipper.Engine.GetBounds(outrec.pts);
+      outrec.owner := GetRealOutRec(outrec.owner);
       if assigned(outRec.owner) then
         DeepCheckOwner(outRec, outRec.owner);
 
-      // swap order if outer/owner paths are preceeded by their inner paths
-      if assigned(outRec.owner) and (outRec.owner.idx > outRec.idx) then
+			// swap the order when a child preceeds its owner
+			// (because owners must preceed children in polytrees)
+      if assigned(outRec.owner) and
+        (outRec.owner.idx > outRec.idx) then
       begin
         j := outRec.owner.idx;
         outRec.idx := j;
@@ -3992,32 +3972,18 @@ begin
         outRec := FOutRecList[i];
         outRec.idx := i;
         outRec.owner := GetRealOutRec(outRec.owner);
+        BuildPath(outRec.pts, FReverseSolution, false, outRec.path);
+        if (outRec.bounds.IsEmpty) then
+          outRec.bounds := Clipper.Engine.GetBounds(outRec.pts);
         if Assigned(outRec.owner) then
           DeepCheckOwner(outRec, outRec.owner);
       end;
 
-      if outRec.isOpen then
-      begin
-        if BuildPath(outRec.pts,
-          FReverseSolution, true, path) then
-        begin
-          openPaths[cntOpen] := path;
-          inc(cntOpen);
-        end;
-        Continue;
-      end;
+      if assigned(outRec.owner) and assigned(outRec.owner.polypath) then
+        ownerPP := outRec.owner.polypath else
+        ownerPP := polytree;
 
-      // closed outer paths should always return a Positive orientation
-      // except when ReverseSolution == true
-      if not BuildPath(outRec.pts, FReverseSolution, false, path) then
-        Continue;
-
-      if assigned(outRec.owner) and
-        assigned(outRec.owner.polypath) then
-          ownerPP := outRec.owner.polypath else
-          ownerPP := polytree;
-
-      outRec.polypath := ownerPP.AddChild(path);
+      outRec.polypath := ownerPP.AddChild(outRec.path);
     end;
     setLength(openPaths, cntOpen);
   except

@@ -3,7 +3,7 @@ unit Clipper.Core;
 (*******************************************************************************
 * Author    :  Angus Johnson                                                   *
 * Version   :  Clipper2 - beta                                                 *
-* Date      :  23 July 2022                                                    *
+* Date      :  27 July 2022                                                    *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  Core Clipper Library module                                     *
 *              Contains structures and functions used throughout the library   *
@@ -69,7 +69,8 @@ type
     Top    : Int64;
     Right  : Int64;
     Bottom : Int64;
-    function PtInside(const pt: TPoint64): Boolean;
+    function Contains(const pt: TPoint64): Boolean; overload;
+    function Contains(const rec: TRect64): Boolean; overload;
     property Width: Int64 read GetWidth;
     property Height: Int64 read GetHeight;
     property IsEmpty: Boolean read GetIsEmpty;
@@ -246,6 +247,8 @@ procedure AppendPaths(var paths: TPathsD; const extra: TPathsD); overload;
 function ArrayOfPathsToPaths(const ap: TArrayOfPaths): TPaths64;
 function GetIntersectPoint(const ln1a, ln1b, ln2a, ln2b: TPoint64): TPointD;
 
+function PointInPolygon(const pt: TPoint64; const polygon: TPath64): TPointInPolygonResult;
+
 function RamerDouglasPeucker(const path: TPath64; epsilon: double): TPath64; overload;
 function RamerDouglasPeucker(const paths: TPaths64; epsilon: double): TPaths64; overload;
 
@@ -289,10 +292,17 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-function TRect64.PtInside(const pt: TPoint64): Boolean;
+function TRect64.Contains(const pt: TPoint64): Boolean;
 begin
   result := (pt.X > Left) and (pt.X < Right) and
     (pt.Y > Top) and (pt.Y < Bottom);
+end;
+//------------------------------------------------------------------------------
+
+function TRect64.Contains(const rec: TRect64): Boolean;
+begin
+  result := (rec.Left >= Left) and (rec.Right <= Right) and
+    (rec.Top >+ Top) and (rec.Bottom <= Bottom);
 end;
 
 //------------------------------------------------------------------------------
@@ -1529,6 +1539,77 @@ begin
       Result.Y := (ln1a.Y + ln1b.Y) * 0.5;
     end;
   end;
+end;
+//------------------------------------------------------------------------------
+
+function PointInPolygon(const pt: TPoint64;
+  const polygon: TPath64): TPointInPolygonResult;
+var
+  i, len, val: Integer;
+  isAbove: Boolean;
+  d: Double; // used to avoid integer overflow
+  curr, prev, first, stop: PPoint64;
+begin
+  result := pipOutside;
+  len := Length(polygon);
+  if len < 3 then Exit;
+
+  i := len -1;
+  first := @polygon[0];
+
+  while (i >= 0) and (polygon[i].Y = pt.Y) do dec(i);
+  if i < 0 then Exit;
+  isAbove := polygon[i].Y < pt.Y;
+
+  Result := pipOn;
+  stop := @polygon[len -1];
+  inc(stop); // stop is just past the last point
+
+  curr := first;
+  val := 0;
+
+  while (curr <> stop) do
+  begin
+    if isAbove then
+    begin
+      while (curr <> stop) and (curr.Y < pt.Y) do inc(curr);
+      if (curr = stop) then break;
+    end else
+    begin
+      while (curr <> stop) and (curr.Y > pt.Y) do inc(curr);
+      if (curr = stop) then break;
+    end;
+
+    if curr = first then
+      prev := stop else
+      prev := curr;
+    dec(prev);
+
+    if (curr.Y = pt.Y) then
+    begin
+      if (curr.X = pt.X) or ((curr.Y = prev.Y) and
+        ((pt.X < prev.X) <> (pt.X < curr.X))) then Exit;
+      inc(curr);
+      Continue;
+    end;
+
+    if (pt.X < curr.X) and (pt.X < prev.X) then
+      // we're only interested in edges crossing on the left
+    else if((pt.X > prev.X) and (pt.X > curr.X)) then
+      val := 1 - val // toggle val
+    else
+    begin
+      d := CrossProduct(prev^, curr^, pt);
+      if d = 0 then Exit; // ie point on path
+      if (d < 0) = isAbove then val := 1 - val;
+    end;
+
+    isAbove := not isAbove;
+    inc(curr);
+  end;
+  if val = 0 then
+     result := pipOutside else
+     result := pipInside;
 end;
 //------------------------------------------------------------------------------
 

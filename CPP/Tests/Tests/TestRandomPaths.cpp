@@ -109,7 +109,7 @@ void SaveInputToFile(
   }
 }
 
-TEST(Clipper2Tests, TestRandomPolygons)
+TEST(Clipper2Tests, TestRandomPaths)
 {
   std::default_random_engine rng(42);
 

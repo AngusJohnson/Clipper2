@@ -184,7 +184,7 @@ namespace Clipper2Lib {
         svg_xml_1 << GetAlphaAsFrac(pi->brush_color_) <<
         svg_xml_2 << "evenodd" <<
         svg_xml_3 << ColorToHtml(0) <<
-        svg_xml_4 << GetAlphaAsFrac(0.0) <<
+        svg_xml_4 << GetAlphaAsFrac(0) <<
         svg_xml_5 << pi->pen_width_ << svg_xml_6;
     }
 
