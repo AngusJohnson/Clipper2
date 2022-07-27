@@ -16,8 +16,6 @@
 #include <algorithm>
 #include "clipper.engine.h"
 
-#include <conio.h>
-
 namespace Clipper2Lib {
 
 	static const double FloatingPointTolerance = 1.0e-12;
