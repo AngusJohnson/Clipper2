@@ -3152,7 +3152,7 @@ namespace Clipper2Lib
     private static void UpdateOutrecOwner(OutRec outrec)
     {
       OutPt opCurr = outrec.pts!;
-      for (; ; )
+      for (;;)
       {
         opCurr.outrec = outrec;
         opCurr = opCurr.next!;
@@ -3177,11 +3177,6 @@ namespace Clipper2Lib
         SafeDisposeOutPts(ref op2!);
         outrec.pts = op1;
       }
-
-      if (op1 == null)
-        outrec.pts = op2;
-      else if (op2 == null)
-        outrec.pts = op1;
       else
       {
         OutRec newOr = new OutRec() { idx = _outrecList.Count };
@@ -3427,9 +3422,9 @@ namespace Clipper2Lib
           if (split == null || split.idx <= owner.idx || split == outrec) continue;
           if (split.splits != null && DeepCheckOwner(outrec, split)) return true;
 
-          if (split.bounds.IsEmpty()) split.bounds = GetBounds(split.path);
           if (split.path.Count == 0) 
             BuildPath(split.pts!, ReverseSolution, false, split.path);
+          if (split.bounds.IsEmpty()) split.bounds = GetBounds(split.path);
 
           if (split.bounds.Contains(outrec.bounds) && Path1InsidePath2(outrec, split))
 			    {
@@ -3486,9 +3481,9 @@ namespace Clipper2Lib
           _outrecList[i] = _outrecList[j];
           _outrecList[j] = outrec;
           outrec = _outrecList[i];
+          outrec.owner = GetRealOutRec(outrec.owner);
           BuildPath(outrec.pts!, ReverseSolution, false, outrec.path);
           if (outrec.bounds.IsEmpty()) outrec.bounds = GetBounds(outrec.path);
-          outrec.owner = GetRealOutRec(outrec.owner);
           if (outrec.owner != null)
             DeepCheckOwner(outrec, outrec.owner);
         }
@@ -3498,7 +3493,6 @@ namespace Clipper2Lib
           ownerPP = outrec.owner.polypath;
         else
           ownerPP = polytree;
-
         outrec.polypath = ownerPP.AddChild(outrec.path);
       }
       return true;
