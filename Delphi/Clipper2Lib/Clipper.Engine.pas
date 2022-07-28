@@ -3,7 +3,7 @@ unit Clipper.Engine;
 (*******************************************************************************
 * Author    :  Angus Johnson                                                   *
 * Version   :  Clipper2 - beta                                                 *
-* Date      :  27 July 2022                                                    *
+* Date      :  28 July 2022                                                    *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  This is the main polygon clipping module                        *
@@ -3844,19 +3844,23 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-function GetBounds(op: POutPt): TRect64;
+function GetBounds(const path: TPath64): TRect64;
 var
-  op2: POutPt;
+  i: integer;
 begin
-  result := Rect64(op.pt.x, op.pt.y, op.pt.x, op.pt.y);
-  op2 := op.next;
-  while (op2 <> op) do
+  if Length(path) = 0 then
   begin
-    if (op2.pt.x < result.left) then result.left := op2.pt.X
-    else if (op2.pt.x > result.right) then result.right := op2.pt.X;
-    if (op2.pt.y < result.top) then result.top := op2.pt.Y
-    else if (op2.pt.y > result.bottom) then result.bottom := op2.pt.Y;
-    op2 := op2.next;
+    Result := NullRect64;
+    Exit;
+  end;
+
+  result := Rect64(MaxInt64, MaxInt64, -MaxInt64, -MaxInt64);
+  for i := 0 to High(path) do
+  begin
+    if (path[i].X < result.left) then result.left := path[i].X;
+    if (path[i].X > result.right) then result.right := path[i].X;
+    if (path[i].Y < result.top) then result.top := path[i].Y;
+    if (path[i].Y > result.bottom) then result.bottom := path[i].Y;
   end;
 end;
 //------------------------------------------------------------------------------
@@ -3868,7 +3872,7 @@ var
   isInsideOwnerBounds: Boolean;
 begin
   if (owner.bounds.IsEmpty) then
-    owner.bounds := Clipper.Engine.GetBounds(owner.pts);
+    owner.bounds := Clipper.Engine.GetBounds(owner.path);
   isInsideOwnerBounds := owner.bounds.Contains(outrec.bounds);
 
   // while looking for the correct owner, check the owner's
@@ -3889,11 +3893,10 @@ begin
       Exit;
     end;
 
-    if split.bounds.IsEmpty then
-      split.bounds := Clipper.Engine.GetBounds(split.pts);
     if Length(split.path) = 0 then
       BuildPath(split.pts, FReverseSolution, false, split.path);
-
+    if split.bounds.IsEmpty then
+      split.bounds := Clipper.Engine.GetBounds(split.path);
     if split.bounds.Contains(OutRec.bounds) and
       Path1InsidePath2(OutRec, split) then
     begin
@@ -3953,9 +3956,8 @@ begin
 
       if not BuildPath(outRec.pts, FReverseSolution, false, outRec.path) then
         Continue;
-
       if outrec.bounds.IsEmpty then
-        outrec.bounds := Clipper.Engine.GetBounds(outrec.pts);
+        outrec.bounds := Clipper.Engine.GetBounds(outrec.path);
       outrec.owner := GetRealOutRec(outrec.owner);
       if assigned(outRec.owner) then
         DeepCheckOwner(outRec, outRec.owner);
@@ -3974,7 +3976,7 @@ begin
         outRec.owner := GetRealOutRec(outRec.owner);
         BuildPath(outRec.pts, FReverseSolution, false, outRec.path);
         if (outRec.bounds.IsEmpty) then
-          outRec.bounds := Clipper.Engine.GetBounds(outRec.pts);
+          outRec.bounds := Clipper.Engine.GetBounds(outRec.path);
         if Assigned(outRec.owner) then
           DeepCheckOwner(outRec, outRec.owner);
       end;

@@ -1,7 +1,7 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
 * Version   :  Clipper2 - beta                                                 *
-* Date      :  27 July 2022                                                    *
+* Date      :  28 July 2022                                                    *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  This is the main polygon clipping module                        *
@@ -3362,9 +3362,9 @@ namespace Clipper2Lib {
 		for(const Point64& pt : path)
 		{
 			if (pt.x < result.left) result.left = pt.x;
-			else if (pt.x > result.right) result.right = pt.x;
+			if (pt.x > result.right) result.right = pt.x;
 			if (pt.y < result.top) result.top = pt.y;
-			else if (pt.y > result.bottom) result.bottom = pt.y;
+			if (pt.y > result.bottom) result.bottom = pt.y;
 		}
 		return result;
 	}	
