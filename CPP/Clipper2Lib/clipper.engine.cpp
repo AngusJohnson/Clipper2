@@ -1,7 +1,7 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
 * Version   :  Clipper2 - beta                                                 *
-* Date      :  28 July 2022                                                    *
+* Date      :  29 July 2022                                                    *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  This is the main polygon clipping module                        *
@@ -507,10 +507,10 @@ namespace Clipper2Lib {
 	}
 
 
-	inline OutRec* GetRealOutRec(OutRec* outRec)
+	inline OutRec* GetRealOutRec(OutRec* outrec)
 	{
-		while (outRec && !outRec->pts) outRec = outRec->owner;
-		return outRec;
+		while (outrec && !outrec->pts) outrec = outrec->owner;
+		return outrec;
 	}
 
 
@@ -3152,6 +3152,9 @@ namespace Clipper2Lib {
 					{
 						or1->pts = op1;
 						or2->pts = nullptr;
+						if (or1->owner && (!or2->owner || 
+							or2->owner->idx < or1->owner->idx))
+								or1->owner = or2->owner;
 						or2->owner = or1;
 					}
 					else
@@ -3159,6 +3162,9 @@ namespace Clipper2Lib {
 						result = or2;
 						or2->pts = op1;
 						or1->pts = nullptr;
+						if (or2->owner && (!or1->owner || 
+							or1->owner->idx < or2->owner->idx))
+								or2->owner = or1->owner;
 						or1->owner = or2;
 					}
 				}
@@ -3207,6 +3213,9 @@ namespace Clipper2Lib {
 					{
 						or1->pts = op1;
 						or2->pts = nullptr;
+						if (or1->owner && (!or2->owner || 
+							or2->owner->idx < or1->owner->idx))
+								or1->owner = or2->owner;
 						or2->owner = or1;
 					}
 					else
@@ -3214,6 +3223,9 @@ namespace Clipper2Lib {
 						result = or2;
 						or2->pts = op1;
 						or1->pts = nullptr;
+						if (or2->owner && (!or1->owner || 
+							or1->owner->idx < or2->owner->idx))
+								or2->owner = or1->owner; 
 						or1->owner = or2;
 					}
 				}
@@ -3379,24 +3391,27 @@ namespace Clipper2Lib {
 		// splits **before** checking the owner itself because 
 		// splits can occur internally, and checking the owner 
 		// first would miss the inner split's true ownership
-		if (owner->splits) 
+		if (owner->splits)
+		{
 			for (OutRec* split : *owner->splits)
 			{
 				split = GetRealOutRec(split);
 				if (!split || split->idx <= owner->idx || split == outrec) continue;
+
 				if (split->splits && DeepCheckOwner(outrec, split)) return true;
 
 				if (!split->path.size())
 					BuildPath(split->pts, ReverseSolution, false, split->path);
 				if (split->bounds.IsEmpty()) split->bounds = GetBounds(split->path);
 
-				if (split->bounds.Contains(outrec->bounds) && 
+				if (split->bounds.Contains(outrec->bounds) &&
 					Path1InsidePath2(outrec, split))
 				{
 					outrec->owner = split;
 					return true;
 				}
 			}
+		}
 
 		// only continue past here when not inside recursion
 		if (owner != outrec->owner) return false;
@@ -3405,7 +3420,6 @@ namespace Clipper2Lib {
 		{
 			if (is_inside_owner_bounds && Path1InsidePath2(outrec, outrec->owner))
 				return true;
-
 			// otherwise keep trying with owner's owner 
 			outrec->owner = outrec->owner->owner;
 			if (!outrec->owner) return true; // true or false
@@ -3425,7 +3439,6 @@ namespace Clipper2Lib {
 		for (OutRec* outrec : outrec_list_)
 		{
 			if (!outrec || !outrec->pts) continue;
-
 			if (outrec->is_open)
 			{
 				Path64 path;
