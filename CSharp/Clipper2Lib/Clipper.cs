@@ -27,15 +27,15 @@ namespace Clipper2Lib
   using Paths64 = List<List<Point64>>;
   using PathD = List<PointD>;
   using PathsD = List<List<PointD>>;
-  
+
   public static class Clipper
   {
 
     public static Rect64 MaxInvalidRect64 = new Rect64(
       long.MaxValue, long.MaxValue, long.MinValue, long.MinValue);
 
-   public static RectD MaxInvalidRectD = new RectD(
-     double.MaxValue, -double.MaxValue, -double.MaxValue, -double.MaxValue);
+    public static RectD MaxInvalidRectD = new RectD(
+      double.MaxValue, -double.MaxValue, -double.MaxValue, -double.MaxValue);
 
     public static Paths64 Intersect(Paths64 subject, Paths64 clip, FillRule fillRule)
     {
@@ -87,7 +87,7 @@ namespace Clipper2Lib
       return BooleanOp(ClipType.Xor, fillRule, subject, clip);
     }
 
-    public static Paths64 BooleanOp(ClipType clipType, FillRule fillRule, 
+    public static Paths64 BooleanOp(ClipType clipType, FillRule fillRule,
       Paths64? subject, Paths64? clip)
     {
       Paths64 solution = new Paths64();
@@ -112,7 +112,7 @@ namespace Clipper2Lib
       return solution;
     }
 
-    public static Paths64 InflatePaths(Paths64 paths, double delta, JoinType joinType, 
+    public static Paths64 InflatePaths(Paths64 paths, double delta, JoinType joinType,
       EndType endType, double miterLimit = 2.0)
     {
       ClipperOffset co = new ClipperOffset(miterLimit);
@@ -120,7 +120,7 @@ namespace Clipper2Lib
       return co.Execute(delta);
     }
 
-    public static PathsD InflatePaths(PathsD paths, double delta, JoinType joinType, 
+    public static PathsD InflatePaths(PathsD paths, double delta, JoinType joinType,
       EndType endType, double miterLimit = 2.0, int precision = 2)
     {
       if (precision < -8 || precision > 8)
@@ -130,7 +130,7 @@ namespace Clipper2Lib
       ClipperOffset co = new ClipperOffset(miterLimit);
       co.AddPaths(tmp, joinType, endType);
       tmp = co.Execute(delta * scale);
-      return ScalePathsD(tmp, 1/scale);
+      return ScalePathsD(tmp, 1 / scale);
     }
     public static double Area(Path64 path)
     {
@@ -150,7 +150,7 @@ namespace Clipper2Lib
     public static double Area(Paths64 paths)
     {
       double a = 0.0;
-      foreach (Path64 path in paths) 
+      foreach (Path64 path in paths)
         a += Area(path);
       return a;
     }
@@ -198,7 +198,7 @@ namespace Clipper2Lib
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static PointD ScalePoint(Point64 pt, double scale) 
+    public static PointD ScalePoint(Point64 pt, double scale)
     {
       PointD result = new PointD()
       {
@@ -665,7 +665,7 @@ namespace Clipper2Lib
         if (result.Count < 3)
           result.Clear();
       }
-      return result;      
+      return result;
     }
 
     public static PathD TrimCollinear(PathD path, int precision, bool isOpen = false)
@@ -678,69 +678,10 @@ namespace Clipper2Lib
       return ScalePathD(p, 1 / scale);
     }
 
-    public static PointInPolygonResult PointInPolygon(Point64 pt, Path64 polygon)
+    public static PointInPolygonResult PointInPolygon(Point64 pt, List<Point64> polygon)
     {
-      int len = polygon.Count, i = len - 1;
-
-      if (len < 3) return PointInPolygonResult.IsOutside;
-
-      while (i >= 0 && polygon[i].Y == pt.Y) --i;
-      if (i < 0) return PointInPolygonResult.IsOutside;
-
-      int val = 0;
-      bool isAbove = polygon[i].Y < pt.Y;
-      i = 0;
-
-      while (i < len)
-      {
-        if (isAbove)
-        {
-          while (i < len && polygon[i].Y < pt.Y) i++;
-          if (i == len) break;
-        } else
-        {
-          while (i < len && polygon[i].Y > pt.Y) i++;
-          if (i == len) break;
-        }
-
-        Point64 curr, prev;
-
-        curr = polygon[i];
-        if (i > 0) prev = polygon[i - 1];
-        else prev = polygon[len -1];
-
-        if (curr.Y == pt.Y)
-        {
-          if (curr.X == pt.X || (curr.Y == prev.Y &&
-            ((pt.X < prev.X) != (pt.X < curr.X))))
-              return PointInPolygonResult.IsOn;
-          i++;
-          continue;
-        }
-
-        if (pt.X < curr.X && pt.X < prev.X)
-        {
-          // we're only interested in edges crossing on the left
-        }
-        else if (pt.X > prev.X && pt.X > curr.X)
-        {
-          val = 1 - val; // toggle val
-        }
-        else
-        {
-          double d = InternalClipper.CrossProduct(prev, curr, pt);
-          if (d == 0)
-            return PointInPolygonResult.IsOn;
-          if ((d < 0) == isAbove) val = 1 - val;
-        }
-        isAbove = !isAbove;
-        i++;
-      }
-      if (val == 0)
-        return PointInPolygonResult.IsOutside;
-      else
-        return PointInPolygonResult.IsInside;
+      return InternalClipper.PointInPolygon(pt, polygon);
     }
-  }
 
+  }
 } // namespace

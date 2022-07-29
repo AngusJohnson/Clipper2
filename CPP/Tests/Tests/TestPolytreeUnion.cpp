@@ -3,7 +3,7 @@
 
 using namespace Clipper2Lib;
 
-TEST(Clipper2Tests, TestUnionUsingPolytree) {
+TEST(Clipper2Tests, TestPolytreeUnion) {
 
     Paths64 subject;
     subject.push_back(MakePath("0,0  0,5  5,5  5,0"));

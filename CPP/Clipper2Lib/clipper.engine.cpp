@@ -1,7 +1,7 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
 * Version   :  Clipper2 - beta                                                 *
-* Date      :  23 July 2022                                                    *
+* Date      :  28 July 2022                                                    *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  This is the main polygon clipping module                        *
@@ -19,6 +19,12 @@
 namespace Clipper2Lib {
 
 	static const double FloatingPointTolerance = 1.0e-12;
+	static const Rect64 invalid_rect = Rect64(
+		std::numeric_limits<int64_t>::max(),
+		std::numeric_limits<int64_t>::max(),
+		-std::numeric_limits<int64_t>::max(),
+		-std::numeric_limits<int64_t>::max()
+	);
 
 	//Every closed path (or polygon) is made up of a series of vertices forming
 	//edges that alternate between going up (relative to the Y-axis) and going
@@ -1341,6 +1347,8 @@ namespace Clipper2Lib {
 			UncoupleOutRec(e1);
 			if (!IsOpen(e1)) CleanCollinear(&outrec);
 			result = outrec.pts;
+			if (using_polytree_ && outrec.owner && !outrec.owner->front_edge)
+				outrec.owner = GetRealOutRec(outrec.owner->owner);
 		}
 		//and to preserve the winding orientation of outrec ...
 		else if (IsOpen(e1))
@@ -1446,7 +1454,6 @@ namespace Clipper2Lib {
 	{
 		if (IsValidClosedPath(outpt)) return true;
 		if (outpt) SafeDisposeOutPts(outpt);
-		outpt = nullptr;
 		return false;
 	}
 
@@ -1598,14 +1605,13 @@ namespace Clipper2Lib {
 	}
 
 
-	void ClipperBase::SafeDisposeOutPts(OutPt* op)
+	void ClipperBase::SafeDisposeOutPts(OutPt*& op)
 	{
 		OutRec* outrec = GetRealOutRec(op->outrec);
 		if (outrec->front_edge)
 			outrec->front_edge->outrec = nullptr;
 		if (outrec->back_edge)
 			outrec->back_edge->outrec = nullptr;
-		outrec->pts = nullptr;
 
 		op->prev->next = nullptr;
 		while (op)
@@ -1615,6 +1621,7 @@ namespace Clipper2Lib {
 			delete op;
 			op = tmp;
 		}
+		outrec->pts = nullptr;
 	}
 
 
@@ -3336,129 +3343,79 @@ namespace Clipper2Lib {
 		}
 	}
 
-	PointInPolygonResult PointInPolygon(const Point64& pt, OutPt* ops)
-	{
-		if (ops->next == ops || ops->next == ops->prev)
-			return PointInPolygonResult::IsOutside;
-		
-		OutPt *curr = ops, *prev = curr->prev;
-		
-		while (prev->pt.y == pt.y)
-		{
-			if (prev == ops) return PointInPolygonResult::IsOutside;
-			prev = prev->prev;
-		}
-		
-		bool is_above = prev->pt.y < pt.y;
-		ops->prev->next = nullptr; // temporary!!!		
-		int val = 0;
 
-		do
-		{
-			if (is_above)
-			{
-				while (curr && curr->pt.y < pt.y) curr = curr->next;
-				if (!curr) break;
-			}
-			else
-			{
-				while (curr && curr->pt.y > pt.y) curr = curr->next;
-				if (!curr) break;
-			}
-			prev = curr->prev;
-
-			if (curr->pt.y == pt.y)
-			{
-				if (curr->pt.x == pt.x || (curr->pt.y == prev->pt.y &&
-					((pt.x < prev->pt.x) != (pt.x < curr->pt.x))))
-				{
-					ops->prev->next = ops; // reestablish the link
-					return PointInPolygonResult::IsOn;
-				}
-				curr = curr->next;
-				continue;
-			}
-
-			if (pt.x < curr->pt.x && pt.x < prev->pt.x)
-			{
-				//we're only interested in edges crossing on the left
-			}
-			else if (pt.x > prev->pt.x && pt.x > curr->pt.x)
-				val = 1 - val; // toggle val
-			else
-			{
-				double d = CrossProduct(prev->pt, curr->pt, pt);
-				if (d == 0)
-				{
-					ops->prev->next = ops; // reestablish the link
-					return PointInPolygonResult::IsOn;
-				}
-				if ((d < 0) == is_above) val = 1 - val;
-			}
-			is_above = !is_above;
-			curr = curr->next;
-
-		} while (curr);
-
-		ops->prev->next = ops; // reestablish the link
-		return val == 0 ? 
-			PointInPolygonResult::IsOutside : 
-			PointInPolygonResult::IsInside;
-	}
-
-	bool Path1InsidePath2(OutPt* op1, OutPt* op2)
+	inline bool Path1InsidePath2(const OutRec* or1, const OutRec* or2)
 	{
 		PointInPolygonResult result = PointInPolygonResult::IsOn;
-		OutPt* op = op1;
+		OutPt* op = or1->pts;
 		do
 		{
-			result = PointInPolygon(op->pt, op2);
+			result = PointInPolygon(op->pt, or2->path);
 			if (result != PointInPolygonResult::IsOn) break;
 			op = op->next;
-		} while (op != op1);
+		} while (op != or1->pts);
 		return result == PointInPolygonResult::IsInside;
 	}
 
-	bool DeepCheckOwner(OutRec* outrec, OutRec* owner)
+	inline Rect64 GetBounds(const Path64& path)
 	{
+		if (path.empty()) return Rect64();
+		Rect64 result = invalid_rect;
+		for(const Point64& pt : path)
+		{
+			if (pt.x < result.left) result.left = pt.x;
+			if (pt.x > result.right) result.right = pt.x;
+			if (pt.y < result.top) result.top = pt.y;
+			if (pt.y > result.bottom) result.bottom = pt.y;
+		}
+		return result;
+	}	
+
+	
+	bool ClipperBase::DeepCheckOwner(OutRec* outrec, OutRec* owner)
+	{
+		if (owner->bounds.IsEmpty()) owner->bounds = GetBounds(owner->path);
+		bool is_inside_owner_bounds = owner->bounds.Contains(outrec->bounds);
+
 		// while looking for the correct owner, check the owner's 
 		// splits **before** checking the owner itself because 
 		// splits can occur internally, and checking the owner 
 		// first would miss the inner split's true ownership
-		if (owner && owner->splits)
-		{
+		if (owner->splits) 
 			for (OutRec* split : *owner->splits)
 			{
-				split = GetRealOutRec(split); 
-				if (!split || split->idx <= owner->idx || split == outrec)
-					continue;
-				else if (split->splits && DeepCheckOwner(outrec, split))
-					return true;
-				else if (Path1InsidePath2(outrec->pts, split->pts))
+				split = GetRealOutRec(split);
+				if (!split || split->idx <= owner->idx || split == outrec) continue;
+				if (split->splits && DeepCheckOwner(outrec, split)) return true;
+
+				if (!split->path.size())
+					BuildPath(split->pts, ReverseSolution, false, split->path);
+				if (split->bounds.IsEmpty()) split->bounds = GetBounds(split->path);
+
+				if (split->bounds.Contains(outrec->bounds) && 
+					Path1InsidePath2(outrec, split))
 				{
 					outrec->owner = split;
 					return true;
 				}
 			}
-		}
 
+		// only continue past here when not inside recursion
 		if (owner != outrec->owner) return false;
-		while (outrec->owner)
+
+		for (;;)
 		{
-			if (Path1InsidePath2(outrec->pts, outrec->owner->pts))
+			if (is_inside_owner_bounds && Path1InsidePath2(outrec, outrec->owner))
 				return true;
-			outrec->owner = GetRealOutRec(outrec->owner->owner);
+
+			// otherwise keep trying with owner's owner 
+			outrec->owner = outrec->owner->owner;
+			if (!outrec->owner) return true; // true or false
+			is_inside_owner_bounds = outrec->owner->bounds.Contains(outrec->bounds);
 		}
-		return false;
+		return true; // true or false (the return value only matters inside recursion)
 	}
 
-	void GetRealOwner(OutRec* outrec)
-	{
-		outrec->owner = GetRealOutRec(outrec->owner);
-		while (outrec->owner &&
-			!Path1InsidePath2(outrec->pts, outrec->owner->pts))
-				outrec->owner = GetRealOutRec(outrec->owner->owner);
-	}
 
 	void ClipperBase::BuildTree(PolyPath64& polytree, Paths64& open_paths)
 	{
@@ -3466,33 +3423,11 @@ namespace Clipper2Lib {
 		open_paths.resize(0);
 		if (has_open_paths_)
 			open_paths.reserve(outrec_list_.size());
+
 		for (OutRec* outrec : outrec_list_)
 		{
 			if (!outrec || !outrec->pts) continue;
 
-			outrec->owner = GetRealOutRec(outrec->owner);
-			if (outrec->owner)
-				DeepCheckOwner(outrec, outrec->owner);
-
-			if (outrec->owner)
-			{
-				//swap the order when a child preceeds its owner
-				//(because owners must preceed children in polytrees)
-				if (outrec->idx < outrec->owner->idx)
-				{
-					OutRec* tmp = outrec->owner;
-					outrec_list_[outrec->owner->idx] = outrec;
-					outrec_list_[outrec->idx] = tmp;
-					size_t tmp_idx = outrec->idx;
-					outrec->idx = tmp->idx;
-					tmp->idx = tmp_idx;
-					outrec = tmp;
-					outrec->owner = GetRealOutRec(outrec->owner);
-					if (outrec->owner)
-						DeepCheckOwner(outrec, outrec->owner);
-				}
-			}
-		
 			if (outrec->is_open)
 			{
 				Path64 path;
@@ -3501,18 +3436,35 @@ namespace Clipper2Lib {
 				continue;
 			}
 
-			Path64 path;
-			//closed outer paths should always return a Positive orientation
-			//except when ReverseSolution == true
-			if (!BuildPath(outrec->pts, ReverseSolution, false, path)) continue;
+			if (!BuildPath(outrec->pts, ReverseSolution, false, outrec->path))
+					continue;
+			if (outrec->bounds.IsEmpty()) outrec->bounds = GetBounds(outrec->path);
+			outrec->owner = GetRealOutRec(outrec->owner);
+			if (outrec->owner) DeepCheckOwner(outrec, outrec->owner);
+
+			// swap the order when a child preceeds its owner
+			// (because owners must preceed children in polytrees)
+			if (outrec->owner && outrec->idx < outrec->owner->idx)
+			{
+				OutRec* tmp = outrec->owner;
+				outrec_list_[outrec->owner->idx] = outrec;
+				outrec_list_[outrec->idx] = tmp;
+				size_t tmp_idx = outrec->idx;
+				outrec->idx = tmp->idx;
+				tmp->idx = tmp_idx;
+				outrec = tmp;
+				outrec->owner = GetRealOutRec(outrec->owner);
+				BuildPath(outrec->pts, ReverseSolution, false, outrec->path);
+				if (outrec->bounds.IsEmpty()) outrec->bounds = GetBounds(outrec->path);
+				if (outrec->owner) DeepCheckOwner(outrec, outrec->owner);
+			}
 
 			PolyPath64* owner_polypath;
 			if (outrec->owner && outrec->owner->polypath)
 				owner_polypath = outrec->owner->polypath;
 			else
 				owner_polypath = &polytree;
-
-			outrec->polypath = owner_polypath->AddChild(path);
+			outrec->polypath = owner_polypath->AddChild(outrec->path);
 		}
 	}
 
@@ -3520,7 +3472,8 @@ namespace Clipper2Lib {
 	{
 		for (const PolyPath64* child : polypath.childs())
 		{
-			PolyPathD* res_child = result.AddChild(Path64ToPathD(child->polygon()));
+			PolyPathD* res_child = result.AddChild(
+				Path64ToPathD(child->polygon()));
 			PolyPath64ToPolyPathD(*child, *res_child);
 		}
 	}

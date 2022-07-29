@@ -1,7 +1,7 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
 * Version   :  Clipper2 - beta                                                 *
-* Date      :  20 June 2022                                                    *
+* Date      :  26 June 2022                                                    *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  Core Clipper Library structures and functions                   *
@@ -340,12 +340,18 @@ struct Rect {
 		return Point<T>((left + right) / 2, (top + bottom) / 2);
 	}
 
-	bool PtIsInside(const Point<T> pt)
+	bool Contains(const Point<T> pt)
 	{
-		return pt.x > left && pt.x < right && pt.y > top && pt.y < bottom;
+		return pt.x > left && pt.x < right&& pt.y > top && pt.y < bottom;
 	}
 
-	void Scale(double scale) { 
+	bool Contains(const Rect<T> rec)
+	{
+		return rec.left >= left && rec.right <= right && 
+			rec.top >= top && rec.bottom <= bottom;
+	}
+
+	void Scale(double scale) {
 		left *= scale; 
 		top *= scale;
 		right *= scale;
@@ -452,6 +458,73 @@ inline bool IsPositive(const Path<T>& poly)
 	//https://mathworld.wolfram.com/CurveOrientation.html
 	//nb: This statement is premised on using Cartesian coordinates
 	return Area<T>(poly) >= 0;
+}
+
+enum class PointInPolygonResult { IsOn, IsInside, IsOutside };
+
+template <typename T>
+inline PointInPolygonResult PointInPolygon(const Point<T>& pt, const Path<T>& polygon)
+{
+	if (polygon.size() < 3)
+		return PointInPolygonResult::IsOutside;
+
+	int val = 0;
+	typename Path<T>::const_iterator start = polygon.cbegin(), cit = start;
+	typename Path<T>::const_iterator cend = polygon.cend(), pit = cend - 1;
+
+	while (pit->y == pt.y)
+	{
+		if (pit == start) return PointInPolygonResult::IsOutside;
+		--pit;
+	}
+	bool is_above = pit->y < pt.y;
+
+	while (cit != cend)
+	{
+		if (is_above)
+		{
+			while (cit != cend && cit->y < pt.y) ++cit;
+			if (cit == cend) break;
+		}
+		else
+		{
+			while (cit != cend && cit->y > pt.y) ++cit;
+			if (cit == cend) break;
+		}
+
+		if (cit == start) pit = cend - 1;
+		else  pit = cit - 1;
+
+		if (cit->y == pt.y)
+		{
+			if (cit->x == pt.x || (cit->y == pit->y &&
+				((pt.x < pit->x) != (pt.x < cit->x))))
+				return PointInPolygonResult::IsOn;
+			++cit;
+			continue;
+		}
+
+		if (pt.x < cit->x && pt.x < pit->x)
+		{
+			// we're only interested in edges crossing on the left
+		}
+		else if (pt.x > pit->x && pt.x > cit->x)
+			val = 1 - val; // toggle val
+		else
+		{
+			double d = CrossProduct(*pit, *cit, pt);
+			if (d == 0)
+				return PointInPolygonResult::IsOn;
+			else if ((d < 0) == is_above)
+				val = 1 - val;
+		}
+		is_above = !is_above;
+		cit++;
+	}
+	if (val == 0)
+		return PointInPolygonResult::IsOutside;
+	else
+		return PointInPolygonResult::IsInside;
 }
 
 }  // namespace

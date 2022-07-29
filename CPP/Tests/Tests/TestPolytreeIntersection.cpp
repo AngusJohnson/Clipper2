@@ -3,7 +3,7 @@
 
 using namespace Clipper2Lib;
 
-TEST(Clipper2Tests, TestIntersectionUsingPolyTree) 
+TEST(Clipper2Tests, TestPolyTreeIntersection)
 {
     Clipper64 clipper;
 

@@ -2,6 +2,15 @@
 #include "../../Clipper2Lib/clipper.h"
 #include "../../Utils/ClipFileLoad.h"
 
+inline Clipper2Lib::PathD MakeRandomPath(int width, int height, unsigned vertCnt)
+{
+  Clipper2Lib::PathD result;
+  result.reserve(vertCnt);
+  for (unsigned i = 0; i < vertCnt; ++i)
+    result.push_back(Clipper2Lib::PointD(double(rand()) / RAND_MAX * width, double(rand()) / RAND_MAX * height));
+  return result;
+}
+
 TEST(Clipper2Tests, TestMultiplePolygons)
 {
 #ifdef _WIN32
@@ -139,4 +148,14 @@ TEST(Clipper2Tests, TestMultiplePolygons)
     ++test_number;
   }
   EXPECT_GE(test_number, 188);
+
+
+  Clipper2Lib::PathsD subjd, clipd, solutiond;
+  Clipper2Lib::FillRule frd = Clipper2Lib::FillRule::NonZero;
+
+  subjd.push_back(MakeRandomPath(800, 600, 100));
+  clipd.push_back(MakeRandomPath(800, 600, 100));
+  solutiond = Clipper2Lib::Intersect(subjd, clipd, Clipper2Lib::FillRule::NonZero);
+  EXPECT_GE(solutiond.size(), 1);
+
 }

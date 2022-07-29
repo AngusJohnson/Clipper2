@@ -43,7 +43,7 @@ double GetPolytreeArea(const PolyPath64& pp)
   return result;
 }
 
-TEST(Clipper2Tests, TestPolytreeHoleOwnership2)
+TEST(Clipper2Tests, TestPolytreeHoles2)
 {
 #ifdef _WIN32
   std::ifstream ifs("../../../Tests/PolytreeHoleOwner2.txt");

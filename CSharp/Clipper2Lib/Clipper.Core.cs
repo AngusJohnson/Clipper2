@@ -1,7 +1,7 @@
 ﻿/*******************************************************************************
 * Author    :  Angus Johnson                                                   *
 * Version   :  Clipper2 - beta                                                 *
-* Date      :  23 July 2022                                                    *
+* Date      :  27 July 2022                                                    *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  Core structures and functions for the Clipper Library           *
@@ -9,6 +9,7 @@
 *******************************************************************************/
 
 using System;
+using System.Collections.Generic;
 
 namespace Clipper2Lib
 {
@@ -330,10 +331,16 @@ namespace Clipper2Lib
       return new Point64((left + right) /2, (top + bottom)/2);
     }
 
-    public bool PtIsInside(Point64 pt)
+    public bool Contains(Point64 pt)
     {
-      return pt.X > left && pt.X < right && 
+      return pt.X > left && pt.X < right &&
         pt.Y > top && pt.Y < bottom;
+    }
+
+    public bool Contains(Rect64 rec)
+    {
+      return rec.left >= left && rec.right <= right &&
+        rec.top >= top && rec.bottom <= bottom;
     }
 
 
@@ -507,6 +514,72 @@ namespace Clipper2Lib
         dx2 * (seg1a.Y - seg2a.Y)) * (dy2 * (seg1b.X - seg2a.X) -
         dx2 * (seg1b.Y - seg2a.Y)) < 0));
     }
+
+    public static PointInPolygonResult PointInPolygon(Point64 pt, List<Point64> polygon)
+    {
+      int len = polygon.Count, i = len - 1;
+
+      if (len < 3) return PointInPolygonResult.IsOutside;
+
+      while (i >= 0 && polygon[i].Y == pt.Y) --i;
+      if (i < 0) return PointInPolygonResult.IsOutside;
+
+      int val = 0;
+      bool isAbove = polygon[i].Y < pt.Y;
+      i = 0;
+
+      while (i < len)
+      {
+        if (isAbove)
+        {
+          while (i < len && polygon[i].Y < pt.Y) i++;
+          if (i == len) break;
+        }
+        else
+        {
+          while (i < len && polygon[i].Y > pt.Y) i++;
+          if (i == len) break;
+        }
+
+        Point64 curr, prev;
+
+        curr = polygon[i];
+        if (i > 0) prev = polygon[i - 1];
+        else prev = polygon[len - 1];
+
+        if (curr.Y == pt.Y)
+        {
+          if (curr.X == pt.X || (curr.Y == prev.Y &&
+            ((pt.X < prev.X) != (pt.X < curr.X))))
+            return PointInPolygonResult.IsOn;
+          i++;
+          continue;
+        }
+
+        if (pt.X < curr.X && pt.X < prev.X)
+        {
+          // we're only interested in edges crossing on the left
+        }
+        else if (pt.X > prev.X && pt.X > curr.X)
+        {
+          val = 1 - val; // toggle val
+        }
+        else
+        {
+          double d = InternalClipper.CrossProduct(prev, curr, pt);
+          if (d == 0)
+            return PointInPolygonResult.IsOn;
+          if ((d < 0) == isAbove) val = 1 - val;
+        }
+        isAbove = !isAbove;
+        i++;
+      }
+      if (val == 0)
+        return PointInPolygonResult.IsOutside;
+      else
+        return PointInPolygonResult.IsInside;
+    }
+
   } // InternalClipper
 
 } // namespace

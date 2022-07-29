@@ -1,7 +1,7 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
 * Version   :  Clipper2 - beta                                                 *
-* Date      :  14 July 2022                                                    *
+* Date      :  26 July 2022                                                    *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  This is the main polygon clipping module                        *
@@ -32,8 +32,6 @@ namespace Clipper2Lib {
 	//Note: all clipping operations except for Difference are commutative.
 	enum class ClipType { None, Intersection, Union, Difference, Xor };
 	
-	enum class PointInPolygonResult { IsOn, IsInside, IsOutside };
-
 	enum class PathType { Subject, Clip };
 
 	//By far the most widely used filling rules for polygons are EvenOdd
@@ -99,6 +97,8 @@ namespace Clipper2Lib {
 		Active* back_edge = nullptr;
 		OutPt* pts = nullptr;
 		PolyPath64* polypath = nullptr;
+		Rect64 bounds = {};
+		Path64 path;
 		bool is_open = false;
 		~OutRec() { if (splits) delete splits; };
 	};
@@ -227,7 +227,7 @@ namespace Clipper2Lib {
 		OutPt* DoSplitOp(OutPt* outRecOp, OutPt* splitOp);
 		Joiner* GetHorzTrialParent(const OutPt* op);
 		bool OutPtInTrialHorzList(OutPt* op);
-		void SafeDisposeOutPts(OutPt* op);
+		void SafeDisposeOutPts(OutPt*& op);
 		void SafeDeleteOutPtJoiners(OutPt* op);
 		void AddTrialHorzJoin(OutPt* op);
 		void DeleteTrialHorzJoin(OutPt* op);
@@ -237,6 +237,7 @@ namespace Clipper2Lib {
 		void ProcessJoinerList();
 		OutRec* ProcessJoin(Joiner* joiner);
 		bool ExecuteInternal(ClipType ct, FillRule ft, bool use_polytrees);
+		bool DeepCheckOwner(OutRec* outrec, OutRec* owner);
 		void BuildPaths(Paths64& solutionClosed, Paths64* solutionOpen);
 		void BuildTree(PolyPath64& polytree, Paths64& open_paths);
 #ifdef USINGZ

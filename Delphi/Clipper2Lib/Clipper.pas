@@ -3,7 +3,7 @@ unit Clipper;
 (*******************************************************************************
 * Author    :  Angus Johnson                                                   *
 * Version   :  Clipper2 - beta                                                 *
-* Date      :  23 July 2022                                                    *
+* Date      :  27 July 2022                                                    *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  This module provides a simple interface to the Clipper Library  *
@@ -414,72 +414,8 @@ end;
 
 function PointInPolygon(const pt: TPoint64;
   const polygon: TPath64): TPointInPolygonResult;
-var
-  i, len, val: Integer;
-  isAbove: Boolean;
-  d: Double; // used to avoid integer overflow
-  curr, prev, first, stop: PPoint64;
 begin
-  result := pipOutside;
-  len := Length(polygon);
-  if len < 3 then Exit;
-
-  i := len -1;
-  first := @polygon[0];
-
-  while (i >= 0) and (polygon[i].Y = pt.Y) do dec(i);
-  if i < 0 then Exit;
-  isAbove := polygon[i].Y < pt.Y;
-
-  Result := pipOn;
-  stop := @polygon[len -1];
-  inc(stop); // stop is just past the last point
-
-  curr := first;
-  val := 0;
-
-  while (curr <> stop) do
-  begin
-    if isAbove then
-    begin
-      while (curr <> stop) and (curr.Y < pt.Y) do inc(curr);
-      if (curr = stop) then break;
-    end else
-    begin
-      while (curr <> stop) and (curr.Y > pt.Y) do inc(curr);
-      if (curr = stop) then break;
-    end;
-
-    if curr = first then
-      prev := stop else
-      prev := curr;
-    dec(prev);
-
-    if (curr.Y = pt.Y) then
-    begin
-      if (curr.X = pt.X) or ((curr.Y = prev.Y) and
-        ((pt.X < prev.X) <> (pt.X < curr.X))) then Exit;
-      inc(curr);
-      Continue;
-    end;
-
-    if (pt.X < curr.X) and (pt.X < prev.X) then
-      // we're only interested in edges crossing on the left
-    else if((pt.X > prev.X) and (pt.X > curr.X)) then
-      val := 1 - val // toggle val
-    else
-    begin
-      d := CrossProduct(prev^, curr^, pt);
-      if d = 0 then Exit; // ie point on path
-      if (d < 0) = isAbove then val := 1 - val;
-    end;
-
-    isAbove := not isAbove;
-    inc(curr);
-  end;
-  if val = 0 then
-     result := pipOutside else
-     result := pipInside;
+  Result := Clipper.Core.PointInPolygon(pt, polygon);
 end;
 //------------------------------------------------------------------------------
 
