@@ -1978,7 +1978,7 @@ begin
   op2 := op;
   while true do
   begin
-    // 3 edged polygons can't self-intersect
+    // triangles can't self-intersect
     if (op2.prev = op2.next.next) then
       Break
     else if SegmentsIntersect(op2.prev.pt, op2.pt,

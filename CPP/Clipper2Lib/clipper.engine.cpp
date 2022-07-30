@@ -1572,7 +1572,7 @@ namespace Clipper2Lib {
 		OutPt* op2 = outrec->pts;
 		for (; ; )
 		{
-			//3 edged polygons can't self-intersect
+			// triangles can't self-intersect
 			if (op2->prev == op2->next->next) break;
 			if (SegmentsIntersect(op2->prev->pt,
 				op2->pt, op2->next->pt, op2->next->next->pt))
