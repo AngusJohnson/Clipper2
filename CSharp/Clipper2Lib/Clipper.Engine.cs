@@ -1,7 +1,7 @@
 ﻿/*******************************************************************************
 * Author    :  Angus Johnson                                                   *
 * Version   :  Clipper2 - beta                                                 *
-* Date      :  28 July 2022                                                    *
+* Date      :  30 July 2022                                                    *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  This is the main polygon clipping module                        *
@@ -3027,6 +3027,11 @@ namespace Clipper2Lib
             {
               or1.pts = op1;
               or2.pts = null;
+              if (or1.owner != null &&
+                (or2.owner == null || or2.owner.idx < or1.owner.idx))
+              {
+                or1.owner = or2.owner;
+              }
               or2.owner = or1;
             }
             else
@@ -3034,6 +3039,11 @@ namespace Clipper2Lib
               result = or2;
               or2.pts = op1;
               or1.pts = null;
+              if (or2.owner != null &&
+                (or1.owner == null || or1.owner.idx < or2.owner.idx))
+              {
+                or2.owner = or1.owner;
+              }
               or1.owner = or2;
             }
           }
@@ -3081,6 +3091,11 @@ namespace Clipper2Lib
             {
               or1.pts = op1;
               or2.pts = null;
+              if (or1.owner != null &&
+                (or2.owner == null || or2.owner.idx < or1.owner.idx))
+              {
+                or1.owner = or2.owner;
+              }
               or2.owner = or1;
             }
             else
@@ -3088,6 +3103,11 @@ namespace Clipper2Lib
               result = or2;
               or2.pts = op1;
               or1.pts = null;
+              if (or2.owner != null &&
+                (or1.owner == null || or1.owner.idx < or2.owner.idx))
+              {
+                or2.owner = or1.owner;
+              }
               or1.owner = or2;
             }
           }

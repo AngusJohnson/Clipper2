@@ -3,7 +3,7 @@ unit Clipper.Engine;
 (*******************************************************************************
 * Author    :  Angus Johnson                                                   *
 * Version   :  Clipper2 - beta                                                 *
-* Date      :  28 July 2022                                                    *
+* Date      :  30 July 2022                                                    *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  This is the main polygon clipping module                        *
@@ -2501,11 +2501,19 @@ begin
         begin
           or1.pts := op1;
           or2.pts := nil;
+          if Assigned(or1.owner) and
+            (not Assigned(or2.owner) or
+							(or2.owner.idx < or1.owner.idx)) then
+								or1.owner := or2.owner;
           or2.owner := or1
         end else
         begin
           or2.pts := op1;
           or1.pts := nil;
+          if Assigned(or2.owner) and
+            (not Assigned(or1.owner) or
+							(or1.owner.idx < or2.owner.idx)) then
+								or2.owner := or1.owner;
           or1.owner := or2;
         end;
       end;
@@ -2553,12 +2561,20 @@ begin
         begin
           or1.pts := op1;
           or2.pts := nil;
+          if Assigned(or1.owner) and
+            (not Assigned(or2.owner) or
+							(or2.owner.idx < or1.owner.idx)) then
+								or1.owner := or2.owner;
           or2.owner := or1;
         end else
         begin
           Result := or2;
           or2.pts := op1;
           or1.pts := nil;
+          if Assigned(or2.owner) and
+            (not Assigned(or1.owner) or
+							(or1.owner.idx < or2.owner.idx)) then
+								or2.owner := or1.owner;
           or1.owner := or2;
         end;
       end;
