@@ -89,7 +89,7 @@ begin
   SetLength(subj, 1);
   subj[0] := MakeNPointedStar(Rect64(0,0,500,500), 5);
   SetLength(clip, 1);
-  clip[0] := Ellipse(Rect64(100,100,400,400));
+  clip[0] := Clipper.Core.Ellipse(Rect64(100,100,400,400));
   sol := Union(subj, clip, frNonZero);
 
   with TSimpleClipperSvgWriter.Create(frNonZero) do
@@ -111,7 +111,7 @@ begin
   SetLength(subj, 1);
   subj[0] := MakeNPointedStar(Rect64(0,0,500,500), 5);
   SetLength(clip, 1);
-  clip[0] := Ellipse(Rect64(100,100,400,400));
+  clip[0] := Clipper.Core.Ellipse(Rect64(100,100,400,400));
   sol := Intersect(subj, clip, frEvenOdd);
 
   with TSimpleClipperSvgWriter.Create(frEvenOdd) do
@@ -131,9 +131,8 @@ var
   subj, sol: TPaths64;
 begin
   SetLength(subj, 1);
-  subj[0] := Ellipse(Rect64(0,0,450,450), 7);
+  subj[0] := Clipper.Core.Ellipse(Rect64(0,0,450,450), 7);
   sol := InflatePaths(subj, 25, jtRound, etPolygon);
-
   with TSimpleClipperSvgWriter.Create(frEvenOdd) do
   try
     AddPaths(subj, false, $1000BBFF, $800099FF, 0.8);
@@ -150,8 +149,8 @@ var
   subjOpen, sol: TPaths64;
 begin
   SetLength(subjOpen, 1);
-  subjOpen[0] := Ellipse(Rect64(0,0,450,450), 7);
-  sol := InflatePaths(subjOpen, 25, jtRound, etJoined);
+  subjOpen[0] := Clipper.Core.Ellipse(Rect64(0,0,450,450), 7);
+  sol := InflatePaths(subjOpen, -25, jtRound, etJoined);
 
   with TSimpleClipperSvgWriter.Create(frEvenOdd) do
   try
@@ -169,7 +168,7 @@ var
   subjOpen, sol: TPaths64;
 begin
   SetLength(subjOpen, 1);
-  subjOpen[0] := Ellipse(Rect64(0,0,450,450), 7);
+  subjOpen[0] := Clipper.Core.Ellipse(Rect64(0,0,450,450), 7);
   sol := InflatePaths(subjOpen, 25, jtRound, etRound);
 
   with TSimpleClipperSvgWriter.Create(frEvenOdd) do
@@ -188,7 +187,7 @@ var
   circle, paths, sol: TPaths64;
 begin
   SetLength(circle, 1);
-  circle[0] := Ellipse(Rect64(-10,-10,10,10));
+  circle[0] := Clipper.Core.Ellipse(Rect64(-10,-10,10,10));
   SetLength(paths, 2);
   paths[0] := MakePath([40,40, 100,160, 160,40]);     //triangle
   paths[1] := MakePath([0,0, 200,0, 200,200, 0,200]); //square
@@ -241,8 +240,8 @@ begin
   WriteLn('Inflate Open Circle');
   InflateOpenCircle;
 
-  WriteLn('Minkowski Sum');
-  MinkowskiSum1;
+//  WriteLn('Minkowski Sum');
+//  MinkowskiSum1;
 
   ShellExecute(0, 'open',PChar(directory), nil, nil, SW_SHOW);
 end.

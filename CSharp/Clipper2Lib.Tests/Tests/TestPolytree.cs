@@ -10,15 +10,15 @@ namespace Clipper2Lib.UnitTests
   [TestClass]
   public class TestPolytree
   {
-
     void PolyPathContainsPoint(PolyPath64 pp, Point64 pt, ref int counter)
     {
-      if (pp.Polygon.Count > 0 &&
-        Clipper.PointInPolygon(pt, pp.Polygon) != PointInPolygonResult.IsOutside)
-          if (pp.IsHole) --counter; else ++counter;
-      for (int i = 0; i < pp.ChildCount; i++)
+      if (Clipper.PointInPolygon(pt, pp.Polygon!) != PointInPolygonResult.IsOutside)
       {
-        PolyPath64 child = (PolyPath64) pp.GetChild(i);
+        if (pp.IsHole) --counter; else ++counter;
+      }
+      for (int i = 0; i < pp.Count; i++)
+      {
+        PolyPath64 child = (PolyPath64) pp[i];
         PolyPathContainsPoint(child, pt, ref counter);
       } 
     }
@@ -26,9 +26,9 @@ namespace Clipper2Lib.UnitTests
     private bool PolytreeContainsPoint(PolyTree64 pp, Point64 pt)
     {
       int counter = 0;
-      for (int i = 0; i < pp.ChildCount; i++)
+      for (int i = 0; i < pp.Count; i++)
       {
-        PolyPath64 child = (PolyPath64) pp.GetChild(i);
+        PolyPath64 child = (PolyPath64) pp[i];
         PolyPathContainsPoint(child, pt, ref counter);
       }
       Assert.IsTrue(counter >= 0, "Polytree has too many holes");
@@ -37,13 +37,12 @@ namespace Clipper2Lib.UnitTests
 
   private bool PolyPathFullyContainsChildren(PolyPath64 pp)
     {
-      for (int i = 0; i < pp.ChildCount; i++)
+      foreach (PolyPath64 child in pp)
       {
-        PolyPath64 child = (PolyPath64) pp.GetChild(i);
-        foreach (Point64 pt in child.Polygon)
-          if (Clipper.PointInPolygon(pt, pp.Polygon) == PointInPolygonResult.IsOutside)
+        foreach (Point64 pt in child.Polygon!)
+          if (Clipper.PointInPolygon(pt, pp.Polygon!) == PointInPolygonResult.IsOutside)
             return false;
-        if (child.ChildCount > 0 && !PolyPathFullyContainsChildren(child))
+        if (child.Count > 0 && !PolyPathFullyContainsChildren(child))
           return false;
       }
       return true;
@@ -51,10 +50,10 @@ namespace Clipper2Lib.UnitTests
 
     private bool CheckPolytreeFullyContainsChildren(PolyTree64 polytree)
     {
-      for (int i = 0; i < polytree.ChildCount; i++)
+      for (int i = 0; i < polytree.Count; i++)
       {
-        PolyPath64 child = (PolyPath64) polytree.GetChild(i);
-        if (child.ChildCount > 0 && !PolyPathFullyContainsChildren(child))
+        PolyPath64 child = (PolyPath64) polytree[i];
+        if (child.Count > 0 && !PolyPathFullyContainsChildren(child))
           return false;
       }    
       return true;

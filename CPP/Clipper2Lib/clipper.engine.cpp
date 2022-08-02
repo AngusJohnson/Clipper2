@@ -1,7 +1,7 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
 * Version   :  Clipper2 - beta                                                 *
-* Date      :  29 July 2022                                                    *
+* Date      :  2 August 2022                                                   *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  This is the main polygon clipping module                        *
@@ -3481,10 +3481,10 @@ namespace Clipper2Lib {
 
 	static void PolyPath64ToPolyPathD(const PolyPath64& polypath, PolyPathD& result)
 	{
-		for (const PolyPath64* child : polypath.childs())
+		for (auto child : polypath)
 		{
 			PolyPathD* res_child = result.AddChild(
-				Path64ToPathD(child->polygon()));
+				Path64ToPathD(child->Polygon()));
 			PolyPath64ToPolyPathD(*child, *res_child);
 		}
 	}

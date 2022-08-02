@@ -13,9 +13,9 @@ function MakeRandomPathD(maxWidth, maxHeight, count: Integer;
   margin: Integer = 10): TPathD;
 
 function Ellipse(const rec: TRect64; steps: integer = 0;
-    reverse_orientation: Boolean = DEFAULT_ORIENTATION_IS_REVERSED): TPath64; overload;
+    reverse_orientation: Boolean = false): TPath64; overload;
 function Ellipse(const rec: TRectD; steps: integer = 0;
-    reverse_orientation: Boolean = DEFAULT_ORIENTATION_IS_REVERSED): TPathD; overload;
+    reverse_orientation: Boolean = false): TPathD; overload;
 
 function MakeNPointedStar(const rec: TRect64;
   points: integer = 5): TPath64; overload;

@@ -1,7 +1,7 @@
 ﻿/*******************************************************************************
 * Author    :  Angus Johnson                                                   *
 * Version   :  Clipper2 - beta                                                 *
-* Date      :  23 July 2022                                                    *
+* Date      :  2 August 2022                                                   *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  This module contains simple functions that will likely cover    *
@@ -489,14 +489,14 @@ namespace Clipper2Lib
     {
       if (polyPath.Polygon!.Count > 0)
         paths.Add(polyPath.Polygon);
-      for (int i = 0; i < polyPath.ChildCount; i++)
+      for (int i = 0; i < polyPath.Count; i++)
         AddPolyNodeToPaths((PolyPath64) polyPath._childs[i], paths);
     }
 
     public static Paths64 PolyTreeToPaths(PolyTree64 polyTree)
     {
       Paths64 result = new Paths64();
-      for (int i = 0; i < polyTree.ChildCount; i++)
+      for (int i = 0; i < polyTree.Count; i++)
         AddPolyNodeToPaths((PolyPath64) polyTree._childs[i], result);
       return result;
     }
@@ -505,15 +505,15 @@ namespace Clipper2Lib
     {
       if (polyPath.Polygon!.Count > 0)
         paths.Add(polyPath.Polygon);
-      for (int i = 0; i < polyPath.ChildCount; i++)
+      for (int i = 0; i < polyPath.Count; i++)
         AddPolyNodeToPathsD((PolyPathD) polyPath._childs[i], paths);
     }
 
     public static PathsD PolyTreeToPathsD(PolyTreeD polyTree)
     {
       PathsD result = new PathsD();
-      for (int i = 0; i < polyTree.ChildCount; i++)
-        AddPolyNodeToPathsD((PolyPathD) polyTree._childs[i], result);
+      foreach (PolyPathD p in polyTree)
+        AddPolyNodeToPathsD(p, result);
       return result;
     }
 

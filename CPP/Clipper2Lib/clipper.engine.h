@@ -1,7 +1,7 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
 * Version   :  Clipper2 - beta                                                 *
-* Date      :  26 July 2022                                                    *
+* Date      :  2 August 2022                                                   *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  This is the main polygon clipping module                        *
@@ -297,6 +297,11 @@ namespace Clipper2Lib {
 		PolyPath(const PolyPath&) = delete;
 		PolyPath& operator=(const PolyPath&) = delete;
 
+		PolyPath<T>* operator [] (size_t index) { return childs_[index]; }
+
+		typename std::vector<PolyPath*>::const_iterator begin() const { return childs_.cbegin(); }
+		typename std::vector<PolyPath*>::const_iterator end() const { return childs_.cend(); }
+
 		void Clear() { 
 			for (PolyPath<T>* child : childs_) delete child;
 			childs_.resize(0); 
@@ -313,9 +318,7 @@ namespace Clipper2Lib {
 			return childs_.back();
 		}
 
-		size_t ChildCount() const { return childs_.size(); }
-
-		const PolyPath<T>* operator [] (size_t index) const { return childs_[index]; }
+		size_t Count() const { return childs_.size(); }
 
 		const PolyPath<T>* parent() const { return parent_; }
 
@@ -330,9 +333,9 @@ namespace Clipper2Lib {
 			return is_hole;
 		}
 
-		const Path<T>& polygon() const { return polygon_; }
+		const Path<T>& Polygon() const { return polygon_; }
 
-		const std::vector<PolyPath*>& childs() const { return childs_; }
+		//const std::vector<PolyPath*>& Child() const { return childs_; }
 
 		double Area() const
 		{

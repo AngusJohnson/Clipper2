@@ -204,11 +204,6 @@ function ScalePathsD(const paths: TPathsD; sx, sy: double): TPathsD; overload;
 function ScalePathsD(const paths: TPaths64; scale: double): TPathsD; overload;
 function ScalePathsD(const paths: TPathsD; scale: double): TPathsD; overload;
 
-function TranslatePath(const path: TPath64; dx, dy: Int64): TPath64; overload;
-function TranslatePath(const path: TPathD; dx, dy: double): TPathD; overload;
-function TranslatePaths(const paths: TPaths64; dx, dy: Int64): TPaths64; overload;
-function TranslatePaths(const paths: TPathsD; dx, dy: double): TPathsD; overload;
-
 function Path64(const pathD: TPathD): TPath64;
 function PathD(const path: TPath64): TPathD;
 function Paths64(const pathsD: TPathsD): TPaths64;
@@ -302,7 +297,7 @@ end;
 function TRect64.Contains(const rec: TRect64): Boolean;
 begin
   result := (rec.Left >= Left) and (rec.Right <= Right) and
-    (rec.Top >+ Top) and (rec.Bottom <= Bottom);
+    (rec.Top >= Top) and (rec.Bottom <= Bottom);
 end;
 
 //------------------------------------------------------------------------------
@@ -701,84 +696,6 @@ begin
 {$IFDEF USINGZ}
       result[i][j].Z := paths[i][j].Z * scale;
 {$ENDIF}
-    end;
-  end;
-end;
-//------------------------------------------------------------------------------
-
-function TranslatePath(const path: TPath64; dx, dy: Int64): TPath64;
-var
-  i: integer;
-begin
-  if (dx = 0) and (dy = 0) then
-  begin
-    result := path; // nb: reference counted
-    Exit;
-  end;
-
-  setlength(result, length(path));
-  for i := 0 to high(path) do
-  begin
-    result[i].X := path[i].X + dx;
-    result[i].Y := path[i].Y + dy;
-  end;
-end;
-//------------------------------------------------------------------------------
-
-function TranslatePath(const path: TPathD; dx, dy: double): TPathD;
-var
-  i: integer;
-begin
-  if (dx = 0) and (dy = 0) then
-  begin
-    result := path; // nb: reference counted
-    Exit;
-  end;
-
-  setlength(result, length(path));
-  for i := 0 to high(path) do
-  begin
-    result[i].X := path[i].X + dx;
-    result[i].Y := path[i].Y + dy;
-  end;
-end;
-//------------------------------------------------------------------------------
-
-function TranslatePaths(const paths: TPaths64; dx, dy: Int64): TPaths64;
-var
-  i,j: integer;
-begin
-  if (dx = 0) and (dy = 0) then
-  begin
-    result := paths; // nb: reference counted
-    Exit;
-  end;
-
-  setlength(result, length(paths));
-  for i := 0 to high(paths) do
-  begin
-    setlength(result[i], length(paths[i]));
-    for j := 0 to high(paths[i]) do
-    begin
-      result[i][j].X := paths[i][j].X + dx;
-      result[i][j].Y := paths[i][j].Y + dy;
-    end;
-  end;
-end;
-//------------------------------------------------------------------------------
-
-function TranslatePaths(const paths: TPathsD; dx, dy: double): TPathsD;
-var
-  i,j: integer;
-begin
-  setlength(result, length(paths));
-  for i := 0 to high(paths) do
-  begin
-    setlength(result[i], length(paths[i]));
-    for j := 0 to high(paths[i]) do
-    begin
-      result[i][j].X := paths[i][j].X + dx;
-      result[i][j].Y := paths[i][j].Y + dy;
     end;
   end;
 end;

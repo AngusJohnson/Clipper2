@@ -1,7 +1,7 @@
 ﻿/*******************************************************************************
 * Author    :  Angus Johnson                                                   *
 * Version   :  Clipper2 - beta                                                 *
-* Date      :  31 July 2022                                                    *
+* Date      :  2 August 2022                                                   *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  This is the main polygon clipping module                        *
@@ -12,6 +12,7 @@
 
 #nullable enable
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 
@@ -3782,11 +3783,19 @@ namespace Clipper2Lib
     }
   } // ClipperD class
 
-
-  public abstract class PolyPathBase
+  public abstract class PolyPathBase : IEnumerable
   {
     internal PolyPathBase? _parent;
     internal List<PolyPathBase> _childs = new List<PolyPathBase>();
+
+    public PolyPathEnum GetEnumerator()
+    {
+      return new PolyPathEnum(_childs);
+    }
+    IEnumerator IEnumerable.GetEnumerator()
+    {
+      return (IEnumerator) GetEnumerator();
+    }
 
     public bool IsHole => GetIsHole();
 
@@ -3805,21 +3814,49 @@ namespace Clipper2Lib
       return result;
     }
 
-    public int ChildCount => _childs.Count;
+    public int Count => _childs.Count;
 
     internal abstract PolyPathBase AddChild(Path64 p);
-
-    public PolyPathBase? GetChild(int idx)
-    {
-      if (idx < 0 || idx >= ChildCount) return null;
-      else return _childs[idx];
-    }
 
     public void Clear()
     {
       _childs.Clear();
     }
   } // PolyPathBase class
+
+  public class PolyPathEnum : IEnumerator
+  {
+    public List<PolyPathBase> _ppbList;
+    private int position = -1;
+    public PolyPathEnum(List<PolyPathBase> childs)
+    {
+      _ppbList = childs;
+    }
+
+    public bool MoveNext()
+    {
+      position++;
+      return (position < _ppbList.Count);
+    }
+
+    public void Reset()
+    {
+      position = -1;
+    }
+
+    public PolyPathBase Current
+    {
+      get
+      {
+        if (position < 0 || position >= _ppbList.Count)
+          throw new InvalidOperationException();
+        return _ppbList[position];
+      }
+    }
+
+    object IEnumerator.Current { get { return Current; } }
+
+  }
 
   public class PolyPath64 : PolyPathBase
   {
@@ -3833,6 +3870,16 @@ namespace Clipper2Lib
       (newChild as PolyPath64)!.Polygon = p;
       _childs.Add(newChild);
       return newChild;
+    }
+
+    [System.Runtime.CompilerServices.IndexerName("Child")]
+    public PolyPath64 this[int index]
+    {
+      get {
+        if (index < 0 || index >= _childs.Count)
+          throw new InvalidOperationException();
+        return _childs[index] as PolyPath64; 
+      }
     }
 
     public double Area()
@@ -3860,6 +3907,16 @@ namespace Clipper2Lib
       return newChild;
     }
 
+    [System.Runtime.CompilerServices.IndexerName("Child")]
+    public PolyPathD this[int index]
+    {
+      get
+      {
+        if (index < 0 || index >= _childs.Count)
+          throw new InvalidOperationException();
+        return _childs[index] as PolyPathD;
+      }
+    }
     public double Area()
     {
       double result = Polygon == null ? 0 : Clipper.Area(Polygon);

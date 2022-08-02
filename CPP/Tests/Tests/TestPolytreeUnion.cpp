@@ -26,7 +26,7 @@ TEST(Clipper2Tests, TestPolytreeUnion) {
     }
 
     EXPECT_EQ(open_paths.size(), 0);
-    ASSERT_EQ(solution.ChildCount(), 1);
-    EXPECT_EQ(solution[0]->polygon().size(), 8);
-    EXPECT_EQ(IsPositive(subject[0]), IsPositive(solution[0]->polygon()));
+    ASSERT_EQ(solution.Count(), 1);
+    EXPECT_EQ(solution[0]->Polygon().size(), 8);
+    EXPECT_EQ(IsPositive(subject[0]), IsPositive(solution[0]->Polygon()));
 }

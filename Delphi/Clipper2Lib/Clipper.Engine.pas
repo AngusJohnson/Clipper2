@@ -3,7 +3,7 @@ unit Clipper.Engine;
 (*******************************************************************************
 * Author    :  Angus Johnson                                                   *
 * Version   :  Clipper2 - beta                                                 *
-* Date      :  30 July 2022                                                    *
+* Date      :  2 August 2022                                                   *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  This is the main polygon clipping module                        *
@@ -279,9 +279,9 @@ type
     FParent     : TPolyPathBase;
     FChildList  : TList;
     function    GetChildCnt: Integer;
-    function    GetChild(index: Integer): TPolyPathBase;
     function    GetIsHole: Boolean;
   protected
+    function    GetChild(index: Integer): TPolyPathBase;
     function    AddChild(const path: TPath64): TPolyPathBase; virtual; abstract;
     property    ChildList: TList read FChildList;
     property    Parent: TPolyPathBase read FParent write FParent;
@@ -290,16 +290,18 @@ type
     destructor  Destroy; override;
     procedure   Clear; virtual;
     property    IsHole: Boolean read GetIsHole;
-    property    ChildCount: Integer read GetChildCnt;
-    property    Child[index: Integer]: TPolyPathBase read GetChild;
+    property    Count: Integer read GetChildCnt;
+    property    Child[index: Integer]: TPolyPathBase read GetChild; default;
   end;
 
   TPolyPath64 = class(TPolyPathBase)
   {$IFDEF STRICT}strict{$ENDIF} private
     FPath : TPath64;
+    function    GetChild64(index: Integer): TPolyPath64;
   protected
     function AddChild(const path: TPath64): TPolyPathBase; override;
   public
+    property Child[index: Integer]: TPolyPath64 read GetChild64; default;
     property Polygon: TPath64 read FPath;
   end;
 
@@ -347,11 +349,13 @@ type
   TPolyPathD = class(TPolyPathBase)
   {$IFDEF STRICT}strict{$ENDIF} private
     FPath   : TPathD;
+    function  GetChildD(index: Integer): TPolyPathD;
   protected
     FScale  : double;
     function  AddChild(const path: TPath64): TPolyPathBase; override;
   public
     property  Polygon: TPathD read FPath;
+    property Child[index: Integer]: TPolyPathD read GetChildD; default;
   end;
 
   TPolyTreeD = class(TPolyPathD)
@@ -4196,6 +4200,12 @@ begin
   TPolyPath64(Result).FPath := path;;
   ChildList.Add(Result);
 end;
+//------------------------------------------------------------------------------
+
+function TPolyPath64.GetChild64(index: Integer): TPolyPath64;
+begin
+  Result := TPolyPath64(GetChild(index));
+end;
 
 //------------------------------------------------------------------------------
 // TClipperD methods
@@ -4420,6 +4430,12 @@ begin
   TPolyPathD(Result).fScale := fScale;
   TPolyPathD(Result).FPath := ScalePathD(path, 1/FScale);
   ChildList.Add(Result);
+end;
+//------------------------------------------------------------------------------
+
+function TPolyPathD.GetChildD(index: Integer): TPolyPathD;
+begin
+  Result := TPolyPathD(GetChild(index));
 end;
 
 //------------------------------------------------------------------------------

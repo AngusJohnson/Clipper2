@@ -1,7 +1,7 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
 * Version   :  Clipper2 - beta                                                 *
-* Date      :  23 July 2022                                                    *
+* Date      :  2 August 2022                                                   *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  This module provides a simple interface to the Clipper Library  *
@@ -253,19 +253,19 @@ namespace Clipper2Lib
     template <typename T>
     inline void InternalPolyNodeToPaths(const PolyPath<T>& polypath, Paths<T>& paths)
     {
-      paths.push_back(polypath.polygon());
-      for (PolyPath<T>* child : polypath.childs())
+      paths.push_back(polypath.Polygon());
+      for (auto child : polypath)
         InternalPolyNodeToPaths(*child, paths);
     }
 
     inline bool InternalPolyPathContainsChildren(const PolyPath64& pp)
     {
-      for (auto child : pp.childs())
+      for (auto child : pp)
       {
-        for (const Point64& pt : child->polygon())
-          if (PointInPolygon(pt, pp.polygon()) == PointInPolygonResult::IsOutside)
+        for (const Point64& pt : child->Polygon())
+          if (PointInPolygon(pt, pp.Polygon()) == PointInPolygonResult::IsOutside)
             return false;
-        if (child->ChildCount() > 0 && !InternalPolyPathContainsChildren(*child))
+        if (child->Count() > 0 && !InternalPolyPathContainsChildren(*child))
           return false;
       }
       return true;
@@ -364,15 +364,15 @@ namespace Clipper2Lib
   inline Paths<T> PolyTreeToPaths(const PolyTree<T>& polytree)
   {
     Paths<T> result;
-    for (const auto* child : polytree.childs())
+    for (auto child : polytree)
       details::InternalPolyNodeToPaths(*child, result);
     return result;
   }
 
   inline bool CheckPolytreeFullyContainsChildren(const PolyTree64& polytree)
   {
-    for (const PolyPath64* child : polytree.childs())
-      if (child->ChildCount() > 0 && !details::InternalPolyPathContainsChildren(*child))
+    for (auto child : polytree)
+      if (child->Count() > 0 && !details::InternalPolyPathContainsChildren(*child))
         return false;
     return true;
   }

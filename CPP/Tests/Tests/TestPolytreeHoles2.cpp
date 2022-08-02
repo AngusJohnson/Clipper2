@@ -7,22 +7,22 @@ using namespace Clipper2Lib;
 
 void PolyPathContainsPoint(const PolyPath64& pp, const Point64 pt, int& counter)
 {
-  if (pp.polygon().size() > 0)
+  if (pp.Polygon().size() > 0)
   {
-    if (PointInPolygon(pt, pp.polygon()) != PointInPolygonResult::IsOutside)
+    if (PointInPolygon(pt, pp.Polygon()) != PointInPolygonResult::IsOutside)
     {
       if (pp.IsHole()) --counter;
       else  ++counter;
     }
   }
-  for (auto child : pp.childs())
+  for (auto child : pp)
     PolyPathContainsPoint(*child, pt, counter);
 }
 
 bool PolytreeContainsPoint(const PolyPath64& pp, const Point64 pt)
 {
   int counter = 0;
-  for (auto child : pp.childs())
+  for (auto child : pp)
     PolyPathContainsPoint(*child, pt, counter);
   EXPECT_GE(counter, 0); //ie 'pt' can't be inside more holes than outers
   return counter != 0;
@@ -30,15 +30,15 @@ bool PolytreeContainsPoint(const PolyPath64& pp, const Point64 pt)
 
 void GetPolyPathArea(const PolyPath64& pp, double& area)
 {
-  area += Area(pp.polygon());
-  for (auto child : pp.childs())
+  area += Area(pp.Polygon());
+  for (auto child : pp)
     GetPolyPathArea(*child, area);
 }
 
 double GetPolytreeArea(const PolyPath64& pp)
 {
   double result = 0;
-  for (auto child : pp.childs())
+  for (auto child : pp)
     GetPolyPathArea(*child, result);
   return result;
 }
