@@ -351,7 +351,7 @@ namespace Clipper2Lib {
 	void Polytree64ToPolytreeD(const PolyPath64& polytree, PolyPathD& result);
 
 
-	class Clipper64 : public ClipperBase
+	class Clipper64 : private ClipperBase
 	{
 	public:
 		using ClipperBase::ClipperBase;
@@ -387,9 +387,18 @@ namespace Clipper2Lib {
 			return ClipperBase::Execute(clip_type, fill_rule, polytree, open_paths);
 		}
 
+		void SetPreserveCollinear(bool preserve_collinear)
+		{
+			PreserveCollinear = preserve_collinear;
+		}
+
+		void SetReverseSolution(bool reverse_solution)
+		{
+			ReverseSolution = reverse_solution;
+		}
 	};
 
-	class ClipperD : public ClipperBase {
+	class ClipperD : private ClipperBase {
 	private:
 		double scale_ = 1.0;
 	public:
