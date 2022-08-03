@@ -22,26 +22,24 @@ And Clipper2 has all the features of Clipper1 that sets Clipper apart from other
 
 ### Documentation
 
- Online documentation (nearly completed) is <a href="http://www.angusj.com/clipper2/Docs/Overview.htm"><b>here</b></a>.
+ Online documentation (which is nearly completed) is <a href="http://www.angusj.com/clipper2/Docs/Overview.htm"><b>here</b></a>.
 <br><br>
 
-### Example
+### Examples
 
 <pre>
       //C++
       Paths64 subject, clip, solution;
       subject.push_back(MakePath("100, 50, 10, 79, 65, 2, 65, 98, 10, 21"));
       clip.push_back(MakePath("98, 63, 4, 68, 77, 8, 52, 100, 19, 12"));
-      solution = Intersect(subject, clip, FillRule::NonZero);
-
-      //C#
+      solution = Intersect(subject, clip, FillRule::NonZero);</pre>
+<pre>      //C#
       Paths64 subj = new Paths64();
       Paths64 clip = new Paths64();
       subj.Add(Clipper.MakePath(new int[] { 100, 50, 10, 79, 65, 2, 65, 98, 10, 21 }));
       clip.Add(Clipper.MakePath(new int[] { 98, 63, 4, 68, 77, 8, 52, 100, 19, 12 }));
-      Paths64 solution = Clipper.Intersect(subj, clip, FillRule.NonZero);
-      
-      //Delphi
+      Paths64 solution = Clipper.Intersect(subj, clip, FillRule.NonZero);</pre>
+<pre>      //Delphi
       var 
         subject, clip, solution: TPaths64;
       begin
