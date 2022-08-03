@@ -1,7 +1,7 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Version   :  Clipper2 - beta                                                 *
-* Date      :  26 June 2022                                                    *
+* Version   :  Clipper2 - ver.1.0.0                                            *
+* Date      :  3 August 2022                                                   *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  Core Clipper Library structures and functions                   *
@@ -460,6 +460,7 @@ inline bool IsPositive(const Path<T>& poly)
 	return Area<T>(poly) >= 0;
 }
 
+
 enum class PointInPolygonResult { IsOn, IsInside, IsOutside };
 
 template <typename T>
@@ -513,18 +514,15 @@ inline PointInPolygonResult PointInPolygon(const Point<T>& pt, const Path<T>& po
 		else
 		{
 			double d = CrossProduct(*pit, *cit, pt);
-			if (d == 0)
-				return PointInPolygonResult::IsOn;
-			else if ((d < 0) == is_above)
-				val = 1 - val;
+			if (d == 0) return PointInPolygonResult::IsOn;
+			if ((d < 0) == is_above) val = 1 - val;
 		}
 		is_above = !is_above;
-		cit++;
+		++cit;
 	}
-	if (val == 0)
-		return PointInPolygonResult::IsOutside;
-	else
-		return PointInPolygonResult::IsInside;
+	return (val == 0) ? 
+		PointInPolygonResult::IsOutside :
+		PointInPolygonResult::IsInside;
 }
 
 }  // namespace
