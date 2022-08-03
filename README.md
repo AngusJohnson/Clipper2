@@ -22,7 +22,7 @@ And Clipper2 has all the features of Clipper1 that sets Clipper apart from other
 
 ### Documentation
 
- Online documentation (nearly completed) is <a href="http://www.angusj.com/clipper2/Docs/Overview.htm"><b>HTML help</b></a>.
+ Online documentation (nearly completed) is <a href="http://www.angusj.com/clipper2/Docs/Overview.htm"><b>here</b></a>.
 <br><br>
 
 ### Example
