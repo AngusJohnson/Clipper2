@@ -86,7 +86,7 @@ namespace Clipper2Lib
 
     public override bool Equals(object obj)
     {
-      return obj is LocalMinima && this == (LocalMinima) obj;
+      return obj is LocalMinima minima && this == minima;
     }
 
     public override int GetHashCode()
@@ -399,9 +399,7 @@ namespace Clipper2Lib
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static void SwapActives(ref Active ae1, ref Active ae2)
     {
-      Active ae = ae1;
-      ae1 = ae2;
-      ae2 = ae;
+      (ae2, ae1) = (ae1, ae2);
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -450,12 +448,7 @@ namespace Clipper2Lib
       ae.dx = GetDx(ae.bot, ae.top);
     }
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static bool IsLeftBound(Active ae)
-    {
-      return ae.isLeftBound;
-    }
-
+    
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static Vertex NextVertex(Active ae)
     {
@@ -602,19 +595,6 @@ namespace Clipper2Lib
       return (double) (pt3.Y + pt1.Y) * (double) (pt3.X - pt1.X) +
         (double) (pt1.Y + pt2.Y) * (double) (pt1.X - pt2.X) +
         (double) (pt2.Y + pt3.Y) * (double) (pt2.X - pt3.X);
-    }
-
-    private static void ReverseOutPts(OutPt op)
-    {
-      OutPt op1 = op;
-      OutPt op2;
-      do
-      {
-        op2 = op1.next!;
-        op1.next = op1.prev;
-        op1.prev = op2;
-        op1 = op2;
-      } while (op1 != op);
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -885,45 +865,35 @@ namespace Clipper2Lib
       switch (_cliptype)
       {
         case ClipType.Intersection:
-          switch (_fillrule)
+          return _fillrule switch
           {
-            case FillRule.Positive:
-              return (ae.windCount2 > 0);
-            case FillRule.Negative:
-              return (ae.windCount2 < 0);
-            default:
-              return (ae.windCount2 != 0);
-          }
+            FillRule.Positive => ae.windCount2 > 0,
+            FillRule.Negative => ae.windCount2 < 0,
+            _ => ae.windCount2 != 0,
+          };
+
         case ClipType.Union:
-          switch (_fillrule)
+          return _fillrule switch
           {
-            case FillRule.Positive:
-              return (ae.windCount2 <= 0);
-            case FillRule.Negative:
-              return (ae.windCount2 >= 0);
-            default:
-              return (ae.windCount2 == 0);
-          }
+            FillRule.Positive => ae.windCount2 <= 0,
+            FillRule.Negative => ae.windCount2 >= 0,
+            _ => ae.windCount2 == 0,
+          };
+
         case ClipType.Difference:
-          bool result;
-          switch (_fillrule)
+          bool result = _fillrule switch
           {
-            case FillRule.Positive:
-              result = (ae.windCount2 <= 0); break;
-            case FillRule.Negative:
-              result = (ae.windCount2 >= 0); break;
-            default:
-              result = (ae.windCount2 == 0); break;
-          }
-          if (GetPolyType(ae) == PathType.Subject)
-            return result;          
-          else
-            return !result;
+            FillRule.Positive => (ae.windCount2 <= 0),
+            FillRule.Negative => (ae.windCount2 >= 0),
+            _ => (ae.windCount2 == 0),
+          };
+          return (GetPolyType(ae) == PathType.Subject)? result : !result;
 
         case ClipType.Xor:
           return true; // XOr is always contributing unless open
+
         default:
-          return false; // delphi2cpp translation note: no warnings
+          return false;
       }
     }
 
@@ -946,12 +916,13 @@ namespace Clipper2Lib
           break;
       }
 
-      switch (_cliptype)
+      bool result = _cliptype switch
       {
-        case ClipType.Intersection: return isInClip;
-        case ClipType.Union: return !isInSubj && !isInClip;
-        default: return !isInClip;
+        ClipType.Intersection => isInClip,
+        ClipType.Union => !isInSubj && !isInClip,
+        _ => !isInClip
       };
+      return result;
     }
 
     private void SetWindCountForClosedPathEdge(Active ae)
@@ -2026,13 +1997,12 @@ namespace Clipper2Lib
         if (!EdgesAdjacentInAEL(_intersectList[i]))
         {
           int j = i + 1;
-          while (j < _intersectList.Count && !EdgesAdjacentInAEL(_intersectList[j])) j++;
+          while (j < _intersectList.Count && 
+            !EdgesAdjacentInAEL(_intersectList[j])) j++;
+
           if (j < _intersectList.Count)
-          {
-            IntersectNode n = _intersectList[i];
-            _intersectList[i] = _intersectList[j];
-            _intersectList[j] = n;
-          }
+            (_intersectList[j], _intersectList[i]) = 
+              (_intersectList[i], _intersectList[j]);
         }
 
         IntersectNode node = _intersectList[i];
@@ -3854,7 +3824,7 @@ namespace Clipper2Lib
       }
     }
 
-    object IEnumerator.Current { get { return Current; } }
+    object IEnumerator.Current => Current;
 
   }
 
@@ -3878,7 +3848,7 @@ namespace Clipper2Lib
       get {
         if (index < 0 || index >= _childs.Count)
           throw new InvalidOperationException();
-        return _childs[index] as PolyPath64; 
+        return (PolyPath64) _childs[index]; 
       }
     }
 
@@ -3914,7 +3884,7 @@ namespace Clipper2Lib
       {
         if (index < 0 || index >= _childs.Count)
           throw new InvalidOperationException();
-        return _childs[index] as PolyPathD;
+        return (PolyPathD) _childs[index];
       }
     }
     public double Area()

@@ -656,7 +656,7 @@ namespace Clipper2Lib {
 
 			v->prev = nullptr;
 			int cnt = 0;
-			for (const Point64 pt : path)
+			for (const Point64& pt : path)
 			{
 				if (prev_v)
 				{
