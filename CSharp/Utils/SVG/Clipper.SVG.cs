@@ -102,8 +102,6 @@ namespace Clipper2Lib
     private readonly CoordStyle coordStyle;
 
     private const string svg_header = "<?xml version=\"1.0\" standalone=\"no\"?>\n" +
-      "<!DOCTYPE svg PUBLIC \"-//W3C//DTD SVG 1.0//EN\"\n" +
-      "\"http://www.w3.org/TR/2001/REC-SVG-20010904/DTD/svg10.dtd\">\n\n" +
       "<svg width=\"{0}px\" height=\"{1}px\" viewBox=\"0 0 {0} {1}\"" +
       " version=\"1.1\" xmlns=\"http://www.w3.org/2000/svg\">\n\n";
     private const string svg_path_format = "\"\n style=\"fill:{0};" +

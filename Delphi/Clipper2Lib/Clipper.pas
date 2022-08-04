@@ -100,8 +100,8 @@ function TranslatePaths(const paths: TPathsD; dx, dy: double): TPathsD; overload
 function MinkowskiSum(const pattern, path: TPath64;
   pathIsClosed: Boolean): TPaths64;
 
-function PolyTreeToPaths(PolyTree: TPolyTree64): TPaths64;
-function PolyTreeDToPathsD(PolyTree: TPolyTreeD): TPathsD;
+function PolyTreeToPaths64(PolyTree: TPolyTree64): TPaths64;
+function PolyTreeToPathsD(PolyTree: TPolyTreeD): TPathsD;
 
 function MakePath(const ints: TArrayOfInteger): TPath64; overload;
 function MakePath(const dbls: TArrayOfDouble): TPathD; overload;
@@ -165,7 +165,7 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-function PolyTreeToPaths(PolyTree: TPolyTree64): TPaths64;
+function PolyTreeToPaths64(PolyTree: TPolyTree64): TPaths64;
 begin
   Result := nil;
   AddPolyNodeToPaths(PolyTree, Result);
@@ -187,7 +187,7 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-function PolyTreeDToPathsD(PolyTree: TPolyTreeD): TPathsD;
+function PolyTreeToPathsD(PolyTree: TPolyTreeD): TPathsD;
 begin
   Result := nil;
   AddPolyNodeToPathsD(PolyTree, Result);

@@ -116,7 +116,7 @@ namespace Clipper2Lib.UnitTests
       clipper.AddClip(clip);
       clipper.Execute(cliptype, fillrule, solutionTree, solution_open);
 
-      Paths64 solutionPaths = Clipper.PolyTreeToPaths(solutionTree);
+      Paths64 solutionPaths = Clipper.PolyTreeToPaths64(solutionTree);
       double a1 = Clipper.Area(solutionPaths), a2 = solutionTree.Area();
 
       Assert.IsTrue(a1 > 330000, 

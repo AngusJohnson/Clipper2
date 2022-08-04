@@ -157,7 +157,7 @@ namespace Clipper2Lib
   {
     Path64 result;
     result.reserve(path.size());
-    for (const Point64 pt : path)
+    for (const Point64& pt : path)
       result.push_back(Point64(pt.x + dx, pt.y + dy));
     return result;
   }
@@ -166,7 +166,7 @@ namespace Clipper2Lib
   {
     PathD result;
     result.reserve(path.size());
-    for (const PointD pt : path)
+    for (const PointD& pt : path)
       result.push_back(PointD(pt.x + dx, pt.y + dy));
     return result;
   }

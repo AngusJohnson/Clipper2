@@ -3587,7 +3587,8 @@ namespace Clipper2Lib
     {
       return Execute(clipType, fillRule, polytree, new Paths64());
     }
-  } // Clipper class
+
+  } // Clipper64 class
 
   public class ClipperD : ClipperBase
   {

@@ -2087,6 +2087,16 @@ namespace Clipper2Lib {
 	}
 
 
+	bool ClipperBase::Execute(ClipType clip_type, FillRule fill_rule, PolyTree64& polytree)
+	{
+		Paths64 dummy;
+		polytree.Clear();
+		if (ExecuteInternal(clip_type, fill_rule, true))
+			BuildTree(polytree, dummy);
+		CleanUp();
+		return succeeded_;
+	}
+
 	bool ClipperBase::Execute(ClipType clip_type,
 		FillRule fill_rule, PolyTree64& polytree, Paths64& solution_open)
 	{

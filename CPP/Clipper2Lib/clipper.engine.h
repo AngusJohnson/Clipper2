@@ -253,6 +253,7 @@ namespace Clipper2Lib {
 			FillRule fill_rule, Paths64& solution_closed);
 		bool Execute(ClipType clip_type,
 			FillRule fill_rule, Paths64& solution_closed, Paths64& solution_open);
+		bool Execute(ClipType clip_type, FillRule fill_rule, PolyTree64& polytree);
 		bool Execute(ClipType clip_type,
 			FillRule fill_rule, PolyTree64& polytree, Paths64& open_paths);
 	public:
@@ -381,6 +382,10 @@ namespace Clipper2Lib {
 			return ClipperBase::Execute(clip_type, fill_rule, closed_paths, open_paths);
 		}
 
+		bool Execute(ClipType clip_type, FillRule fill_rule, PolyTree64& polytree)
+		{
+			return ClipperBase::Execute(clip_type, fill_rule, polytree);
+		}
 		bool Execute(ClipType clip_type,
 			FillRule fill_rule, PolyTree64& polytree, Paths64& open_paths)
 		{
@@ -430,6 +435,14 @@ namespace Clipper2Lib {
 				fill_rule, closed_paths64, open_paths64)) return false;
 			closed_paths = ScalePaths<double, int64_t>(closed_paths64, 1 / scale_);
 			open_paths = ScalePaths<double, int64_t>(open_paths64, 1 / scale_);
+			return true;
+		}
+
+		bool Execute(ClipType clip_type, FillRule fill_rule, PolyTreeD& polytree)
+		{
+			PolyTree64 tree_result;
+			if (!ClipperBase::Execute(clip_type, fill_rule, tree_result)) return false;;
+			Polytree64ToPolytreeD(tree_result, polytree);
 			return true;
 		}
 

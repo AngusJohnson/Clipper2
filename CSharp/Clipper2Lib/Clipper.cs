@@ -132,6 +132,17 @@ namespace Clipper2Lib
       tmp = co.Execute(delta * scale);
       return ScalePathsD(tmp, 1 / scale);
     }
+
+    public static Paths64 MinkowskiSum(Path64 pattern, Path64 path, bool isClosed)
+    {
+      return Minkowski.Sum(pattern, path, isClosed);
+    }
+
+    public static Paths64 MinkowskiDiff(Path64 pattern, Path64 path, bool isClosed)
+    {
+      return Minkowski.Diff(pattern, path, isClosed);
+    }
+
     public static double Area(Path64 path)
     {
       // https://en.wikipedia.org/wiki/Shoelace_formula
@@ -493,7 +504,7 @@ namespace Clipper2Lib
         AddPolyNodeToPaths((PolyPath64) polyPath._childs[i], paths);
     }
 
-    public static Paths64 PolyTreeToPaths(PolyTree64 polyTree)
+    public static Paths64 PolyTreeToPaths64(PolyTree64 polyTree)
     {
       Paths64 result = new Paths64();
       for (int i = 0; i < polyTree.Count; i++)
