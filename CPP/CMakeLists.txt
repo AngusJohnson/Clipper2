@@ -28,12 +28,19 @@ set_target_properties(Clipper2 PROPERTIES LINK_FLAGS "-Wl,-rpath,${CMAKE_SOURCE_
 
 add_library(Clipper2utils SHARED
   Utils/clipper.svg.cpp
+  Utils/clipper.svg.h
   Utils/ClipFileLoad.cpp
+  Utils/ClipFileLoad.h
   Utils/ClipFileSave.cpp
+  Utils/ClipFileSave.h
 )
 target_link_libraries(Clipper2utils PRIVATE -lm Clipper2)
 set_target_properties(Clipper2utils PROPERTIES LINKER_LANGUAGE CXX)
 set_target_properties(Clipper2utils PROPERTIES LINK_FLAGS "-Wl,-rpath,${CMAKE_SOURCE_DIR}/lib")
+target_include_directories(Clipper2utils
+  PUBLIC Utils
+  SYSTEM INTERFACE Utils
+)
 
 add_executable(ConsoleDemo1 Examples/ConsoleDemo1/ConsoleDemo1.cpp)
 target_include_directories(ConsoleDemo1 PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
