@@ -312,6 +312,8 @@ namespace Clipper2Lib
       if (iter == start_iter || dec_pos == 0) return false;
       if (dec_pos > 0)
         val *= std::pow(10, -dec_pos);
+      if (is_neg)
+        val *= -1;
       return true;
     }
 
