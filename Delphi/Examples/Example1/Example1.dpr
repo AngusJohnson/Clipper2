@@ -9,13 +9,13 @@ uses
   SysUtils,
   Classes,
   Math,
-  Clipper in '..\..\Clipper2Lib\Clipper.pas',
-  Clipper.Core in '....\Clipper2Lib\Clipper.Core.pas',
-  Clipper.Offset in '....\Clipper2Lib\Clipper.Offset.pas',
-  Clipper.Engine in '....\Clipper2Lib\Clipper.Engine.pas',
-  Clipper.Minkowski in '....\Clipper2Lib\Clipper.Minkowski.pas',
-  Clipper.SVG in '..\..\Utils\Clipper.SVG.pas',
-  ClipMisc in '..\..\Utils\ClipMisc.pas';
+  Clipper             in '..\..\Clipper2Lib\Clipper.pas',
+  Clipper.Core        in '..\..\Clipper2Lib\Clipper.Core.pas',
+  Clipper.Offset      in '..\..\Clipper2Lib\Clipper.Offset.pas',
+  Clipper.Engine      in '..\..\Clipper2Lib\Clipper.Engine.pas',
+  Clipper.Minkowski   in '..\..\Clipper2Lib\Clipper.Minkowski.pas',
+  Clipper.SVG         in '..\..\Utils\Clipper.SVG.pas',
+  ClipMisc            in '..\..\Utils\ClipMisc.pas';
 
 var
   subj, clip, solution: TPaths64;
