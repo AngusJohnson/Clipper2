@@ -1,7 +1,7 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
 * Version   :  Clipper2 - ver.1.0.0                                            *
-* Date      :  3 August 2022                                                   *
+* Date      :  10 August 2022                                                  *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  This is the main polygon clipping module                        *
@@ -3155,8 +3155,8 @@ namespace Clipper2Lib {
 					op1->prev = op2;
 					op2->next = op1;
 
-					SafeDeleteOutPtJoiners(op2);
-					DisposeOutPt(op2);
+					//SafeDeleteOutPtJoiners(op2);
+					//DisposeOutPt(op2);
 
 					if (or1->idx < or2->idx)
 					{
@@ -3216,8 +3216,8 @@ namespace Clipper2Lib {
 					op1->next = op2;
 					op2->prev = op1;
 
-					SafeDeleteOutPtJoiners(op2);
-					DisposeOutPt(op2);
+					//SafeDeleteOutPtJoiners(op2);
+					//DisposeOutPt(op2);
 
 					if (or1->idx < or2->idx)
 					{
