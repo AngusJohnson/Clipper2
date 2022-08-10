@@ -10,6 +10,10 @@ uses
   Classes,
   Math,
   Clipper in '..\..\Clipper2Lib\Clipper.pas',
+  Clipper.Core in '....\Clipper2Lib\Clipper.Core.pas',
+  Clipper.Offset in '....\Clipper2Lib\Clipper.Offset.pas',
+  Clipper.Engine in '....\Clipper2Lib\Clipper.Engine.pas',
+  Clipper.Minkowski in '....\Clipper2Lib\Clipper.Minkowski.pas',
   Clipper.SVG in '..\..\Utils\Clipper.SVG.pas',
   ClipMisc in '..\..\Utils\ClipMisc.pas';
 
@@ -24,7 +28,7 @@ begin
   Randomize;
   setLength(subj, 1);
   setLength(clip, 1);
-  //make 2 random self-intersecting paths of 'edgeCount' length
+  //make 2 random self-intersecting paths
   subj[0] := MakeRandomPath(displayWidth, displayHeight, edgeCount);
   clip[0] := MakeRandomPath(displayWidth, displayHeight, edgeCount);
 
