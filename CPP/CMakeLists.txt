@@ -6,9 +6,9 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
-option(CLIPPER2_UTILS "Build the utilities" OFF)
-option(CLIPPER2_EXAMPLES "Build the examples" OFF)
-option(CLIPPER2_TESTS "Build the tests" OFF)
+option(CLIPPER2_UTILS "Build utilities" OFF)
+option(CLIPPER2_EXAMPLES "Build examples" OFF)
+option(CLIPPER2_TESTS "Build tests" OFF)
 
 add_library(Clipper2 SHARED
         Clipper2Lib/clipper.core.h
@@ -31,7 +31,7 @@ set_target_properties(Clipper2 PROPERTIES LINKER_LANGUAGE CXX)
 set_target_properties(Clipper2 PROPERTIES LIBRARY_OUTPUT_DIRECTORY "./lib")
 set_target_properties(Clipper2 PROPERTIES LINK_FLAGS "-Wl,-rpath,${CMAKE_SOURCE_DIR}/lib")
 
-if(CLIPPER2_UTILS)
+if(CLIPPER2_UTILS OR CLIPPER2_TESTS OR CLIPPER2_EXAMPLES)
   add_library(Clipper2utils SHARED
     Utils/clipper.svg.cpp
     Utils/clipper.svg.h
