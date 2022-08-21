@@ -14,7 +14,9 @@
 #include <cstdlib>
 #include <vector>
 #include <string>
+
 #include "clipper.core.h"
+#include "clipper.engine.h"
 
 namespace Clipper2Lib 
 {
