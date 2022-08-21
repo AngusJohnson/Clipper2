@@ -35,11 +35,6 @@ namespace Clipper2Lib {
 	
 	enum class PathType { Subject, Clip };
 
-	//By far the most widely used filling rules for polygons are EvenOdd
-	//and NonZero, sometimes called Alternate and Winding respectively.
-	//https://en.wikipedia.org/wiki/Nonzero-rule
-	enum class FillRule { EvenOdd, NonZero, Positive, Negative };
-
 	enum class VertexFlags : uint32_t {
 		None = 0, OpenStart = 1, OpenEnd = 2, LocalMax = 4, LocalMin = 8
 	};
@@ -153,7 +148,6 @@ namespace Clipper2Lib {
 		{
 		}
 	};
-
 
 #ifdef USINGZ
 		typedef std::function<void(const Point64& e1bot, const Point64& e1top,

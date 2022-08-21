@@ -23,16 +23,23 @@ namespace Clipper2Lib
 
 	static double const PI = 3.141592653589793238;
 
+	//By far the most widely used filling rules for polygons are EvenOdd
+	//and NonZero, sometimes called Alternate and Winding respectively.
+	//https://en.wikipedia.org/wiki/Nonzero-rule
+	enum class FillRule { EvenOdd, NonZero, Positive, Negative };
+	
 // Point ------------------------------------------------------------------------
 
 template <typename T>
 struct Point {
 	T x;
 	T y;
+#ifdef USINGZ
+	int64_t z;
+#endif
 
 	template <typename T2>
-	//inline 
-		void Init(const T2 x_ = 0, const T2 y_ = 0)
+	inline void Init(const T2 x_ = 0, const T2 y_ = 0)
 	{
 		if (std::numeric_limits<T>::is_integer &&
 			!std::numeric_limits<T2>::is_integer)
@@ -48,15 +55,14 @@ struct Point {
 	}
 
 #ifdef USINGZ
-	T z;
 
 	explicit Point() : x(0), y(0), z(0) {};
 
 	template <typename T2>
-	explicit Point(const T2 x_ = 0, const T2 y_ = 0)
+	explicit Point(const T2 x_= 0, const T2 y_ = 0, const int64_t z_ = 0)
 	{
 		Init(x_, y_);
-		z = 0;
+		z = z_;
 	}
 
 	template <typename T2>
@@ -65,6 +71,12 @@ struct Point {
 		Init(p.x, p.y);
 		z = 0;
 	}
+
+	Point operator * (const double scale) const
+	{
+		return Point(x * scale, y * scale, z);
+	}
+
 
 	friend std::ostream& operator<<(std::ostream& os, const Point& point)
 	{
@@ -82,6 +94,11 @@ struct Point {
 	template <typename T2>
 	explicit Point<T>(const Point<T2>& p) { Init(p.x, p.y); }
 
+	Point operator * (const double scale) const
+	{
+		return Point(x * scale, y * scale);
+	}
+
 	friend std::ostream& operator<<(std::ostream& os, const Point& point)
 	{
 		os << point.x << "," << point.y << " ";
@@ -98,11 +115,6 @@ struct Point {
 	friend bool operator!=(const Point& a, const Point& b)
 	{
 		return !(a == b);
-	}
-
-	Point operator * (const double scale) const
-	{
-		return Point(x * scale, y * scale);
 	}
 
 	inline Point<T> operator-() const
@@ -162,8 +174,13 @@ inline Path<T1> ScalePath(const Path<T2>& path, double scale)
 {
 	Path<T1> result;
 	result.reserve(path.size());
-	for (const Point<T2> pt : path)
+#ifdef USINGZ
+	for (const Point<T2>& pt : path)
+		result.push_back(Point<T1>(pt.x * scale, pt.y * scale, pt.z));
+#else
+	for (const Point<T2>& pt : path)
 		result.push_back(Point<T1>(pt.x * scale, pt.y * scale));
+#endif
 	return result;
 }
 

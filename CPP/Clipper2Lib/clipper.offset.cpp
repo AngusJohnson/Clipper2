@@ -28,7 +28,7 @@ Paths64::size_type GetLowestPolygonIdx(const Paths64& paths)
 		std::numeric_limits<int64_t>::min());
 
 	for (Paths64::size_type i = 0 ; i < paths.size(); ++i)
-		for (Point64 p : paths[i])
+		for (const Point64& p : paths[i])
 			if (p.y > lp.y || (p.y == lp.y && p.x < lp.x))
 			{
 				result = i;
@@ -54,9 +54,16 @@ inline bool AlmostZero(double value, double epsilon = 0.001)
 	return std::fabs(value) < epsilon;
 }
 
+inline double Hypot(double x, double y) 
+{
+	//see https://stackoverflow.com/a/32436148/359538
+	return std::sqrt(x * x + y * y);
+}
+
 inline PointD NormalizeVector(const PointD& vec)
 {
-	double h = std::hypot(vec.x, vec.y);
+	
+	double h = Hypot(vec.x, vec.y);
 	if (AlmostZero(h)) return PointD(0,0);
 	double inverseHypot = 1 / h;
 	return PointD(vec.x * inverseHypot, vec.y * inverseHypot);
