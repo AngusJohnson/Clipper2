@@ -1,7 +1,7 @@
 ﻿/*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Version   :  Clipper2 - ver.1.0.0                                            *
-* Date      :  3 August 2022                                                   *
+* Version   :  Clipper2 - ver.1.0.3                                            *
+* Date      :  20 August 2022                                                  *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  Path Offset (Inflate/Shrink)                                    *
@@ -71,7 +71,7 @@ namespace Clipper2Lib
     private const double TwoPi = Math.PI * 2;
 
     public ClipperOffset(double miterLimit = 2.0, 
-      double arcTolerance = 0.25, bool 
+      double arcTolerance = 0.0, bool 
       preserveCollinear = false, bool reverseSolution = false)
     {
       MiterLimit = miterLimit;
@@ -185,26 +185,104 @@ namespace Clipper2Lib
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private void DoSquare(PathGroup group, Path64 path, int j, int k)
+    private PointD TranslatePoint(PointD pt, double dx, double dy)
     {
-      if (_delta > 0)
+	    return new PointD(pt.x + dx, pt.y + dy);
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private PointD ReflectPoint(PointD pt, PointD pivot)
+    {
+      return new PointD(pivot.x + (pivot.x - pt.x), pivot.y + (pivot.y - pt.y));
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private bool AlmostZero(double value, double epsilon = 0.001)
+    {
+      return Math.Abs(value) < epsilon;
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private double Hypotenuse(double x, double y)
+    {
+      return Math.Sqrt(Math.Pow(x, 2) + Math.Pow(y, 2));
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private PointD NormalizeVector(PointD vec)
+    {
+	    double h = Hypotenuse(vec.x, vec.y);
+	    if (AlmostZero(h)) return new PointD(0,0);
+        double inverseHypot = 1 / h;
+	    return new PointD(vec.x* inverseHypot, vec.y* inverseHypot);
+    }
+
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private PointD GetAvgUnitVector(PointD vec1, PointD vec2)
+    {
+	    return NormalizeVector(new PointD(vec1.x + vec2.x, vec1.y + vec2.y));
+    }
+
+    private PointD IntersectPoint(PointD pt1a, PointD pt1b, PointD pt2a, PointD pt2b)
+    {
+      if (pt1a.x == pt1b.x) //vertical
       {
-        group._outPath.Add(new Point64(
-            path[j].X + _delta * (_normals[k].x - _normals[k].y),
-            path[j].Y + _delta * (_normals[k].y + _normals[k].x)));
-        group._outPath.Add(new Point64(
-            path[j].X + _delta * (_normals[j].x + _normals[j].y),
-            path[j].Y + _delta * (_normals[j].y - _normals[j].x)));
+        if (pt2a.x == pt2b.x) return new PointD(0, 0);
+        double m2 = (pt2b.y - pt2a.y) / (pt2b.x - pt2a.x);
+        double b2 = pt2a.y - m2 * pt2a.x;
+        return new PointD(pt1a.x, m2* pt1a.x + b2);
+      }
+      else if (pt2a.x == pt2b.x) //vertical
+      {
+        double m1 = (pt1b.y - pt1a.y) / (pt1b.x - pt1a.x);
+        double b1 = pt1a.y - m1 * pt1a.x;
+          return new PointD(pt2a.x, m1* pt2a.x + b1);
       }
       else
       {
-        group._outPath.Add(new Point64(
-            path[j].X + _delta * (_normals[k].x + _normals[k].y),
-            path[j].Y + _delta * (_normals[k].y - _normals[k].x)));
-        group._outPath.Add(new Point64(
-            path[j].X + _delta * (_normals[j].x - _normals[j].y),
-            path[j].Y + _delta * (_normals[j].y + _normals[j].x)));
+        double m1 = (pt1b.y - pt1a.y) / (pt1b.x - pt1a.x);
+        double b1 = pt1a.y - m1 * pt1a.x;
+        double m2 = (pt2b.y - pt2a.y) / (pt2b.x - pt2a.x);
+        double b2 = pt2a.y - m2 * pt2a.x;
+        if (m1 == m2) return new PointD(0, 0);
+        double x = (b2 - b1) / (m1 - m2);
+        return new PointD(x, m1 * x + b1);
       }
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private void DoSquare(PathGroup group, Path64 path, int j, int k)
+    {
+      // square off at delta distance from original vertex
+      PointD vec, pt, ptQ, pt1, pt2, pt3, pt4;
+
+      // using the reciprocal of unit normals (as unit vectors)
+      // get the average unit vector ...
+      vec = GetAvgUnitVector(
+        new PointD(-_normals[k].y, _normals[k].x),
+        new PointD(_normals[j].y, -_normals[j].x));
+
+      // now offset the original vertex delta units along unit vector
+      ptQ = new PointD(path[j]);
+      ptQ = TranslatePoint(ptQ, _delta * vec.x, _delta * vec.y);
+
+      // get perpendicular vertices
+      pt1 = TranslatePoint(ptQ, _delta * vec.y, _delta * -vec.x);
+      pt2 = TranslatePoint(ptQ, _delta * -vec.y, _delta * vec.x);
+      // get 2 vertices along one edge offset
+      pt3 = new PointD(
+        path[k].X + _normals[k].x * _delta,
+        path[k].Y + _normals[k].y * _delta);
+      pt4 = new PointD(
+        path[j].X + _normals[k].x * _delta,
+        path[j].Y + _normals[k].y * _delta);
+
+      // get the intersection point
+      pt = IntersectPoint(pt1, pt2, pt3, pt4);
+      group._outPath.Add(new Point64(pt));
+      //get the second intersect point through reflecion
+      group._outPath.Add(new Point64(ReflectPoint(pt, ptQ)));
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]

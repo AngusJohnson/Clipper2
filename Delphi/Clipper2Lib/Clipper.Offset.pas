@@ -2,8 +2,8 @@ unit Clipper.Offset;
 
 (*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Version   :  Clipper2 - ver.1.0.0                                            *
-* Date      :  3 August 2022                                                   *
+* Version   :  Clipper2 - ver.1.0.3                                            *
+* Date      :  20 August 2022                                                  *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  Path Offset (Inflate/Shrink)                                    *
@@ -112,7 +112,37 @@ const
 function DotProduct(const vec1, vec2: TPointD): double;
   {$IFDEF INLINING} inline; {$ENDIF}
 begin
-  result := (vec1.X * vec2.X + vec1.Y * vec2.Y);
+  result := vec1.X * vec2.X + vec1.Y * vec2.Y;
+end;
+//------------------------------------------------------------------------------
+
+function ValueAlmostZero(val: double; epsilon: double = 0.001): Boolean;
+  {$IFDEF INLINE} inline; {$ENDIF}
+begin
+  Result := Abs(val) < epsilon;
+end;
+//------------------------------------------------------------------------------
+
+function NormalizeVector(const vec: TPointD): TPointD;
+  {$IFDEF INLINE} inline; {$ENDIF}
+var
+  h, inverseHypot: Double;
+begin
+  h := Hypot(vec.X, vec.Y);
+  if ValueAlmostZero(h) then
+  begin
+    Result := NullPointD;
+    Exit;
+  end;
+  inverseHypot := 1 / h;
+  Result.X := vec.X * inverseHypot;
+  Result.Y := vec.Y * inverseHypot;
+end;
+//------------------------------------------------------------------------------
+
+function GetAvgUnitVector(const vec1, vec2: TPointD): TPointD;
+begin
+  Result := NormalizeVector(PointD(vec1.X + vec2.X, vec1.Y + vec2.Y));
 end;
 //------------------------------------------------------------------------------
 
@@ -523,29 +553,81 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-procedure TClipperOffset.DoSquare(j, k: Integer);
+function IntersectPoint(const ln1a, ln1b, ln2a, ln2b: TPointD): TPointD;
+var
+  m1,b1,m2,b2: double;
 begin
-  // Two vertices, one using the prior offset's (k) normal one the current (j).
-  // Do a 'normal' offset (by delta) and then another by 'de-normaling' the
-  // normal hence parallel to the direction of the respective edges.
-  if (fDelta > 0) then
+  result := NullPointD;
+  //see http://astronomy.swin.edu.au/~pbourke/geometry/lineline2d/
+  if (ln1B.X = ln1A.X) then
   begin
-    AddPoint(
-      fInPath[j].X + fDelta * (fNorms[k].X - fNorms[k].Y),
-      fInPath[j].Y + fDelta * (fNorms[k].Y + fNorms[k].X));
-
-    AddPoint(
-      fInPath[j].X + fDelta * (fNorms[j].X + fNorms[j].Y),
-      fInPath[j].Y + fDelta * (fNorms[j].Y - fNorms[j].X));
+    if (ln2B.X = ln2A.X) then exit; //parallel lines
+    m2 := (ln2B.Y - ln2A.Y)/(ln2B.X - ln2A.X);
+    b2 := ln2A.Y - m2 * ln2A.X;
+    Result.X := ln1A.X;
+    Result.Y := m2*ln1A.X + b2;
+  end
+  else if (ln2B.X = ln2A.X) then
+  begin
+    m1 := (ln1B.Y - ln1A.Y)/(ln1B.X - ln1A.X);
+    b1 := ln1A.Y - m1 * ln1A.X;
+    Result.X := ln2A.X;
+    Result.Y := m1*ln2A.X + b1;
   end else
   begin
-    AddPoint(
-      fInPath[j].X + fDelta * (fNorms[k].X + fNorms[k].Y),
-      fInPath[j].Y + fDelta * (fNorms[k].Y - fNorms[k].X));
-    AddPoint(
-      fInPath[j].X + fDelta * (fNorms[j].X - fNorms[j].Y),
-      fInPath[j].Y + fDelta * (fNorms[j].Y + fNorms[j].X));
+    m1 := (ln1B.Y - ln1A.Y)/(ln1B.X - ln1A.X);
+    b1 := ln1A.Y - m1 * ln1A.X;
+    m2 := (ln2B.Y - ln2A.Y)/(ln2B.X - ln2A.X);
+    b2 := ln2A.Y - m2 * ln2A.X;
+    if m1 = m2 then exit; //parallel lines
+    Result.X := (b2 - b1)/(m1 - m2);
+    Result.Y := m1 * Result.X + b1;
   end;
+end;
+//------------------------------------------------------------------------------
+
+function ReflectPoint(const pt, pivot: TPointD): TPointD;
+begin
+  Result.X := pivot.X + (pivot.X - pt.X);
+  Result.Y := pivot.Y + (pivot.Y - pt.Y);
+end;
+//------------------------------------------------------------------------------
+
+procedure TClipperOffset.DoSquare(j, k: Integer);
+var
+  vec, pt1,pt2,pt3,pt4, pt,ptQ : TPointD;
+begin
+  // square off at delta distance from original vertex
+
+  // using the reciprocal of unit normals (as unit vectors)
+  // get the average unit vector ...
+  vec := GetAvgUnitVector(
+        PointD(-fNorms[k].Y, fNorms[k].X),
+        PointD(fNorms[j].Y, -fNorms[j].X));
+  // now offset the original vertex delta units along unit vector
+  ptQ := PointD(fInPath[j]);
+  ptQ := TranslatePoint(ptQ, fDelta * vec.X, fDelta * vec.Y);
+
+  // get perpendicular vertices
+  pt1 := TranslatePoint(ptQ, fDelta * vec.Y, fDelta * -vec.X);
+  pt2 := TranslatePoint(ptQ, fDelta * -vec.Y, fDelta * vec.X);
+  // get 2 vertices along one edge offset
+  with fInPath[k] do
+  begin
+    pt3.X := X + fNorms[k].X * fDelta;
+    pt3.Y := Y + fNorms[k].Y * fDelta;
+  end;
+  with fInPath[j] do
+  begin
+    pt4.X := X + fNorms[k].X * fDelta;
+    pt4.Y := Y + fNorms[k].Y * fDelta;
+  end;
+  // get the intersection point
+  pt := IntersectPoint(pt1, pt2, pt3, pt4);
+  AddPoint(pt.X, pt.Y);
+  //get the second intersect point through reflecion
+  with ReflectPoint(pt, ptQ) do
+    AddPoint(X, Y);
 end;
 //------------------------------------------------------------------------------
 
@@ -567,12 +649,12 @@ var
   pt: TPoint64;
   pt2: TPointD;
 begin
-	// even though angle may be negative this is a convex join
+	// nb: even though angle may be negative this is a convex join
   pt := fInPath[j];
   pt2 := PointD(fNorms[k].X * fDelta, fNorms[k].Y * fDelta);
   AddPoint(pt.X + pt2.X, pt.Y + pt2.Y);
 
-  steps := Round(fStepsPerRad * abs(angle) + 0.501);
+  steps := Ceil(fStepsPerRad * abs(angle));
   GetSinCos(angle / steps, stepSin, stepCos);
   for i := 0 to steps -1 do
   begin
@@ -600,7 +682,8 @@ begin
   if (sinA > 1.0) then sinA := 1.0
   else if (sinA < -1.0) then sinA := -1.0;
 
-  if sinA * fDelta < 0 then // ie a concave offset
+  if ValueAlmostZero(sinA) or
+    (sinA * fDelta < 0) then // ie a concave offset
   begin
     p1 := Point64(
       fInPath[j].X + fNorms[k].X * fDelta,
@@ -616,8 +699,8 @@ begin
     end;
   end else
   begin
-    cosA := DotProduct(fNorms[j], fNorms[k]);
     // convex offsets here ...
+    cosA := DotProduct(fNorms[j], fNorms[k]);
     case fJoinType of
       jtMiter:
         // see offset_triginometry3.svg

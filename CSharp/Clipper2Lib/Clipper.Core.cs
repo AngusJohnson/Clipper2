@@ -53,14 +53,14 @@ namespace Clipper2Lib
     {
       X = (long) Math.Round(pt.x);
       Y = (long) Math.Round(pt.y);
-      Z = (long) Math.Round(pt.z);
+      Z = pt.z;
     }
 
     public Point64(PointD pt, double scale)
     {
       X = (long) Math.Round(pt.x * scale);
       Y = (long) Math.Round(pt.y * scale);
-      Z = (long) Math.Round(pt.z * scale);
+      Z = pt.z;
     }
 
     public static bool operator ==(Point64 lhs, Point64 rhs)
@@ -167,7 +167,7 @@ namespace Clipper2Lib
     public double y;
 
 #if USINGZ
-    public double z;
+    public long z;
 
     public PointD(PointD pt)
     {
@@ -187,14 +187,14 @@ namespace Clipper2Lib
     {
       x = pt.X * scale;
       y = pt.Y * scale;
-      z = pt.Z * scale;
+      z = pt.Z;
     }
 
     public PointD(PointD pt, double scale)
     {
       x = pt.x * scale;
       y = pt.y * scale;
-      z = pt.z * scale;
+      z = pt.z;
     }
 
     public PointD(long x, long y, long z = 0)
@@ -204,7 +204,7 @@ namespace Clipper2Lib
       this.z = z;
     }
 
-    public PointD(double x, double y, double z = 0)
+    public PointD(double x, double y, long z = 0)
     {
       this.x = x;
       this.y = y;

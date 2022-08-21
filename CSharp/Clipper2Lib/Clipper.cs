@@ -209,12 +209,29 @@ namespace Clipper2Lib
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static PointD ScalePoint(Point64 pt, double scale)
+    public static Point64 ScalePoint64(Point64 pt, double scale)
+    {
+      Point64 result = new Point64()
+      {
+        X = (long) (pt.X * scale),
+        Y = (long) (pt.Y * scale),
+#if USINGZ
+        Z = (long) (pt.Z),
+#endif
+      };
+      return result;
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static PointD ScalePointD(Point64 pt, double scale)
     {
       PointD result = new PointD()
       {
         x = pt.X * scale,
         y = pt.Y * scale,
+#if USINGZ
+        z = pt.Z,
+#endif
       };
       return result;
     }
@@ -223,8 +240,13 @@ namespace Clipper2Lib
     {
       if (scale == 1) return path;
       Path64 result = new Path64(path.Count);
+#if USINGZ
+      foreach (Point64 pt in path)
+        result.Add(new Point64(pt.X * scale, pt.Y * scale, pt.Z));
+#else
       foreach (Point64 pt in path)
         result.Add(new Point64(pt.X * scale, pt.Y * scale));
+#endif
       return result;
     }
 

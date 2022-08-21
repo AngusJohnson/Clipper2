@@ -1,7 +1,7 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Version   :  Clipper2 - ver.1.0.0                                            *
-* Date      :  3 August 2022                                                   *
+* Version   :  Clipper2 - ver.1.0.3                                            *
+* Date      :  20 August 2022                                                  *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  Path Offset (Inflate/Shrink)                                    *
@@ -47,6 +47,24 @@ PointD GetUnitNormal(const Point64& pt1, const Point64& pt2)
 	dx *= inverse_hypot;
 	dy *= inverse_hypot;
 	return PointD(dy, -dx);
+}
+
+inline bool AlmostZero(double value, double epsilon = 0.001)
+{
+	return std::fabs(value) < epsilon;
+}
+
+inline PointD NormalizeVector(const PointD& vec)
+{
+	double h = std::hypot(vec.x, vec.y);
+	if (AlmostZero(h)) return PointD(0,0);
+	double inverseHypot = 1 / h;
+	return PointD(vec.x * inverseHypot, vec.y * inverseHypot);
+}
+
+inline PointD GetAvgUnitVector(const PointD& vec1, const PointD& vec2)
+{
+	return NormalizeVector(PointD(vec1.x + vec2.x, vec1.y + vec2.y));
 }
 
 inline bool IsClosedPath(EndType et)
@@ -95,26 +113,74 @@ void ClipperOffset::BuildNormals(const Path64& path)
 	norms.push_back(GetUnitNormal(*path_last_iter, *(path.cbegin())));
 }
 
-void ClipperOffset::DoSquare(PathGroup& group, const Path64& path, size_t j, size_t k)
+inline PointD TranslatePoint(const PointD& pt, double dx, double dy)
 {
-	if (delta_ > 0)
+	return PointD(pt.x + dx, pt.y + dy);
+}
+
+inline PointD ReflectPoint(const PointD& pt, const PointD& pivot)
+{
+	return PointD(pivot.x + (pivot.x - pt.x), pivot.y + (pivot.y - pt.y));
+}
+
+PointD IntersectPoint(const PointD& pt1a, const PointD& pt1b,
+	const PointD& pt2a, const PointD& pt2b)
+{
+	if (pt1a.x == pt1b.x) //vertical
 	{
-		group.path_.push_back(Point64(
-			path[j].x + delta_ * (norms[k].x - norms[k].y),
-			path[j].y + delta_ * (norms[k].y + norms[k].x)));
-		group.path_.push_back(Point64(
-			path[j].x + delta_ * (norms[j].x + norms[j].y),
-			path[j].y + delta_ * (norms[j].y - norms[j].x)));
+		if (pt2a.x == pt2b.x) return PointD(0, 0);
+
+		double m2 = (pt2b.y - pt2a.y) / (pt2b.x - pt2a.x);
+		double b2 = pt2a.y - m2 * pt2a.x;
+		return PointD(pt1a.x, m2 * pt1a.x + b2);
+	}
+	else if (pt2a.x == pt2b.x) //vertical
+	{
+		double m1 = (pt1b.y - pt1a.y) / (pt1b.x - pt1a.x);
+		double b1 = pt1a.y - m1 * pt1a.x;
+		return PointD(pt2a.x, m1 * pt2a.x + b1);
 	}
 	else
 	{
-		group.path_.push_back(Point64(
-			path[j].x + delta_ * (norms[k].x + norms[k].y),
-			path[j].y + delta_ * (norms[k].y - norms[k].x)));
-		group.path_.push_back(Point64(
-			path[j].x + delta_ * (norms[j].x - norms[j].y),
-			path[j].y + delta_ * (norms[j].y + norms[j].x)));
+		double m1 = (pt1b.y - pt1a.y) / (pt1b.x - pt1a.x);
+		double b1 = pt1a.y - m1 * pt1a.x;
+		double m2 = (pt2b.y - pt2a.y) / (pt2b.x - pt2a.x);
+		double b2 = pt2a.y - m2 * pt2a.x;
+		if (m1 == m2) return PointD(0, 0);
+		double x = (b2 - b1) / (m1 - m2);
+		return PointD(x, m1 * x + b1);
 	}
+}
+
+void ClipperOffset::DoSquare(PathGroup& group, const Path64& path, size_t j, size_t k)
+{
+	// square off at delta distance from original vertex
+	PointD vec, pt, ptQ, pt1, pt2, pt3, pt4;
+
+	// using the reciprocal of unit normals (as unit vectors)
+	// get the average unit vector ...
+	vec	= GetAvgUnitVector(
+	PointD(-norms[k].y, norms[k].x),
+	PointD(norms[j].y, -norms[j].x));
+
+	// now offset the original vertex delta units along unit vector
+	ptQ = PointD(path[j]);
+	ptQ = TranslatePoint(ptQ, delta_ * vec.x, delta_ * vec.y);
+
+	// get perpendicular vertices
+	pt1 = TranslatePoint(ptQ, delta_ * vec.y, delta_ * -vec.x);
+	pt2 = TranslatePoint(ptQ, delta_ * -vec.y, delta_ * vec.x);
+	// get 2 vertices along one edge offset
+	pt3.x = path[k].x + norms[k].x * delta_;
+	pt3.y = path[k].y + norms[k].y * delta_;
+	pt4.x = path[j].x + norms[k].x * delta_;
+	pt4.y = path[j].y + norms[k].y * delta_;
+
+	// get the intersection point
+	pt = IntersectPoint(pt1, pt2, pt3, pt4);
+	group.path_.push_back(Point64(pt));
+	//get the second intersect point through reflecion
+	group.path_.push_back(Point64(ReflectPoint(pt, ptQ)));
 }
 
 void ClipperOffset::DoMiter(PathGroup& group, const Path64& path, size_t j, size_t k, double cos_a)
@@ -155,7 +221,7 @@ void ClipperOffset::OffsetPoint(PathGroup& group, Path64& path, size_t j, size_t
 	if (sin_a > 1.0) sin_a = 1.0;
 	else if (sin_a < -1.0) sin_a = -1.0;
 
-	if (sin_a * delta_ < 0) // a concave offset
+	if (AlmostZero(sin_a) || (sin_a * delta_ < 0)) // a concave offset
 	{
 		Point64 p1 = Point64(
 			path[j].x + norms[k].x * delta_,
@@ -172,14 +238,17 @@ void ClipperOffset::OffsetPoint(PathGroup& group, Path64& path, size_t j, size_t
 	}
 	else
 	{
+		// convex offsets here ...
 		double cos_a = DotProduct(norms[j], norms[k]);
 		switch (join_type_)
 		{
 		case JoinType::Miter:
+			// see offset_triginometry3.svg
 			if (1 + cos_a < temp_lim_) DoSquare(group, path, j, k);
 			else DoMiter(group, path, j, k, cos_a);
 			break;
 		case JoinType::Square:
+          // angles >= 90 deg. don't need squaring
 			if (cos_a >= 0) DoMiter(group, path, j, k, cos_a);
 			else DoSquare(group, path, j, k);
 			break;

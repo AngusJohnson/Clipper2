@@ -2,8 +2,8 @@ unit Clipper.Core;
 
 (*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Version   :  Clipper2 - ver.1.0.0                                            *
-* Date      :  3 August 2022                                                   *
+* Version   :  Clipper2 - ver.1.0.3                                            *
+* Date      :  20 August 2022                                                  *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  Core Clipper Library module                                     *
 *              Contains structures and functions used throughout the library   *
@@ -30,7 +30,7 @@ type
   TPointD   = record
     X, Y: double;
 {$IFDEF USINGZ}
-    Z: double;
+    Z: Int64;
 {$ENDIF}
   end;
 
@@ -139,9 +139,9 @@ function PointsNearEqual(const pt1, pt2: TPointD; distanceSqrd: double): Boolean
 {$IFDEF USINGZ}
 function Point64(const X, Y: Int64; Z: Int64 = 0): TPoint64; overload;
 {$IFDEF INLINING} inline; {$ENDIF}
-function Point64(const X, Y: Double; Z: double = 0.0): TPoint64; overload;
+function Point64(const X, Y: Double; Z: Int64 = 0): TPoint64; overload;
 {$IFDEF INLINING} inline; {$ENDIF}
-function PointD(const X, Y: Double; Z: double = 0.0): TPointD; overload;
+function PointD(const X, Y: Double; Z: Int64 = 0): TPointD; overload;
 {$IFDEF INLINING} inline; {$ENDIF}
 {$ELSE}
 function Point64(const X, Y: Int64): TPoint64; overload; {$IFDEF INLINING} inline; {$ENDIF}
@@ -164,6 +164,12 @@ function GetBounds(const paths: TArrayOfPaths): TRect64; overload;
 function GetBounds(const paths: TPaths64): TRect64; overload;
 function GetBounds(const paths: TPathsD): TRectD; overload;
 function GetBounds(const path: TPath64): TRect64; overload;
+
+function TranslatePoint(const pt: TPoint64; dx, dy: Int64): TPoint64; overload;
+function TranslatePoint(const pt: TPointD; dx, dy: double): TPointD; overload;
+
+procedure RotatePt(var pt: TPointD; const center: TPointD; sinA, cosA: double);
+procedure RotatePath(var path: TPathD; const center: TPointD; sinA, cosA: double);
 
 procedure InflateRect(var rec: TRect64; dx, dy: Int64); overload;
   {$IFDEF INLINING} inline; {$ENDIF}
@@ -253,6 +259,7 @@ function Ellipse(const rec: TRectD; steps: integer = 0): TPathD; overload;
 
 const
   MaxInt64    = 9223372036854775807;
+  NullPointD  : TPointD = (X: 0; Y: 0);
   NullRect64  : TRect64 = (left: 0; top: 0; right: 0; Bottom: 0);
   NullRectD   : TRectD = (left: 0; top: 0; right: 0; Bottom: 0);
   Tolerance   : Double = 1.0E-15;
@@ -420,7 +427,7 @@ begin
   Result.X := pt.X * scale;
   Result.Y := pt.Y * scale;
 {$IFDEF USINGZ}
-  Result.Z := pt.Z * scale;
+  Result.Z := pt.Z;
 {$ENDIF}
 end;
 //------------------------------------------------------------------------------
@@ -561,7 +568,7 @@ begin
     result[i].X := path[i].X * scale;
     result[i].Y := path[i].Y * scale;
 {$IFDEF USINGZ}
-    result[i].Z := path[i].Z * scale;
+    result[i].Z := path[i].Z;
 {$ENDIF}
   end;
 end;
@@ -577,7 +584,7 @@ begin
     result[i].X := path[i].X * scale;
     result[i].Y := path[i].Y * scale;
 {$IFDEF USINGZ}
-    result[i].Z := path[i].Z * scale;
+    result[i].Z := path[i].Z;
 {$ENDIF}
   end;
 end;
@@ -634,7 +641,7 @@ begin
       result[i][j].X := Round(paths[i][j].X * scale);
       result[i][j].Y := Round(paths[i][j].Y * scale);
 {$IFDEF USINGZ}
-      result[i][j].Z := Round(paths[i][j].Z * scale);
+      result[i][j].Z := paths[i][j].Z;
 {$ENDIF}
     end;
   end;
@@ -654,7 +661,7 @@ begin
       result[i][j].X := Round(paths[i][j].X * scale);
       result[i][j].Y := Round(paths[i][j].Y * scale);
 {$IFDEF USINGZ}
-      result[i][j].Z := Round(paths[i][j].Z * scale);
+      result[i][j].Z := paths[i][j].Z;
 {$ENDIF}
     end;
   end;
@@ -674,7 +681,7 @@ begin
       result[i][j].X := paths[i][j].X * scale;
       result[i][j].Y := paths[i][j].Y * scale;
 {$IFDEF USINGZ}
-      result[i][j].Z := paths[i][j].Z * scale;
+      result[i][j].Z := paths[i][j].Z;
 {$ENDIF}
     end;
   end;
@@ -694,7 +701,7 @@ begin
       result[i][j].X := paths[i][j].X * scale;
       result[i][j].Y := paths[i][j].Y * scale;
 {$IFDEF USINGZ}
-      result[i][j].Z := paths[i][j].Z * scale;
+      result[i][j].Z := paths[i][j].Z;
 {$ENDIF}
     end;
   end;
@@ -911,15 +918,15 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-function Point64(const X, Y: Double; Z: double): TPoint64;
+function Point64(const X, Y: Double; Z: Int64): TPoint64;
 begin
   Result.X := Round(X);
   Result.Y := Round(Y);
-  Result.Z := Round(Z);
+  Result.Z := Z;
 end;
 //------------------------------------------------------------------------------
 
-function PointD(const X, Y: Double; Z: Double): TPointD;
+function PointD(const X, Y: Double; Z: Int64): TPointD;
 begin
   Result.X := X;
   Result.Y := Y;
@@ -931,7 +938,7 @@ function Point64(const pt: TPointD): TPoint64;
 begin
   Result.X := Round(pt.X);
   Result.Y := Round(pt.Y);
-  Result.Z := Round(pt.Z);
+  Result.Z := pt.Z;
 end;
 //------------------------------------------------------------------------------
 
@@ -1112,6 +1119,19 @@ begin
 end;
 //------------------------------------------------------------------------------
 
+function TranslatePoint(const pt: TPoint64; dx, dy: Int64): TPoint64;
+begin
+  Result.X := pt.X + dx;
+  Result.Y := pt.Y + dy;
+end;
+//------------------------------------------------------------------------------
+
+function TranslatePoint(const pt: TPointD; dx, dy: double): TPointD;
+begin
+  Result.X := pt.X + dx;
+  Result.Y := pt.Y + dy;
+end;
+//------------------------------------------------------------------------------
 
 procedure InflateRect(var rec: TRect64; dx, dy: Int64);
 begin
@@ -1139,6 +1159,15 @@ begin
   tmpY := pt.Y-center.Y;
   pt.X := tmpX * cosA - tmpY * sinA + center.X;
   pt.Y := tmpX * sinA + tmpY * cosA + center.Y;
+end;
+//------------------------------------------------------------------------------
+
+procedure RotatePath(var path: TPathD; const center: TPointD; sinA, cosA: double);
+var
+  i: integer;
+begin
+  for i := 0 to High(path) do
+    RotatePt(path[i], center, sinA, cosA);
 end;
 //------------------------------------------------------------------------------
 

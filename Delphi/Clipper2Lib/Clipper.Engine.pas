@@ -2,8 +2,8 @@ unit Clipper.Engine;
 
 (*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Version   :  Clipper2 - ver.1.0.0                                            *
-* Date      :  10 August 2022                                                  *
+* Version   :  Clipper2 - ver.1.0.3                                            *
+* Date      :  21 August 2022                                                  *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  This is the main polygon clipping module                        *
@@ -175,7 +175,7 @@ type
     FSucceeded          : Boolean;
     FReverseSolution    : Boolean;
   {$IFDEF USINGZ}
-    FZFunc              : TZCallback64;
+    fZCallback          : TZCallback64;
   {$ENDIF}
     procedure Reset;
     procedure InsertScanLine(const Y: Int64);
@@ -240,7 +240,7 @@ type
     procedure BuildTree(polytree: TPolyPathBase; out openPaths: TPaths64);
   {$IFDEF USINGZ}
     procedure SetZ( e1, e2: PActive; var intersectPt: TPoint64);
-    property  OnZFill : TZCallback64 read FZFunc write FZFunc;
+    property  ZCallback : TZCallback64 read fZCallback write fZCallback;
   {$ENDIF}
     property  Succeeded : Boolean read FSucceeded;
   public
@@ -269,7 +269,7 @@ type
     function  Execute(clipType: TClipType; fillRule: TFillRule;
       var solutionTree: TPolyTree64; out openSolutions: TPaths64): Boolean; overload; virtual;
   {$IFDEF USINGZ}
-    property  ZFillFunc;
+    property  ZCallback;
   {$ENDIF}
   end;
 
@@ -322,7 +322,10 @@ type
     FScale: double;
     FInvScale: double;
   {$IFDEF USINGZ}
-    FZFuncD : TZCallbackD;
+    fZCallback : TZCallbackD;
+    procedure ZCB(const bot1, top1, bot2, top2: TPoint64;
+      var intersectPt: TPoint64);
+    procedure CheckCallback;
   {$ENDIF}
   public
     procedure AddSubject(const pathD: TPathD); overload;
@@ -340,9 +343,7 @@ type
     function  Execute(clipType: TClipType; fillRule: TFillRule;
       var solutionsTree: TPolyTreeD; out openSolutions: TPathsD): Boolean; overload;
 {$IFDEF USINGZ}
-    procedure ProxyZFillFunc(const bot1, top1, bot2, top2: TPoint64;
-      var intersectPt: TPoint64);
-    property  ZFillFunc : TZCallbackD read FZFuncD write FZFuncD;
+    property  ZCallback : TZCallbackD read fZCallback write fZCallback;
 {$ENDIF}
   end;
 
@@ -1220,7 +1221,7 @@ end;
 
 procedure TClipperBase.SetZ(e1, e2: PActive; var intersectPt: TPoint64);
 begin
-  if not Assigned(FZFunc) then Exit;
+  if not Assigned(fZCallback) then Exit;
 
   // prioritize subject vertices over clip vertices
   // and pass the subject vertices before clip vertices in the callback
@@ -1230,14 +1231,14 @@ begin
     else if (XYCoordsEqual(intersectPt, e1.top)) then intersectPt.Z := e1.top.Z
     else if (XYCoordsEqual(intersectPt, e2.bot)) then intersectPt.Z := e2.bot.Z
     else if (XYCoordsEqual(intersectPt, e2.top)) then intersectPt.Z := e2.top.Z;
-    FZFunc(e1.bot, e1.top, e2.bot, e2.top, intersectPt);
+    fZCallback(e1.bot, e1.top, e2.bot, e2.top, intersectPt);
   end else
   begin
     if (XYCoordsEqual(intersectPt, e2.bot)) then intersectPt.Z := e2.bot.Z
     else if (XYCoordsEqual(intersectPt, e2.top)) then intersectPt.Z := e2.top.Z
     else if (XYCoordsEqual(intersectPt, e1.bot)) then intersectPt.Z := e1.bot.Z
     else if (XYCoordsEqual(intersectPt, e1.top)) then intersectPt.Z := e1.top.Z;
-    FZFunc(e2.bot, e2.top, e1.bot, e1.top, intersectPt);
+    fZCallback(e2.bot, e2.top, e1.bot, e1.top, intersectPt);
   end;
 end;
 //------------------------------------------------------------------------------
@@ -1921,8 +1922,8 @@ procedure TClipperBase.FixSelfIntersects(var op: POutPt);
     ip := Point64(Clipper.Core.GetIntersectPoint(
       prevOp.pt, splitOp.pt, splitOp.next.pt, nextNextOp.pt));
   {$IFDEF USINGZ}
-    if Assigned(FZFunc) then
-      FZFunc(prevOp.Pt, splitOp.Pt, splitOp.Next.Pt, nextNextOp.Pt, ip.Pt);
+    if Assigned(fZCallback) then
+      fZCallback(prevOp.Pt, splitOp.Pt, splitOp.Next.Pt, nextNextOp.Pt, ip);
   {$ENDIF}
     area1 := Area(op);
     area2 := AreaTriangle(ip, splitOp.pt, splitOp.next.pt);
@@ -2875,7 +2876,7 @@ begin
   begin
     Result := AddOutPt(e1, pt);
     {$IFDEF USINGZ}
-    SetZ(e1, e2, op.pt);
+    SetZ(e1, e2, Result.pt);
     {$ENDIF}
     SwapOutRecs(e1, e2);
   end
@@ -2883,7 +2884,7 @@ begin
   begin
     Result := AddOutPt(e2, pt);
     {$IFDEF USINGZ}
-    SetZ(e1, e2, op.pt);
+    SetZ(e1, e2, Result.pt);
     {$ENDIF}
     SwapOutRecs(e1, e2);
   end
@@ -4223,20 +4224,34 @@ end;
 //------------------------------------------------------------------------------
 
 {$IFDEF USINGZ}
-procedure TClipperD.ProxyZFillFunc(const bot1, top1, bot2, top2: TPoint64;
+procedure TClipperD.CheckCallback;
+begin
+  // only when the user defined ZCallback function has been assigned
+  // do we assign the proxy callback ZCB to ClipperBase
+  if Assigned(ZCallback) then
+    inherited ZCallback := ZCB else
+    inherited ZCallback := nil;
+end;
+//------------------------------------------------------------------------------
+
+procedure TClipperD.ZCB(const bot1, top1, bot2, top2: TPoint64;
   var intersectPt: TPoint64);
 var
   tmp: TPointD;
 begin
-  // de-scale coordinates
+  if not assigned(fZCallback) then Exit;
+  // de-scale (x & y)
+  // temporarily convert integers to their initial float values
+  // this will slow clipping marginally but will make it much easier
+  // to understand the coordinates passed to the callback function
   tmp := ScalePoint(intersectPt, FInvScale);
-  FZFuncD(
+  //do the callback
+  fZCallback(
     ScalePoint(bot1, FInvScale),
     ScalePoint(top1, FInvScale),
     ScalePoint(bot2, FInvScale),
     ScalePoint(top2, FInvScale), tmp);
-  // re-scale
-  intersectPt.Z := Round(tmp.Z * FScale);
+  intersectPt.Z := tmp.Z;
 end;
 //------------------------------------------------------------------------------
 {$ENDIF}
@@ -4301,7 +4316,6 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-{$IFDEF USINGZ}
 function TClipperD.Execute(clipType: TClipType; fillRule: TFillRule;
   out closedSolutions: TPathsD): Boolean;
 var
@@ -4316,75 +4330,17 @@ function TClipperD.Execute(clipType: TClipType; fillRule: TFillRule;
 var
   solClosed, solOpen: TPaths64;
 begin
+{$IFDEF USINGZ}
+    CheckCallback;
+{$ENDIF}
   closedSolutions := nil;
   openSolutions := nil;
   try try
-    if Assigned(ZFillFunc) then
-      inherited ZFillFunc := ProxyZFillFunc else
-      inherited ZFillFunc := nil;
-    ExecuteInternal(clipType, fillRule);
+    ExecuteInternal(clipType, fillRule, false);
     Result := BuildPaths(solClosed, solOpen);
     if not Result then Exit;
     closedSolutions := ScalePathsD(solClosed, FInvScale);
     openSolutions := ScalePathsD(solOpen, FInvScale);
-  except
-    Result := false;
-  end;
-  finally
-    CleanUp;
-  end;
-end;
-//------------------------------------------------------------------------------
-
-function TClipperD.Execute(clipType: TClipType; fillRule: TFillRule;
-  var solutionsTree: TPolyTreeD; out openSolutions: TPathsD): Boolean;
-var
-  open_Paths: TPaths64;
-begin
-  if not assigned(solutionsTree) then RaiseError(rsClipper_PolyTreeErr);
-  solutionsTree.Clear;
-  FUsingPolytree := true;
-  solutionsTree.SetScale(fScale);
-  openSolutions := nil;
-  try try
-    if Assigned(ZFillFunc) then
-      inherited ZFillFunc := ProxyZFillFunc else
-      inherited ZFillFunc := nil;
-    ExecuteInternal(clipType, fillRule);
-    BuildTree(solutionsTree, open_Paths);
-    openSolutions := ScalePathsD(open_Paths, FInvScale);
-    Result := true;
-  except
-    Result := false;
-  end;
-  finally
-    CleanUp;
-  end;
-end;
-//------------------------------------------------------------------------------
-{$ELSE}
-
-function TClipperD.Execute(clipType: TClipType; fillRule: TFillRule;
-  out closedSolutions: TPathsD): Boolean;
-var
-  dummyP: TPathsD;
-begin
-  Result := Execute(clipType, fillRule, closedSolutions, dummyP);
-end;
-//------------------------------------------------------------------------------
-
-function TClipperD.Execute(clipType: TClipType; fillRule: TFillRule;
-  out closedSolutions, openSolutions: TPathsD): Boolean;
-var
-  closedP, openP: TPaths64;
-begin
-  closedSolutions := nil;
-  try try
-    ExecuteInternal(clipType, fillRule, false);
-    Result := BuildPaths(closedP, openP);
-    if not Result then Exit;
-    closedSolutions := ScalePathsD(closedP, FInvScale);
-    openSolutions := ScalePathsD(openP, FInvScale);
   except
     Result := false;
   end;
@@ -4401,9 +4357,12 @@ var
 begin
   if not assigned(solutionsTree) then
     Raise EClipperLibException(rsClipper_PolyTreeErr);
-
+{$IFDEF USINGZ}
+    CheckCallback;
+{$ENDIF}
   solutionsTree.Clear;
-  solutionsTree.SetScale(FScale);
+  FUsingPolytree := true;
+  solutionsTree.SetScale(fScale);
   openSolutions := nil;
   try try
     ExecuteInternal(clipType, fillRule, true);
@@ -4417,7 +4376,6 @@ begin
     ClearSolution;
   end;
 end;
-{$ENDIF}
 
 //------------------------------------------------------------------------------
 // TPolyPathD methods
