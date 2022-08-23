@@ -29,7 +29,7 @@ if (WIN32)
   target_compile_options(Clipper2 PRIVATE /W4 /WX)
 else()
   target_compile_options(Clipper2 PRIVATE -Wall -Wextra -Wpedantic -Werror)
-  target_link_libraries(Clipper2 PRIVATE -lm)
+  target_link_libraries(Clipper2 PUBLIC -lm)
   set_target_properties(Clipper2 PROPERTIES LINKER_LANGUAGE CXX)
   set_target_properties(Clipper2 PROPERTIES LIBRARY_OUTPUT_DIRECTORY "./lib")
   set_target_properties(Clipper2 PROPERTIES LINK_FLAGS "-Wl,-rpath,${CMAKE_SOURCE_DIR}/lib")
@@ -45,32 +45,23 @@ if(CLIPPER2_UTILS OR CLIPPER2_TESTS OR CLIPPER2_EXAMPLES)
     Utils/ClipFileSave.h
   )
   
-  if (WIN32)
-    target_link_libraries(Clipper2utils PRIVATE Clipper2)
-    target_include_directories(Clipper2utils
-      PUBLIC Utils
-      SYSTEM INTERFACE Utils
-    )
+  target_link_libraries(Clipper2utils PRIVATE Clipper2)
+  target_include_directories(Clipper2utils
+    PUBLIC Utils
+    SYSTEM INTERFACE Utils
+  )
+if (WIN32)
   else()
-    target_link_libraries(Clipper2utils PRIVATE -lm Clipper2)
     set_target_properties(Clipper2utils PROPERTIES LINKER_LANGUAGE CXX)
     set_target_properties(Clipper2utils PROPERTIES LINK_FLAGS "-Wl,-rpath,${CMAKE_SOURCE_DIR}/lib")
-    target_include_directories(Clipper2utils
-      PUBLIC Utils
-      SYSTEM INTERFACE Utils
-    )
   endif()
 endif()
 
 if(CLIPPER2_EXAMPLES)
   add_executable(ConsoleDemo1 Examples/ConsoleDemo1/ConsoleDemo1.cpp)
-  
+  target_link_libraries(ConsoleDemo1 PRIVATE Clipper2 Clipper2utils)
   if (WIN32)
-    # target_include_directories(ConsoleDemo1 PRIVATE Clipper2Lib)
-    target_link_libraries(ConsoleDemo1 PRIVATE Clipper2 Clipper2utils)
   else()
-    target_include_directories(ConsoleDemo1 PRIVATE Clipper2Lib)
-    target_link_libraries(ConsoleDemo1 PRIVATE -lm Clipper2 Clipper2utils)
     set_target_properties(ConsoleDemo1 PROPERTIES LINKER_LANGUAGE CXX)
     set_target_properties(ConsoleDemo1 PROPERTIES LINK_FLAGS "-Wl,-rpath,${CMAKE_SOURCE_DIR}/lib")
   endif()
@@ -79,11 +70,9 @@ if(CLIPPER2_EXAMPLES)
   file(COPY Examples/InflateDemo/rabbit.svg DESTINATION ${CMAKE_BINARY_DIR} FILE_PERMISSIONS OWNER_READ GROUP_READ WORLD_READ )
 
   add_executable(InflateDemo1 Examples/InflateDemo/InflateDemo1.cpp)
-  target_include_directories(InflateDemo1 PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+  target_link_libraries(InflateDemo1 PRIVATE Clipper2 Clipper2utils)
   if (WIN32)
-    target_link_libraries(InflateDemo1 PRIVATE Clipper2 Clipper2utils)
   else()
-    target_link_libraries(InflateDemo1 PRIVATE Clipper2 Clipper2utils)
     set_target_properties(InflateDemo1 PROPERTIES LINKER_LANGUAGE CXX)
     set_target_properties(InflateDemo1 PROPERTIES LINK_FLAGS "-Wl,-rpath,${CMAKE_SOURCE_DIR}/lib")
   endif()
@@ -94,30 +83,34 @@ if(CLIPPER2_TESTS)
   # See: https://cliutils.gitlab.io/modern-cmake/chapters/testing/googletest.html
 
   enable_testing()
-  set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
+  if (WIN32)
+    set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
+  endif()
   include(GoogleTest)
+
   add_subdirectory("${PROJECT_SOURCE_DIR}/Tests/googletest/")
 
-  add_executable(tests
-    Tests/Tests/TestLines.cpp
-    Tests/Tests/TestOffsetOrientation.cpp
-    Tests/Tests/TestOrientation.cpp
-    Tests/Tests/TestPolygons.cpp
-    Tests/Tests/TestPolytreeHoles1.cpp
-    Tests/Tests/TestPolytreeHoles2.cpp
-    Tests/Tests/TestPolytreeIntersection.cpp
-    Tests/Tests/TestPolytreeUnion.cpp
-    Tests/Tests/TestRandomPaths.cpp
-    Tests/Tests/TestTrimCollinear.cpp
+  add_executable(ClipperTests
+    Tests/TestLines.cpp
+    Tests/TestOffsetOrientation.cpp
+    Tests/TestOrientation.cpp
+    Tests/TestPolygons.cpp
+    Tests/TestPolytreeHoles1.cpp
+    Tests/TestPolytreeHoles2.cpp
+    Tests/TestPolytreeIntersection.cpp
+    Tests/TestPolytreeUnion.cpp
+    Tests/TestRandomPaths.cpp
+    Tests/TestTrimCollinear.cpp
   )
-  target_link_libraries(tests gtest gmock gtest_main Clipper2 Clipper2utils)
-  gtest_discover_tests(tests
+
+  target_link_libraries(ClipperTests gtest gmock gtest_main Clipper2 Clipper2utils)
+
+  gtest_discover_tests(ClipperTests
         # set a working directory so your project root so that you can find test data via paths relative to the project root
         WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}/../Tests
         PROPERTIES VS_DEBUGGER_WORKING_DIRECTORY "${PROJECT_DIR}"
   )
-  set_target_properties(tests PROPERTIES FOLDER tests)
-
+  
   install( FILES  ../Tests/PolytreeHoleOwner.txt DESTINATION . )
   install( FILES  ../Tests/PolytreeHoleOwner2.txt DESTINATION . )
   install( FILES  ../Tests/Lines.txt DESTINATION . )

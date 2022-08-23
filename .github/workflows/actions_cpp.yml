@@ -16,7 +16,7 @@ jobs:
         mkdir CPP/build
         cd CPP/build
         cmake .. -DCLIPPER2_TESTS=ON -DCLIPPER2_UTILS:BOOL=ON -DCLIPPER2_EXAMPLES:BOOL=ON
-        cmake --build . --config RelWithDebInfo
+        cmake --build . --config RelWithDebInfo --parallel
     - name: Run tests
       run: |
         cd CPP/build
