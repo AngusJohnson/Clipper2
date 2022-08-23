@@ -41,7 +41,7 @@ struct Point {
 	template <typename T2>
 	inline void Init(const T2 x_ = 0, const T2 y_ = 0)
 	{
-		if (std::numeric_limits<T>::is_integer &&
+		if constexpr (std::numeric_limits<T>::is_integer &&
 			!std::numeric_limits<T2>::is_integer)
 		{
 			x = static_cast<T>(std::round(x_));

@@ -1,14 +1,11 @@
 #include <gtest/gtest.h>
-#include "../../Clipper2Lib/clipper.h"
-#include "../../Utils/ClipFileLoad.h"
+#include "clipper.h"
+#include "ClipFileLoad.h"
 
 TEST(Clipper2Tests, TestMultipleLines) {
 
-#ifdef _WIN32
-  std::ifstream ifs("../../../Tests/Lines.txt");
-#else
   std::ifstream ifs("Lines.txt");
-#endif
+
 
   ASSERT_TRUE(ifs);
   ASSERT_TRUE(ifs.good());

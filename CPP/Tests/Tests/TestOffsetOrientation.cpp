@@ -1,5 +1,5 @@
 #include <gtest/gtest.h>
-#include "../../Clipper2Lib/clipper.offset.h"
+#include "clipper.offset.h"
 
 TEST(Clipper2Tests, TestOffsettingOrientation) {
     Clipper2Lib::ClipperOffset co;

@@ -1,6 +1,6 @@
 #include <gtest/gtest.h>
-#include "../../Clipper2Lib/clipper.h"
-#include "../../Utils/ClipFileLoad.h"
+#include "clipper.h"
+#include "ClipFileLoad.h"
 
 inline Clipper2Lib::PathD MakeRandomPath(int width, int height, unsigned vertCnt)
 {
@@ -13,11 +13,8 @@ inline Clipper2Lib::PathD MakeRandomPath(int width, int height, unsigned vertCnt
 
 TEST(Clipper2Tests, TestMultiplePolygons)
 {
-#ifdef _WIN32
-  std::ifstream ifs("../../../Tests/Polygons.txt");
-#else
   std::ifstream ifs("Polygons.txt");
-#endif
+
 
   ASSERT_TRUE(ifs);
   ASSERT_TRUE(ifs.good());
