@@ -20,7 +20,7 @@ jobs:
     - name: Run tests
       run: |
         cd CPP/build
-        ctest . -C RelWithDebInfo
+        ctest . -C RelWithDebInfo --output-on-failure
   ubuntu-latest-gcc-default:
     runs-on: 'ubuntu-latest'
     steps:

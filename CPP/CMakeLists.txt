@@ -113,7 +113,7 @@ if(CLIPPER2_TESTS)
   target_link_libraries(tests gtest gmock gtest_main Clipper2 Clipper2utils)
   gtest_discover_tests(tests
         # set a working directory so your project root so that you can find test data via paths relative to the project root
-        WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}/Tests
+        WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}/../Tests
         PROPERTIES VS_DEBUGGER_WORKING_DIRECTORY "${PROJECT_DIR}"
   )
   set_target_properties(tests PROPERTIES FOLDER tests)
