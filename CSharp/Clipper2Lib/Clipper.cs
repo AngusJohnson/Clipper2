@@ -1,7 +1,7 @@
 ﻿/*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Version   :  Clipper2 - ver.1.0.0                                            *
-* Date      :  3 August 2022                                                   *
+* Version   :  Clipper2 - ver.1.0.3                                            *
+* Date      :  23 August 2022                                                  *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  This module contains simple functions that will likely cover    *
@@ -200,6 +200,34 @@ namespace Clipper2Lib
       return Area(poly) >= 0;
     }
 
+    public static string Path64ToString(Path64 path)
+    {
+      string result = "";
+      foreach (Point64 pt in path)
+        result = result + pt.ToString();
+      return result + '\n';
+    }
+    public static string Paths64ToString(Paths64 paths)
+    {
+      string result = "";
+      foreach (Path64 path in paths)
+        result = result + Path64ToString(path);
+      return result;
+    }
+    public static string PathDToString(PathD path)
+    {
+      string result = "";
+      foreach (PointD pt in path)
+        result = result + pt.ToString();
+      return result + '\n';
+    }
+    public static string PathsDToString(PathsD paths)
+    {
+      string result = "";
+      foreach (PathD path in paths)
+        result = result + PathDToString(path);
+      return result;
+    }
     public static Path64 OffsetPath(Path64 path, long dx, long dy)
     {
       Path64 result = new Path64(path.Count);
