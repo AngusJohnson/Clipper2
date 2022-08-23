@@ -30,9 +30,6 @@ if (WIN32)
 else()
   target_compile_options(Clipper2 PRIVATE -Wall -Wextra -Wpedantic -Werror)
   target_link_libraries(Clipper2 PUBLIC -lm)
-  set_target_properties(Clipper2 PROPERTIES LINKER_LANGUAGE CXX)
-  set_target_properties(Clipper2 PROPERTIES LIBRARY_OUTPUT_DIRECTORY "./lib")
-  set_target_properties(Clipper2 PROPERTIES LINK_FLAGS "-Wl,-rpath,${CMAKE_SOURCE_DIR}/lib")
 endif()
 
 if(CLIPPER2_UTILS OR CLIPPER2_TESTS OR CLIPPER2_EXAMPLES)
@@ -50,32 +47,17 @@ if(CLIPPER2_UTILS OR CLIPPER2_TESTS OR CLIPPER2_EXAMPLES)
     PUBLIC Utils
     SYSTEM INTERFACE Utils
   )
-if (WIN32)
-  else()
-    set_target_properties(Clipper2utils PROPERTIES LINKER_LANGUAGE CXX)
-    set_target_properties(Clipper2utils PROPERTIES LINK_FLAGS "-Wl,-rpath,${CMAKE_SOURCE_DIR}/lib")
-  endif()
 endif()
 
 if(CLIPPER2_EXAMPLES)
   add_executable(ConsoleDemo1 Examples/ConsoleDemo1/ConsoleDemo1.cpp)
   target_link_libraries(ConsoleDemo1 PRIVATE Clipper2 Clipper2utils)
-  if (WIN32)
-  else()
-    set_target_properties(ConsoleDemo1 PROPERTIES LINKER_LANGUAGE CXX)
-    set_target_properties(ConsoleDemo1 PROPERTIES LINK_FLAGS "-Wl,-rpath,${CMAKE_SOURCE_DIR}/lib")
-  endif()
 
   install( FILES  Examples/InflateDemo/rabbit.svg DESTINATION . )
   file(COPY Examples/InflateDemo/rabbit.svg DESTINATION ${CMAKE_BINARY_DIR} FILE_PERMISSIONS OWNER_READ GROUP_READ WORLD_READ )
 
   add_executable(InflateDemo1 Examples/InflateDemo/InflateDemo1.cpp)
   target_link_libraries(InflateDemo1 PRIVATE Clipper2 Clipper2utils)
-  if (WIN32)
-  else()
-    set_target_properties(InflateDemo1 PROPERTIES LINKER_LANGUAGE CXX)
-    set_target_properties(InflateDemo1 PROPERTIES LINK_FLAGS "-Wl,-rpath,${CMAKE_SOURCE_DIR}/lib")
-  endif()
 endif()
 
 
