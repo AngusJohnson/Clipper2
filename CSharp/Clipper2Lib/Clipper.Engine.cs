@@ -3245,8 +3245,7 @@ namespace Clipper2Lib
       InternalClipper.GetIntersectPoint(
           prevOp.pt, splitOp.pt, splitOp.next.pt, nextNextOp.pt, out PointD ipD);
       Point64 ip = new Point64(ipD);
-#if USINGZ
-#endif
+
       double area1 = Area(outRecOp);
       double area2 = AreaTriangle(ip, splitOp.pt, splitOp.next.pt);
 
@@ -3590,10 +3589,12 @@ namespace Clipper2Lib
       return Execute(clipType, fillRule, polytree, new Paths64());
     }
 
+#if USINGZ
     public ZCallback64? ZCallback {
       get { return this._zCallback; }
       set { this._zCallback = value; } 
     }
+#endif
 
   } // Clipper64 class
 
