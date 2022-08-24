@@ -1,6 +1,6 @@
 #include <gtest/gtest.h>
-#include "../../Clipper2Lib/clipper.h"
-#include "../../Utils/ClipFileLoad.h"
+#include "clipper.h"
+#include "ClipFileLoad.h"
 
 using namespace Clipper2Lib;
 
@@ -45,11 +45,7 @@ double GetPolytreeArea(const PolyPath64& pp)
 
 TEST(Clipper2Tests, TestPolytreeHoles2)
 {
-#ifdef _WIN32
-  std::ifstream ifs("../../../Tests/PolytreeHoleOwner2.txt");
-#else
   std::ifstream ifs("PolytreeHoleOwner2.txt");
-#endif
 
   ASSERT_TRUE(ifs);
   ASSERT_TRUE(ifs.good());

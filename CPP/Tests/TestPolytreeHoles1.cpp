@@ -1,16 +1,12 @@
 #include <gtest/gtest.h>
-#include "../../Clipper2Lib/clipper.h"
-#include "../../Utils/ClipFileLoad.h"
+#include "clipper.h"
+#include "ClipFileLoad.h"
 
 using namespace Clipper2Lib;
 
 TEST(Clipper2Tests, TestPolytreeHoles1)
 {
-#ifdef _WIN32
-  std::ifstream ifs("../../../Tests/PolytreeHoleOwner.txt");
-#else
   std::ifstream ifs("PolytreeHoleOwner.txt");
-#endif
   ASSERT_TRUE(ifs);
   ASSERT_TRUE(ifs.good());
 

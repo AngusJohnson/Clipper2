@@ -1,5 +1,5 @@
 #include <gtest/gtest.h>
-#include "../../Clipper2Lib/clipper.h"
+#include "clipper.h"
 #include <fstream>
 #include <random>
 

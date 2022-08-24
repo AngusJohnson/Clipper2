@@ -11,15 +11,16 @@ jobs:
       run: git submodule update --init
     - name: Add MSBuild to PATH
       uses: microsoft/setup-msbuild@v1.0.2      
-    - name: Build tests
-      run: msbuild CPP/Tests/VisualStudio/Tests_cpp.sln /p:Configuration=Release /p:Platform=x64
+    - name: Build
+      run: |
+        mkdir CPP/build
+        cd CPP/build
+        cmake .. -DCLIPPER2_TESTS=ON -DCLIPPER2_UTILS:BOOL=ON -DCLIPPER2_EXAMPLES:BOOL=ON
+        cmake --build . --config RelWithDebInfo --parallel
     - name: Run tests
-      run: x64\Release\Tests.exe
-      working-directory: CPP/Tests/VisualStudio
-    - name: Build console demo program
-      run: msbuild CPP/Examples/ConsoleDemo1/ConsoleDemo1_cpp.sln
-    - name: Build inflate demo application
-      run: msbuild CPP/Examples/InflateDemo/InflateDemoApp.sln
+      run: |
+        cd CPP/build
+        ctest . -C RelWithDebInfo --output-on-failure
   ubuntu-latest-gcc-default:
     runs-on: 'ubuntu-latest'
     steps:
