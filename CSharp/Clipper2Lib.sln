@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio Version 16
-VisualStudioVersion = 16.0.32126.315
+# Visual Studio Version 17
+VisualStudioVersion = 17.2.32630.192
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Clipper2Lib", "Clipper2Lib\Clipper2Lib.csproj", "{4CE00B81-F1B2-4012-9BBD-B0DB6BF8CAD3}"
 EndProject
@@ -19,8 +19,6 @@ EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ConsoleDemo", "Clipper2Lib.Examples\ConsoleDemo\ConsoleDemo.csproj", "{DBFB59C1-C08D-48DC-9A15-CD18B5897BE4}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "InflateDemo", "Clipper2Lib.Examples\InflateDemo\InflateDemo.csproj", "{DB7B56ED-474F-49A7-91F1-75EEB76A8B2B}"
-EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Clipper2Lib.Tests", "Clipper2Lib.Tests\Clipper2Lib.Tests.csproj", "{76F94EC2-9A49-42EA-A947-A8A694AF07B1}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -52,10 +50,6 @@ Global
 		{DB7B56ED-474F-49A7-91F1-75EEB76A8B2B}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{DB7B56ED-474F-49A7-91F1-75EEB76A8B2B}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{DB7B56ED-474F-49A7-91F1-75EEB76A8B2B}.Release|Any CPU.Build.0 = Release|Any CPU
-		{76F94EC2-9A49-42EA-A947-A8A694AF07B1}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{76F94EC2-9A49-42EA-A947-A8A694AF07B1}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{76F94EC2-9A49-42EA-A947-A8A694AF07B1}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{76F94EC2-9A49-42EA-A947-A8A694AF07B1}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

@@ -13,20 +13,17 @@ namespace Clipper2Lib.UnitTests
     [TestMethod]
     public void TestClosedPaths()
     {
-      ClipType clipType;
-      FillRule fillrule;
-      long area;
-      int i = 0, count;
-      string caption;
+      int i = 0;
       while (true)
       {
         i++;
-        Clipper64 c64 = new Clipper64();
-        Paths64 subj = new Paths64(), subj_open = new Paths64(), clip = new Paths64();
-        Paths64 solution = new Paths64(), solution_open = new Paths64();
+        Clipper64 c64 = new();
+        Paths64 subj = new(), subj_open = new (), clip = new();
+        Paths64 solution = new(), solution_open = new();
 
-        if (!ClipperFileIO.LoadTestNum("..\\..\\..\\..\\..\\Tests\\Polygons.txt",
-          i, subj, subj_open, clip, out clipType, out fillrule, out area, out count, out caption))
+        if (!ClipperFileIO.LoadTestNum("..\\..\\..\\..\\..\\..\\Tests\\Polygons.txt",
+          i, subj, subj_open, clip, out ClipType clipType, out FillRule fillrule, 
+          out long area, out int count, out _))
         {          
           Assert.IsTrue(i > 180, string.Format("Loading test polygon {0} failed.", i));
           break;

@@ -13,20 +13,16 @@ namespace Clipper2Lib.UnitTests
     [TestMethod]
     public void TestOpenPaths()
     {
-      ClipType clipType;
-      FillRule fillrule;
-      long area;
-      int count;
-      string caption;
       for (int i = 0; i <= 16; i++)
       {
-        Clipper64 c64 = new Clipper64();
-        Paths64 subj = new Paths64(), subj_open = new Paths64(), clip = new Paths64();
-        Paths64 solution = new Paths64(), solution_open = new Paths64();
+        Clipper64 c64 = new();
+        Paths64 subj = new(), subj_open = new(), clip = new();
+        Paths64 solution = new(), solution_open = new();
 
-        Assert.IsTrue(ClipperFileIO.LoadTestNum("..\\..\\..\\..\\..\\Tests\\Lines.txt",
-          i, subj, subj_open, clip, out clipType, out fillrule,  out area, out count, out caption),
-          string.Format("Loading test {0} failed.", i));
+        Assert.IsTrue(ClipperFileIO.LoadTestNum("..\\..\\..\\..\\..\\..\\Tests\\Lines.txt",
+          i, subj, subj_open, clip, out ClipType clipType, out FillRule fillrule,  
+          out long area, out int count, out _),
+            string.Format("Loading test {0} failed.", i));
 
         c64.AddSubject(subj);
         c64.AddOpenSubject(subj_open);

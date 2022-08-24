@@ -10,7 +10,7 @@ namespace Clipper2Lib.UnitTests
   [TestClass]
   public class TestPolytree
   {
-    void PolyPathContainsPoint(PolyPath64 pp, Point64 pt, ref int counter)
+    private void PolyPathContainsPoint(PolyPath64 pp, Point64 pt, ref int counter)
     {
       if (Clipper.PointInPolygon(pt, pp.Polygon!) != PointInPolygonResult.IsOutside)
       {
@@ -37,7 +37,7 @@ namespace Clipper2Lib.UnitTests
 
   private bool PolyPathFullyContainsChildren(PolyPath64 pp)
     {
-      foreach (PolyPath64 child in pp)
+      foreach (PolyPath64 child in pp.Cast<PolyPath64>())
       {
         foreach (Point64 pt in child.Polygon!)
           if (Clipper.PointInPolygon(pt, pp.Polygon!) == PointInPolygonResult.IsOutside)
@@ -62,29 +62,26 @@ namespace Clipper2Lib.UnitTests
   [TestMethod]
     public void TestPolytree2()
     {
-      ClipType cliptype;
-      FillRule fillrule;
-      long area;
-      int count;
-      string caption;
-      Paths64 subject = new Paths64(), subjectOpen = new Paths64(), clip = new Paths64();
+      Paths64 subject = new(), subjectOpen = new(), clip = new();
 
-      Assert.IsTrue(ClipperFileIO.LoadTestNum("..\\..\\..\\..\\..\\Tests\\PolytreeHoleOwner2.txt",
-        1, subject, subjectOpen, clip, out cliptype, out fillrule, out area, out count, out caption),
-        "Unable to read PolytreeHoleOwner2.txt");
+      Assert.IsTrue(ClipperFileIO.LoadTestNum("..\\..\\..\\..\\..\\..\\Tests\\PolytreeHoleOwner2.txt",
+        1, subject, subjectOpen, clip, out ClipType cliptype, out FillRule fillrule, 
+        out _, out _, out _),
+          "Unable to read PolytreeHoleOwner2.txt");
 
+      PolyTree64 solutionTree = new();
+      Paths64 solution_open = new();
+      Clipper64 clipper = new();
 
-      PolyTree64 solutionTree = new PolyTree64();
-      Paths64 solution_open = new Paths64();
-      Clipper64 clipper = new Clipper64();
+      Path64 pointsOfInterestOutside = new()
+      {
+        new Point64(21887, 10420),
+        new Point64(21726, 10825),
+        new Point64(21662, 10845),
+        new Point64(21617, 10890)
+      };
 
-      List<Point64> pointsOfInterestOutside = new List<Point64>();
-      pointsOfInterestOutside.Add(new Point64(21887, 10420));
-      pointsOfInterestOutside.Add(new Point64(21726, 10825));
-      pointsOfInterestOutside.Add(new Point64(21662, 10845));
-      pointsOfInterestOutside.Add(new Point64(21617, 10890));
-
-      foreach(Point64 pt in pointsOfInterestOutside)
+      foreach (Point64 pt in pointsOfInterestOutside)
       {
         foreach (Path64 path in subject)
         {
@@ -93,11 +90,13 @@ namespace Clipper2Lib.UnitTests
         }
       }
 
-      List<Point64> pointsOfInterestInside = new List<Point64>();
-      pointsOfInterestInside.Add(new Point64(21887, 10430));
-      pointsOfInterestInside.Add(new Point64(21843, 10520));
-      pointsOfInterestInside.Add(new Point64(21810, 10686));
-      pointsOfInterestInside.Add(new Point64(21900, 10461));
+      Path64 pointsOfInterestInside = new()
+      {
+        new Point64(21887, 10430),
+        new Point64(21843, 10520),
+        new Point64(21810, 10686),
+        new Point64(21900, 10461)
+      };
 
       foreach (Point64 pt in pointsOfInterestInside)
       {
