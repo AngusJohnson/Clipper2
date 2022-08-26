@@ -1,7 +1,7 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Version   :  Clipper2 - ver.1.0.0                                            *
-* Date      :  3 August 2022                                                   *
+* Version   :  Clipper2 - ver.1.0.3                                            *
+* Date      :  26 August 2022                                                  *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  Core Clipper Library structures and functions                   *
@@ -41,17 +41,8 @@ struct Point {
 	template <typename T2>
 	inline void Init(const T2 x_ = 0, const T2 y_ = 0)
 	{
-		if constexpr (std::numeric_limits<T>::is_integer &&
-			!std::numeric_limits<T2>::is_integer)
-		{
-			x = static_cast<T>(std::round(x_));
-			y = static_cast<T>(std::round(y_));
-		}
-		else
-		{
-			x = static_cast<T>(x_);
-			y = static_cast<T>(y_);
-		}
+		x = static_cast<T>(x_);
+		y = static_cast<T>(y_);
 	}
 
 #ifdef USINGZ

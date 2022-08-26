@@ -1,7 +1,7 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
 * Version   :  Clipper2 - ver.1.0.3                                            *
-* Date      :  21 August 2022                                                  *
+* Date      :  26 August 2022                                                  *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  This is the main polygon clipping module                        *
@@ -3434,7 +3434,6 @@ namespace Clipper2Lib {
 			if (!outrec->owner) return true; // true or false
 			is_inside_owner_bounds = outrec->owner->bounds.Contains(outrec->bounds);
 		}
-		return true; // true or false (the return value only matters inside recursion)
 	}
 
 
