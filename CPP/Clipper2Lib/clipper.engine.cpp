@@ -634,7 +634,7 @@ namespace Clipper2Lib {
 	void ClipperBase::AddPath(const Path64& path, PathType polytype, bool is_open)
 	{
 		Paths64 tmp;
-		tmp.push_back(path);
+		tmp.emplace_back(path);
 		AddPaths(tmp, polytype, is_open);
 	}
 
@@ -791,7 +791,7 @@ namespace Clipper2Lib {
 		if ((VertexFlags::LocalMin & vert.flags) != VertexFlags::None) return;
 
 		vert.flags = (vert.flags | VertexFlags::LocalMin);
-		minima_list_.push_back(new LocalMinima(&vert, polytype, is_open));
+		minima_list_.emplace_back(new LocalMinima(&vert, polytype, is_open));
 	}
 
 	bool ClipperBase::IsContributingClosed(const Active & e) const
@@ -1270,7 +1270,7 @@ namespace Clipper2Lib {
 	{
 		OutRec* outrec = new OutRec();
 		outrec->idx = (unsigned)outrec_list_.size();
-		outrec_list_.push_back(outrec);
+		outrec_list_.emplace_back(outrec);
 		outrec->pts = nullptr;
 		outrec->polypath = nullptr;
 		e1.outrec = outrec;
@@ -1544,7 +1544,7 @@ namespace Clipper2Lib {
 		{
 			OutRec* newOutRec = new OutRec();
 			newOutRec->idx = outrec_list_.size();
-			outrec_list_.push_back(newOutRec);
+			outrec_list_.emplace_back(newOutRec);
 			newOutRec->owner = prevOp->outrec->owner;
 			newOutRec->polypath = nullptr;
 			splitOp->outrec = newOutRec;
@@ -1642,13 +1642,13 @@ namespace Clipper2Lib {
 		{
 			OutRec* newOr = new OutRec();
 			newOr->idx = outrec_list_.size();
-			outrec_list_.push_back(newOr);
+			outrec_list_.emplace_back(newOr);
 			newOr->polypath = nullptr;
 
 			if (using_polytree_)
 			{
 				if (!outrec.splits) outrec.splits = new OutRecList();
-				outrec.splits->push_back(newOr);
+				outrec.splits->emplace_back(newOr);
 			}
 
 			if (std::abs(area1) >= std::abs(area2))
@@ -1677,7 +1677,7 @@ namespace Clipper2Lib {
 	{
 		OutRec* outrec = new OutRec();
 		outrec->idx = outrec_list_.size();
-		outrec_list_.push_back(outrec);
+		outrec_list_.emplace_back(outrec);
 		outrec->owner = nullptr;
 		outrec->is_open = true;
 		outrec->pts = nullptr;
@@ -2147,7 +2147,7 @@ namespace Clipper2Lib {
 				pt.x = e2.curr_x;
 		}
 
-		intersect_nodes_.push_back(IntersectNode(&e1, &e2, pt));
+		intersect_nodes_.emplace_back(IntersectNode(&e1, &e2, pt));
 	}
 
 
@@ -2929,7 +2929,7 @@ namespace Clipper2Lib {
 
 		Joiner* j = new Joiner(op1, op2, nullptr);
 		j->idx = static_cast<int>(joiner_list_.size());
-		joiner_list_.push_back(j);
+		joiner_list_.emplace_back(j);
 	}
 
 
@@ -3315,14 +3315,14 @@ namespace Clipper2Lib {
 			lastPt = op->pt;
 			op2 = op->next;
 		}
-		path.push_back(lastPt);
+		path.emplace_back(lastPt);
 
 		while (op2 != op)
 		{
 			if (op2->pt != lastPt)
 			{
 				lastPt = op2->pt;
-				path.push_back(lastPt);
+				path.emplace_back(lastPt);
 			}
 			if (reverse) 
 				op2 = op2->prev;
@@ -3451,7 +3451,7 @@ namespace Clipper2Lib {
 			{
 				Path64 path;
 				if (BuildPath(outrec->pts, ReverseSolution, true, path))
-					open_paths.push_back(path);
+					open_paths.emplace_back(path);
 				continue;
 			}
 

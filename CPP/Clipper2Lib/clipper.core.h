@@ -176,10 +176,10 @@ inline Path<T1> ScalePath(const Path<T2>& path, double scale)
 	result.reserve(path.size());
 #ifdef USINGZ
 	for (const Point<T2>& pt : path)
-		result.push_back(Point<T1>(pt.x * scale, pt.y * scale, pt.z));
+		result.emplace_back(Point<T1>(pt.x * scale, pt.y * scale, pt.z));
 #else
 	for (const Point<T2>& pt : path)
-		result.push_back(Point<T1>(pt.x * scale, pt.y * scale));
+		result.emplace_back(Point<T1>(pt.x * scale, pt.y * scale));
 #endif
 	return result;
 }
@@ -190,7 +190,7 @@ inline Paths<T1> ScalePaths(const Paths<T2>& paths, double scale)
 	Paths<T1> result;
 	result.reserve(paths.size());
 	for (const Path<T2>& path : paths)
-		result.push_back(ScalePath<T1, T2>(path, scale));
+		result.emplace_back(ScalePath<T1, T2>(path, scale));
 	return result;
 }
 
@@ -255,13 +255,13 @@ inline Path<T> StripNearEqual(const Path<T>& path,
 	result.reserve(path.size());
 	typename Path<T>::const_iterator path_iter = path.cbegin();
 	Point<T> first_pt = *path_iter++, last_pt = first_pt;
-	result.push_back(first_pt);
+	result.emplace_back(first_pt);
 	for (; path_iter != path.cend(); ++path_iter)
 	{
 		if (!NearEqual(*path_iter, last_pt, max_dist_sqrd))
 		{
 			last_pt = *path_iter;
-			result.push_back(last_pt);
+			result.emplace_back(last_pt);
 		}
 	}
 	if (!is_closed_path) return result;
@@ -279,7 +279,7 @@ inline Paths<T> StripNearEqual(const Paths<T>& paths,
 	for (typename Paths<T>::const_iterator paths_citer = paths.cbegin();
 		paths_citer != paths.cend(); ++paths_citer)
 	{
-		result.push_back(StripNearEqual(*paths_citer, max_dist_sqrd, is_closed_path));
+		result.emplace_back(StripNearEqual(*paths_citer, max_dist_sqrd, is_closed_path));
 	}
 	return result;
 }
@@ -292,13 +292,13 @@ inline Path<T> StripDuplicates(const Path<T>& path, bool is_closed_path)
 	result.reserve(path.size());
 	typename Path<T>::const_iterator path_iter = path.cbegin();
 	Point<T> first_pt = *path_iter++, last_pt = first_pt;
-	result.push_back(first_pt);
+	result.emplace_back(first_pt);
 	for (; path_iter != path.cend(); ++path_iter)
 	{
 		if (*path_iter != last_pt)
 		{
 			last_pt = *path_iter;
-			result.push_back(last_pt);
+			result.emplace_back(last_pt);
 		}
 	}
 	if (!is_closed_path) return result;
@@ -314,7 +314,7 @@ inline Paths<T> StripDuplicates(const Paths<T>& paths, bool is_closed_path)
 	for (typename Paths<T>::const_iterator paths_citer = paths.cbegin();
 		paths_citer != paths.cend(); ++paths_citer)
 	{
-		result.push_back(StripDuplicates(*paths_citer, is_closed_path));
+		result.emplace_back(StripDuplicates(*paths_citer, is_closed_path));
 	}
 	return result;
 }

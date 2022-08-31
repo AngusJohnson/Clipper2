@@ -311,7 +311,7 @@ namespace Clipper2Lib {
 
 		PolyPath<T>* AddChild(const Path<T>& path)
 		{
-			childs_.push_back(new PolyPath<T>(this, path));
+			childs_.emplace_back(new PolyPath<T>(this, path));
 			return childs_.back();
 		}
 

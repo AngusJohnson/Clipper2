@@ -158,7 +158,7 @@ namespace Clipper2Lib
     Path64 result;
     result.reserve(path.size());
     for (const Point64& pt : path)
-      result.push_back(Point64(pt.x + dx, pt.y + dy));
+      result.emplace_back(Point64(pt.x + dx, pt.y + dy));
     return result;
   }
 
@@ -167,7 +167,7 @@ namespace Clipper2Lib
     PathD result;
     result.reserve(path.size());
     for (const PointD& pt : path)
-      result.push_back(PointD(pt.x + dx, pt.y + dy));
+      result.emplace_back(PointD(pt.x + dx, pt.y + dy));
     return result;
   }
 
@@ -176,7 +176,7 @@ namespace Clipper2Lib
     Paths64 result;
     result.reserve(paths.size());
     for (const Path64& path : paths)
-      result.push_back(TranslatePath(path, dx, dy));
+      result.emplace_back(TranslatePath(path, dx, dy));
     return result;
   }
 
@@ -185,7 +185,7 @@ namespace Clipper2Lib
     PathsD result;
     result.reserve(paths.size());
     for (const PathD& path : paths)
-      result.push_back(TranslatePath(path, dx, dy));
+      result.emplace_back(TranslatePath(path, dx, dy));
     return result;
   }
 
@@ -253,7 +253,7 @@ namespace Clipper2Lib
     template <typename T>
     inline void InternalPolyNodeToPaths(const PolyPath<T>& polypath, Paths<T>& paths)
     {
-      paths.push_back(polypath.Polygon());
+      paths.emplace_back(polypath.Polygon());
       for (auto child : polypath)
         InternalPolyNodeToPaths(*child, paths);
     }
@@ -394,7 +394,7 @@ namespace Clipper2Lib
       if (!details::GetInt(s_iter, s.cend(), x)) break;
       details::SkipSpacesWithOptionalComma(s_iter, s.cend());
       if (!details::GetInt(s_iter, s.cend(), y)) break;
-      result.push_back(Point64(x, y));
+      result.emplace_back(Point64(x, y));
       if (user_defined_skip)
         details::SkipUserDefinedChars(s_iter, s.cend(), skip_chars);
       else
@@ -414,7 +414,7 @@ namespace Clipper2Lib
       if (!details::GetFloat(s_iter, s.cend(), x)) break;
       details::SkipSpacesWithOptionalComma(s_iter, s.cend());
       if (!details::GetFloat(s_iter, s.cend(), y)) break;
-      result.push_back(PointD(x, y));
+      result.emplace_back(PointD(x, y));
       details::SkipSpacesWithOptionalComma(s_iter, s.cend());
     }
     return result;
@@ -443,20 +443,20 @@ namespace Clipper2Lib
     }
 
     prevIt = srcIt++;
-    dst.push_back(*prevIt);
+    dst.emplace_back(*prevIt);
     for (; srcIt != stop; ++srcIt)
     {
       if (CrossProduct(*prevIt, *srcIt, *(srcIt + 1)))
       {
         prevIt = srcIt;
-        dst.push_back(*prevIt);
+        dst.emplace_back(*prevIt);
       }
     }
 
     if (is_open_path)
-      dst.push_back(*srcIt);
+      dst.emplace_back(*srcIt);
     else if (CrossProduct(*prevIt, *stop, dst[0]))
-      dst.push_back(*stop);
+      dst.emplace_back(*stop);
     else
     {
       while (dst.size() > 2 &&
@@ -526,10 +526,10 @@ namespace Clipper2Lib
     double dx = co, dy = si;
     Path<T> result;
     result.reserve(steps);
-    result.push_back(Point<T>(center.x + radiusX, static_cast<double>(center.y)));
+    result.emplace_back(Point<T>(center.x + radiusX, static_cast<double>(center.y)));
     for (int i = 1; i < steps; ++i)
     {
-      result.push_back(Point<T>(center.x + radiusX * dx, center.y + radiusY * dy));
+      result.emplace_back(Point<T>(center.x + radiusX * dx, center.y + radiusY * dy));
       double x = dx * co - dy * si;
       dy = dy * co + dx * si;
       dx = x;
@@ -583,7 +583,7 @@ namespace Clipper2Lib
     result.reserve(len);
     for (typename Path<T>::size_type i = 0; i < len; ++i)
       if (flags[i])
-        result.push_back(path[i]);
+        result.emplace_back(path[i]);
     return result;
   }
 
@@ -593,7 +593,7 @@ namespace Clipper2Lib
     Paths<T> result;
     result.reserve(paths.size());
     for (const Path<T>& path : paths)
-      result.push_back(RamerDouglasPeucker<T>(path, epsilon));
+      result.emplace_back(RamerDouglasPeucker<T>(path, epsilon));
     return result;
   }
 
