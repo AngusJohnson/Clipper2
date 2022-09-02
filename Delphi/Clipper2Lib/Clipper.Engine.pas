@@ -2,8 +2,8 @@ unit Clipper.Engine;
 
 (*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Version   :  Clipper2 - ver.1.0.3                                            *
-* Date      :  21 August 2022                                                  *
+* Version   :  Clipper2 - ver.1.0.4                                            *
+* Date      :  2 September 2022                                                *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  This is the main polygon clipping module                        *
@@ -18,7 +18,6 @@ uses
   Classes, Math, Clipper.Core;
 
 type
-
   //PathType:
   //  1. only subject paths may be open
   //  2. for closed paths, all boolean clipping operations except for
@@ -385,6 +384,13 @@ const
 
 //------------------------------------------------------------------------------
 // Miscellaneous Functions ...
+//------------------------------------------------------------------------------
+
+function UnsafeGet(List: TList; Index: Integer): Pointer;
+  {$IFDEF INLINING} inline; {$ENDIF}
+begin
+  Result := List.List[Index];
+end;
 //------------------------------------------------------------------------------
 
 function IsOpen(e: PActive): Boolean; overload; {$IFDEF INLINING} inline; {$ENDIF}
@@ -1204,7 +1210,7 @@ begin
   end;
 
   for i := FLocMinList.Count -1 downto 0 do
-    InsertScanLine(PLocalMinima(FLocMinList[i]).vertex.pt.Y);
+    InsertScanLine(PLocalMinima(UnsafeGet(FLocMinList, i)).vertex.pt.Y);
   FCurrentLocMinIdx := 0;
   FActives := nil;
   FSel := nil;
@@ -1298,7 +1304,7 @@ function TClipperBase.PopLocalMinima(Y: Int64;
 begin
   Result := false;
   if FCurrentLocMinIdx = FLocMinList.Count then Exit;
-  localMinima := PLocalMinima(FLocMinList[FCurrentLocMinIdx]);
+  localMinima := PLocalMinima(UnsafeGet(FLocMinList, FCurrentLocMinIdx));
   if (localMinima.vertex.pt.Y = Y) then
   begin
     inc(FCurrentLocMinIdx);
@@ -1323,20 +1329,21 @@ end;
 procedure TClipperBase.DisposeOutRecsAndJoiners;
 var
   i: Integer;
+  outrec: POutRec;
 begin
   // just in case joiners haven't already been disposed
   for i := 0 to FJoinerList.Count -1 do
-    if Assigned(FJoinerList[i]) then
-      Dispose(PJoiner(FJoinerList[i]));
+    if Assigned(UnsafeGet(FJoinerList, i)) then
+      Dispose(PJoiner(UnsafeGet(FJoinerList, i)));
   FJoinerList.Clear;
   FHorzTrials := nil;
 
   for i := 0 to FOutRecList.Count -1 do
-    with POutRec(FOutRecList[i])^ do
-    begin
-      if Assigned(pts) then DisposeOutPts(pts);
-      Dispose(POutRec(FOutRecList[i]));
-    end;
+  begin
+    outrec := UnsafeGet(FOutRecList, i);
+    if Assigned(outrec.pts) then DisposeOutPts(outrec.pts);
+    Dispose(outrec);
+  end;
   FOutRecList.Clear;
 end;
 //------------------------------------------------------------------------------
@@ -1346,10 +1353,10 @@ var
   i: Integer;
 begin
   for i := 0 to FLocMinList.Count -1 do
-    Dispose(PLocalMinima(FLocMinList[i]));
+    Dispose(PLocalMinima(UnsafeGet(FLocMinList, i)));
   FLocMinList.Clear;
   for i := 0 to FVertexArrayList.Count -1 do
-    FreeMem(FVertexArrayList[i]);
+    FreeMem(UnsafeGet(FVertexArrayList, i));
   FVertexArrayList.Clear;
 end;
 //------------------------------------------------------------------------------
@@ -1919,7 +1926,7 @@ procedure TClipperBase.FixSelfIntersects(var op: POutPt);
     prevOp := splitOp.prev;
     nextNextOp := splitOp.next.next;
     Result := prevOp;
-    ip := Point64(Clipper.Core.GetIntersectPoint(
+    ip := Point64(Clipper.Core.GetIntersectPointD(
       prevOp.pt, splitOp.pt, splitOp.next.pt, nextNextOp.pt));
   {$IFDEF USINGZ}
     if Assigned(fZCallback) then
@@ -2250,9 +2257,9 @@ var
 begin
   for i := 0 to FJoinerList.Count -1 do
   begin
-    if Assigned(FJoinerList[i]) then
+    if Assigned(UnsafeGet(FJoinerList, i)) then
     begin
-      joiner := FJoinerList[i];
+      joiner := UnsafeGet(FJoinerList, i);
       outrec := ProcessJoin(joiner);
       CleanCollinear(outRec);
     end;
@@ -3030,7 +3037,7 @@ var
   i: Integer;
 begin
   for i := 0 to FIntersectList.Count - 1 do
-    Dispose(PIntersectNode(FIntersectList[i]));
+    Dispose(PIntersectNode(UnsafeGet(FIntersectList,i)));
   FIntersectList.Clear;
 end;
 //------------------------------------------------------------------------------
@@ -3178,18 +3185,18 @@ begin
   begin
     // make sure edges are adjacent, otherwise
     // change the intersection order before proceeding
-    if not EdgesAdjacentInAEL(FIntersectList[i]) then
+    if not EdgesAdjacentInAEL(UnsafeGet(FIntersectList, i)) then
     begin
       j := i + 1;
-      while not EdgesAdjacentInAEL(FIntersectList[j]) do inc(j);
+      while not EdgesAdjacentInAEL(UnsafeGet(FIntersectList, j)) do inc(j);
       // now swap intersection order
       node := FIntersectList[i];
-      FIntersectList[i] := FIntersectList[j];
+      FIntersectList[i] := UnsafeGet(FIntersectList, j);
       FIntersectList[j] := node;
     end;
 
     // now process the intersection
-    node := FIntersectList[i];
+    node := UnsafeGet(FIntersectList, i);
     with node^ do
     begin
       IntersectEdges(active1, active2, pt);
@@ -3824,7 +3831,7 @@ begin
       SetLength(openPaths, FOutRecList.Count);
     for i := 0 to FOutRecList.Count -1 do
     begin
-      outRec := FOutRecList[i];
+      outRec := UnsafeGet(FOutRecList, i);
       if not assigned(outRec.pts) then Continue;
 
       if outRec.isOpen then
@@ -3961,7 +3968,7 @@ begin
 
     for i := 0 to FOutRecList.Count -1 do
     begin
-      outRec := FOutRecList[i];
+      outRec := UnsafeGet(FOutRecList, i);
       if not assigned(outRec.pts) then Continue;
 
       if outRec.isOpen then
@@ -3990,9 +3997,9 @@ begin
       begin
         j := outRec.owner.idx;
         outRec.idx := j;
-        FOutRecList[i] := FOutRecList[j];
+        FOutRecList[i] := UnsafeGet(FOutRecList, j);
         FOutRecList[j] := outRec;
-        outRec := FOutRecList[i];
+        outRec := UnsafeGet(FOutRecList, i);
         outRec.idx := i;
         outRec.owner := GetRealOutRec(outRec.owner);
         BuildPath(outRec.pts, FReverseSolution, false, outRec.path);
@@ -4022,7 +4029,7 @@ begin
   Result := Rect64(MaxInt64, MaxInt64, -MaxInt64, -MaxInt64);
   for i := 0 to FVertexArrayList.Count -1 do
   begin
-    vStart := FVertexArrayList[i];
+    vStart := UnsafeGet(FVertexArrayList, i);
     v := vStart;
     repeat
       if v.pt.X < Result.Left then Result.Left := v.pt.X

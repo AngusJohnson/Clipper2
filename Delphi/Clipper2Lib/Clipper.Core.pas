@@ -2,8 +2,8 @@ unit Clipper.Core;
 
 (*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Version   :  Clipper2 - ver.1.0.3                                            *
-* Date      :  20 August 2022                                                  *
+* Version   :  Clipper2 - ver.1.0.4                                            *
+* Date      :  2 September 2022                                                *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  Core Clipper Library module                                     *
 *              Contains structures and functions used throughout the library   *
@@ -71,6 +71,7 @@ type
     Bottom : Int64;
     function Contains(const pt: TPoint64): Boolean; overload;
     function Contains(const rec: TRect64): Boolean; overload;
+    function AsPath: TPath64;
     property Width: Int64 read GetWidth;
     property Height: Int64 read GetHeight;
     property IsEmpty: Boolean read GetIsEmpty;
@@ -88,7 +89,9 @@ type
     Top    : double;
     Right  : double;
     Bottom : double;
-    function PtInside(const pt: TPointD): Boolean;
+    function Contains(const pt: TPointD): Boolean; overload;
+    function Contains(const rec: TRectD): Boolean; overload;
+    function AsPath: TPathD;
     property Width: double read GetWidth;
     property Height: double read GetHeight;
     property IsEmpty: Boolean read GetIsEmpty;
@@ -246,7 +249,8 @@ procedure AppendPaths(var paths: TPaths64; const extra: TPaths64); overload;
 procedure AppendPaths(var paths: TPathsD; const extra: TPathsD); overload;
 
 function ArrayOfPathsToPaths(const ap: TArrayOfPaths): TPaths64;
-function GetIntersectPoint(const ln1a, ln1b, ln2a, ln2b: TPoint64): TPointD;
+function GetIntersectPoint64(const ln1a, ln1b, ln2a, ln2b: TPoint64): TPoint64;
+function GetIntersectPointD(const ln1a, ln1b, ln2a, ln2b: TPoint64): TPointD;
 
 function PointInPolygon(const pt: TPoint64; const polygon: TPath64): TPointInPolygonResult;
 
@@ -259,8 +263,14 @@ function Ellipse(const rec: TRectD; steps: integer = 0): TPathD; overload;
 
 const
   MaxInt64    = 9223372036854775807;
+  invalid64   = MaxInt64;
+  invalidD    = infinity;
+
   NullPointD  : TPointD = (X: 0; Y: 0);
   NullRect64  : TRect64 = (left: 0; top: 0; right: 0; Bottom: 0);
+  InvalidPt64 : TPoint64 = (X: invalid64; Y: invalid64);
+  InvalidPtD :  TPointD = (X: invalidD; Y: invalidD);
+
   NullRectD   : TRectD = (left: 0; top: 0; right: 0; Bottom: 0);
   Tolerance   : Double = 1.0E-15;
 
@@ -306,6 +316,16 @@ begin
   result := (rec.Left >= Left) and (rec.Right <= Right) and
     (rec.Top >= Top) and (rec.Bottom <= Bottom);
 end;
+//------------------------------------------------------------------------------
+
+function TRect64.AsPath: TPath64;
+begin
+  SetLength(Result, 4);
+  Result[0] := Point64(Left, Top);
+  Result[1] := Point64(Right, Top);
+  Result[2] := Point64(Right, Bottom);
+  Result[3] := Point64(Left, Bottom);
+end;
 
 //------------------------------------------------------------------------------
 // TRectD methods ...
@@ -335,10 +355,27 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-function TRectD.PtInside(const pt: TPointD): Boolean;
+function TRectD.Contains(const pt: TPointD): Boolean;
 begin
   result := (pt.X > Left) and (pt.X < Right) and
     (pt.Y > Top) and (pt.Y < Bottom);
+end;
+//------------------------------------------------------------------------------
+
+function TRectD.Contains(const rec: TRectD): Boolean;
+begin
+  result := (rec.Left >= Left) and (rec.Right <= Right) and
+    (rec.Top >= Top) and (rec.Bottom <= Bottom);
+end;
+//------------------------------------------------------------------------------
+
+function TRectD.AsPath: TPathD;
+begin
+  SetLength(Result, 4);
+  Result[0] := PointD(Left, Top);
+  Result[1] := PointD(Right, Top);
+  Result[2] := PointD(Right, Bottom);
+  Result[3] := PointD(Left, Bottom);
 end;
 
 //------------------------------------------------------------------------------
@@ -1450,7 +1487,46 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-function GetIntersectPoint(const ln1a, ln1b, ln2a, ln2b: TPoint64): TPointD;
+function GetIntersectPoint64(const ln1a, ln1b, ln2a, ln2b: TPoint64): TPoint64;
+var
+  x, m1,b1,m2,b2: double;
+begin
+  // see http://astronomy.swin.edu.au/~pbourke/geometry/lineline2d/
+  if (ln1B.X = ln1A.X) then
+  begin
+    if (ln2B.X = ln2A.X) then exit; // parallel lines
+    m2 := (ln2B.Y - ln2A.Y)/(ln2B.X - ln2A.X);
+    b2 := ln2A.Y - m2 * ln2A.X;
+    Result.X := ln1A.X;
+    Result.Y := Round(m2*ln1A.X + b2);
+  end
+  else if (ln2B.X = ln2A.X) then
+  begin
+    m1 := (ln1B.Y - ln1A.Y)/(ln1B.X - ln1A.X);
+    b1 := ln1A.Y - m1 * ln1A.X;
+    Result.X := ln2A.X;
+    Result.Y := Round(m1*ln2A.X + b1);
+  end else
+  begin
+    m1 := (ln1B.Y - ln1A.Y)/(ln1B.X - ln1A.X);
+    b1 := ln1A.Y - m1 * ln1A.X;
+    m2 := (ln2B.Y - ln2A.Y)/(ln2B.X - ln2A.X);
+    b2 := ln2A.Y - m2 * ln2A.X;
+    if Abs(m1 - m2) > 1.0E-15 then
+    begin
+      x := (b2 - b1)/(m1 - m2);
+      Result.X := Round(x);
+      Result.Y := Round(m1 * x + b1);
+    end else
+    begin
+      Result.X := Round((ln1a.X + ln1b.X) * 0.5);
+      Result.Y := Round((ln1a.Y + ln1b.Y) * 0.5);
+    end;
+  end;
+end;
+//------------------------------------------------------------------------------
+
+function GetIntersectPointD(const ln1a, ln1b, ln2a, ln2b: TPoint64): TPointD;
 var
   m1,b1,m2,b2: double;
 begin
