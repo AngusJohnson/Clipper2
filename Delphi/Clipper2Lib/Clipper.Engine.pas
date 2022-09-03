@@ -1010,35 +1010,36 @@ end;
 
 function EdgesAdjacentInAEL(node: PIntersectNode): Boolean;
   {$IFDEF INLINING} inline; {$ENDIF}
+var
+  active1, active2: PActive;
 begin
-  with node^ do
-    Result := (active1.nextInAEL = active2) or (active1.prevInAEL = active2);
+  active1 := node.active1;
+  active2 := node.active2;
+  Result := (active1.nextInAEL = active2) or (active1.prevInAEL = active2);
 end;
 //------------------------------------------------------------------------------
 
 function IntersectListSort(node1, node2: Pointer): Integer;
 var
-  i1: PIntersectNode absolute node1;
-  i2: PIntersectNode absolute node2;
+  pt1, pt2: PPoint64;
   i: Int64;
 begin
+  pt1 := @PIntersectNode(node1).pt;
+  pt2 := @PIntersectNode(node2).pt;
+  i := pt2.Y - pt1.Y;
   // note to self - can't return int64 values :)
-  i := i2.pt.Y - i1.pt.Y;
-  if (i = 0) then
-  begin
-    if (i1 = i2) then
-    begin
-      Result := 0;
-      Exit;
-    end;
-    // Sort by X too. Not essential, but it significantly
-    // speeds up the secondary sort in ProcessIntersectList .
-    i := i1.pt.X - i2.pt.X;
-  end;
-
   if i > 0 then Result := 1
   else if i < 0 then Result := -1
-  else result := 0;
+  else if (pt1 = pt2) then Result := 0
+  else
+  begin
+    // Sort by X too. Not essential, but it significantly
+    // speeds up the secondary sort in ProcessIntersectList .
+    i := pt1.X - pt2.X;
+    if i > 0 then Result := 1
+    else if i < 0 then Result := -1
+    else Result := 0;
+  end;
 end;
 //------------------------------------------------------------------------------
 
@@ -3167,8 +3168,9 @@ end;
 
 procedure TClipperBase.ProcessIntersectList;
 var
-  i, j, highI: Integer;
-  node: PIntersectNode;
+  i: Integer;
+  nodeQ: PIntersectNode;
+  nodeI, nodeJ: ^PIntersectNode;
   op1, op2: POutpt;
 begin
   // The list of required intersections now needs to be processed in a specific
@@ -3177,27 +3179,28 @@ begin
   // are adjacent at the time of intersection.
 
   // First we do a quicksort so that intersections will be processed
-  // generally from largest Y to smallest (as long as they're adjacent)
+  // generally from largest Y to smallest
   FIntersectList.Sort(IntersectListSort);
-
-  highI := FIntersectList.Count - 1;
-  for i := 0 to highI do
+  nodeI := @FIntersectList.List[0];
+  for i := 0 to FIntersectList.Count - 1 do
   begin
-    // make sure edges are adjacent, otherwise
+    // now make sure edges are adjacent, otherwise
     // change the intersection order before proceeding
-    if not EdgesAdjacentInAEL(UnsafeGet(FIntersectList, i)) then
+    if not EdgesAdjacentInAEL(nodeI^) then
     begin
-      j := i + 1;
-      while not EdgesAdjacentInAEL(UnsafeGet(FIntersectList, j)) do inc(j);
+      nodeJ := nodeI;
+      repeat
+        inc(nodeJ);
+      until EdgesAdjacentInAEL(nodeJ^);
+
       // now swap intersection order
-      node := FIntersectList[i];
-      FIntersectList[i] := UnsafeGet(FIntersectList, j);
-      FIntersectList[j] := node;
+      nodeQ := nodeI^;
+      nodeI^ := nodeJ^;
+      nodeJ^ := nodeQ;
     end;
 
     // now process the intersection
-    node := UnsafeGet(FIntersectList, i);
-    with node^ do
+    with nodeI^^ do
     begin
       IntersectEdges(active1, active2, pt);
       SwapPositionsInAEL(active1, active2);
@@ -3217,6 +3220,7 @@ begin
           AddJoin(op1, op2);
       end;
     end;
+    inc(nodeI);
   end;
   // Edges should once again be correctly ordered (left to right) in the AEL.
 end;
@@ -3875,20 +3879,25 @@ end;
 function GetBounds(const path: TPath64): TRect64;
 var
   i: integer;
+  pX, pY: PInt64;
 begin
   if Length(path) = 0 then
   begin
     Result := NullRect64;
     Exit;
   end;
-
   result := Rect64(MaxInt64, MaxInt64, -MaxInt64, -MaxInt64);
+  pX := @path[0].X;
+  pY := @path[0].Y;
+
   for i := 0 to High(path) do
   begin
-    if (path[i].X < result.left) then result.left := path[i].X;
-    if (path[i].X > result.right) then result.right := path[i].X;
-    if (path[i].Y < result.top) then result.top := path[i].Y;
-    if (path[i].Y > result.bottom) then result.bottom := path[i].Y;
+
+    if (pX^ < result.left) then result.left := pX^;
+    if (pX^ > result.right) then result.right := pX^;
+    if (pY^ < result.top) then result.top := pY^;
+    if (pY^ > result.bottom) then result.bottom := pY^;
+    inc(pX, 2); inc(pY, 2);
   end;
 end;
 //------------------------------------------------------------------------------
@@ -4159,12 +4168,21 @@ begin
 end;
 //------------------------------------------------------------------------------
 
+type
+  PPolyPathBase = ^TPolyPathBase;
+
 procedure TPolyPathBase.Clear;
 var
   i: integer;
+  ppb: PPolyPathBase;
 begin
+  if FChildList.Count = 0 then Exit;
+  ppb := @FChildList.List[0];
   for i := 0 to FChildList.Count -1 do
-    TPolyPathBase(FChildList[i]).Free;
+  begin
+    ppb^.Free;
+    inc(ppb);
+  end;
   FChildList.Clear;
 end;
 //------------------------------------------------------------------------------
