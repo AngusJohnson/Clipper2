@@ -6,49 +6,84 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
-option(CLIPPER2_UTILS "Build utilities" OFF)
-option(CLIPPER2_EXAMPLES "Build examples" OFF)
-option(CLIPPER2_TESTS "Build tests" OFF)
+option(CLIPPER2_STATIC "Build static libraries" ON)
+option(CLIPPER2_UTILS "Build utilities" ON)
+option(CLIPPER2_EXAMPLES "Build examples" ON)
+option(CLIPPER2_TESTS "Build tests" ON)
 
-add_library(Clipper2 STATIC
+if (CLIPPER2_STATIC)
+  set(CLIPPER2_VARIANT STATIC)
+else()
+  set(CLIPPER2_VARIANT SHARED)
+endif()
+
+set(CLIPPER2_INC
   Clipper2Lib/clipper.core.h
-  Clipper2Lib/clipper.engine.cpp
   Clipper2Lib/clipper.engine.h
   Clipper2Lib/clipper.h
   Clipper2Lib/clipper.minkowski.h
-  Clipper2Lib/clipper.offset.cpp
   Clipper2Lib/clipper.offset.h
 )
+
+set(CLIPPER2_SRC
+  Clipper2Lib/clipper.engine.cpp
+  Clipper2Lib/clipper.offset.cpp
+)
+
+# 2d version of Clipper2
+add_library(Clipper2 ${CLIPPER2_VARIANT} ${CLIPPER2_INC} ${CLIPPER2_SRC})
 
 target_include_directories(Clipper2
   PUBLIC Clipper2Lib
   SYSTEM INTERFACE Clipper2Lib
 )
 
+# Clipper2 but with the ability to accommodate 3d points
+add_library(Clipper2Z ${CLIPPER2_VARIANT} ${CLIPPER2_INC} ${CLIPPER2_SRC})
+target_include_directories(Clipper2Z
+  PUBLIC Clipper2Lib
+  SYSTEM INTERFACE Clipper2Lib
+)
+target_compile_definitions(Clipper2Z PUBLIC USINGZ)
+
 if (WIN32)
   target_compile_options(Clipper2 PRIVATE /W4 /WX)
+  target_compile_options(Clipper2Z PRIVATE /W4 /WX)
 else()
   target_compile_options(Clipper2 PRIVATE -Wall -Wextra -Wpedantic -Werror)
   target_link_libraries(Clipper2 PUBLIC -lm)
+
+  target_compile_options(Clipper2Z PRIVATE -Wall -Wextra -Wpedantic -Werror)
+  target_link_libraries(Clipper2Z PUBLIC -lm)
 endif()
 
 if(CLIPPER2_UTILS OR CLIPPER2_TESTS OR CLIPPER2_EXAMPLES)
-
-  add_library(Clipper2utils STATIC
-    Utils/clipper.svg.cpp
+  set(CLIPPER2_UTILS_INC
     Utils/clipper.svg.h
-    Utils/ClipFileLoad.cpp
     Utils/ClipFileLoad.h
-    Utils/ClipFileSave.cpp
     Utils/ClipFileSave.h
   )
+  set(CLIPPER2_UTILS_SRC
+    Utils/clipper.svg.cpp
+    Utils/ClipFileLoad.cpp
+    Utils/ClipFileSave.cpp
+  )
+
+  add_library(Clipper2utils ${CLIPPER2_VARIANT} ${CLIPPER2_UTILS_INC} ${CLIPPER2_UTILS_SRC})
   
-  target_link_libraries(Clipper2utils PRIVATE Clipper2)
+  target_link_libraries(Clipper2utils PUBLIC Clipper2)
   target_include_directories(Clipper2utils
     PUBLIC Utils
     SYSTEM INTERFACE Utils
   )
 
+  add_library(Clipper2Zutils ${CLIPPER2_VARIANT} ${CLIPPER2_UTILS_INC} ${CLIPPER2_UTILS_SRC})
+
+  target_link_libraries(Clipper2Zutils PUBLIC Clipper2Z)
+  target_include_directories(Clipper2Zutils
+    PUBLIC Utils
+    SYSTEM INTERFACE Utils
+  )
 endif()
 
 if(CLIPPER2_EXAMPLES)
@@ -67,29 +102,6 @@ if(CLIPPER2_EXAMPLES)
   file(COPY Clipper2Lib/clipper.offset.h DESTINATION Clipper2ZLib FILE_PERMISSIONS OWNER_READ GROUP_READ WORLD_READ )
   file(COPY Clipper2Lib/clipper.offset.cpp DESTINATION Clipper2ZLib FILE_PERMISSIONS OWNER_READ GROUP_READ WORLD_READ )
 
-  # add the Clipper2Z library
-  add_library(Clipper2Z STATIC
-    Clipper2ZLib/clipper.core.h
-    Clipper2ZLib/clipper.engine.cpp
-    Clipper2ZLib/clipper.engine.h
-    Clipper2ZLib/clipper.h
-    Clipper2ZLib/clipper.minkowski.h
-    Clipper2ZLib/clipper.offset.cpp
-    Clipper2ZLib/clipper.offset.h
-  )
-
-  target_include_directories(Clipper2Z
-    PUBLIC Clipper2ZLib
-    SYSTEM INTERFACE Clipper2ZLib
-  )
-
-  if (WIN32)
-    target_compile_options(Clipper2Z PRIVATE /W4 /WX)
-  else()
-    target_compile_options(Clipper2Z PRIVATE -Wall -Wextra -Wpedantic -Werror)
-    target_link_libraries(Clipper2Z PUBLIC -lm)
-  endif()
-
   # copy utils
   install( DIRECTORY Utils DESTINATION UtilsZ )
   file(COPY Utils/clipper.svg.cpp DESTINATION UtilsZ FILE_PERMISSIONS OWNER_READ GROUP_READ WORLD_READ )
@@ -99,20 +111,7 @@ if(CLIPPER2_EXAMPLES)
   file(COPY Utils/ClipFileSave.cpp DESTINATION UtilsZ FILE_PERMISSIONS OWNER_READ GROUP_READ WORLD_READ )
   file(COPY Utils/ClipFileSave.h DESTINATION UtilsZ FILE_PERMISSIONS OWNER_READ GROUP_READ WORLD_READ )
 
-  add_library(Clipper2Zutils STATIC
-    UtilsZ/clipper.svg.cpp
-    UtilsZ/clipper.svg.h
-    UtilsZ/ClipFileLoad.cpp
-    UtilsZ/ClipFileLoad.h
-    UtilsZ/ClipFileSave.cpp
-    UtilsZ/ClipFileSave.h
-  )
 
-  target_link_libraries(Clipper2Zutils PRIVATE Clipper2Z)
-  target_include_directories(Clipper2Zutils
-    PUBLIC UtilsZ
-    SYSTEM INTERFACE UtilsZ
-  )
   ##########################################################################
   ##########################################################################
 
@@ -130,10 +129,6 @@ if(CLIPPER2_EXAMPLES)
 
   add_executable(UsingZ1 Examples/UsingZ/UsingZ1.cpp)
   target_link_libraries(UsingZ1 PRIVATE Clipper2Z Clipper2Zutils)
-  target_compile_definitions(Clipper2Z PRIVATE USINGZ)
-  target_compile_definitions(Clipper2Zutils PRIVATE USINGZ)
-  target_compile_definitions(UsingZ1 PRIVATE USINGZ)
-
 endif()
 
 
@@ -148,7 +143,7 @@ if(CLIPPER2_TESTS)
 
   add_subdirectory("${PROJECT_SOURCE_DIR}/Tests/googletest/")
 
-  add_executable(ClipperTests
+  set(ClipperTests_SRC
     Tests/TestLines.cpp
     Tests/TestOffsetOrientation.cpp
     Tests/TestOrientation.cpp
@@ -160,13 +155,24 @@ if(CLIPPER2_TESTS)
     Tests/TestRandomPaths.cpp
     Tests/TestTrimCollinear.cpp
   )
+  add_executable(ClipperTests ${ClipperTests_SRC})
+  
+  add_executable(ClipperTestsZ ${ClipperTests_SRC})
 
   target_link_libraries(ClipperTests gtest gmock gtest_main Clipper2 Clipper2utils)
+  target_link_libraries(ClipperTestsZ gtest gmock gtest_main Clipper2Z Clipper2Zutils)
 
   gtest_discover_tests(ClipperTests
         # set a working directory so your project root so that you can find test data via paths relative to the project root
         WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}/../Tests
         PROPERTIES VS_DEBUGGER_WORKING_DIRECTORY "${PROJECT_DIR}"
+  )
+
+  gtest_discover_tests(ClipperTestsZ
+    # set a working directory so your project root so that you can find test data via paths relative to the project root
+    WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}/../Tests
+    PROPERTIES VS_DEBUGGER_WORKING_DIRECTORY "${PROJECT_DIR}"
+    TEST_SUFFIX "_USINGZ"
   )
 
   install( FILES  ../Tests/PolytreeHoleOwner.txt DESTINATION . )
