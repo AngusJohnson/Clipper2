@@ -3948,7 +3948,7 @@ namespace Clipper2Lib
     {
       double result = Polygon == null ? 0 : Clipper.Area(Polygon);
       foreach (PolyPath64 child in _childs)
-			result += child.Area();
+        result += child.Area();
       return result;
     }
   }
