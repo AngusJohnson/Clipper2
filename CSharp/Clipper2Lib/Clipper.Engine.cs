@@ -2104,7 +2104,7 @@ namespace Clipper2Lib
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private bool TrimHorz(Active horzEdge, bool preserveCollinear)
+    private void TrimHorz(Active horzEdge, bool preserveCollinear)
     {
       bool result = false;
       Point64 pt = NextVertex(horzEdge).pt;
@@ -2124,7 +2124,6 @@ namespace Clipper2Lib
         pt = NextVertex(horzEdge).pt;
       }
       if (result) SetDx(horzEdge); // +/-infinity
-      return result;
     }
 
     private void DoHorizontal(Active horz)
