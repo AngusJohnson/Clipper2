@@ -3947,8 +3947,12 @@ namespace Clipper2Lib
     public double Area()
     {
       double result = Polygon == null ? 0 : Clipper.Area(Polygon);
-      foreach (PolyPath64 child in _childs)
-			result += child.Area();
+      foreach (var polyPathBase in _childs)
+      {
+        PolyPath64 child = (PolyPath64)polyPathBase;
+        result += child.Area();
+      }
+
       return result;
     }
   }
@@ -3984,8 +3988,12 @@ namespace Clipper2Lib
     public double Area()
     {
       double result = Polygon == null ? 0 : Clipper.Area(Polygon);
-      foreach (PolyPath64 child in _childs)
+      foreach (var polyPathBase in _childs)
+      {
+        PolyPath64 child = (PolyPath64)polyPathBase;
         result += child.Area();
+      }
+
       return result;
     }
   }
