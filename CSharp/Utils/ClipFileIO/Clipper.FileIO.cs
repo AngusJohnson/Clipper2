@@ -108,7 +108,8 @@ namespace Clipper2Lib
           result = true;
           continue;
         }
-        else if (num > 0) continue;
+
+        if (num > 0) continue;
 
         if (s.IndexOf("CLIPTYPE: ") == 0)
         {
@@ -154,7 +155,7 @@ namespace Clipper2Lib
           if (paths == null || paths.Count == 0)
           {
             if (GetIdx == 3) return result;
-            else if (s.IndexOf("SUBJECTS_OPEN") == 0) GetIdx = 2;
+            if (s.IndexOf("SUBJECTS_OPEN") == 0) GetIdx = 2;
             else if (s.IndexOf("CLIPS") == 0) GetIdx = 3;
             else return result;
             continue;

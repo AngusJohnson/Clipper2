@@ -175,7 +175,7 @@ namespace Clipper2Lib
         for (int j = 0; j < p.Count; j++)
         {
           if (p[j].Y < lp.Y) continue;
-          else if (p[j].Y > lp.Y || p[j].X < lp.X)
+          if (p[j].Y > lp.Y || p[j].X < lp.X)
           {
             result = i;
             lp = p[j];
@@ -235,11 +235,12 @@ namespace Clipper2Lib
         double b2 = pt2a.y - m2 * pt2a.x;
         return new PointD(pt1a.x, m2* pt1a.x + b2);
       }
-      else if (pt2a.x == pt2b.x) //vertical
+
+      if (pt2a.x == pt2b.x) //vertical
       {
         double m1 = (pt1b.y - pt1a.y) / (pt1b.x - pt1a.x);
         double b1 = pt1a.y - m1 * pt1a.x;
-          return new PointD(pt2a.x, m1* pt2a.x + b1);
+        return new PointD(pt2a.x, m1* pt2a.x + b1);
       }
       else
       {

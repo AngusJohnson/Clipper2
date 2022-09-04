@@ -704,8 +704,7 @@ namespace Clipper2Lib
       {
         if (!isOpen || len < 2 || path[0] == path[1])
           return new Path64();
-        else
-          return path;
+        return path;
       }
 
       Path64 result = new Path64(len - i);
