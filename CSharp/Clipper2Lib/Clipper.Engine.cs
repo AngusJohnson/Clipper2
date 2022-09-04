@@ -598,9 +598,9 @@ namespace Clipper2Lib
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static double AreaTriangle(Point64 pt1, Point64 pt2, Point64 pt3)
     {
-      return (double) (pt3.Y + pt1.Y) * (double) (pt3.X - pt1.X) +
-        (double) (pt1.Y + pt2.Y) * (double) (pt1.X - pt2.X) +
-        (double) (pt2.Y + pt3.Y) * (double) (pt2.X - pt3.X);
+      return (double) (pt3.Y + pt1.Y) * (pt3.X - pt1.X) +
+        (double) (pt1.Y + pt2.Y) * (pt1.X - pt2.X) +
+        (double) (pt2.Y + pt3.Y) * (pt2.X - pt3.X);
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
