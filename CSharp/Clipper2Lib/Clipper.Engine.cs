@@ -36,6 +36,7 @@ namespace Clipper2Lib
     IsOutside = 2
   };
 
+  [Flags]
   internal enum VertexFlags
   {
     None = 0,
