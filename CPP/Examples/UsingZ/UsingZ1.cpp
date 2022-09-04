@@ -43,7 +43,7 @@ int main(int argc, char* argv[])
     for (const Point64& pt : solution[0])
       if (pt.z == 1)
       {
-        ellipses.push_back(Ellipse(RectD(pt.x - 3, pt.y - 3, pt.x + 3, pt.y + 3), 11));
+        ellipses.push_back(Ellipse(RectD(pt.x - 3., pt.y - 3., pt.x + 3., pt.y + 3.), 11));
       }
     SvgAddClip(svg, ellipses, FillRule::NonZero);
   }

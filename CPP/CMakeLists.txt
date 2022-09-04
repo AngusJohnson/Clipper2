@@ -6,16 +6,9 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
-option(CLIPPER2_STATIC "Build static libraries" ON)
 option(CLIPPER2_UTILS "Build utilities" ON)
 option(CLIPPER2_EXAMPLES "Build examples" ON)
 option(CLIPPER2_TESTS "Build tests" ON)
-
-if (CLIPPER2_STATIC)
-  set(CLIPPER2_VARIANT STATIC)
-else()
-  set(CLIPPER2_VARIANT SHARED)
-endif()
 
 set(CLIPPER2_INC
   Clipper2Lib/clipper.core.h
@@ -31,7 +24,7 @@ set(CLIPPER2_SRC
 )
 
 # 2d version of Clipper2
-add_library(Clipper2 ${CLIPPER2_VARIANT} ${CLIPPER2_INC} ${CLIPPER2_SRC})
+add_library(Clipper2 STATIC ${CLIPPER2_INC} ${CLIPPER2_SRC})
 
 target_include_directories(Clipper2
   PUBLIC Clipper2Lib
@@ -39,7 +32,7 @@ target_include_directories(Clipper2
 )
 
 # Clipper2 but with the ability to accommodate 3d points
-add_library(Clipper2Z ${CLIPPER2_VARIANT} ${CLIPPER2_INC} ${CLIPPER2_SRC})
+add_library(Clipper2Z STATIC ${CLIPPER2_INC} ${CLIPPER2_SRC})
 target_include_directories(Clipper2Z
   PUBLIC Clipper2Lib
   SYSTEM INTERFACE Clipper2Lib
@@ -69,7 +62,7 @@ if(CLIPPER2_UTILS OR CLIPPER2_TESTS OR CLIPPER2_EXAMPLES)
     Utils/ClipFileSave.cpp
   )
 
-  add_library(Clipper2utils ${CLIPPER2_VARIANT} ${CLIPPER2_UTILS_INC} ${CLIPPER2_UTILS_SRC})
+  add_library(Clipper2utils STATIC ${CLIPPER2_UTILS_INC} ${CLIPPER2_UTILS_SRC})
   
   target_link_libraries(Clipper2utils PUBLIC Clipper2)
   target_include_directories(Clipper2utils
@@ -77,7 +70,7 @@ if(CLIPPER2_UTILS OR CLIPPER2_TESTS OR CLIPPER2_EXAMPLES)
     SYSTEM INTERFACE Utils
   )
 
-  add_library(Clipper2Zutils ${CLIPPER2_VARIANT} ${CLIPPER2_UTILS_INC} ${CLIPPER2_UTILS_SRC})
+  add_library(Clipper2Zutils STATIC ${CLIPPER2_UTILS_INC} ${CLIPPER2_UTILS_SRC})
 
   target_link_libraries(Clipper2Zutils PUBLIC Clipper2Z)
   target_include_directories(Clipper2Zutils
