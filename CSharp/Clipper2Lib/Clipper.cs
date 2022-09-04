@@ -30,6 +30,7 @@ namespace Clipper2Lib
 
   public static class Clipper
   {
+    internal const double floatingPointTolerance = 1E-15;
 
     public static Rect64 MaxInvalidRect64 = new Rect64(
       long.MaxValue, long.MaxValue, long.MinValue, long.MinValue);
@@ -274,7 +275,7 @@ namespace Clipper2Lib
 
     public static Path64 ScalePath(Path64 path, double scale)
     {
-      if (scale == 1) return path;
+      if (Math.Abs(scale - 1) < floatingPointTolerance) return path;
       Path64 result = new Path64(path.Count);
 #if USINGZ
       foreach (Point64 pt in path)
@@ -288,7 +289,7 @@ namespace Clipper2Lib
 
     public static Paths64 ScalePaths(Paths64 paths, double scale)
     {
-      if (scale == 1) return paths;
+      if (Math.Abs(scale - 1) < floatingPointTolerance) return paths;
       Paths64 result = new Paths64(paths.Count);
       foreach (Path64 path in paths)
         result.Add(ScalePath(path, scale));
@@ -297,7 +298,7 @@ namespace Clipper2Lib
 
     public static PathD ScalePath(PathD path, double scale)
     {
-      if (scale == 1) return path;
+      if (Math.Abs(scale - 1) < floatingPointTolerance) return path;
       PathD result = new PathD(path.Count);
       foreach (PointD pt in path)
         result.Add(new PointD(pt, scale));
@@ -306,7 +307,7 @@ namespace Clipper2Lib
 
     public static PathsD ScalePaths(PathsD paths, double scale)
     {
-      if (scale == 1) return paths;
+      if (Math.Abs(scale - 1) < floatingPointTolerance) return paths;
       PathsD result = new PathsD(paths.Count);
       foreach (PathD path in paths)
         result.Add(ScalePath(path, scale));

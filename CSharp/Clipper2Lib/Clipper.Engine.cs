@@ -232,6 +232,8 @@ namespace Clipper2Lib
 
   public class ClipperBase
   {
+    internal const double floatingPointTolerance = 1E-15;
+
     private ClipType _cliptype;
     private FillRule _fillrule;
     private Active? _actives;
@@ -419,7 +421,7 @@ namespace Clipper2Lib
     private static Point64 GetIntersectPoint(Active ae1, Active ae2)
     {
       double b1, b2;
-      if (ae1.dx == ae2.dx) return ae1.top;
+      if (Math.Abs(ae1.dx - ae2.dx) < floatingPointTolerance) return ae1.top;
 
       if (ae1.dx == 0)
       {
