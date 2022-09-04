@@ -11,7 +11,7 @@ jobs:
     steps:
     - uses: actions/checkout@v2
     - name: Copy Clipper2Lib to USINGZ directory
-      run: cp -f Clipper2Lib/*.cs USINGZ/
+      run: cp Clipper2Lib/*.cs USINGZ/
     - name: Setup .NET Core
       uses: actions/setup-dotnet@v1
       with: 
