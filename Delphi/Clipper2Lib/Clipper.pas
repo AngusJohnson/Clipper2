@@ -56,12 +56,12 @@ const
   ctDifference    = Clipper.Core.ctDifference;
   ctXor           = Clipper.Core.ctXor;
 
-function BooleanOp(clipType: TClipType; fillRule: TFillRule;
-  const subjects, clips: TPaths64): TPaths64; overload;
-function BooleanOp(clipType: TClipType; fillRule: TFillRule;
-  const subjects, clips: TPathsD; decimalPrec: integer = 2): TPathsD; overload;
-procedure BooleanOp(clipType: TClipType; fillRule: TFillRule;
-  const subjects, clips: TPaths64; polytree: TPolyTree64); overload;
+function BooleanOp(clipType: TClipType;
+  const subjects, clips: TPaths64; fillRule: TFillRule): TPaths64; overload;
+function BooleanOp(clipType: TClipType; const subjects, clips:
+  TPathsD; fillRule: TFillRule; decimalPrec: integer = 2): TPathsD; overload;
+procedure BooleanOp(clipType: TClipType; const subjects, clips: TPaths64;
+  fillRule: TFillRule; polytree: TPolyTree64); overload;
 
 function Intersect(const subjects, clips: TPaths64;
   fillRule: TFillRule): TPaths64; overload;
@@ -195,8 +195,8 @@ end;
 //------------------------------------------------------------------------------
 //------------------------------------------------------------------------------
 
-function BooleanOp(clipType: TClipType; fillRule: TFillRule;
-  const subjects, clips: TPaths64): TPaths64;
+function BooleanOp(clipType: TClipType;
+  const subjects, clips: TPaths64; fillRule: TFillRule): TPaths64;
 begin
   with TClipper64.Create do
   try
@@ -209,8 +209,8 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-function BooleanOp(clipType: TClipType; fillRule: TFillRule;
-  const subjects, clips: TPathsD; decimalPrec: integer = 2): TPathsD;
+function BooleanOp(clipType: TClipType; const subjects, clips: TPathsD;
+  fillRule: TFillRule; decimalPrec: integer = 2): TPathsD;
 begin
   with TClipperD.Create(decimalPrec) do
   try
@@ -223,8 +223,8 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-procedure BooleanOp(clipType: TClipType; fillRule: TFillRule;
-  const subjects, clips: TPaths64; polytree: TPolyTree64);
+procedure BooleanOp(clipType: TClipType; const subjects, clips: TPaths64;
+  fillRule: TFillRule; polytree: TPolyTree64);
 var
   dummy: TPaths64;
 begin
@@ -241,66 +241,66 @@ end;
 
 function Intersect(const subjects, clips: TPaths64; fillRule: TFillRule): TPaths64;
 begin
-  Result := BooleanOp(ctIntersection, fillRule, subjects, clips);
+  Result := BooleanOp(ctIntersection, subjects, clips, fillRule);
 end;
 //------------------------------------------------------------------------------
 
 function Union(const subjects, clips: TPaths64; fillRule: TFillRule): TPaths64;
 begin
-  Result := BooleanOp(ctUnion, fillRule, subjects, clips);
+  Result := BooleanOp(ctUnion, subjects, clips, fillRule);
 end;
 //------------------------------------------------------------------------------
 
 function Union(const subjects: TPaths64; fillRule: TFillRule): TPaths64;
 begin
-  Result := BooleanOp(ctUnion, fillRule, subjects, nil);
+  Result := BooleanOp(ctUnion, subjects, nil, fillRule);
 end;
 //------------------------------------------------------------------------------
 
 function Difference(const subjects, clips: TPaths64; fillRule: TFillRule): TPaths64;
 begin
-  Result := BooleanOp(ctDifference, fillRule, subjects, clips);
+  Result := BooleanOp(ctDifference, subjects, clips, fillRule);
 end;
 //------------------------------------------------------------------------------
 
 function XOR_(const subjects, clips: TPaths64; fillRule: TFillRule): TPaths64;
 begin
-  Result := BooleanOp(ctXor, fillRule, subjects, clips);
+  Result := BooleanOp(ctXor, subjects, clips, fillRule);
 end;
 //------------------------------------------------------------------------------
 
 function Intersect(const subjects, clips: TPathsD;
   fillRule: TFillRule; decimalPrec: integer = 2): TPathsD;
 begin
-  Result := BooleanOp(ctIntersection, fillRule, subjects, clips, decimalPrec);
+  Result := BooleanOp(ctIntersection, subjects, clips, fillRule, decimalPrec);
 end;
 //------------------------------------------------------------------------------
 
 function Union(const subjects, clips: TPathsD;
   fillRule: TFillRule; decimalPrec: integer = 2): TPathsD;
 begin
-  Result := BooleanOp(ctUnion, fillRule, subjects, clips, decimalPrec);
+  Result := BooleanOp(ctUnion, subjects, clips, fillRule, decimalPrec);
 end;
 //------------------------------------------------------------------------------
 
 function Union(const subjects: TPathsD;
   fillRule: TFillRule; decimalPrec: integer = 2): TPathsD;
 begin
-  Result := BooleanOp(ctUnion, fillRule, subjects, nil, decimalPrec);
+  Result := BooleanOp(ctUnion, subjects, nil, fillRule, decimalPrec);
 end;
 //------------------------------------------------------------------------------
 
 function Difference(const subjects, clips: TPathsD;
   fillRule: TFillRule; decimalPrec: integer = 2): TPathsD;
 begin
-  Result := BooleanOp(ctDifference, fillRule, subjects, clips, decimalPrec);
+  Result := BooleanOp(ctDifference, subjects, clips, fillRule, decimalPrec);
 end;
 //------------------------------------------------------------------------------
 
 function XOR_(const subjects, clips: TPathsD;
   fillRule: TFillRule; decimalPrec: integer = 2): TPathsD;
 begin
-  Result := BooleanOp(ctXor, fillRule, subjects, clips, decimalPrec);
+  Result := BooleanOp(ctXor, subjects, clips, fillRule, decimalPrec);
 end;
 //------------------------------------------------------------------------------
 //------------------------------------------------------------------------------

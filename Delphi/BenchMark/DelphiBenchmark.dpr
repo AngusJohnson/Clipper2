@@ -25,8 +25,8 @@ var
   maxWidth  : integer   = 800;
   maxHeight : integer   = 600;
   minEdges  : integer   = 1000;
-  maxEdges  : integer   = 4000;
-  loopCount : integer   = 3;
+  maxEdges  : integer   = 5000;
+  loopCount : integer   = 2;
   /////////////////////////////
 begin
   Randomize;
@@ -50,7 +50,7 @@ begin
       clip[0] := MakeRandomPath(maxWidth, maxHeight, edgeCount);
 
       begin
-        DoTimer(@timerResult);
+        DoTimer(timerResult);
         solution := Intersect(subj, clip, frNonZero);
       end;
       timeTotal := timeTotal + timerResult;

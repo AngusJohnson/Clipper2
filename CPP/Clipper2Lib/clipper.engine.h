@@ -1,7 +1,7 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Version   :  Clipper2 - ver.1.0.3                                            *
-* Date      :  21 August 2022                                                  *
+* Version   :  Clipper2 - ver.1.0.4                                            *
+* Date      :  4 September 2022                                                *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  This is the main polygon clipping module                        *
@@ -205,11 +205,6 @@ namespace Clipper2Lib {
 		void ProcessIntersectList();
 		void SwapPositionsInAEL(Active& edge1, Active& edge2);
 		OutPt* AddOutPt(const Active &e, const Point64& pt);
-		bool TestJoinWithPrev1(const Active& e, int64_t curr_y);
-		bool TestJoinWithPrev2(const Active& e, const Point64& curr_pt);
-		bool TestJoinWithNext1(const Active& e, int64_t curr_y);
-		bool TestJoinWithNext2(const Active& e, const Point64& curr_pt);
-
 		OutPt* AddLocalMinPoly(Active &e1, Active &e2, 
 			const Point64& pt, bool is_new = false);
 		OutPt* AddLocalMaxPoly(Active &e1, Active &e2, const Point64& pt);

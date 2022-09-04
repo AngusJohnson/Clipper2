@@ -16,7 +16,7 @@ type
   ['{A50173E8-6497-4F83-B4A8-9C0D5D709834}']
   end;
 
-function DoTimer(timeResult: Pdouble): ITimer;
+function DoTimer(out timeResult: double): ITimer;
 
 implementation
 
@@ -81,14 +81,14 @@ begin
   Dispose(Inst);
 end;
 
-function DoTimer(timeResult: Pdouble): ITimer;
+function DoTimer(out timeResult: double): ITimer;
 var
   timer: PTimerData;
 begin
   New(timer);
   timer.FVTable:= @TimerVTable;
   timer.FRefCount:= 0;
-  timer.FResult := timeResult;
+  timer.FResult := @timeResult;
   QueryPerformanceFrequency(timer.FTimeFreq);
   Result := ITimer(timer);
 end;

@@ -3,7 +3,7 @@ unit Clipper.Core;
 (*******************************************************************************
 * Author    :  Angus Johnson                                                   *
 * Version   :  Clipper2 - ver.1.0.4                                            *
-* Date      :  2 September 2022                                                *
+* Date      :  3 September 2022                                                *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  Core Clipper Library module                                     *
 *              Contains structures and functions used throughout the library   *
@@ -118,6 +118,8 @@ function IsPositive(const path: TPathD): Boolean; overload;
 function CrossProduct(const pt1, pt2, pt3: TPoint64): double; overload;
   {$IFDEF INLINING} inline; {$ENDIF}
 function CrossProduct(const pt1, pt2, pt3: TPointD): double; overload;
+  {$IFDEF INLINING} inline; {$ENDIF}
+function CrossProduct(const vec1, vec2: TPointD): double; overload;
   {$IFDEF INLINING} inline; {$ENDIF}
 function CrossProduct(vec1x, vec1y, vec2x, vec2y: double): double; overload;
   {$IFDEF INLINING} inline; {$ENDIF}
@@ -1387,6 +1389,12 @@ begin
   result := CrossProduct(
     pt2.X - pt1.X, pt2.Y - pt1.Y,
     pt3.X - pt2.X, pt3.Y - pt2.Y);
+end;
+//------------------------------------------------------------------------------
+
+function CrossProduct(const vec1, vec2: TPointD): double;
+begin
+  result := (vec1.X * vec2.Y - vec1.Y * vec2.X);
 end;
 //------------------------------------------------------------------------------
 

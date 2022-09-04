@@ -1,7 +1,7 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Version   :  Clipper2 - ver.1.0.3                                            *
-* Date      :  20 August 2022                                                  *
+* Version   :  Clipper2 - ver.1.0.4                                            *
+* Date      :  4 August 2022                                                   *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  Path Offset (Inflate/Shrink)                                    *
@@ -219,16 +219,19 @@ void ClipperOffset::DoRound(PathGroup& group, const Point64& pt,
 
 void ClipperOffset::OffsetPoint(PathGroup& group, Path64& path, size_t j, size_t& k)
 {
-	//A: angle between adjoining edges (on left side WRT winding direction).
-	//A == 0 deg (or A == 360 deg): collinear edges heading in same direction
-	//A == 180 deg: collinear edges heading in opposite directions (i.e. a 'spike')
-	//sin(A) < 0: convex on left.
-	//cos(A) > 0: angles on both left and right sides > 90 degrees
-	double sin_a = norms[k].x * norms[j].y - norms[j].x * norms[k].y;
+	// Let A = change in angle where edges join
+	// A == 0: ie no change in angle (flat join)
+	// A == PI: edges 'spike'
+	// sin(A) < 0: right turning
+	// cos(A) < 0: change in angle is more than 90 degree
+
+	double sin_a = CrossProduct(norms[j], norms[k]);
+	double cos_a = DotProduct(norms[j], norms[k]);
 	if (sin_a > 1.0) sin_a = 1.0;
 	else if (sin_a < -1.0) sin_a = -1.0;
 
-	if (AlmostZero(sin_a) || (sin_a * delta_ < 0)) // a concave offset
+	// when there's almost no angle of deviation or it's concave
+	if ((AlmostZero(sin_a) && cos_a > 0) || (sin_a * delta_ < 0))
 	{
 		Point64 p1 = Point64(
 			path[j].x + norms[k].x * delta_,
@@ -243,26 +246,19 @@ void ClipperOffset::OffsetPoint(PathGroup& group, Path64& path, size_t j, size_t
 			group.path_.push_back(p2);
 		}
 	}
-	else
+	else // it's convex 
 	{
-		// convex offsets here ...
-		double cos_a = DotProduct(norms[j], norms[k]);
-		switch (join_type_)
-		{
-		case JoinType::Miter:
-			// see offset_triginometry3.svg
-			if (1 + cos_a < temp_lim_) DoSquare(group, path, j, k);
-			else DoMiter(group, path, j, k, cos_a);
-			break;
-		case JoinType::Square:
-          // angles >= 90 deg. don't need squaring
-			if (cos_a >= 0) DoMiter(group, path, j, k, cos_a);
-			else DoSquare(group, path, j, k);
-			break;
-		default:
+		if (join_type_ == JoinType::Round)
 			DoRound(group, path[j], norms[j], norms[k], std::atan2(sin_a, cos_a));
-			break;
-		}
+		// else miter when the angle isn't too acute (and hence exceed ML)
+		else if (join_type_ == JoinType::Miter && cos_a > temp_lim_ - 1)
+			DoMiter(group, path, j, k, cos_a);
+		// else only square angles that deviate > 90 degrees
+		else if (cos_a < -0.001)
+			DoSquare(group, path, j, k);
+		else
+			// don't square shallow angles that are safe to miter
+			DoMiter(group, path, j, k, cos_a);
 	}
 	k = j;
 }

@@ -3,7 +3,7 @@ unit Clipper.Engine;
 (*******************************************************************************
 * Author    :  Angus Johnson                                                   *
 * Version   :  Clipper2 - ver.1.0.4                                            *
-* Date      :  2 September 2022                                                *
+* Date      :  4 September 2022                                                *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  This is the main polygon clipping module                        *
@@ -1043,14 +1043,13 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-function TestJoinWithPrev1(e: PActive; currY: int64): Boolean;
+function TestJoinWithPrev1(e: PActive): Boolean;
 begin
   // this is marginally quicker than TestJoinWithPrev2
   // but can only be used when e.PrevInAEL.currX is accurate
   Result := IsHotEdge(e) and not IsOpen(e) and
     Assigned(e.prevInAEL) and (e.prevInAEL.currX = e.currX) and
     IsHotEdge(e.prevInAEL) and not IsOpen(e.prevInAEL) and
-    (currY - e.top.Y > 1) and (currY - e.prevInAEL.top.Y > 1) and
     (CrossProduct(e.prevInAEL.top, e.bot, e.top) = 0);
 end;
 //------------------------------------------------------------------------------
@@ -1066,14 +1065,13 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-function TestJoinWithNext1(e: PActive; currY: Int64): Boolean;
+function TestJoinWithNext1(e: PActive): Boolean;
 begin
   // this is marginally quicker than TestJoinWithNext2
   // but can only be used when e.NextInAEL.currX is accurate
   Result := IsHotEdge(e) and Assigned(e.nextInAEL) and
     IsHotEdge(e.nextInAEL) and not IsOpen(e) and
     not IsOpen(e.nextInAEL) and
-    (currY - e.top.Y > 1) and (currY - e.nextInAEL.top.Y > 1) and
     (e.nextInAEL.currX = e.currX) and
     (CrossProduct(e.nextInAEL.top, e.bot, e.top) = 0);
 end;
@@ -1743,7 +1741,7 @@ begin
         AddLocalMinPoly(leftB, rightB, leftB.bot, true);
 
         if not IsHorizontal(leftB) and
-          TestJoinWithPrev1(leftB, botY) then
+          TestJoinWithPrev1(leftB) then
         begin
           op := AddOutPt(leftB.prevInAEL, leftB.bot);
           AddJoin(op, leftB.outrec.pts);
@@ -1758,7 +1756,7 @@ begin
       end;
 
       if not IsHorizontal(rightB) and
-        TestJoinWithNext1(rightB, botY) then
+        TestJoinWithNext1(rightB) then
       begin
         op := AddOutPt(rightB.nextInAEL, rightB.bot);
         AddJoin(rightB.outrec.pts, op);
@@ -2691,7 +2689,7 @@ begin
   SetDx(e);
   if IsHorizontal(e) then Exit;
   InsertScanLine(e.top.Y);
-  if TestJoinWithPrev1(e, e.bot.Y) then
+  if TestJoinWithPrev1(e) then
   begin
     op1 := AddOutPt(e.prevInAEL, e.bot);
     op2 := AddOutPt(e, e.bot);
@@ -3629,7 +3627,7 @@ begin
             AddTrialHorzJoin(op);
 
         if not IsHorizontal(e) and
-          TestJoinWithPrev1(e, Y) then
+          TestJoinWithPrev1(e) then
         begin
           op := AddOutPt(e.prevInAEL, pt);
           op2 := AddOutPt(e, pt);
@@ -3649,7 +3647,7 @@ begin
             AddTrialHorzJoin(op);
 
         if not IsHorizontal(e) and
-          TestJoinWithNext1(e, Y) then
+          TestJoinWithNext1(e) then
         begin
           op := AddOutPt(e, pt);
           op2 := AddOutPt(e.nextInAEL, pt);
@@ -3704,12 +3702,12 @@ begin
     UpdateEdgeIntoAEL(horzEdge); // this is the end of an intermediate horiz.
     if IsOpen(horzEdge) then Exit;
 
-    if isLeftToRight and TestJoinWithNext1(horzEdge, Y) then
+    if isLeftToRight and TestJoinWithNext1(horzEdge) then
     begin
       op2 := AddOutPt(horzEdge.nextInAEL, horzEdge.bot);
       AddJoin(op, op2);
     end
-    else if not isLeftToRight and TestJoinWithPrev1(horzEdge, Y) then
+    else if not isLeftToRight and TestJoinWithPrev1(horzEdge) then
     begin
       op2 := AddOutPt(horzEdge.prevInAEL, horzEdge.bot);
       AddJoin(op2, op);

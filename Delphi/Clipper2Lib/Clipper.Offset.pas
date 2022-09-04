@@ -2,8 +2,8 @@ unit Clipper.Offset;
 
 (*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Version   :  Clipper2 - ver.1.0.3                                            *
-* Date      :  20 August 2022                                                  *
+* Version   :  Clipper2 - ver.1.0.4                                            *
+* Date      :  3 September 2022                                                *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  Path Offset (Inflate/Shrink)                                    *
@@ -198,6 +198,14 @@ begin
   for i := 0 to len -1 do
     Result[i] := Copy(paths[i], 0, Length(paths[i]));
 end;
+//------------------------------------------------------------------------------
+
+function UnsafeGet(List: TList; Index: Integer): Pointer;
+  {$IFDEF INLINING} inline; {$ENDIF}
+begin
+  Result := List.List[Index];
+end;
+//------------------------------------------------------------------------------
 
 //------------------------------------------------------------------------------
 // TPathGroup methods
@@ -239,7 +247,7 @@ var
   i: integer;
 begin
   for i := 0 to fInGroups.Count -1 do
-    TPathGroup(fInGroups[i]).Free;
+    TPathGroup(UnsafeGet(fInGroups, i)).Free;
   fInGroups.Clear;
   fSolution := nil;
 end;
@@ -489,10 +497,12 @@ begin
   fMinLenSqrd := 1;
   if abs(delta) < Tolerance then
   begin
-    // if delta ~= 0, just copy paths to Result
+    // if delta == 0, just copy paths to Result
     for i := 0 to fInGroups.Count -1 do
-      with TPathGroup(fInGroups[i]) do
-          AppendPaths(fSolution, paths);
+    begin
+      group := TPathGroup(UnsafeGet(fInGroups, i));
+      AppendPaths(fSolution, group.paths);
+    end;
     Result := fSolution;
     Exit;
   end;
@@ -505,7 +515,7 @@ begin
   // nb: delta will depend on whether paths are polygons or open
   for i := 0 to fInGroups.Count -1 do
   begin
-    group := TPathGroup(fInGroups[i]);
+    group := TPathGroup(UnsafeGet(fInGroups, i));
     DoGroupOffset(group, delta);
   end;
 
@@ -520,7 +530,7 @@ begin
       ReverseSolution :=
         fReverseSolution <> TPathGroup(fInGroups[0]).reversed;
       AddSubject(fSolution);
-      if TPathGroup(fInGroups[0]).reversed then
+      if TPathGroup(UnsafeGet(fInGroups, 0)).reversed then
         Execute(ctUnion, frNegative, fSolution) else
         Execute(ctUnion, frPositive, fSolution);
     finally
@@ -672,19 +682,20 @@ var
   sinA, cosA: Double;
   p1, p2: TPoint64;
 begin
-  // A: angle between adjoining edges (on left side WRT winding direction).
-  // A == 0 deg (or A == 360 deg): collinear edges heading in same direction
-  // A == 180 deg: collinear edges heading in opposite directions (ie a 'spike')
-  // sin(A) < 0: convex on left.
-  // cos(A) > 0: angles on both left and right sides > 90 degrees
-  sinA := (fNorms[k].X * fNorms[j].Y - fNorms[j].X * fNorms[k].Y);
-
+  // Let A = change in angle where edges join
+  // A == 0: ie no change in angle (flat join)
+  // A == PI: edges 'spike'
+  // sin(A) < 0: right turning
+  // cos(A) < 0: change in angle is more than 90 degree
+  sinA := CrossProduct(fNorms[k], fNorms[j]);
+  cosA := DotProduct(fNorms[j], fNorms[k]);
   if (sinA > 1.0) then sinA := 1.0
   else if (sinA < -1.0) then sinA := -1.0;
 
-  if ValueAlmostZero(sinA) or
-    (sinA * fDelta < 0) then // ie a concave offset
+  // when there's almost no angle of deviation or it's concave
+  if (ValueAlmostZero(sinA) and (cosA > 0)) or (sinA * fDelta < 0) then
   begin
+    // create a simple self-intersection that will be removed later
     p1 := Point64(
       fInPath[j].X + fNorms[k].X * fDelta,
       fInPath[j].Y + fNorms[k].Y * fDelta);
@@ -694,29 +705,23 @@ begin
     AddPoint(p1);
     if not PointsEqual(p1, p2) then
     begin
-      AddPoint(fInPath[j]); // this aids with clipping removal later
+      AddPoint(fInPath[j]);
       AddPoint(p2);
     end;
-  end else
+  end
+  else // convex offset
   begin
-    // convex offsets here ...
-    cosA := DotProduct(fNorms[j], fNorms[k]);
-    case fJoinType of
-      jtMiter:
-        // see offset_triginometry3.svg
-        if (1 + cosA < fTmpLimit) then
-          DoSquare(j, k) else
-          DoMiter(j, k, 1 + cosA);
-      jtSquare:
-        begin
-          // angles >= 90 deg. don't need squaring
-          if cosA >= 0 then
-            DoMiter(j, k, 1 + cosA) else
-            DoSquare(j, k);
-        end
-      else
-        DoRound(j, k, ArcTan2(sinA, cosA));
-    end;
+    if (fJoinType = jtRound) then
+      DoRound(j, k, ArcTan2(sinA, cosA))
+    // only miter when the angle isn't too acute (and exceeds ML)
+    else if (fJoinType = jtMiter) and (cosA > fTmpLimit -1) then
+      DoMiter(j, k, 1 + cosA)
+    // only do squaring when the angle of deviation > 90 degrees
+    else if (cosA < -0.001) then
+      DoSquare(j, k)
+    else
+      // don't square shallow angles that are safe to miter
+      DoMiter(j, k, 1 + cosA);
   end;
   k := j;
 end;

@@ -10,6 +10,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 
 namespace Clipper2Lib
 {
@@ -440,6 +441,7 @@ namespace Clipper2Lib
     internal const double floatingPointTolerance = 1E-15;
     internal const double defaultMinimumEdgeLength = 0.1;
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static double CrossProduct(Point64 pt1, Point64 pt2, Point64 pt3)
     {
       // typecast to double to avoid potential int overflow
@@ -447,6 +449,7 @@ namespace Clipper2Lib
               (double) (pt2.Y - pt1.Y) * (pt3.X - pt2.X));
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static double DotProduct(Point64 pt1, Point64 pt2, Point64 pt3)
     {
       // typecast to double to avoid potential int overflow
@@ -454,6 +457,13 @@ namespace Clipper2Lib
               (double) (pt2.Y - pt1.Y) * (pt3.Y - pt2.Y));
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    internal static double CrossProduct(PointD vec1, PointD vec2)
+    {
+      return (vec1.y * vec2.x - vec2.y * vec1.x);
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static double DotProduct(PointD vec1, PointD vec2)
     {
       return (vec1.x * vec2.x + vec1.y * vec2.y);

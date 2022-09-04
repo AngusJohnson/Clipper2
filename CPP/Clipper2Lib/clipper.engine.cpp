@@ -1,7 +1,7 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Version   :  Clipper2 - ver.1.0.3                                            *
-* Date      :  26 August 2022                                                  *
+* Version   :  Clipper2 - ver.1.0.4                                            *
+* Date      :  4 September 2022                                                *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  This is the main polygon clipping module                        *
@@ -558,6 +558,43 @@ namespace Clipper2Lib {
 		return (inode.edge1->next_in_ael == inode.edge2) || (inode.edge1->prev_in_ael == inode.edge2);
 	}
 
+	inline bool TestJoinWithPrev1(const Active& e)
+	{
+		//this is marginally quicker than TestJoinWithPrev2
+		//but can only be used when e.PrevInAEL.currX is accurate
+		return IsHotEdge(e) && !IsOpen(e) &&
+			e.prev_in_ael && e.prev_in_ael->curr_x == e.curr_x &&
+			IsHotEdge(*e.prev_in_ael) && !IsOpen(*e.prev_in_ael) &&
+			(CrossProduct(e.prev_in_ael->top, e.bot, e.top) == 0);
+	}
+
+	inline bool TestJoinWithPrev2(const Active& e, const Point64& curr_pt)
+	{
+		return IsHotEdge(e) && !IsOpen(e) &&
+			e.prev_in_ael && !IsOpen(*e.prev_in_ael) &&
+			IsHotEdge(*e.prev_in_ael) && (e.prev_in_ael->top.y < e.bot.y) &&
+			(std::llabs(TopX(*e.prev_in_ael, curr_pt.y) - curr_pt.x) < 2) &&
+			(CrossProduct(e.prev_in_ael->top, curr_pt, e.top) == 0);
+	}
+
+	inline bool TestJoinWithNext1(const Active& e)
+	{
+		//this is marginally quicker than TestJoinWithNext2
+		//but can only be used when e.NextInAEL.currX is accurate
+		return IsHotEdge(e) && !IsOpen(e) &&
+			e.next_in_ael && (e.next_in_ael->curr_x == e.curr_x) &&
+			IsHotEdge(*e.next_in_ael) && !IsOpen(*e.next_in_ael) &&
+			(CrossProduct(e.next_in_ael->top, e.bot, e.top) == 0);
+	}
+
+	inline bool TestJoinWithNext2(const Active& e, const Point64& curr_pt)
+	{
+		return IsHotEdge(e) && !IsOpen(e) &&
+			e.next_in_ael && !IsOpen(*e.next_in_ael) &&
+			IsHotEdge(*e.next_in_ael) && (e.next_in_ael->top.y < e.bot.y) &&
+			(std::llabs(TopX(*e.next_in_ael, curr_pt.y) - curr_pt.x) < 2) &&
+			(CrossProduct(e.next_in_ael->top, curr_pt, e.top) == 0);
+	}
 
 	//------------------------------------------------------------------------------
 	// ClipperBase methods ...
@@ -1166,7 +1203,7 @@ namespace Clipper2Lib {
 				if (contributing)
 				{
 					AddLocalMinPoly(*left_bound, *right_bound, left_bound->bot, true);
-					if (!IsHorizontal(*left_bound) && TestJoinWithPrev1(*left_bound, bot_y))
+					if (!IsHorizontal(*left_bound) && TestJoinWithPrev1(*left_bound))
 					{
 						OutPt* op = AddOutPt(*left_bound->prev_in_ael, left_bound->bot);
 						AddJoin(op, left_bound->outrec->pts);
@@ -1181,7 +1218,7 @@ namespace Clipper2Lib {
 				}
 
 				if (!IsHorizontal(*right_bound) &&
-					TestJoinWithNext1(*right_bound, bot_y))
+					TestJoinWithNext1(*right_bound))
 				{
 					OutPt* op = AddOutPt(*right_bound->next_in_ael, right_bound->bot);
 					AddJoin(right_bound->outrec->pts, op);
@@ -1218,50 +1255,6 @@ namespace Clipper2Lib {
 		if (!e) return false;
 		sel_ = sel_->next_in_sel;
 		return true;
-	}
-
-
-	bool ClipperBase::TestJoinWithPrev1(const Active& e, int64_t curr_y)
-	{
-		//this is marginally quicker than TestJoinWithPrev2
-		//but can only be used when e.PrevInAEL.currX is accurate
-		return IsHotEdge(e) && !IsOpen(e) &&
-			e.prev_in_ael && e.prev_in_ael->curr_x == e.curr_x &&
-			IsHotEdge(*e.prev_in_ael) && !IsOpen(*e.prev_in_ael) &&
-			(curr_y - e.top.y > 1) && (curr_y - e.prev_in_ael->top.y > 1) &&
-			(CrossProduct(e.prev_in_ael->top, e.bot, e.top) == 0);
-	}
-
-
-	bool ClipperBase::TestJoinWithPrev2(const Active& e, const Point64& curr_pt)
-	{
-		return IsHotEdge(e) && !IsOpen(e) &&
-			e.prev_in_ael && !IsOpen(*e.prev_in_ael) &&
-			IsHotEdge(*e.prev_in_ael) && (e.prev_in_ael->top.y < e.bot.y) &&
-			(std::llabs(TopX(*e.prev_in_ael, curr_pt.y) - curr_pt.x) < 2) &&
-			(CrossProduct(e.prev_in_ael->top, curr_pt, e.top) == 0);
-	}
-
-
-	bool ClipperBase::TestJoinWithNext1(const Active& e, int64_t curr_y)
-	{
-		//this is marginally quicker than TestJoinWithNext2
-		//but can only be used when e.NextInAEL.currX is accurate
-		return IsHotEdge(e) && !IsOpen(e) &&
-			e.next_in_ael && (e.next_in_ael->curr_x == e.curr_x) &&
-			IsHotEdge(*e.next_in_ael) && !IsOpen(*e.next_in_ael) &&
-			(curr_y - e.top.y > 1) && (curr_y - e.next_in_ael->top.y > 1) &&
-			(CrossProduct(e.next_in_ael->top, e.bot, e.top) == 0);
-	}
-
-
-	bool ClipperBase::TestJoinWithNext2(const Active& e, const Point64& curr_pt)
-	{
-		return IsHotEdge(e) && !IsOpen(e) &&
-			e.next_in_ael && !IsOpen(*e.next_in_ael) &&
-			IsHotEdge(*e.next_in_ael) && (e.next_in_ael->top.y < e.bot.y) &&
-			(std::llabs(TopX(*e.next_in_ael, curr_pt.y) - curr_pt.x) < 2) &&
-			(CrossProduct(e.next_in_ael->top, curr_pt, e.top) == 0);
 	}
 
 
@@ -1711,7 +1704,7 @@ namespace Clipper2Lib {
 		SetDx(*e);
 		if (IsHorizontal(*e)) return;
 		InsertScanline(e->top.y);
-		if (TestJoinWithPrev1(*e, e->bot.y))
+		if (TestJoinWithPrev1(*e))
 		{
 			OutPt* op1 = AddOutPt(*e->prev_in_ael, e->bot);
 			OutPt* op2 = AddOutPt(*e, e->bot);
@@ -2209,7 +2202,6 @@ namespace Clipper2Lib {
 		return intersect_nodes_.size() > 0;
 	}
 
-
 	void ClipperBase::ProcessIntersectList()
 	{
 		//We now have a list of intersections required so that edges will be
@@ -2229,10 +2221,8 @@ namespace Clipper2Lib {
 			if (!EdgesAdjacentInAEL(*node_iter))
 			{
 				node_iter2 = node_iter + 1;
-				while (node_iter2 != intersect_nodes_.end() &&
-					!EdgesAdjacentInAEL(*node_iter2)) ++node_iter2;
-				if (node_iter2 != intersect_nodes_.end())
-					std::swap(*node_iter, *node_iter2);
+				while (!EdgesAdjacentInAEL(*node_iter2)) ++node_iter2;
+				std::swap(*node_iter, *node_iter2);
 			}
 
 			IntersectNode& node = *node_iter;
@@ -2442,12 +2432,12 @@ namespace Clipper2Lib {
 				{
 					op = IntersectEdges(horz, *e, pt);
 					SwapPositionsInAEL(horz, *e);
-
-
+					// todo: check if op->pt == pt test is still needed
+					// expect op != pt only after AddLocalMaxPoly when horz.outrec == nullptr
 					if (IsHotEdge(horz) && op && !IsOpen(horz) && op->pt == pt)
 						AddTrialHorzJoin(op);
 
-					if (!IsHorizontal(*e) && TestJoinWithPrev1(*e, y))
+					if (!IsHorizontal(*e) && TestJoinWithPrev1(*e))
 					{
 						op = AddOutPt(*e->prev_in_ael, pt);
 						OutPt* op2 = AddOutPt(*e, pt);
@@ -2466,7 +2456,7 @@ namespace Clipper2Lib {
 						!IsOpen(horz) && op->pt == pt)
 						AddTrialHorzJoin(op);
 
-					if (!IsHorizontal(*e) && TestJoinWithNext1(*e, y))
+					if (!IsHorizontal(*e) && TestJoinWithNext1(*e))
 					{
 						op = AddOutPt(*e, pt);
 						OutPt* op2 = AddOutPt(*e->next_in_ael, pt);
@@ -2523,12 +2513,12 @@ namespace Clipper2Lib {
 			UpdateEdgeIntoAEL(&horz); // this is the end of an intermediate horiz.
 			if (IsOpen(horz)) return;
 
-			if (is_left_to_right && TestJoinWithNext1(horz, y))
+			if (is_left_to_right && TestJoinWithNext1(horz))
 			{
 				OutPt* op2 = AddOutPt(*horz.next_in_ael, horz.bot);
 				AddJoin(op, op2);
 			}
-			else if (!is_left_to_right && TestJoinWithPrev1(horz, y))
+			else if (!is_left_to_right && TestJoinWithPrev1(horz))
 			{
 				OutPt* op2 = AddOutPt(*horz.prev_in_ael, horz.bot);
 				AddJoin(op2, op);

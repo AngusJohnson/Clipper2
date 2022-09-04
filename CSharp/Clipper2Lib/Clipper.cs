@@ -1,7 +1,7 @@
 ﻿/*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Version   :  Clipper2 - ver.1.0.3                                            *
-* Date      :  23 August 2022                                                  *
+* Version   :  Clipper2 - ver.1.0.4                                            *
+* Date      :  3 September 2022                                                *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  This module contains simple functions that will likely cover    *
@@ -39,56 +39,64 @@ namespace Clipper2Lib
 
     public static Paths64 Intersect(Paths64 subject, Paths64 clip, FillRule fillRule)
     {
-      return BooleanOp(ClipType.Intersection, fillRule, subject, clip);
+      return BooleanOp(ClipType.Intersection, subject, clip, fillRule);
     }
 
-    public static PathsD Intersect(PathsD subject, PathsD clip, FillRule fillRule)
+    public static PathsD Intersect(PathsD subject, PathsD clip, 
+      FillRule fillRule, int roundingDecimalPrecision = 2)
     {
-      return BooleanOp(ClipType.Intersection, fillRule, subject, clip);
+      return BooleanOp(ClipType.Intersection,
+        subject, clip, fillRule, roundingDecimalPrecision);
     }
 
     public static Paths64 Union(Paths64 subject, FillRule fillRule)
     {
-      return BooleanOp(ClipType.Union, fillRule, subject, null);
+      return BooleanOp(ClipType.Union, subject, null, fillRule);
     }
 
     public static Paths64 Union(Paths64 subject, Paths64 clip, FillRule fillRule)
     {
-      return BooleanOp(ClipType.Union, fillRule, subject, clip);
+      return BooleanOp(ClipType.Union, subject, clip, fillRule);
     }
 
     public static PathsD Union(PathsD subject, FillRule fillRule)
     {
-      return BooleanOp(ClipType.Union, fillRule, subject, null);
+      return BooleanOp(ClipType.Union, subject, null, fillRule);
     }
 
-    public static PathsD Union(PathsD subject, PathsD clip, FillRule fillRule)
+    public static PathsD Union(PathsD subject, PathsD clip, 
+      FillRule fillRule, int roundingDecimalPrecision = 2)
     {
-      return BooleanOp(ClipType.Union, fillRule, subject, clip);
+      return BooleanOp(ClipType.Union,
+        subject, clip, fillRule, roundingDecimalPrecision);
     }
 
     public static Paths64 Difference(Paths64 subject, Paths64 clip, FillRule fillRule)
     {
-      return BooleanOp(ClipType.Difference, fillRule, subject, clip);
+      return BooleanOp(ClipType.Difference, subject, clip, fillRule);
     }
 
-    public static PathsD Difference(PathsD subject, PathsD clip, FillRule fillRule)
+    public static PathsD Difference(PathsD subject, PathsD clip, 
+      FillRule fillRule, int roundingDecimalPrecision = 2)
     {
-      return BooleanOp(ClipType.Difference, fillRule, subject, clip);
+      return BooleanOp(ClipType.Difference,
+        subject, clip, fillRule, roundingDecimalPrecision);
     }
 
     public static Paths64 Xor(Paths64 subject, Paths64 clip, FillRule fillRule)
     {
-      return BooleanOp(ClipType.Xor, fillRule, subject, clip);
+      return BooleanOp(ClipType.Xor, subject, clip, fillRule);
     }
 
-    public static PathsD Xor(PathsD subject, PathsD clip, FillRule fillRule)
+    public static PathsD Xor(PathsD subject, PathsD clip, 
+      FillRule fillRule, int roundingDecimalPrecision = 2)
     {
-      return BooleanOp(ClipType.Xor, fillRule, subject, clip);
+      return BooleanOp(ClipType.Xor, 
+        subject, clip, fillRule, roundingDecimalPrecision);
     }
 
-    public static Paths64 BooleanOp(ClipType clipType, FillRule fillRule,
-      Paths64? subject, Paths64? clip)
+    public static Paths64 BooleanOp(ClipType clipType, 
+      Paths64? subject, Paths64? clip, FillRule fillRule)
     {
       Paths64 solution = new Paths64();
       if (subject == null) return solution;
@@ -100,8 +108,8 @@ namespace Clipper2Lib
       return solution;
     }
 
-    public static PathsD BooleanOp(ClipType clipType, FillRule fillRule,
-        PathsD subject, PathsD? clip, int roundingDecimalPrecision = 0)
+    public static PathsD BooleanOp(ClipType clipType, PathsD subject, PathsD? clip, 
+      FillRule fillRule, int roundingDecimalPrecision = 2)
     {
       PathsD solution = new PathsD();
       ClipperD c = new ClipperD(roundingDecimalPrecision);
