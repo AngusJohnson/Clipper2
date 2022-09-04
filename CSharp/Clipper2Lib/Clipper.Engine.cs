@@ -3071,7 +3071,7 @@ namespace Clipper2Lib
           }
           break;
         }
-        else if (op1.next!.pt == op2.prev.pt ||
+        if (op1.next!.pt == op2.prev.pt ||
                  ((InternalClipper.CrossProduct(op1.next.pt, op2.pt, op2.prev.pt) == 0) &&
                   CollinearSegsOverlap(op1.next.pt, op1.pt, op2.pt, op2.prev.pt)))
         {
@@ -3136,25 +3136,25 @@ namespace Clipper2Lib
           }
           break;
         }
-        else if (PointBetween(op1.next.pt, op2.pt, op2.prev.pt) &&
+        if (PointBetween(op1.next.pt, op2.pt, op2.prev.pt) &&
                  DistanceFromLineSqrd(op1.next.pt, op2.pt, op2.prev.pt) < 2.01)
         {
           InsertOp(op1.next.pt, op2.prev);
           continue;
         }
-        else if (PointBetween(op2.next.pt, op1.pt, op1.prev.pt) &&
+        if (PointBetween(op2.next.pt, op1.pt, op1.prev.pt) &&
                  DistanceFromLineSqrd(op2.next.pt, op1.pt, op1.prev.pt) < 2.01)
         {
           InsertOp(op2.next.pt, op1.prev);
           continue;
         }
-        else if (PointBetween(op1.prev.pt, op2.pt, op2.next.pt) &&
+        if (PointBetween(op1.prev.pt, op2.pt, op2.next.pt) &&
                  DistanceFromLineSqrd(op1.prev.pt, op2.pt, op2.next.pt) < 2.01)
         {
           InsertOp(op1.prev.pt, op2);
           continue;
         }
-        else if (PointBetween(op2.prev.pt, op1.pt, op1.next.pt) &&
+        if (PointBetween(op2.prev.pt, op1.pt, op1.next.pt) &&
                  DistanceFromLineSqrd(op2.prev.pt, op1.pt, op1.next.pt) < 2.01)
         {
           InsertOp(op2.prev.pt, op1);
@@ -3163,30 +3163,26 @@ namespace Clipper2Lib
 
         // something odd needs tidying up
         if (CheckDisposeAdjacent(ref op1, op2, or1)) continue;
-        else if (CheckDisposeAdjacent(ref op2, op1, or1)) continue;
-        else if (op1.prev.pt != op2.next!.pt &&
+        if (CheckDisposeAdjacent(ref op2, op1, or1)) continue;
+        if (op1.prev.pt != op2.next!.pt &&
           (DistanceSqr(op1.prev.pt, op2.next.pt) < 2.01))
         {
           op1.prev.pt = op2.next.pt;
           continue;
         }
-        else if (op1.next!.pt != op2.prev.pt &&
+        if (op1.next!.pt != op2.prev.pt &&
           (DistanceSqr(op1.next.pt, op2.prev.pt) < 2.01))
         {
           op2.prev.pt = op1.next.pt;
           continue;
         }
-        else
+        // OK, there doesn't seem to be a way to join after all
+        // so just tidy up the polygons
+        or1.pts = op1;
+        if (or2 != or1)
         {
-          // OK, there doesn't seem to be a way to join after all
-          // so just tidy up the polygons
-          or1.pts = op1;
-          if (or2 != or1)
-          {
-            or2.pts = op2;
-            CleanCollinear(or2);
-          }
-          break;
+          or2.pts = op2;
+          CleanCollinear(or2);
         }
       }
       return result;
