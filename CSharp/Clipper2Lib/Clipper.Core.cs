@@ -155,8 +155,7 @@ namespace Clipper2Lib
     {
       if (obj is Point64 p)
         return this == p;
-      else
-        return false;
+      return false;
     }
 
     public override int GetHashCode() { return 0; }
@@ -280,8 +279,7 @@ namespace Clipper2Lib
     {
       if (obj is PointD p)
         return this == p;
-      else
-        return false;
+      return false;
     }
 
     public override int GetHashCode() { return 0; }
@@ -585,8 +583,7 @@ namespace Clipper2Lib
       }
       if (val == 0)
         return PointInPolygonResult.IsOutside;
-      else
-        return PointInPolygonResult.IsInside;
+      return PointInPolygonResult.IsInside;
     }
 
   } // InternalClipper

@@ -170,8 +170,7 @@ namespace Clipper2Lib
           }
       if (!IsValidRect(bounds))
         return RectEmpty;
-      else
-        return bounds;
+      return bounds;
     }
 
     private static string ColorToHtml(uint clr)

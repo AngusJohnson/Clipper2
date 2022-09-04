@@ -366,18 +366,17 @@ namespace Clipper2Lib
       double dy = pt2.Y - pt1.Y;
       if (dy != 0)
         return (pt2.X - pt1.X) / dy;
-      else if (pt2.X > pt1.X)
+      if (pt2.X > pt1.X)
         return double.NegativeInfinity;
-      else
-        return double.PositiveInfinity;
+      return double.PositiveInfinity;
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static long TopX(Active ae, long currentY)
     {
       if ((currentY == ae.top.Y) || (ae.top.X == ae.bot.X)) return ae.top.X;
-      else if (currentY == ae.bot.Y) return ae.bot.X;
-      else return ae.bot.X + (long) Math.Round(ae.dx * (currentY - ae.bot.Y));
+      if (currentY == ae.bot.Y) return ae.bot.X;
+      return ae.bot.X + (long) Math.Round(ae.dx * (currentY - ae.bot.Y));
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -428,21 +427,19 @@ namespace Clipper2Lib
         b2 = ae2.bot.Y - (ae2.bot.X / ae2.dx);
         return new Point64(ae1.bot.X, (long) Math.Round(ae1.bot.X / ae2.dx + b2));
       }
-      else if (ae2.dx == 0)
+
+      if (ae2.dx == 0)
       {
         if (IsHorizontal(ae1)) return new Point64(ae2.bot.X, ae1.bot.Y);
         b1 = ae1.bot.Y - (ae1.bot.X / ae1.dx);
         return new Point64(ae2.bot.X, (long) Math.Round(ae2.bot.X / ae1.dx + b1));
       }
-      else
-      {
-        b1 = ae1.bot.X - ae1.bot.Y * ae1.dx;
-        b2 = ae2.bot.X - ae2.bot.Y * ae2.dx;
-        double q = (b2 - b1) / (ae1.dx - ae2.dx);
-        return (Math.Abs(ae1.dx) < Math.Abs(ae2.dx))
-            ? new Point64((long) Math.Round(ae1.dx * q + b1), (long) Math.Round(q))
-            : new Point64((long) Math.Round(ae2.dx * q + b2), (long) Math.Round(q));
-      }
+      b1 = ae1.bot.X - ae1.bot.Y * ae1.dx;
+      b2 = ae2.bot.X - ae2.bot.Y * ae2.dx;
+      double q = (b2 - b1) / (ae1.dx - ae2.dx);
+      return (Math.Abs(ae1.dx) < Math.Abs(ae2.dx))
+        ? new Point64((long) Math.Round(ae1.dx * q + b1), (long) Math.Round(q))
+        : new Point64((long) Math.Round(ae2.dx * q + b2), (long) Math.Round(q));
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -457,8 +454,7 @@ namespace Clipper2Lib
     {
       if (ae.windDx > 0)
         return ae.vertexTop!.next!;
-      else
-        return ae.vertexTop!.prev!;
+      return ae.vertexTop!.prev!;
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -466,8 +462,7 @@ namespace Clipper2Lib
     {
       if (ae.windDx > 0)
         return ae.vertexTop!.prev!.prev!;
-      else 
-        return ae.vertexTop!.next!.next!;
+      return ae.vertexTop!.next!.next!;
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -534,10 +529,8 @@ namespace Clipper2Lib
         {
           return (a.pt.X < b.pt.X) ? -1 : 1;
         }
-        else
-        {
-          return (a.pt.Y > b.pt.Y) ? -1 : 1;
-        }
+
+        return (a.pt.Y > b.pt.Y) ? -1 : 1;
       }
     }
 
@@ -1072,7 +1065,8 @@ namespace Clipper2Lib
         return InternalClipper.CrossProduct(newcomer.bot, 
           resident.top, NextVertex(resident).pt) <= 0;
       }
-      else if (!IsMaxima(newcomer) && (newcomer.top.Y > resident.top.Y))
+
+      if (!IsMaxima(newcomer) && (newcomer.top.Y > resident.top.Y))
       {
         return InternalClipper.CrossProduct(newcomer.bot,
           newcomer.top, NextVertex(newcomer).pt) >= 0;
@@ -1084,14 +1078,13 @@ namespace Clipper2Lib
       if (resident.bot.Y != y || resident.localMin.vertex.pt.Y != y)
         return newcomer.isLeftBound;
       // resident must also have just been inserted
-      else if (resident.isLeftBound != newcomerIsLeft)
+      if (resident.isLeftBound != newcomerIsLeft)
         return newcomerIsLeft;
-      else if (InternalClipper.CrossProduct(PrevPrevVertex(resident).pt,
-        resident.bot, resident.top) == 0) return true;
-      else
-        // compare turning direction of the alternate bound
-        return (InternalClipper.CrossProduct(PrevPrevVertex(resident).pt,
-          newcomer.bot, PrevPrevVertex(newcomer).pt) > 0) == newcomerIsLeft;
+      if (InternalClipper.CrossProduct(PrevPrevVertex(resident).pt,
+            resident.bot, resident.top) == 0) return true;
+      // compare turning direction of the alternate bound
+      return (InternalClipper.CrossProduct(PrevPrevVertex(resident).pt,
+        newcomer.bot, PrevPrevVertex(newcomer).pt) > 0) == newcomerIsLeft;
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -1560,15 +1553,15 @@ namespace Clipper2Lib
       while (result != null)
       {
         if (result.localMin == e.localMin) return result;
-        else if (!IsHorizontal(result) && e.bot != result.bot) result = null;
+        if (!IsHorizontal(result) && e.bot != result.bot) result = null;
         else result = result.nextInAEL;
       }
       result = e.prevInAEL;
       while (result != null)
       {
         if (result.localMin == e.localMin) return result;
-        else  if (!IsHorizontal(result) && e.bot != result.bot) return null;
-        else result = result.prevInAEL;
+        if (!IsHorizontal(result) && e.bot != result.bot) return null;
+        result = result.prevInAEL;
       }
       return result;
     }
@@ -1632,8 +1625,8 @@ namespace Clipper2Lib
               SetSides(ae3.outrec!, ae3, ae1);
             return ae3.outrec!.pts;
           }
-          else
-            resultOp = StartOpenPath(ae1, pt);
+
+          resultOp = StartOpenPath(ae1, pt);
         }
         else
           resultOp = StartOpenPath(ae1, pt);
@@ -2083,18 +2076,16 @@ namespace Clipper2Lib
         while (ae != null && ae != maxPair) ae = ae.nextInAEL;
         return ae != null;
       }
-      else if (horz.curX < horz.top.X)
+
+      if (horz.curX < horz.top.X)
       {
         leftX = horz.curX;
         rightX = horz.top.X;
         return true;
       }
-      else
-      {
-        leftX = horz.top.X;
-        rightX = horz.curX;
-        return false; // right to left
-      }
+      leftX = horz.top.X;
+      rightX = horz.curX;
+      return false; // right to left
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -2297,7 +2288,8 @@ namespace Clipper2Lib
           DeleteFromAEL(horz); // ie open at top
           return;
         }
-        else if (NextVertex(horz).pt.Y != horz.top.Y) break;
+
+        if (NextVertex(horz).pt.Y != horz.top.Y) break;
 
 
         // there must be a following (consecutive) horizontal
@@ -2363,15 +2355,13 @@ namespace Clipper2Lib
             ae = DoMaxima(ae); // TOP OF BOUND (MAXIMA)
             continue;
           }
-          else
-          {
-            // INTERMEDIATE VERTEX ...
-            if (IsHotEdge(ae))
-              AddOutPt(ae, ae.top);
-            UpdateEdgeIntoAEL(ae);
-            if (IsHorizontal(ae))
-              PushHorz(ae); // horizontals are processed later
-          }
+
+          // INTERMEDIATE VERTEX ...
+          if (IsHotEdge(ae))
+            AddOutPt(ae, ae.top);
+          UpdateEdgeIntoAEL(ae);
+          if (IsHorizontal(ae))
+            PushHorz(ae); // horizontals are processed later
         }
         else // i.e. not the top of the edge
           ae.curX = TopX(ae, y);
@@ -2405,11 +2395,9 @@ namespace Clipper2Lib
         }
         return nextE;
       }
-      else
-      {
-        maxPair = GetMaximaPair(ae);
-        if (maxPair == null) return nextE; // eMaxPair is horizontal
-      }
+
+      maxPair = GetMaximaPair(ae);
+      if (maxPair == null) return nextE; // eMaxPair is horizontal
 
       // only non-horizontal maxima here.
       // process any edges between maxima pair ...
@@ -2553,18 +2541,16 @@ namespace Clipper2Lib
       {
         if (x2a > x2b + minOverlap)
           return !((x1a <= x2b) || (x2a <= x1b));
-        else
-          return !((x1a <= x2a) || (x2b <= x1b));
+        return !((x1a <= x2a) || (x2b <= x1b));
       }
-      else if (x1b > x1a + minOverlap)
+
+      if (x1b > x1a + minOverlap)
       {
         if (x2a > x2b + minOverlap)
           return !((x1b <= x2b) || (x2a <= x1a));
-        else
-          return !((x1b <= x2a) || (x2b <= x1a));
+        return !((x1b <= x2a) || (x2b <= x1a));
       }
-      else
-        return false;
+      return false;
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -2576,14 +2562,14 @@ namespace Clipper2Lib
         if (joiner.op1 == op)
         {
           if (joiner.next1 != null &&
-            joiner.next1.idx < 0) return joiner;
-          else joiner = joiner.next1;
+              joiner.next1.idx < 0) return joiner;
+          joiner = joiner.next1;
         }
         else
         {
           if (joiner.next2 != null &&
-            joiner.next2.idx < 0) return joiner;
-          else joiner = joiner.next1;
+              joiner.next2.idx < 0) return joiner;
+          joiner = joiner.next1;
         }
       }
       return joiner;
@@ -2770,14 +2756,12 @@ namespace Clipper2Lib
           op2.next!.pt.Y == op2.pt.Y) op2 = op2.next;
         return op2 != op;
       }
-      else
-      {
-        while (op.prev != op2 && op.prev.pt.Y == op.pt.Y)
-          op = op.prev;
-        while (op2.next != op && op2.next!.pt.Y == op2.pt.Y)
-          op2 = op2.next;
-        return op2 != op && op2.next != op;
-      }
+
+      while (op.prev != op2 && op.prev.pt.Y == op.pt.Y)
+        op = op.prev;
+      while (op2.next != op && op2.next!.pt.Y == op2.pt.Y)
+        op2 = op2.next;
+      return op2 != op && op2.next != op;
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -2866,12 +2850,12 @@ namespace Clipper2Lib
         if (op == result.op1)
         {
           if (result.next1 == joiner) return result;
-          else result = result.next1!;
+          result = result.next1!;
         }
         else
         {
           if (result.next2 == joiner) return result;
-          else result = result.next2!;
+          result = result.next2!;
         }
       }
     }
@@ -2984,17 +2968,17 @@ namespace Clipper2Lib
       DeleteJoin(j);
 
       if (or2.pts == null) return or1;
-      else if (!IsValidClosedPath(op2))
+      if (!IsValidClosedPath(op2))
       {
         SafeDisposeOutPts(ref op2);
         return or1;
       }
-      else if ((or1.pts == null) || !IsValidClosedPath(op1))
+      if ((or1.pts == null) || !IsValidClosedPath(op1))
       {
         SafeDisposeOutPts(ref op1);
         return or2;
       }
-      else if (or1 == or2 &&
+      if (or1 == or2 &&
           ((op1 == op2) || (op1.next == op2) || (op1.prev == op2))) return or1;
 
       CheckDisposeAdjacent(ref op1, op2, or1);
@@ -3072,7 +3056,7 @@ namespace Clipper2Lib
           }
           break;
         }
-        else if (op1.next!.pt == op2.prev.pt ||
+        if (op1.next!.pt == op2.prev.pt ||
                  ((InternalClipper.CrossProduct(op1.next.pt, op2.pt, op2.prev.pt) == 0) &&
                   CollinearSegsOverlap(op1.next.pt, op1.pt, op2.pt, op2.prev.pt)))
         {
@@ -3137,25 +3121,25 @@ namespace Clipper2Lib
           }
           break;
         }
-        else if (PointBetween(op1.next.pt, op2.pt, op2.prev.pt) &&
+        if (PointBetween(op1.next.pt, op2.pt, op2.prev.pt) &&
                  DistanceFromLineSqrd(op1.next.pt, op2.pt, op2.prev.pt) < 2.01)
         {
           InsertOp(op1.next.pt, op2.prev);
           continue;
         }
-        else if (PointBetween(op2.next.pt, op1.pt, op1.prev.pt) &&
+        if (PointBetween(op2.next.pt, op1.pt, op1.prev.pt) &&
                  DistanceFromLineSqrd(op2.next.pt, op1.pt, op1.prev.pt) < 2.01)
         {
           InsertOp(op2.next.pt, op1.prev);
           continue;
         }
-        else if (PointBetween(op1.prev.pt, op2.pt, op2.next.pt) &&
+        if (PointBetween(op1.prev.pt, op2.pt, op2.next.pt) &&
                  DistanceFromLineSqrd(op1.prev.pt, op2.pt, op2.next.pt) < 2.01)
         {
           InsertOp(op1.prev.pt, op2);
           continue;
         }
-        else if (PointBetween(op2.prev.pt, op1.pt, op1.next.pt) &&
+        if (PointBetween(op2.prev.pt, op1.pt, op1.next.pt) &&
                  DistanceFromLineSqrd(op2.prev.pt, op1.pt, op1.next.pt) < 2.01)
         {
           InsertOp(op2.prev.pt, op1);
@@ -3164,30 +3148,26 @@ namespace Clipper2Lib
 
         // something odd needs tidying up
         if (CheckDisposeAdjacent(ref op1, op2, or1)) continue;
-        else if (CheckDisposeAdjacent(ref op2, op1, or1)) continue;
-        else if (op1.prev.pt != op2.next!.pt &&
+        if (CheckDisposeAdjacent(ref op2, op1, or1)) continue;
+        if (op1.prev.pt != op2.next!.pt &&
           (DistanceSqr(op1.prev.pt, op2.next.pt) < 2.01))
         {
           op1.prev.pt = op2.next.pt;
           continue;
         }
-        else if (op1.next!.pt != op2.prev.pt &&
+        if (op1.next!.pt != op2.prev.pt &&
           (DistanceSqr(op1.next.pt, op2.prev.pt) < 2.01))
         {
           op2.prev.pt = op1.next.pt;
           continue;
         }
-        else
+        // OK, there doesn't seem to be a way to join after all
+        // so just tidy up the polygons
+        or1.pts = op1;
+        if (or2 != or1)
         {
-          // OK, there doesn't seem to be a way to join after all
-          // so just tidy up the polygons
-          or1.pts = op1;
-          if (or2 != or1)
-          {
-            or2.pts = op2;
-            CleanCollinear(or2);
-          }
-          break;
+          or2.pts = op2;
+          CleanCollinear(or2);
         }
       }
       return result;
@@ -3356,8 +3336,8 @@ namespace Clipper2Lib
           op = op2;
           continue;
         }
-        else
-          op2 = op2.next;
+
+        op2 = op2.next;
 
         if (op2 == op) break;
       }
