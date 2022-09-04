@@ -1736,8 +1736,8 @@ namespace Clipper2Lib
         {
           // can't treat as maxima & minima
           resultOp = AddOutPt(ae1, pt);
-          OutPt op2 = AddOutPt(ae2, pt);
 #if USINGZ
+          OutPt op2 = AddOutPt(ae2, pt);
           SetZ(ae1, ae2, ref resultOp.pt);
           SetZ(ae1, ae2, ref op2.pt);
 #endif
