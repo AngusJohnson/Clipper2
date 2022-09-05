@@ -575,7 +575,7 @@ namespace Clipper2Lib
         }
         else
         {
-          double d = InternalClipper.CrossProduct(prev, curr, pt);
+          double d = CrossProduct(prev, curr, pt);
           if (d == 0) return PointInPolygonResult.IsOn;
           if ((d < 0) == isAbove) val = 1 - val;
         }
