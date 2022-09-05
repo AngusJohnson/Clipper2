@@ -1383,8 +1383,7 @@ namespace Clipper2Lib
         result = outrec.pts;
 
         outrec.owner = GetRealOutRec(outrec.owner);
-        if (_using_polytree && outrec.owner != null &&
-          outrec.owner.frontEdge == null)
+        if (_using_polytree && outrec.owner is { frontEdge: null })
             outrec.owner = GetRealOutRec(outrec.owner.owner);
       }
       // and to preserve the winding orientation of outrec ...
@@ -1441,8 +1440,7 @@ namespace Clipper2Lib
       if (ae2.outrec.owner != null &&
         ae2.outrec.owner.idx < ae1.outrec.idx)
       {
-        if (ae1.outrec.owner == null ||
-          ae2.outrec.owner.idx < ae1.outrec.owner.idx)
+        if (ae1.outrec.owner == null || ae2.outrec.owner.idx < ae1.outrec.owner.idx)
             ae1.outrec.owner = ae2.outrec.owner;
       }
 
@@ -3548,9 +3546,6 @@ namespace Clipper2Lib
 
   public class Clipper64 : ClipperBase
   {
-    public Clipper64()
-    { }
-
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal new void AddPath(Path64 path, PathType polytype, bool isOpen = false)
     {
