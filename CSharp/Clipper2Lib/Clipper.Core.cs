@@ -259,20 +259,16 @@ namespace Clipper2Lib
     }
 
 #endif
-
-    private static bool IsAlmostZero(double value)
-    {
-      return (Math.Abs(value) <= 1E-15);
-    }
-
     public static bool operator ==(PointD lhs, PointD rhs)
     {
-      return IsAlmostZero(lhs.x - rhs.x) && IsAlmostZero(lhs.y - rhs.y);
+      return InternalClipper.IsAlmostZero(lhs.x - rhs.x) && 
+        InternalClipper.IsAlmostZero(lhs.y - rhs.y);
     }
 
     public static bool operator !=(PointD lhs, PointD rhs)
     {
-      return !IsAlmostZero(lhs.x - rhs.x) || !IsAlmostZero(lhs.y - rhs.y);
+      return !InternalClipper.IsAlmostZero(lhs.x - rhs.x) || 
+        !InternalClipper.IsAlmostZero(lhs.y - rhs.y);
     }
 
     public override bool Equals(object obj)
@@ -436,8 +432,13 @@ namespace Clipper2Lib
   public static class InternalClipper
   {
 
-    internal const double floatingPointTolerance = 1E-15;
+    internal const double floatingPointTolerance = 1E-12;
     internal const double defaultMinimumEdgeLength = 0.1;
+
+    internal static bool IsAlmostZero(double value)
+    {
+      return (Math.Abs(value) <= floatingPointTolerance);
+    }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static double CrossProduct(Point64 pt1, Point64 pt2, Point64 pt3)

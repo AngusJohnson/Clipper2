@@ -1,7 +1,7 @@
 ﻿/*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Version   :  Clipper2 - ver.1.0.3                                            *
-* Date      :  20 August 2022                                                  *
+* Version   :  Clipper2 - ver.1.0.4                                            *
+* Date      :  5 September 2022                                                *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  Path Offset (Inflate/Shrink)                                    *
@@ -228,15 +228,15 @@ namespace Clipper2Lib
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private PointD IntersectPoint(PointD pt1a, PointD pt1b, PointD pt2a, PointD pt2b)
     {
-      if (pt1a.x == pt1b.x) //vertical
+      if (InternalClipper.IsAlmostZero(pt1a.x - pt1b.x)) //vertical
       {
-        if (pt2a.x == pt2b.x) return new PointD(0, 0);
+        if (InternalClipper.IsAlmostZero(pt2a.x - pt2b.x)) return new PointD(0, 0);
         double m2 = (pt2b.y - pt2a.y) / (pt2b.x - pt2a.x);
         double b2 = pt2a.y - m2 * pt2a.x;
         return new PointD(pt1a.x, m2* pt1a.x + b2);
       }
 
-      if (pt2a.x == pt2b.x) //vertical
+      if (InternalClipper.IsAlmostZero(pt2a.x - pt2b.x)) //vertical
       {
         double m1 = (pt1b.y - pt1a.y) / (pt1b.x - pt1a.x);
         double b1 = pt1a.y - m1 * pt1a.x;
@@ -248,7 +248,7 @@ namespace Clipper2Lib
         double b1 = pt1a.y - m1 * pt1a.x;
         double m2 = (pt2b.y - pt2a.y) / (pt2b.x - pt2a.x);
         double b2 = pt2a.y - m2 * pt2a.x;
-        if (m1 == m2) return new PointD(0, 0);
+        if (InternalClipper.IsAlmostZero(m1 - m2)) return new PointD(0, 0);
         double x = (b2 - b1) / (m1 - m2);
         return new PointD(x, m1 * x + b1);
       }

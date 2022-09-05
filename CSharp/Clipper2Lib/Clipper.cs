@@ -1,7 +1,7 @@
 ﻿/*******************************************************************************
 * Author    :  Angus Johnson                                                   *
 * Version   :  Clipper2 - ver.1.0.4                                            *
-* Date      :  3 September 2022                                                *
+* Date      :  5 September 2022                                                *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  This module contains simple functions that will likely cover    *
@@ -274,7 +274,7 @@ namespace Clipper2Lib
 
     public static Path64 ScalePath(Path64 path, double scale)
     {
-      if (scale == 1) return path;
+      if (InternalClipper.IsAlmostZero(scale - 1)) return path;
       Path64 result = new Path64(path.Count);
 #if USINGZ
       foreach (Point64 pt in path)
@@ -288,7 +288,7 @@ namespace Clipper2Lib
 
     public static Paths64 ScalePaths(Paths64 paths, double scale)
     {
-      if (scale == 1) return paths;
+      if (InternalClipper.IsAlmostZero(scale - 1)) return paths;
       Paths64 result = new Paths64(paths.Count);
       foreach (Path64 path in paths)
         result.Add(ScalePath(path, scale));
@@ -297,7 +297,7 @@ namespace Clipper2Lib
 
     public static PathD ScalePath(PathD path, double scale)
     {
-      if (scale == 1) return path;
+      if (InternalClipper.IsAlmostZero(scale - 1)) return path;
       PathD result = new PathD(path.Count);
       foreach (PointD pt in path)
         result.Add(new PointD(pt, scale));
@@ -306,7 +306,7 @@ namespace Clipper2Lib
 
     public static PathsD ScalePaths(PathsD paths, double scale)
     {
-      if (scale == 1) return paths;
+      if (InternalClipper.IsAlmostZero(scale - 1)) return paths;
       PathsD result = new PathsD(paths.Count);
       foreach (PathD path in paths)
         result.Add(ScalePath(path, scale));
@@ -727,9 +727,9 @@ namespace Clipper2Lib
         result.Add(path[len - 1]);
       else
       {
-        while (result.Count > 2 &&
-          InternalClipper.CrossProduct(result[result.Count - 1], result[result.Count - 2], result[0]) == 0)
-          result.RemoveAt(result.Count - 1);
+        while (result.Count > 2 && InternalClipper.CrossProduct(
+          result[result.Count - 1], result[result.Count - 2], result[0]) == 0)
+            result.RemoveAt(result.Count - 1);
         if (result.Count < 3)
           result.Clear();
       }

@@ -1,7 +1,7 @@
 ﻿/*******************************************************************************
 * Author    :  Angus Johnson                                                   *
 * Version   :  Clipper2 - ver.1.0.4                                            *
-* Date      :  4 September 2022                                                *
+* Date      :  5 September 2022                                                *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  This is the main polygon clipping module                        *
@@ -171,16 +171,9 @@ namespace Clipper2Lib
     public Joiner? next2;
     public Joiner? nextH;
 
-    public Joiner(List<Joiner?>? joinerList, OutPt op1, OutPt? op2, Joiner? nextH)
+    public Joiner(OutPt op1, OutPt? op2, Joiner? nextH)
     {
-      if (joinerList != null)
-      {
-        idx = joinerList.Count;
-        joinerList.Add(this);
-      }
-      else
-        idx = -1;
-
+      this.idx = -1;
       this.nextH = nextH;
       this.op1 = op1;
       this.op2 = op2;
@@ -271,11 +264,6 @@ namespace Clipper2Lib
     }
 
 #if USINGZ
-    private bool XYCoordsEqual(Point64 pt1, Point64 pt2)
-    {
-      return (pt1.X == pt2.X && pt1.Y == pt2.Y);
-    }
-
     private void SetZ(Active e1, Active e2, ref Point64 intersectPt)
     {
       if (_zCallback == null) return;
@@ -419,16 +407,16 @@ namespace Clipper2Lib
     private static Point64 GetIntersectPoint(Active ae1, Active ae2)
     {
       double b1, b2;
-      if (ae1.dx == ae2.dx) return ae1.top;
+      if (InternalClipper.IsAlmostZero(ae1.dx - ae2.dx)) return ae1.top;
 
-      if (ae1.dx == 0)
+      if (InternalClipper.IsAlmostZero(ae1.dx))
       {
         if (IsHorizontal(ae2)) return new Point64(ae1.bot.X, ae2.bot.Y);
         b2 = ae2.bot.Y - (ae2.bot.X / ae2.dx);
         return new Point64(ae1.bot.X, (long) Math.Round(ae1.bot.X / ae2.dx + b2));
       }
 
-      if (ae2.dx == 0)
+      if (InternalClipper.IsAlmostZero(ae2.dx))
       {
         if (IsHorizontal(ae1)) return new Point64(ae2.bot.X, ae1.bot.Y);
         b1 = ae1.bot.Y - (ae1.bot.X / ae1.dx);
@@ -1730,10 +1718,12 @@ namespace Clipper2Lib
         {
           // can't treat as maxima & minima
           resultOp = AddOutPt(ae1, pt);
-          OutPt op2 = AddOutPt(ae2, pt);
 #if USINGZ
+          OutPt op2 = AddOutPt(ae2, pt);
           SetZ(ae1, ae2, ref resultOp.pt);
           SetZ(ae1, ae2, ref op2.pt);
+#else
+          AddOutPt(ae2, pt);
 #endif
           SwapOutrecs(ae1, ae2);
         }
@@ -2098,7 +2088,7 @@ namespace Clipper2Lib
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private void TrimHorz(Active horzEdge, bool preserveCollinear)
     {
-      bool result = false;
+      bool wasTrimmed = false;
       Point64 pt = NextVertex(horzEdge).pt;
 
       while (pt.Y == horzEdge.top.Y)
@@ -2111,11 +2101,11 @@ namespace Clipper2Lib
 
         horzEdge.vertexTop = NextVertex(horzEdge);
         horzEdge.top = pt;
-        result = true;
+        wasTrimmed = true;
         if (IsMaxima(horzEdge)) break;
         pt = NextVertex(horzEdge).pt;
       }
-      if (result) SetDx(horzEdge); // +/-infinity
+      if (wasTrimmed) SetDx(horzEdge); // +/-infinity
     }
 
     private void DoHorizontal(Active horz)
@@ -2659,7 +2649,7 @@ namespace Clipper2Lib
     {
       // make sure 'op' isn't added more than once
       if (!op.outrec.isOpen && !OutPtInTrialHorzList(op))
-        _horzJoiners = new Joiner(null, op, null, _horzJoiners);
+        _horzJoiners = new Joiner(op, null, _horzJoiners);
 
     }
 
@@ -2837,7 +2827,9 @@ namespace Clipper2Lib
         ((op1.next == op2) && (op1 != op1.outrec.pts)) ||
         ((op2.next == op1) && (op2 != op1.outrec.pts)))) return;
         
-      new Joiner(_joinerList, op1, op2, null);
+      Joiner joiner = new Joiner(op1, op2, null);
+      joiner.idx = _joinerList.Count;
+      _joinerList.Add(joiner);
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -3120,6 +3112,7 @@ namespace Clipper2Lib
           }
           break;
         }
+
         if (PointBetween(op1.next.pt, op2.pt, op2.prev.pt) &&
                  DistanceFromLineSqrd(op1.next.pt, op2.pt, op2.prev.pt) < 2.01)
         {
@@ -3168,6 +3161,7 @@ namespace Clipper2Lib
           or2.pts = op2;
           CleanCollinear(or2);
         }
+        break;
       }
       return result;
     }
@@ -3927,8 +3921,11 @@ namespace Clipper2Lib
     public double Area()
     {
       double result = Polygon == null ? 0 : Clipper.Area(Polygon);
-      foreach (PolyPath64 child in _childs)
+      foreach (var polyPathBase in _childs)
+      {
+        PolyPath64 child = (PolyPath64) polyPathBase;
         result += child.Area();
+      }
       return result;
     }
   }
@@ -3964,8 +3961,11 @@ namespace Clipper2Lib
     public double Area()
     {
       double result = Polygon == null ? 0 : Clipper.Area(Polygon);
-      foreach (PolyPath64 child in _childs)
+      foreach (var polyPathBase in _childs)
+      {
+        PolyPathD child = (PolyPathD) polyPathBase;
         result += child.Area();
+      }
       return result;
     }
   }
