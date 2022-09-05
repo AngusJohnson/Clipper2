@@ -8,9 +8,7 @@
 * http://www.boost.org/LICENSE_1_0.txt                                         *
 *******************************************************************************/
 
-using System;
 using System.Collections.Generic;
-using System.Globalization;
 using System.IO;
 
 namespace Clipper2Lib
