@@ -3549,7 +3549,8 @@ namespace Clipper2Lib
 
   public class Clipper64 : ClipperBase
   {
-    public Clipper64() : base() { }
+    public Clipper64()
+    { }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal new void AddPath(Path64 path, PathType polytype, bool isOpen = false)
@@ -3660,7 +3661,7 @@ namespace Clipper2Lib
     }
 #endif
 
-    public ClipperD(int roundingDecimalPrecision = 2): base()
+    public ClipperD(int roundingDecimalPrecision = 2)
     {
       if (roundingDecimalPrecision < -8 || roundingDecimalPrecision > 8)
         throw new ClipperLibException("Error - RoundingDecimalPrecision exceeds the allowed range.");
