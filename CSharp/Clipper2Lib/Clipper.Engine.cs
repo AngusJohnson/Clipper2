@@ -456,7 +456,7 @@ namespace Clipper2Lib
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static bool IsMaxima(Vertex vertex)
     {
-      return ((vertex!.flags & VertexFlags.LocalMax) != VertexFlags.None);
+      return ((vertex.flags & VertexFlags.LocalMax) != VertexFlags.None);
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -753,7 +753,7 @@ namespace Clipper2Lib
         bool going_up, going_up0;
         if (isOpen)
         {
-          curr_v = v0!.next;
+          curr_v = v0.next;
           while (curr_v != v0 && curr_v!.pt.Y == v0.pt.Y)
             curr_v = curr_v.next;
           going_up = curr_v.pt.Y <= v0.pt.Y;
@@ -767,7 +767,7 @@ namespace Clipper2Lib
         }
         else // closed path
         {
-          prev_v = v0!.prev;
+          prev_v = v0.prev;
           while (prev_v != v0 && prev_v!.pt.Y == v0.pt.Y)
             prev_v = prev_v.prev;
           if (prev_v == v0)
@@ -2604,7 +2604,7 @@ namespace Clipper2Lib
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private void SafeDisposeOutPts(ref OutPt op)
     {
-      OutRec? outRec = GetRealOutRec(op!.outrec);
+      OutRec? outRec = GetRealOutRec(op.outrec);
       if (outRec!.frontEdge != null)
         outRec.frontEdge.outrec = null;
       if (outRec.backEdge != null)
@@ -3244,7 +3244,7 @@ namespace Clipper2Lib
       {
         if (op2!.joiner != null) return;
         // NB if preserveCollinear == true, then only remove 180 deg. spikes
-        if ((InternalClipper.CrossProduct(op2!.prev.pt, op2.pt, op2.next!.pt) == 0) &&
+        if ((InternalClipper.CrossProduct(op2.prev.pt, op2.pt, op2.next!.pt) == 0) &&
           ((op2.pt == op2.prev.pt) || (op2.pt == op2.next.pt) || !PreserveCollinear ||
           (InternalClipper.DotProduct(op2.prev.pt, op2.pt, op2.next.pt) < 0)))
         {
