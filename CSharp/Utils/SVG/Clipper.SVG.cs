@@ -192,8 +192,8 @@ namespace Clipper2Lib
       double scale = 1.0;
       if (maxWidth > 0 && maxHeight > 0)
         scale = Math.Min(
-           (maxWidth - margin * 2) / (double)bounds.Width,
-            (maxHeight - margin * 2) / (double) bounds.Height);
+           (maxWidth - margin * 2) / bounds.Width,
+            (maxHeight - margin * 2) / bounds.Height);
 
       long offsetX = margin - (long) (bounds.left * scale);
       long offsetY = margin - (long) (bounds.top * scale);
@@ -266,8 +266,8 @@ namespace Clipper2Lib
             captionInfo.fontSize, ColorToHtml(captionInfo.fontColor)));
         writer.Write(string.Format(
             "<text x=\"{0}\" y=\"{1}\">{2}</text>\n</g>\n",
-            (int) (captionInfo.posX + margin),
-            (int) (captionInfo.posY + margin),
+            captionInfo.posX + margin,
+            captionInfo.posY + margin,
             captionInfo.text));
       }
 
