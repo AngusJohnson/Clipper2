@@ -34,15 +34,15 @@ namespace ClipperDemo1
       solution = Clipper.Intersect(subject, clip, fillrule);
 
       SimpleSvgWriter svg = new SimpleSvgWriter();
-      SvgUtils.AddSubject(svg, subject, true);
+      SvgUtils.AddSubject(svg, subject);
       SvgUtils.AddClip(svg, clip);
       SvgUtils.SaveToFile(svg, "..\\..\\..\\clipperA.svg", fillrule, 400, 300, 20);
       ClipperFileIO.OpenFileWithDefaultApp("..\\..\\..\\clipperA.svg");
 
       svg.ClearAll();
-      SvgUtils.AddSubject(svg, subject, true);
+      SvgUtils.AddSubject(svg, subject);
       SvgUtils.AddClip(svg, clip);
-      SvgUtils.AddSolution(svg, solution, false, true);
+      SvgUtils.AddSolution(svg, solution, false);
       SvgUtils.SaveToFile(svg, "..\\..\\..\\clipperB.svg", fillrule, 400, 300, 20);
       ClipperFileIO.OpenFileWithDefaultApp("..\\..\\..\\clipperB.svg");
 
@@ -51,15 +51,15 @@ namespace ClipperDemo1
       solution = Clipper.Intersect(subject, clip, fillrule);
 
       svg.ClearAll();
-      SvgUtils.AddSubject(svg, subject, true);
+      SvgUtils.AddSubject(svg, subject);
       SvgUtils.AddClip(svg, clip);
       SvgUtils.SaveToFile(svg, "..\\..\\..\\clipperC.svg", fillrule, 800, 600, 20);
       ClipperFileIO.OpenFileWithDefaultApp("..\\..\\..\\clipperC.svg");
 
       svg.ClearAll();
-      SvgUtils.AddSubject(svg, subject, true);
+      SvgUtils.AddSubject(svg, subject);
       SvgUtils.AddClip(svg, clip);
-      SvgUtils.AddSolution(svg, solution, false, true);
+      SvgUtils.AddSolution(svg, solution, false);
       SvgUtils.SaveToFile(svg, "..\\..\\..\\clipperD.svg", fillrule, 800, 600, 20);
       ClipperFileIO.OpenFileWithDefaultApp("..\\..\\..\\clipperD.svg");
 

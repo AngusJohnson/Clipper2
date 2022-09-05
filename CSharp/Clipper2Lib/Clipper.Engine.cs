@@ -813,7 +813,7 @@ namespace Clipper2Lib
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void AddSubject(Path64 path)
     {
-      AddPath(path, PathType.Subject, false);
+      AddPath(path, PathType.Subject);
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -825,7 +825,7 @@ namespace Clipper2Lib
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void AddClip(Path64 path)
     {
-      AddPath(path, PathType.Clip, false);
+      AddPath(path, PathType.Clip);
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -1769,7 +1769,7 @@ namespace Clipper2Lib
 
         if (!IsSamePolyType(ae1, ae2))
         {
-          resultOp = AddLocalMinPoly(ae1, ae2, pt, false);
+          resultOp = AddLocalMinPoly(ae1, ae2, pt);
 #if USINGZ
           SetZ(ae1, ae2, ref resultOp.pt);
 #endif
@@ -1781,25 +1781,25 @@ namespace Clipper2Lib
           {
             case ClipType.Union:
               if (e1Wc2 > 0 && e2Wc2 > 0) return null;
-              resultOp = AddLocalMinPoly(ae1, ae2, pt, false);
+              resultOp = AddLocalMinPoly(ae1, ae2, pt);
               break;
 
             case ClipType.Difference:
               if (((GetPolyType(ae1) == PathType.Clip) && (e1Wc2 > 0) && (e2Wc2 > 0)) ||
                   ((GetPolyType(ae1) == PathType.Subject) && (e1Wc2 <= 0) && (e2Wc2 <= 0)))
               {
-                resultOp = AddLocalMinPoly(ae1, ae2, pt, false);
+                resultOp = AddLocalMinPoly(ae1, ae2, pt);
               }
 
               break;
 
             case ClipType.Xor:
-              resultOp = AddLocalMinPoly(ae1, ae2, pt, false);
+              resultOp = AddLocalMinPoly(ae1, ae2, pt);
               break;
 
             default: // ClipType.Intersection:
               if (e1Wc2 <= 0 || e2Wc2 <= 0) return null;
-              resultOp = AddLocalMinPoly(ae1, ae2, pt, false);
+              resultOp = AddLocalMinPoly(ae1, ae2, pt);
               break;
           }
 #if USINGZ
@@ -3567,7 +3567,7 @@ namespace Clipper2Lib
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void AddSubject(Paths64 paths)
     {
-      AddPaths(paths, PathType.Subject, false);
+      AddPaths(paths, PathType.Subject);
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -3579,7 +3579,7 @@ namespace Clipper2Lib
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void AddClip(Paths64 paths)
     {
-      AddPaths(paths, PathType.Clip, false);
+      AddPaths(paths, PathType.Clip);
     }
 
     public bool Execute(ClipType clipType, FillRule fillRule,
@@ -3704,7 +3704,7 @@ namespace Clipper2Lib
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void AddSubject(PathD path)
     {
-      AddPath(path, PathType.Subject, false);
+      AddPath(path, PathType.Subject);
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -3716,13 +3716,13 @@ namespace Clipper2Lib
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void AddClip(PathD path)
     {
-      AddPath(path, PathType.Clip, false);
+      AddPath(path, PathType.Clip);
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void AddSubject(PathsD paths)
     {
-      AddPaths(paths, PathType.Subject, false);
+      AddPaths(paths, PathType.Subject);
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -3734,7 +3734,7 @@ namespace Clipper2Lib
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void AddClip(PathsD paths)
     {
-      AddPaths(paths, PathType.Clip, false);
+      AddPaths(paths, PathType.Clip);
     }
 
     public bool Execute(ClipType clipType, FillRule fillRule,
