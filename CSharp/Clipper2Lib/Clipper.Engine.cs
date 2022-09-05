@@ -3907,7 +3907,7 @@ namespace Clipper2Lib
       return newChild;
     }
 
-    [System.Runtime.CompilerServices.IndexerName("Child")]
+    [IndexerName("Child")]
     public PolyPath64 this[int index]
     {
       get {
@@ -3947,7 +3947,7 @@ namespace Clipper2Lib
       return newChild;
     }
 
-    [System.Runtime.CompilerServices.IndexerName("Child")]
+    [IndexerName("Child")]
     public PolyPathD this[int index]
     {
       get
