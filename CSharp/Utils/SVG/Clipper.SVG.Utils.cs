@@ -8,9 +8,7 @@
 * http://www.boost.org/LICENSE_1_0.txt                                         *
 *******************************************************************************/
 
-using System;
 using System.Collections.Generic;
-using System.Globalization;
 using System.IO;
 
 namespace Clipper2Lib
@@ -19,7 +17,7 @@ namespace Clipper2Lib
   using Paths64 = List<List<Point64>>;
   using PathsD = List<List<PointD>>;
 
-  public class SvgUtils
+  public static class SvgUtils
   {
 
     public static void AddCaption(SimpleSvgWriter svg, string caption, int x, int y)
