@@ -8,6 +8,7 @@
 * http://www.boost.org/LICENSE_1_0.txt                                         *
 *******************************************************************************/
 
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Diagnostics;
@@ -18,11 +19,8 @@ namespace Clipper2Lib
   using Path64 = List<Point64>;
   using Paths64 = List<List<Point64>>;
 
-  public class ClipperFileIO
+  public static class ClipperFileIO
   {
-    const int margin = 20;
-    const int displayWidth = 800;
-    const int displayHeight = 600;
     public static Paths64 PathFromStr(string s)
     {
       if (s == null) return null;
@@ -93,14 +91,21 @@ namespace Clipper2Lib
       caption = "";
       area = 0;
       count = 0;
-      StreamReader reader = new StreamReader(filename);
-      if (reader == null) return false;
+      StreamReader reader;
+      try
+      {
+        reader = new StreamReader(filename);
+      }
+      catch
+      {
+        return false;
+      }
       while (true)
       {
         string s = reader.ReadLine();
         if (s == null) break;
         
-        if (s.IndexOf("CAPTION: ") == 0)
+        if (s.IndexOf("CAPTION: ", StringComparison.Ordinal) == 0)
         {
           num--;
           if (num != 0) continue;
@@ -111,40 +116,40 @@ namespace Clipper2Lib
 
         if (num > 0) continue;
 
-        if (s.IndexOf("CLIPTYPE: ") == 0)
+        if (s.IndexOf("CLIPTYPE: ", StringComparison.Ordinal) == 0)
         {
-          if (s.IndexOf("INTERSECTION") > 0) ct = ClipType.Intersection;
-          else if (s.IndexOf("UNION") > 0) ct = ClipType.Union;
-          else if (s.IndexOf("DIFFERENCE") > 0) ct = ClipType.Difference;
+          if (s.IndexOf("INTERSECTION", StringComparison.Ordinal) > 0) ct = ClipType.Intersection;
+          else if (s.IndexOf("UNION", StringComparison.Ordinal) > 0) ct = ClipType.Union;
+          else if (s.IndexOf("DIFFERENCE", StringComparison.Ordinal) > 0) ct = ClipType.Difference;
           else ct = ClipType.Xor;
           continue;
         }
 
-        if (s.IndexOf("FILLTYPE: ") == 0 ||
-          s.IndexOf("FILLRULE: ") == 0)
+        if (s.IndexOf("FILLTYPE: ", StringComparison.Ordinal) == 0 ||
+            s.IndexOf("FILLRULE: ", StringComparison.Ordinal) == 0)
         {
-          if (s.IndexOf("EVENODD") > 0) fillRule = FillRule.EvenOdd;
-          else if (s.IndexOf("POSITIVE") > 0) fillRule = FillRule.Positive;
-          else if (s.IndexOf("NEGATIVE") > 0) fillRule = FillRule.Negative;
+          if (s.IndexOf("EVENODD", StringComparison.Ordinal) > 0) fillRule = FillRule.EvenOdd;
+          else if (s.IndexOf("POSITIVE", StringComparison.Ordinal) > 0) fillRule = FillRule.Positive;
+          else if (s.IndexOf("NEGATIVE", StringComparison.Ordinal) > 0) fillRule = FillRule.Negative;
           else fillRule = FillRule.NonZero;
           continue;
         }
 
-        if (s.IndexOf("SOL_AREA: ") == 0)
+        if (s.IndexOf("SOL_AREA: ", StringComparison.Ordinal) == 0)
         {
           area = long.Parse(s[10..]);
           continue;
         }
 
-        if (s.IndexOf("SOL_COUNT: ") == 0)
+        if (s.IndexOf("SOL_COUNT: ", StringComparison.Ordinal) == 0)
         {
           count = int.Parse(s[11..]);
           continue;
         }
 
-        if (s.IndexOf("SUBJECTS_OPEN") == 0) GetIdx = 2;
-        else if (s.IndexOf("SUBJECTS") == 0) GetIdx = 1;
-        else if (s.IndexOf("CLIPS") == 0) GetIdx = 3;
+        if (s.IndexOf("SUBJECTS_OPEN", StringComparison.Ordinal) == 0) GetIdx = 2;
+        else if (s.IndexOf("SUBJECTS", StringComparison.Ordinal) == 0) GetIdx = 1;
+        else if (s.IndexOf("CLIPS", StringComparison.Ordinal) == 0) GetIdx = 3;
         else continue;
 
         while (true)
@@ -155,8 +160,8 @@ namespace Clipper2Lib
           if (paths == null || paths.Count == 0)
           {
             if (GetIdx == 3) return result;
-            if (s.IndexOf("SUBJECTS_OPEN") == 0) GetIdx = 2;
-            else if (s.IndexOf("CLIPS") == 0) GetIdx = 3;
+            if (s.IndexOf("SUBJECTS_OPEN", StringComparison.Ordinal) == 0) GetIdx = 2;
+            else if (s.IndexOf("CLIPS", StringComparison.Ordinal) == 0) GetIdx = 3;
             else return result;
             continue;
           }
@@ -172,8 +177,15 @@ namespace Clipper2Lib
     public static void SaveClippingOp(string filename, Paths64 subj,
       Paths64 subj_open, Paths64 clip, ClipType ct, FillRule fillRule, bool append)
     {
-      StreamWriter writer = new StreamWriter(filename, append);
-      if (writer == null) return;
+      StreamWriter writer;
+      try
+      {
+        writer = new StreamWriter(filename, append);
+      }
+      catch
+      {
+        return;
+      }
       writer.Write("CAPTION: 1. \r\n");
       writer.Write("CLIPTYPE: {0}\r\n", ct.ToString().ToUpper());
       writer.Write("FILLRULE: {0}\r\n", fillRule.ToString().ToUpper());
@@ -212,9 +224,24 @@ namespace Clipper2Lib
 
     public static void SaveToBinFile(string filename, Paths64 paths)
     {
-      FileStream filestream = new FileStream(filename, FileMode.Create);
-      BinaryWriter writer = new BinaryWriter(filestream);
-      if (writer == null) return;
+      FileStream filestream;
+      try
+      {
+        filestream = new FileStream(filename, FileMode.Create);
+      }
+      catch
+      {
+        return;
+      }
+      BinaryWriter writer;
+      try
+      {
+        writer = new BinaryWriter(filestream);
+      }
+      catch
+      {
+        return;
+      }
       writer.Write(paths.Count);
       foreach (Path64 path in paths)
       {
