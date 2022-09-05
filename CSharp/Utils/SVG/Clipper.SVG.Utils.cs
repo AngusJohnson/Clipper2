@@ -17,7 +17,7 @@ namespace Clipper2Lib
   using Paths64 = List<List<Point64>>;
   using PathsD = List<List<PointD>>;
 
-  public class SvgUtils
+  public static class SvgUtils
   {
 
     public static void AddCaption(SimpleSvgWriter svg, string caption, int x, int y)
