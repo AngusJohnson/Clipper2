@@ -3540,8 +3540,7 @@ namespace Clipper2Lib
           v = v.next!;
         } while (v != t);
       }
-      if (bounds.IsEmpty()) return new Rect64(0, 0, 0, 0);
-      return bounds;
+      return bounds.IsEmpty() ? new Rect64(0, 0, 0, 0) : bounds;
     }
 
   } // ClipperBase class
