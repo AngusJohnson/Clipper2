@@ -3825,7 +3825,7 @@ namespace Clipper2Lib
     }
     IEnumerator IEnumerable.GetEnumerator()
     {
-      return (IEnumerator) GetEnumerator();
+      return GetEnumerator();
     }
 
     public bool IsHole => GetIsHole();

@@ -32,36 +32,36 @@ namespace Clipper2Lib
       while (i < len)
       {
         bool isNeg;
-        while ((int) s[i] < 33 && i < len) i++;
+        while (s[i] < 33 && i < len) i++;
         if (i >= len) break;
         //get X ...
-        isNeg = (int) s[i] == 45;
+        isNeg = s[i] == 45;
         if (isNeg) i++;
-        if (i >= len || (int) s[i] < 48 || (int) s[i] > 57) break;
+        if (i >= len || s[i] < 48 || s[i] > 57) break;
         j = i + 1;
-        while (j < len && (int) s[j] > 47 && (int) s[j] < 58) j++;
+        while (j < len && s[j] > 47 && s[j] < 58) j++;
         if (!long.TryParse(s[i..j], out long x)) break;
         if (isNeg) x = -x;
         //skip space or comma between X & Y ...
         i = j;
-        while (i < len && ((int) s[i] == 32 || (int) s[i] == 44)) i++;
+        while (i < len && (s[i] == 32 || s[i] == 44)) i++;
         //get Y ...
         if (i >= len) break;
-        isNeg = (int) s[i] == 45;
+        isNeg = s[i] == 45;
         if (isNeg) i++;
-        if (i >= len || (int) s[i] < 48 || (int) s[i] > 57) break;
+        if (i >= len || s[i] < 48 || s[i] > 57) break;
         j = i + 1;
-        while (j < len && (int) s[j] > 47 && (int) s[j] < 58) j++;
+        while (j < len && s[j] > 47 && s[j] < 58) j++;
         if (!long.TryParse(s[i..j], out long y)) break;
         if (isNeg) y = -y;
         p.Add(new Point64(x, y));
         //skip trailing space, comma ...
         i = j;
         int nlCnt = 0;
-        while (i < len && ((int) s[i] < 33 || (int) s[i] == 44))
+        while (i < len && (s[i] < 33 || s[i] == 44))
         {
           if (i >= len) break;
-          if ((int) s[i] == 10)
+          if (s[i] == 10)
           {
             nlCnt++;
             if (nlCnt == 2)
