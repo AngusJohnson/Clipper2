@@ -3,7 +3,7 @@ unit Clipper.SVG;
 (*******************************************************************************
 * Author    :  Angus Johnson                                                   *
 * Version   :  Clipper2 - ver.1.0.4                                            *
-* Date      :  4 September 2022                                                *
+* Date      :  6 September 2022                                                *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  This module provides a very simple SVG Writer for Clipper2      *
@@ -376,6 +376,7 @@ const
 
 begin
   formatSettings := TFormatSettings.Create;
+  formatSettings.DecimalSeparator := '.';
 
   Result := false;
   if (margin < 20) then margin := 20;
