@@ -159,6 +159,7 @@ if(CLIPPER2_TESTS)
     Tests/TestPolytreeUnion.cpp
     Tests/TestRandomPaths.cpp
     Tests/TestTrimCollinear.cpp
+    Tests/TestInitiators.cpp
   )
 
   target_link_libraries(ClipperTests gtest gmock gtest_main Clipper2 Clipper2utils)
