@@ -3416,7 +3416,6 @@ namespace Clipper2Lib
       } while (op != or1.pts);
       if (result == PointInPolygonResult.IsOn)
         return Area(op) < Area(or2.pts!);
-      else
       return result == PointInPolygonResult.IsInside;
     }
 

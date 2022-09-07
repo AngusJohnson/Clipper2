@@ -550,9 +550,9 @@ namespace Clipper2Lib
           if (i == len) break;
         }
 
-        Point64 curr, prev;
+        Point64 prev;
 
-        curr = polygon[i];
+        Point64 curr = polygon[i];
         if (i > 0) prev = polygon[i - 1];
         else prev = polygon[len - 1];
 
