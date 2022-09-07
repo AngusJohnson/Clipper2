@@ -1,7 +1,7 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
 * Version   :  Clipper2 - ver.1.0.4                                            *
-* Date      :  4 August 2022                                                   *
+* Date      :  7 August 2022                                                   *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  Core Clipper Library structures and functions                   *
@@ -59,7 +59,7 @@ struct Point {
 	explicit Point() : x(0), y(0), z(0) {};
 
 	template <typename T2>
-	explicit Point(const T2 x_= 0, const T2 y_ = 0, const int64_t z_ = 0)
+	Point(const T2 x_, const T2 y_, const int64_t z_ = 0)
 	{
 		Init(x_, y_);
 		z = z_;
@@ -89,7 +89,7 @@ struct Point {
 	explicit Point() : x(0), y(0) {};
 
 	template <typename T2>
-	explicit Point(const T2 x_ = 0, const T2 y_ = 0) { Init(x_, y_); }
+	Point(const T2 x_, const T2 y_) { Init(x_, y_); }
 
 	template <typename T2>
 	explicit Point<T>(const Point<T2>& p) { Init(p.x, p.y); }

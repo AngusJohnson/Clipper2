@@ -1,7 +1,7 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
 * Version   :  Clipper2 - ver.1.0.4                                            *
-* Date      :  4 September 2022                                                *
+* Date      :  7 September 2022                                                *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  This is the main polygon clipping module                        *
@@ -2293,9 +2293,9 @@ namespace Clipper2Lib {
 			(horzEdge.bot.x < horzEdge.top.x) != (horzEdge.top.x < nextPt.x);
 	}
 
-	bool TrimHorz(Active& horzEdge, bool preserveCollinear)
+	inline void TrimHorz(Active& horzEdge, bool preserveCollinear)
 	{
-		bool result = false;
+		bool wasTrimmed = false;
 		Point64 pt = NextVertex(horzEdge)->pt;
 		while (pt.y == horzEdge.top.y)
 		{
@@ -2307,13 +2307,12 @@ namespace Clipper2Lib {
 
 			horzEdge.vertex_top = NextVertex(horzEdge);
 			horzEdge.top = pt;
-			result = true;
+			wasTrimmed = true;
 			if (IsMaxima(horzEdge)) break;
 			pt = NextVertex(horzEdge)->pt;
 		}
 
-		if (result) SetDx(horzEdge); // +/-infinity
-		return result;
+		if (wasTrimmed) SetDx(horzEdge); // +/-infinity
 	}
 
 
@@ -3363,7 +3362,10 @@ namespace Clipper2Lib {
 			if (result != PointInPolygonResult::IsOn) break;
 			op = op->next;
 		} while (op != or1->pts);
-		return result == PointInPolygonResult::IsInside;
+		if (result == PointInPolygonResult::IsOn)
+			return Area(op) < Area(or2->pts);
+		else
+			return result == PointInPolygonResult::IsInside;
 	}
 
 	inline Rect64 GetBounds(const Path64& path)

@@ -1,7 +1,7 @@
 ﻿/*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Version   :  Clipper2 - ver.1.0.3                                            *
-* Date      :  20 August 2022                                                  *
+* Version   :  Clipper2 - ver.1.0.4                                            *
+* Date      :  7 September 2022                                                *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  Path Offset (Inflate/Shrink)                                    *
@@ -175,11 +175,9 @@ namespace Clipper2Lib
         for (int j = 0; j < p.Count; j++)
         {
           if (p[j].Y < lp.Y) continue;
-          else if (p[j].Y > lp.Y || p[j].X < lp.X)
-          {
-            result = i;
-            lp = p[j];
-          }
+          if (p[j].Y <= lp.Y && p[j].X >= lp.X) continue;
+          result = i;
+          lp = p[j];
         }
       }
       return result;
@@ -228,18 +226,19 @@ namespace Clipper2Lib
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private PointD IntersectPoint(PointD pt1a, PointD pt1b, PointD pt2a, PointD pt2b)
     {
-      if (pt1a.x == pt1b.x) //vertical
+      if (InternalClipper.IsAlmostZero(pt1a.x - pt1b.x)) //vertical
       {
-        if (pt2a.x == pt2b.x) return new PointD(0, 0);
+        if (InternalClipper.IsAlmostZero(pt2a.x - pt2b.x)) return new PointD(0, 0);
         double m2 = (pt2b.y - pt2a.y) / (pt2b.x - pt2a.x);
         double b2 = pt2a.y - m2 * pt2a.x;
         return new PointD(pt1a.x, m2* pt1a.x + b2);
       }
-      else if (pt2a.x == pt2b.x) //vertical
+
+      if (InternalClipper.IsAlmostZero(pt2a.x - pt2b.x)) //vertical
       {
         double m1 = (pt1b.y - pt1a.y) / (pt1b.x - pt1a.x);
         double b1 = pt1a.y - m1 * pt1a.x;
-          return new PointD(pt2a.x, m1* pt2a.x + b1);
+        return new PointD(pt2a.x, m1* pt2a.x + b1);
       }
       else
       {
@@ -247,7 +246,7 @@ namespace Clipper2Lib
         double b1 = pt1a.y - m1 * pt1a.x;
         double m2 = (pt2b.y - pt2a.y) / (pt2b.x - pt2a.x);
         double b2 = pt2a.y - m2 * pt2a.x;
-        if (m1 == m2) return new PointD(0, 0);
+        if (InternalClipper.IsAlmostZero(m1 - m2)) return new PointD(0, 0);
         double x = (b2 - b1) / (m1 - m2);
         return new PointD(x, m1 * x + b1);
       }
@@ -339,8 +338,8 @@ namespace Clipper2Lib
       if (sinA > 1.0) sinA = 1.0;
       else if (sinA < -1.0) sinA = -1.0;
 
-      // when there's almost no angle of deviation or it's concave
-      if ((AlmostZero(sinA) && cosA > 0) || (sinA * _delta < 0))
+      bool almostNoAngle = (AlmostZero(sinA) && cosA > 0); 
+      if (almostNoAngle || (sinA * _delta < 0))
       {
         Point64 p1 = new Point64(
             path[j].X + _normals[k].x * _delta,
@@ -351,7 +350,8 @@ namespace Clipper2Lib
         group._outPath.Add(p1);
         if (p1 != p2)
         {
-          group._outPath.Add(path[j]); // this aids with clipping removal later
+          // when concave add an extra vertex to ensure neat clipping
+          if (!almostNoAngle) group._outPath.Add(path[j]); 
           group._outPath.Add(p2);
         }
       }

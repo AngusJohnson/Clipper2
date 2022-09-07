@@ -8,9 +8,7 @@
 * http://www.boost.org/LICENSE_1_0.txt                                         *
 *******************************************************************************/
 
-using System;
 using System.Collections.Generic;
-using System.Globalization;
 using System.IO;
 
 namespace Clipper2Lib
@@ -19,26 +17,26 @@ namespace Clipper2Lib
   using Paths64 = List<List<Point64>>;
   using PathsD = List<List<PointD>>;
 
-  public class SvgUtils
+  public static class SvgUtils
   {
 
     public static void AddCaption(SimpleSvgWriter svg, string caption, int x, int y)
     {
-      svg.AddText(caption, x, y, 14, 0xFF000000);
+      svg.AddText(caption, x, y, 14);
     }
 
     public static void AddSubject(SimpleSvgWriter svg, Paths64 paths,
       bool is_closed = true, bool is_joined = true)
     {
       if (!is_closed)
-        svg.AddPaths(paths, !is_joined, 0x0, 0xCCB3B3DA, 0.8, false);
+        svg.AddPaths(paths, !is_joined, 0x0, 0xCCB3B3DA, 0.8);
       else
-        svg.AddPaths(paths, false, 0x1800009C, 0xCCB3B3DA, 0.8, false);
+        svg.AddPaths(paths, false, 0x1800009C, 0xCCB3B3DA, 0.8);
     }
 
     public static void AddClip(SimpleSvgWriter svg, Paths64 paths)
     {
-      svg.AddPaths(paths, false, 0x129C0000, 0xCCFFA07A, 0.8, false);
+      svg.AddPaths(paths, false, 0x129C0000, 0xCCFFA07A, 0.8);
     }
 
     public static void AddSolution(SimpleSvgWriter svg, Paths64 paths,
