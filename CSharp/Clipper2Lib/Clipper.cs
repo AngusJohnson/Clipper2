@@ -581,8 +581,12 @@ namespace Clipper2Lib
     public static PathsD PolyTreeToPathsD(PolyTreeD polyTree)
     {
       PathsD result = new PathsD();
-      foreach (PolyPathD p in polyTree)
+      foreach (var polyPathBase in polyTree)
+      {
+        PolyPathD p = (PolyPathD)polyPathBase;
         AddPolyNodeToPathsD(p, result);
+      }
+
       return result;
     }
 
@@ -629,9 +633,7 @@ namespace Clipper2Lib
     {
       int len = path.Count;
       if (len < 5) return path;
-      List<bool> flags = new List<bool>(new bool[len]);
-      flags[0] = true;
-      flags[len - 1] = true;
+      List<bool> flags = new List<bool>(new bool[len]) { [0] = true, [len - 1] = true };
       RDP(path, 0, len - 1, Sqr(epsilon), flags);
       Path64 result = new Path64(len);
       for (int i = 0; i < len; ++i)
@@ -670,9 +672,7 @@ namespace Clipper2Lib
     {
       int len = path.Count;
       if (len < 5) return path;
-      List<bool> flags = new List<bool>(new bool[len]);
-      flags[0] = true;
-      flags[len - 1] = true;
+      List<bool> flags = new List<bool>(new bool[len]) { [0] = true, [len - 1] = true };
       RDP(path, 0, len - 1, Sqr(epsilon), flags);
       PathD result = new PathD(len);
       for (int i = 0; i < len; ++i)
@@ -713,11 +713,9 @@ namespace Clipper2Lib
       for (i++; i < len - 1; i++)
       {
         if (InternalClipper.CrossProduct(
-          last, path[i], path[i + 1]) != 0)
-        {
-          last = path[i];
-          result.Add(last);
-        }
+              last, path[i], path[i + 1]) == 0) continue;
+        last = path[i];
+        result.Add(last);
       }
 
       if (isOpen)
