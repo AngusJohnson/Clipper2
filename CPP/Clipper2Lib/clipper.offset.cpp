@@ -1,7 +1,7 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
 * Version   :  Clipper2 - ver.1.0.4                                            *
-* Date      :  4 August 2022                                                   *
+* Date      :  7 August 2022                                                   *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  Path Offset (Inflate/Shrink)                                    *
@@ -230,8 +230,9 @@ void ClipperOffset::OffsetPoint(PathGroup& group, Path64& path, size_t j, size_t
 	if (sin_a > 1.0) sin_a = 1.0;
 	else if (sin_a < -1.0) sin_a = -1.0;
 
+	bool almostNoAngle = AlmostZero(sin_a) && cos_a > 0;
 	// when there's almost no angle of deviation or it's concave
-	if ((AlmostZero(sin_a) && cos_a > 0) || (sin_a * delta_ < 0))
+	if (almostNoAngle || (sin_a * delta_ < 0))
 	{
 		Point64 p1 = Point64(
 			path[j].x + norms[k].x * delta_,
@@ -242,7 +243,8 @@ void ClipperOffset::OffsetPoint(PathGroup& group, Path64& path, size_t j, size_t
 		group.path_.push_back(p1);
 		if (p1 != p2)
 		{
-			group.path_.push_back(path[j]); // this aids with clipping removal later
+			// when concave add an extra vertex to ensure neat clipping
+			if (!almostNoAngle) group.path_.push_back(path[j]);
 			group.path_.push_back(p2);
 		}
 	}

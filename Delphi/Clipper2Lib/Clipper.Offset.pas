@@ -681,6 +681,7 @@ procedure TClipperOffset.OffsetPoint(j: Integer; var k: integer);
 var
   sinA, cosA: Double;
   p1, p2: TPoint64;
+  almostNoAngle: Boolean;
 begin
   // Let A = change in angle where edges join
   // A == 0: ie no change in angle (flat join)
@@ -692,8 +693,9 @@ begin
   if (sinA > 1.0) then sinA := 1.0
   else if (sinA < -1.0) then sinA := -1.0;
 
+  almostNoAngle := ValueAlmostZero(sinA) and (cosA > 0);
   // when there's almost no angle of deviation or it's concave
-  if (ValueAlmostZero(sinA) and (cosA > 0)) or (sinA * fDelta < 0) then
+  if almostNoAngle or (sinA * fDelta < 0) then
   begin
     // create a simple self-intersection that will be removed later
     p1 := Point64(
@@ -705,7 +707,8 @@ begin
     AddPoint(p1);
     if not PointsEqual(p1, p2) then
     begin
-      AddPoint(fInPath[j]);
+			// when concave add an extra vertex to ensure neat clipping
+      if not almostNoAngle then AddPoint(fInPath[j]);
       AddPoint(p2);
     end;
   end
