@@ -5,6 +5,7 @@ set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
+set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 
 option(CLIPPER2_UTILS "Build utilities" ON)
 option(CLIPPER2_EXAMPLES "Build examples" ON)
@@ -31,13 +32,15 @@ target_include_directories(Clipper2
   SYSTEM INTERFACE Clipper2Lib
 )
 
-# Clipper2 but with the ability to accommodate 3d points
+# Clipper2 but with USINGZ defined
 add_library(Clipper2Z STATIC ${CLIPPER2_INC} ${CLIPPER2_SRC})
+
+target_compile_definitions(Clipper2Z PUBLIC USINGZ)
+
 target_include_directories(Clipper2Z
   PUBLIC Clipper2Lib
   SYSTEM INTERFACE Clipper2Lib
 )
-target_compile_definitions(Clipper2Z PUBLIC USINGZ)
 
 if (WIN32)
   target_compile_options(Clipper2 PRIVATE /W4 /WX)
@@ -49,6 +52,8 @@ else()
   target_compile_options(Clipper2Z PRIVATE -Wall -Wextra -Wpedantic -Werror)
   target_link_libraries(Clipper2Z PUBLIC -lm)
 endif()
+
+set_target_properties(Clipper2 Clipper2Z PROPERTIES FOLDER Libraries)
 
 if(CLIPPER2_UTILS OR CLIPPER2_TESTS OR CLIPPER2_EXAMPLES)
   set(CLIPPER2_UTILS_INC
@@ -63,7 +68,7 @@ if(CLIPPER2_UTILS OR CLIPPER2_TESTS OR CLIPPER2_EXAMPLES)
   )
 
   add_library(Clipper2utils STATIC ${CLIPPER2_UTILS_INC} ${CLIPPER2_UTILS_SRC})
-  
+
   target_link_libraries(Clipper2utils PUBLIC Clipper2)
   target_include_directories(Clipper2utils
     PUBLIC Utils
@@ -77,34 +82,12 @@ if(CLIPPER2_UTILS OR CLIPPER2_TESTS OR CLIPPER2_EXAMPLES)
     PUBLIC Utils
     SYSTEM INTERFACE Utils
   )
+
+  set_target_properties(Clipper2utils Clipper2Zutils PROPERTIES FOLDER Libraries)
+
 endif()
 
 if(CLIPPER2_EXAMPLES)
-
-  ############################################################################
-  # USINGZ
-  ############################################################################
-
-  # copy Clipper2Lib to Clipper2ZLib where it will be compiled with USINGZ
-  install( DIRECTORY Clipper2Lib DESTINATION Clipper2ZLib )
-  file(COPY Clipper2Lib/clipper.core.h DESTINATION Clipper2ZLib FILE_PERMISSIONS OWNER_READ GROUP_READ WORLD_READ )
-  file(COPY Clipper2Lib/clipper.engine.h DESTINATION Clipper2ZLib FILE_PERMISSIONS OWNER_READ GROUP_READ WORLD_READ )
-  file(COPY Clipper2Lib/clipper.engine.cpp DESTINATION Clipper2ZLib FILE_PERMISSIONS OWNER_READ GROUP_READ WORLD_READ )
-  file(COPY Clipper2Lib/clipper.h DESTINATION Clipper2ZLib FILE_PERMISSIONS OWNER_READ GROUP_READ WORLD_READ )
-  file(COPY Clipper2Lib/clipper.minkowski.h DESTINATION Clipper2ZLib FILE_PERMISSIONS OWNER_READ GROUP_READ WORLD_READ )
-  file(COPY Clipper2Lib/clipper.offset.h DESTINATION Clipper2ZLib FILE_PERMISSIONS OWNER_READ GROUP_READ WORLD_READ )
-  file(COPY Clipper2Lib/clipper.offset.cpp DESTINATION Clipper2ZLib FILE_PERMISSIONS OWNER_READ GROUP_READ WORLD_READ )
-
-  # copy utils
-  install( DIRECTORY Utils DESTINATION UtilsZ )
-  file(COPY Utils/clipper.svg.cpp DESTINATION UtilsZ FILE_PERMISSIONS OWNER_READ GROUP_READ WORLD_READ )
-  file(COPY Utils/clipper.svg.h DESTINATION UtilsZ FILE_PERMISSIONS OWNER_READ GROUP_READ WORLD_READ )
-  file(COPY Utils/ClipFileLoad.cpp DESTINATION UtilsZ FILE_PERMISSIONS OWNER_READ GROUP_READ WORLD_READ )
-  file(COPY Utils/ClipFileLoad.h DESTINATION UtilsZ FILE_PERMISSIONS OWNER_READ GROUP_READ WORLD_READ )
-  file(COPY Utils/ClipFileSave.cpp DESTINATION UtilsZ FILE_PERMISSIONS OWNER_READ GROUP_READ WORLD_READ )
-  file(COPY Utils/ClipFileSave.h DESTINATION UtilsZ FILE_PERMISSIONS OWNER_READ GROUP_READ WORLD_READ )
-
-
   ##########################################################################
   ##########################################################################
 
@@ -114,7 +97,6 @@ if(CLIPPER2_EXAMPLES)
   add_executable(ConsoleDemo2 Examples/ConsoleDemo2/ConsoleDemo2.cpp)
   target_link_libraries(ConsoleDemo2 PRIVATE Clipper2 Clipper2utils)
 
-  install( FILES  Examples/InflateDemo/rabbit.svg DESTINATION . )
   file(COPY Examples/InflateDemo/rabbit.svg DESTINATION ${CMAKE_BINARY_DIR} FILE_PERMISSIONS OWNER_READ GROUP_READ WORLD_READ )
 
   add_executable(InflateDemo1 Examples/InflateDemo/InflateDemo1.cpp)
@@ -122,6 +104,8 @@ if(CLIPPER2_EXAMPLES)
 
   add_executable(UsingZ1 Examples/UsingZ/UsingZ1.cpp)
   target_link_libraries(UsingZ1 PRIVATE Clipper2Z Clipper2Zutils)
+
+  set_target_properties(ConsoleDemo1 ConsoleDemo2 InflateDemo1 UsingZ1 PROPERTIES FOLDER Examples)
 endif()
 
 
@@ -132,9 +116,11 @@ if(CLIPPER2_TESTS)
   if (WIN32)
     set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
   endif()
+  set(BUILD_GMOCK OFF)
   include(GoogleTest)
 
   add_subdirectory("${PROJECT_SOURCE_DIR}/Tests/googletest/")
+  set_target_properties(gtest gtest_main PROPERTIES FOLDER GTest)
 
   set(ClipperTests_SRC
     Tests/TestLines.cpp
@@ -149,11 +135,12 @@ if(CLIPPER2_TESTS)
     Tests/TestTrimCollinear.cpp
   )
   add_executable(ClipperTests ${ClipperTests_SRC})
-  
-  add_executable(ClipperTestsZ ${ClipperTests_SRC})
+  target_link_libraries(ClipperTests gtest gtest_main Clipper2 Clipper2utils)
 
-  target_link_libraries(ClipperTests gtest gmock gtest_main Clipper2 Clipper2utils)
-  target_link_libraries(ClipperTestsZ gtest gmock gtest_main Clipper2Z Clipper2Zutils)
+  add_executable(ClipperTestsZ ${ClipperTests_SRC})
+  target_link_libraries(ClipperTestsZ gtest gtest_main Clipper2Z Clipper2Zutils)
+
+  set_target_properties(ClipperTests ClipperTestsZ PROPERTIES FOLDER Tests)
 
   gtest_discover_tests(ClipperTests
         # set a working directory so your project root so that you can find test data via paths relative to the project root
@@ -167,11 +154,6 @@ if(CLIPPER2_TESTS)
     PROPERTIES VS_DEBUGGER_WORKING_DIRECTORY "${PROJECT_DIR}"
     TEST_SUFFIX "_USINGZ"
   )
-
-  install( FILES  ../Tests/PolytreeHoleOwner.txt DESTINATION . )
-  install( FILES  ../Tests/PolytreeHoleOwner2.txt DESTINATION . )
-  install( FILES  ../Tests/Lines.txt DESTINATION . )
-  install( FILES  ../Tests/Polygons.txt DESTINATION . )
 
   file(COPY ../Tests/PolytreeHoleOwner.txt DESTINATION ${CMAKE_BINARY_DIR} FILE_PERMISSIONS OWNER_READ GROUP_READ WORLD_READ )
   file(COPY ../Tests/PolytreeHoleOwner2.txt DESTINATION ${CMAKE_BINARY_DIR} FILE_PERMISSIONS OWNER_READ GROUP_READ WORLD_READ )
