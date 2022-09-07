@@ -264,6 +264,11 @@ namespace Clipper2Lib
     }
 
 #if USINGZ
+    private bool XYCoordsEqual(Point64 pt1, Point64 pt2)
+    {
+      return (pt1.X == pt2.X && pt1.Y == pt2.Y);
+    }
+    
     private void SetZ(Active e1, Active e2, ref Point64 intersectPt)
     {
       if (_zCallback == null) return;
