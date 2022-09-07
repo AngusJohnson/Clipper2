@@ -3,7 +3,7 @@ unit Clipper.Engine;
 (*******************************************************************************
 * Author    :  Angus Johnson                                                   *
 * Version   :  Clipper2 - ver.1.0.4                                            *
-* Date      :  4 September 2022                                                *
+* Date      :  7 September 2022                                                *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  This is the main polygon clipping module                        *
@@ -1016,30 +1016,6 @@ begin
   active1 := node.active1;
   active2 := node.active2;
   Result := (active1.nextInAEL = active2) or (active1.prevInAEL = active2);
-end;
-//------------------------------------------------------------------------------
-
-function IntersectListSort(node1, node2: Pointer): Integer;
-var
-  pt1, pt2: PPoint64;
-  i: Int64;
-begin
-  pt1 := @PIntersectNode(node1).pt;
-  pt2 := @PIntersectNode(node2).pt;
-  i := pt2.Y - pt1.Y;
-  // note to self - can't return int64 values :)
-  if i > 0 then Result := 1
-  else if i < 0 then Result := -1
-  else if (pt1 = pt2) then Result := 0
-  else
-  begin
-    // Sort by X too. Not essential, but it significantly
-    // speeds up the secondary sort in ProcessIntersectList .
-    i := pt1.X - pt2.X;
-    if i > 0 then Result := 1
-    else if i < 0 then Result := -1
-    else Result := 0;
-  end;
 end;
 //------------------------------------------------------------------------------
 
@@ -3164,6 +3140,35 @@ begin
 end;
 //------------------------------------------------------------------------------
 
+function IntersectListSort(node1, node2: Pointer): Integer;
+var
+  pt1, pt2: PPoint64;
+  i: Int64;
+begin
+  if node1 = node2 then
+  begin
+    Result := 0;
+    Exit;
+  end;
+  pt1 := @PIntersectNode(node1).pt;
+  pt2 := @PIntersectNode(node2).pt;
+  i := pt2.Y - pt1.Y;
+  // note to self - can't return int64 values :)
+  if i > 0 then Result := 1
+  else if i < 0 then Result := -1
+  else if (pt1 = pt2) then Result := 0
+  else
+  begin
+    // Sort by X too. Not essential, but it significantly
+    // speeds up the secondary sort in ProcessIntersectList .
+    i := pt1.X - pt2.X;
+    if i > 0 then Result := 1
+    else if i < 0 then Result := -1
+    else Result := 0;
+  end;
+end;
+//------------------------------------------------------------------------------
+
 procedure TClipperBase.ProcessIntersectList;
 var
   i: Integer;
@@ -3171,19 +3176,21 @@ var
   nodeI, nodeJ: ^PIntersectNode;
   op1, op2: POutpt;
 begin
-  // The list of required intersections now needs to be processed in a specific
-  // order such that intersection points with the largest Y coords are processed
-  // before those with the smallest Y coords. However, it's critical that edges
-  // are adjacent at the time of intersection.
+  // The list of required intersections now needs to be processed in a
+  // specific order such that intersection points with the largest Y coords
+  // are processed before those with the smallest Y coords. However,
+  // it's critical that edges are adjacent at the time of intersection, but
+  // that can only be checked during processing (when edge positions change).
 
   // First we do a quicksort so that intersections will be processed
-  // generally from largest Y to smallest
+  // mostly from largest Y to smallest
   FIntersectList.Sort(IntersectListSort);
+
   nodeI := @FIntersectList.List[0];
   for i := 0 to FIntersectList.Count - 1 do
   begin
-    // now make sure edges are adjacent, otherwise
-    // change the intersection order before proceeding
+    // during processing, make sure edges are adjacent before
+    // proceeding, and swapping the order if they aren't adjacent.
     if not EdgesAdjacentInAEL(nodeI^) then
     begin
       nodeJ := nodeI;
@@ -3251,11 +3258,12 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-function TrimHorz(horzEdge: PActive; preserveCollinear: Boolean): Boolean;
+procedure TrimHorz(horzEdge: PActive; preserveCollinear: Boolean);
 var
   pt: TPoint64;
+  wasTrimmed: Boolean;
 begin
-  Result := false;
+  wasTrimmed := false;
   pt := NextVertex(horzEdge).pt;
   while (pt.Y = horzEdge.top.Y) do
   begin
@@ -3267,11 +3275,11 @@ begin
 
     horzEdge.vertTop := NextVertex(horzEdge);
     horzEdge.top := pt;
-    Result := true;
+    wasTrimmed := true;
     if IsMaxima(horzEdge) then Break;
     pt := NextVertex(horzEdge).pt;
-    end;
-  if (Result) then SetDx(horzEdge); // +/-infinity
+  end;
+  if wasTrimmed then SetDx(horzEdge); // +/-infinity
 end;
 //------------------------------------------------------------------------------
 
@@ -3870,7 +3878,11 @@ begin
     if pipResult <> pipOn then Break;
     op := op.next;
   until op = or1.pts;
-  Result := pipResult = pipInside;
+  if (pipResult = pipOn) then
+  begin
+     Result := Area(op) < Area(or2.pts);
+  end else
+    Result := pipResult = pipInside;
 end;
 //------------------------------------------------------------------------------
 
