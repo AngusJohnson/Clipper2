@@ -30,8 +30,13 @@
 
   <ItemGroup>
     <Resource Include="Clipper2.ico" />
-    <Resource Include="..\Clipper.SVG.cs" />
     <Resource Include="Main.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Resource Include="..\..\Utils\SVG\Clipper.SVG.cs">
+      <Link>Clipper.SVG.cs</Link>
+    </Resource>
   </ItemGroup>
 
 </Project>
