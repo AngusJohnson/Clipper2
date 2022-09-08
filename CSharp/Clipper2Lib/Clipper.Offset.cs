@@ -175,9 +175,11 @@ namespace Clipper2Lib
         for (int j = 0; j < p.Count; j++)
         {
           if (p[j].Y < lp.Y) continue;
-          if (p[j].Y <= lp.Y && p[j].X >= lp.X) continue;
-          result = i;
-          lp = p[j];
+          if (p[j].Y > lp.Y || p[j].X < lp.X)
+          {
+            result = i;
+            lp = p[j];
+          }
         }
       }
       return result;
