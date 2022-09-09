@@ -37,7 +37,6 @@
   <ItemGroup>
     <Resource Include="Clipper2.ico" />
     <Resource Include="Main.cs" />
-    <Resource Include="tests.txt" />
   </ItemGroup>
 
 </Project>
