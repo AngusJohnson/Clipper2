@@ -379,15 +379,12 @@ namespace Clipper2Lib
     return true;
   }
 
-  inline Path64 MakePath(const std::string& s, const std::string& skip_chars = "")
+  inline Path64 MakePath(const std::string& s)
   {
+    const string skip_chars = " ,(){}[]";
     Path64 result;
     std::string::const_iterator s_iter = s.cbegin();
-    bool user_defined_skip = (skip_chars.size() > 0 && skip_chars != " ");
-    if (user_defined_skip)
-      details::SkipUserDefinedChars(s_iter, s.cend(), skip_chars);
-    else
-      details::SkipWhiteSpace(s_iter, s.cend());
+    details::SkipUserDefinedChars(s_iter, s.cend(), skip_chars);
     while (s_iter != s.cend())
     {
       int64_t y = 0, x = 0;
@@ -395,19 +392,17 @@ namespace Clipper2Lib
       details::SkipSpacesWithOptionalComma(s_iter, s.cend());
       if (!details::GetInt(s_iter, s.cend(), y)) break;
       result.push_back(Point64(x, y));
-      if (user_defined_skip)
-        details::SkipUserDefinedChars(s_iter, s.cend(), skip_chars);
-      else
-        details::SkipSpacesWithOptionalComma(s_iter, s.cend());
+      details::SkipUserDefinedChars(s_iter, s.cend(), skip_chars);
     }
     return result;
   }
   
   inline PathD MakePathD(const std::string& s)
   {
+    const string skip_chars = " ,(){}[]";
     PathD result;
     std::string::const_iterator s_iter = s.cbegin();
-    details::SkipWhiteSpace(s_iter, s.cend());
+    details::SkipUserDefinedChars(s_iter, s.cend(), skip_chars);
     while (s_iter != s.cend())
     {
       double y = 0, x = 0;
@@ -415,7 +410,7 @@ namespace Clipper2Lib
       details::SkipSpacesWithOptionalComma(s_iter, s.cend());
       if (!details::GetFloat(s_iter, s.cend(), y)) break;
       result.push_back(PointD(x, y));
-      details::SkipSpacesWithOptionalComma(s_iter, s.cend());
+      details::SkipUserDefinedChars(s_iter, s.cend(), skip_chars);
     }
     return result;
   }

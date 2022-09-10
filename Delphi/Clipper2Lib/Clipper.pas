@@ -107,9 +107,9 @@ function MakePath(const ints: TArrayOfInteger): TPath64; overload;
 function MakePath(const dbls: TArrayOfDouble): TPathD; overload;
 
 function TrimCollinear(const p: TPath64;
-  is_open_path: Boolean = false): TPath64; overload;
+  isOpenPath: Boolean = false): TPath64; overload;
 function TrimCollinear(const path: TPathD;
-  precision: integer; is_open_path: Boolean = false): TPathD; overload;
+  precision: integer; isOpenPath: Boolean = false): TPathD; overload;
 
 function PointInPolygon(const pt: TPoint64;
   const polygon: TPath64): TPointInPolygonResult;
@@ -406,14 +406,14 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-function TrimCollinear(const p: TPath64; is_open_path: Boolean = false): TPath64;
+function TrimCollinear(const p: TPath64; isOpenPath: Boolean = false): TPath64;
 var
   i,j, len: integer;
 begin
   len := Length(p);
 
   i := 0;
-  if not is_open_path then
+  if not isOpenPath then
   begin
     while (i < len -1) and
       (CrossProduct(p[len -1], p[i], p[i+1]) = 0) do inc(i);
@@ -422,7 +422,7 @@ begin
   end;
   if (len - i < 3) then
   begin
-    if not is_open_path or (len < 2) or PointsEqual(p[0], p[1]) then
+    if not isOpenPath or (len < 2) or PointsEqual(p[0], p[1]) then
       Result := nil else
       Result := p;
     Exit;
@@ -439,7 +439,7 @@ begin
       result[j] := p[i];
     end;
 
-  if is_open_path then
+  if isOpenPath then
   begin
     inc(j);
     result[j] := p[len-1];
@@ -459,14 +459,14 @@ end;
 //------------------------------------------------------------------------------
 
 function TrimCollinear(const path: TPathD;
-  precision: integer; is_open_path: Boolean = false): TPathD;
+  precision: integer; isOpenPath: Boolean = false): TPathD;
 var
   p: TPath64;
   scale: double;
 begin
   scale := power(10, precision);
   p := ScalePath(path, scale);
-  p := TrimCollinear(p, is_open_path);
+  p := TrimCollinear(p, isOpenPath);
   Result := ScalePathD(p, 1/scale);
 end;
 //------------------------------------------------------------------------------

@@ -3,7 +3,7 @@ unit Clipper.Engine;
 (*******************************************************************************
 * Author    :  Angus Johnson                                                   *
 * Version   :  Clipper2 - ver.1.0.4                                            *
-* Date      :  7 September 2022                                                *
+* Date      :  10 September 2022                                                *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  This is the main polygon clipping module                        *
@@ -1869,7 +1869,7 @@ begin
     if (CrossProduct(op2.prev.pt, op2.pt, op2.next.pt) = 0) and
       (PointsEqual(op2.pt,op2.prev.pt) or
       PointsEqual(op2.pt,op2.next.pt) or
-      not preserveCollinear or
+      not FPreserveCollinear or
       (DotProduct(op2.prev.pt, op2.pt, op2.next.pt) < 0)) then
     begin
       if op2 = outRec.pts then outRec.pts := op2.prev;

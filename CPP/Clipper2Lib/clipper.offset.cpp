@@ -29,11 +29,11 @@ Paths64::size_type GetLowestPolygonIdx(const Paths64& paths)
 
 	for (Paths64::size_type i = 0 ; i < paths.size(); ++i)
 		for (const Point64& p : paths[i])
-			if (p.y > lp.y || (p.y == lp.y && p.x < lp.x))
-			{
-				result = i;
-				lp = p;
-			}	
+		{ 
+			if (p.y < lp.y || (p.y == lp.y && p.x >= lp.x)) continue;
+			result = i;
+			lp = p;
+		}	
 	return result;
 }
 

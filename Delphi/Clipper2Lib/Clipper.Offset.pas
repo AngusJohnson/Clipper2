@@ -179,12 +179,12 @@ begin
 	begin
 		p := paths[i];
 		for j := 0 to High(p) do
-			if (p[j].Y < lp.Y) then continue
-      else if ((p[j].Y > lp.Y) or (p[j].X < lp.X)) then
-      begin
-				Result := i;
-				lp := p[j];
-			end;
+    begin
+      if (p[j].Y < lp.Y) or
+        ((p[j].Y = lp.Y) and (p[j].X >= lp.X)) then Continue;
+      Result := i;
+      lp := p[j];
+    end;
   end;
 end;
 //------------------------------------------------------------------------------
