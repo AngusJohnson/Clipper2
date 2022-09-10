@@ -38,15 +38,18 @@ struct Timer {
 private:
   std::streamsize old_precision = std::cout.precision(0);
   std::ios_base::fmtflags old_flags = std::cout.flags();
-  bool paused_ = false;
   std::chrono::high_resolution_clock::time_point time_started_ = 
     std::chrono::high_resolution_clock::now();
   std::chrono::high_resolution_clock::duration duration_ = {};
+  bool paused_ = false;
   std::string time_text_ = "";
-  
+
 public:
 
   Timer(bool start_paused = false): paused_(start_paused) {}
+
+  explicit Timer(const char time_text[], bool start_paused) :
+    paused_(start_paused), time_text_(time_text) {}
 
   explicit Timer(const char caption[], const char time_text[] = "",
     bool start_paused = false) :
