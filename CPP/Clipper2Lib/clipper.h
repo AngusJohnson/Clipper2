@@ -381,7 +381,7 @@ namespace Clipper2Lib
 
   inline Path64 MakePath(const std::string& s)
   {
-    const string skip_chars = " ,(){}[]";
+    const std::string skip_chars = " ,(){}[]";
     Path64 result;
     std::string::const_iterator s_iter = s.cbegin();
     details::SkipUserDefinedChars(s_iter, s.cend(), skip_chars);
@@ -399,7 +399,7 @@ namespace Clipper2Lib
   
   inline PathD MakePathD(const std::string& s)
   {
-    const string skip_chars = " ,(){}[]";
+    const std::string skip_chars = " ,(){}[]";
     PathD result;
     std::string::const_iterator s_iter = s.cbegin();
     details::SkipUserDefinedChars(s_iter, s.cend(), skip_chars);
