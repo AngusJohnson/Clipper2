@@ -1,7 +1,7 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
 * Version   :  Clipper2 - ver.1.0.4                                            *
-* Date      :  7 August 2022                                                   *
+* Date      :  11 August 2022                                                  *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  Path Offset (Inflate/Shrink)                                    *
@@ -172,7 +172,7 @@ void ClipperOffset::DoSquare(PathGroup& group, const Path64& path, size_t j, siz
 
 	// now offset the original vertex delta units along unit vector
 	ptQ = PointD(path[j]);
-	ptQ = TranslatePoint(ptQ, delta_ * vec.x, delta_ * vec.y);
+	ptQ = TranslatePoint(ptQ, abs_delta_ * vec.x, abs_delta_ * vec.y);
 
 	// get perpendicular vertices
 	pt1 = TranslatePoint(ptQ, delta_ * vec.y, delta_ * -vec.x);
@@ -357,16 +357,16 @@ void ClipperOffset::DoGroupOffset(PathGroup& group, double delta)
 		group.is_reversed_ = false;
 
 	delta_ = delta;
-	double absDelta = std::abs(delta_);
+	abs_delta_ = std::abs(delta_);
 	join_type_ = group.join_type_;
 
 	double arcTol = (arc_tolerance_ > floating_point_tolerance ? arc_tolerance_
-		: std::log10(2 + absDelta) * default_arc_tolerance); // empirically derived
+		: std::log10(2 + abs_delta_) * default_arc_tolerance); // empirically derived
 
 //calculate a sensible number of steps (for 360 deg for the given offset
 	if (group.join_type_ == JoinType::Round || group.end_type_ == EndType::Round)
 	{
-		steps_per_rad_ = PI / std::acos(1 - arcTol / absDelta) / (PI *2);
+		steps_per_rad_ = PI / std::acos(1 - arcTol / abs_delta_) / (PI *2);
 	}
 
 	bool is_closed_path = IsClosedPath(group.end_type_);
@@ -383,7 +383,7 @@ void ClipperOffset::DoGroupOffset(PathGroup& group, double delta)
 			//single vertex so build a circle or square ...
 			if (group.join_type_ == JoinType::Round)
 			{
-				double radius = absDelta;
+				double radius = abs_delta_;
 				if (group.end_type_ == EndType::Polygon) radius *= 0.5;
 				group.path_ = Ellipse(path[0], radius, radius);
 			}

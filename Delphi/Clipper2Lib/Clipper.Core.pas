@@ -138,7 +138,9 @@ function SegmentsIntersect(const s1a, s1b, s2a, s2b: TPoint64): boolean;
 
 function PointsEqual(const pt1, pt2: TPoint64): Boolean; overload;
   {$IFDEF INLINING} inline; {$ENDIF}
-function PointsNearEqual(const pt1, pt2: TPointD; distanceSqrd: double): Boolean;
+function PointsNearEqual(const pt1, pt2: TPointD): Boolean; overload;
+  {$IFDEF INLINING} inline; {$ENDIF}
+function PointsNearEqual(const pt1, pt2: TPointD; distanceSqrd: double): Boolean; overload;
   {$IFDEF INLINING} inline; {$ENDIF}
 
 {$IFDEF USINGZ}
@@ -258,6 +260,8 @@ function PointInPolygon(const pt: TPoint64; const polygon: TPath64): TPointInPol
 
 function RamerDouglasPeucker(const path: TPath64; epsilon: double): TPath64; overload;
 function RamerDouglasPeucker(const paths: TPaths64; epsilon: double): TPaths64; overload;
+function RamerDouglasPeucker(const path: TPathD; epsilon: double): TPathD; overload;
+function RamerDouglasPeucker(const paths: TPathsD; epsilon: double): TPathsD; overload;
 
 procedure GetSinCos(angle: double; out sinA, cosA: double);
 function Ellipse(const rec: TRect64; steps: integer = 0): TPath64; overload;
@@ -274,7 +278,7 @@ const
   InvalidPtD :  TPointD = (X: invalidD; Y: invalidD);
 
   NullRectD   : TRectD = (left: 0; top: 0; right: 0; Bottom: 0);
-  Tolerance   : Double = 1.0E-15;
+  Tolerance   : Double = 1.0E-12;
 
 implementation
 
@@ -393,6 +397,13 @@ end;
 function PointsEqual(const pt1, pt2: TPoint64): Boolean;
 begin
   Result := (pt1.X = pt2.X) and (pt1.Y = pt2.Y);
+end;
+//------------------------------------------------------------------------------
+
+function PointsNearEqual(const pt1, pt2: TPointD): Boolean;
+begin
+  Result := (Abs(pt1.X - pt2.X) < Tolerance) and
+    (Abs(pt1.Y - pt2.Y) < Tolerance);
 end;
 //------------------------------------------------------------------------------
 
@@ -1693,7 +1704,7 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-function PerpendicDistFromLineSqrd(const pt, line1, line2: TPoint64): double;
+function PerpendicDistFromLineSqrd(const pt, line1, line2: TPoint64): double; overload;
 var
   a,b,c,d: double;
 begin
@@ -1717,6 +1728,49 @@ begin
   maxD := 0;
 	while (endIdx > startIdx) and
     PointsEqual(path[startIdx], path[endIdx]) do
+    begin
+      boolArray[endIdx] := false;
+      dec(endIdx);
+    end;
+  for i := startIdx +1 to endIdx -1 do
+  begin
+    // PerpendicDistFromLineSqrd - avoids expensive Sqrt()
+    d := PerpendicDistFromLineSqrd(path[i], path[startIdx], path[endIdx]);
+    if d <= maxD then Continue;
+    maxD := d;
+    idx := i;
+  end;
+  if maxD < epsilonSqrd then Exit;
+  boolArray[idx] := true;
+  if idx > startIdx + 1 then RDP(path, startIdx, idx, epsilonSqrd, boolArray);
+  if endIdx > idx + 1 then RDP(path, idx, endIdx, epsilonSqrd, boolArray);
+end;
+//------------------------------------------------------------------------------
+
+function PerpendicDistFromLineSqrd(const pt, line1, line2: TPointD): double; overload;
+var
+  a,b,c,d: double;
+begin
+  a := pt.X - line1.X;
+  b := pt.Y - line1.Y;
+  c := line2.X - line1.X;
+  d := line2.Y - line1.Y;
+  if (c = 0) and (d = 0) then
+    result := 0 else
+    result := Sqr(a * d - c * b) / (c * c + d * d);
+end;
+//------------------------------------------------------------------------------
+
+procedure RDP(const path: TPathD; startIdx, endIdx: integer;
+  epsilonSqrd: double; var boolArray: TArrayOfBoolean); overload;
+var
+  i, idx: integer;
+  d, maxD: double;
+begin
+  idx := 0;
+  maxD := 0;
+	while (endIdx > startIdx) and
+    PointsNearEqual(path[startIdx], path[endIdx]) do
     begin
       boolArray[endIdx] := false;
       dec(endIdx);
@@ -1764,6 +1818,44 @@ end;
 //------------------------------------------------------------------------------
 
 function RamerDouglasPeucker(const paths: TPaths64; epsilon: double): TPaths64;
+var
+  i, len: integer;
+begin
+  len := Length(paths);
+  SetLength(Result, len);
+  for i := 0 to len -1 do
+    Result[i] := RamerDouglasPeucker(paths[i], epsilon);
+end;
+//------------------------------------------------------------------------------
+
+function RamerDouglasPeucker(const path: TPathD; epsilon: double): TPathD; overload;
+var
+  i,j, len: integer;
+  boolArray: TArrayOfBoolean;
+begin
+  len := length(path);
+  if len < 5 then
+  begin
+    result := Copy(path, 0, len);
+    Exit;
+  end;
+  SetLength(boolArray, len); // already zero initialized
+  boolArray[0] := true;
+  boolArray[len -1] := true;
+  RDP(path, 0, len -1, Sqr(epsilon), boolArray);
+  j := 0;
+  SetLength(Result, len);
+  for i := 0 to len -1 do
+    if boolArray[i] then
+    begin
+      Result[j] := path[i];
+      inc(j);
+    end;
+  SetLength(Result, j);
+end;
+//------------------------------------------------------------------------------
+
+function RamerDouglasPeucker(const paths: TPathsD; epsilon: double): TPathsD; overload;
 var
   i, len: integer;
 begin

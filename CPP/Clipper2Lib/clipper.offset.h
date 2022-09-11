@@ -1,7 +1,7 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Version   :  Clipper2 - ver.1.0.0                                            *
-* Date      :  3 August 2022                                                   *
+* Version   :  Clipper2 - ver.1.0.4                                            *
+* Date      :  11 August 2022                                                  *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  Path Offset (Inflate/Shrink)                                    *
@@ -39,6 +39,7 @@ public:
 class ClipperOffset {
 private:
 	double delta_ = 0.0;
+	double abs_delta_ = 0.0;
 	double temp_lim_ = 0.0;
 	double steps_per_rad_ = 0.0;
 	PathD norms;

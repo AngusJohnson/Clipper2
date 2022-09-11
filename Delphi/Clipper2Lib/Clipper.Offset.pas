@@ -38,6 +38,7 @@ type
   TClipperOffset = class
   private
     fDelta       : Double;
+    fAbsDelta    : Double;
     fMinLenSqrd  : double;
     fJoinType    : TJoinType;
     fTmpLimit    : Double;
@@ -280,7 +281,7 @@ end;
 procedure TClipperOffset.DoGroupOffset(pathGroup: TPathGroup; delta: double);
 var
   i, len, lowestIdx: Integer;
-  r, absDelta, arcTol, area, steps: Double;
+  r, arcTol, area, steps: Double;
   IsClosedPaths: Boolean;
 begin
   if pathgroup.endType <> etPolygon then
@@ -302,18 +303,18 @@ begin
     pathgroup.reversed := false;
 
   fDelta := delta;
-  absDelta := Abs(fDelta);
+  fAbsDelta := Abs(fDelta);
   fJoinType := pathGroup.joinType;
 
   if fArcTolerance > 0 then
     arcTol := fArcTolerance else
-    arcTol := Log10(2 + absDelta) * 0.25; // empirically derived
+    arcTol := Log10(2 + fAbsDelta) * 0.25; // empirically derived
 
   // calculate a sensible number of steps (for 360 deg for the given offset
   if (pathgroup.joinType = jtRound) or (pathgroup.endType = etRound) then
   begin
     // get steps per 180 degrees (see offset_triginometry2.svg)
-    steps := PI / ArcCos(1 - arcTol / absDelta);
+    steps := PI / ArcCos(1 - arcTol / fAbsDelta);
     fStepsPerRad := steps  * InvTwoPi;
   end;
 
@@ -334,7 +335,7 @@ begin
     begin
       if (pathgroup.endType = etRound) then
       begin
-        r := absDelta;
+        r := fAbsDelta;
 				if (pathGroup.endType = etPolygon) then
           r := r * 0.5;
         with fInPath[0] do
@@ -616,7 +617,7 @@ begin
         PointD(fNorms[j].Y, -fNorms[j].X));
   // now offset the original vertex delta units along unit vector
   ptQ := PointD(fInPath[j]);
-  ptQ := TranslatePoint(ptQ, fDelta * vec.X, fDelta * vec.Y);
+  ptQ := TranslatePoint(ptQ, fAbsDelta * vec.X, fAbsDelta * vec.Y);
 
   // get perpendicular vertices
   pt1 := TranslatePoint(ptQ, fDelta * vec.Y, fDelta * -vec.X);
@@ -631,6 +632,7 @@ begin
   begin
     pt4.X := X + fNorms[k].X * fDelta;
     pt4.Y := Y + fNorms[k].Y * fDelta;
+
   end;
   // get the intersection point
   pt := IntersectPoint(pt1, pt2, pt3, pt4);
@@ -697,6 +699,7 @@ begin
   // when there's almost no angle of deviation or it's concave
   if almostNoAngle or (sinA * fDelta < 0) then
   begin
+    //concave
     // create a simple self-intersection that will be removed later
     p1 := Point64(
       fInPath[j].X + fNorms[k].X * fDelta,
