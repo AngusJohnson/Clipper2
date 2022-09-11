@@ -15,9 +15,9 @@ namespace Clipper2Lib.Benchmark
       {
         Add(DefaultConfig.Instance); 
         AddJob(Job.Default
-            .WithLaunchCount(1)     
-            .WithWarmupCount(2)     
-            .WithIterationCount(2)  
+            .WithLaunchCount(1)
+            .WithWarmupCount(1) 
+            .WithIterationCount(1)
         );
       }
     }

@@ -18,12 +18,6 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <None Remove="*.svg" />
-    <None Remove="*.txt" />
-    <None Remove="*.ico" />
-  </ItemGroup>
-
-  <ItemGroup>
     <EmbeddedResource Include="clip.bin" />
     <EmbeddedResource Include="subj.bin" />
   </ItemGroup>
@@ -39,4 +33,9 @@
     <Resource Include="Main.cs" />
   </ItemGroup>
 
+  <ItemGroup>
+    <None Remove="*.svg" />
+    <None Remove="*.ico" />
+  </ItemGroup>
+  
 </Project>
