@@ -7,7 +7,6 @@
 * License   :  http://www.boost.org/LICENSE_1_0.txt                            *
 *******************************************************************************/
 
-using System;
 using System.Collections.Generic;
 using System.Reflection;
 using System.IO;
@@ -23,15 +22,13 @@ namespace ClipperDemo1
   {
     public static void Main()
     {
-      Random rand = new Random();
       Paths64 subject = new Paths64();
       Paths64 clip = new Paths64();
-      Paths64 solution = new Paths64();
       FillRule fillrule = FillRule.NonZero;
 
       subject.Add(Clipper.MakePath(new int[] { 100, 50, 10, 79, 65, 2, 65, 98, 10, 21 }));
       clip.Add(Clipper.MakePath(new int[] { 98, 63, 4, 68, 77, 8, 52, 100, 19, 12 }));
-      solution = Clipper.Intersect(subject, clip, fillrule);
+      Paths64 solution = Clipper.Intersect(subject, clip, fillrule);
 
       SimpleSvgWriter svg = new SimpleSvgWriter();
       SvgUtils.AddSubject(svg, subject);
