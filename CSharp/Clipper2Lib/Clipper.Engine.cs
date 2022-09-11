@@ -62,7 +62,7 @@ namespace Clipper2Lib
     }
   };
 
-  internal struct LocalMinima
+  internal readonly struct LocalMinima
   {
     public readonly Vertex vertex;
     public readonly PathType polytype;
@@ -85,7 +85,7 @@ namespace Clipper2Lib
       return !(lm1 == lm2);
     }
 
-    public override bool Equals(object obj)
+    public override bool Equals(object? obj)
     {
       return obj is LocalMinima minima && this == minima;
     }
