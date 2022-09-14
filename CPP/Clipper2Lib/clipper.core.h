@@ -132,6 +132,8 @@ struct Point {
 		return Point(x-b.x, y-b.y);
 	}
 
+	inline void Negate() { x = -x; y = -y; }
+
 };
 
 //nb: using 'using' here (instead of typedef) as they can be used in templates
@@ -355,6 +357,17 @@ struct Rect {
 	Point<T> MidPoint() const
 	{
 		return Point<T>((left + right) / 2, (top + bottom) / 2);
+	}
+
+	Path<T> AsPath() const
+	{
+		Path<T> result;
+		result.reserve(4);
+		result.push_back(Point<T>(left, top));
+		result.push_back(Point<T>(right, top));
+		result.push_back(Point<T>(right, bottom));
+		result.push_back(Point<T>(left, bottom));
+		return result;
 	}
 
 	bool Contains(const Point<T> pt)

@@ -3,7 +3,7 @@ unit Clipper.Offset;
 (*******************************************************************************
 * Author    :  Angus Johnson                                                   *
 * Version   :  Clipper2 - ver.1.0.4                                            *
-* Date      :  3 September 2022                                                *
+* Date      :  12 September 2022                                               *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  Path Offset (Inflate/Shrink)                                    *
@@ -190,23 +190,11 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-function CopyPaths(const paths: TPathsD): TPathsD;
-var
-  i, len: integer;
-begin
-  len := Length(paths);
-  SetLength(Result, len);
-  for i := 0 to len -1 do
-    Result[i] := Copy(paths[i], 0, Length(paths[i]));
-end;
-//------------------------------------------------------------------------------
-
 function UnsafeGet(List: TList; Index: Integer): Pointer;
   {$IFDEF INLINING} inline; {$ENDIF}
 begin
   Result := List.List[Index];
 end;
-//------------------------------------------------------------------------------
 
 //------------------------------------------------------------------------------
 // TGroup methods
@@ -275,6 +263,20 @@ begin
   group := TGroup.Create(joinType, endType);
   AppendPaths(group.paths, paths);
   fInGroups.Add(group);
+end;
+//------------------------------------------------------------------------------
+
+function GetPerpendic(const pt: TPoint64; const norm: TPointD; delta: double): TPoint64; overload;
+  {$IFDEF INLINING} inline; {$ENDIF}
+begin
+  result := Point64(pt.X + norm.X * delta, pt.Y + norm.Y * delta);
+end;
+//------------------------------------------------------------------------------
+
+function GetPerpendicD(const pt: TPoint64; const norm: TPointD; delta: double): TPointD; overload;
+  {$IFDEF INLINING} inline; {$ENDIF}
+begin
+  result := PointD(pt.X + norm.X * delta, pt.Y + norm.Y * delta);
 end;
 //------------------------------------------------------------------------------
 
@@ -357,13 +359,10 @@ begin
     begin
       BuildNormals;
       if group.endType = etPolygon then
-      begin
-        OffsetPolygon;
-      end
+        OffsetPolygon
       else if group.endType = etJoined then
-      begin
-        OffsetOpenJoined;
-      end else
+        OffsetOpenJoined
+      else
         OffsetOpenPath(group.endType);
     end;
 
@@ -429,61 +428,60 @@ end;
 //------------------------------------------------------------------------------
 
 procedure TClipperOffset.OffsetOpenPath(endType: TEndType);
-
-  procedure DoButtEnd(highI: integer);
-  begin
-    AddPoint(fInPath[highI].X + fNorms[highI-1].X *fGrpDelta,
-      fInPath[highI].Y + fNorms[highI-1].Y * fGrpDelta);
-    AddPoint(fInPath[highI].X - fNorms[highI-1].X *fGrpDelta,
-      fInPath[highI].Y - fNorms[highI-1].Y * fGrpDelta);
-  end;
-
-  procedure DoButtStart;
-  begin
-    AddPoint(fInPath[0].X + fNorms[1].X *fGrpDelta,
-      fInPath[0].Y + fNorms[1].Y * fGrpDelta);
-    AddPoint(fInPath[0].X - fNorms[1].X *fGrpDelta,
-      fInPath[0].Y - fNorms[1].Y * fGrpDelta);
-  end;
-
 var
   i, k, highI: integer;
 begin
   highI := high(fInPath);
-  k := 0;
-  for i := 1 to highI -1 do
-    OffsetPoint(i, k);
 
-  k := highI -1;
-  fNorms[highI].X := -fNorms[k].X;
-  fNorms[highI].Y := -fNorms[k].Y;
-
- // cap the end first ...
+ // do the line start cap
   case endType of
-    etButt: DoButtEnd(highI);
-    etRound: DoRound(highI, k, PI);
-    else DoSquare(highI, k);
+    etButt:
+      begin
+        with fInPath[0] do AddPoint(Point64(
+          X - fNorms[0].X *fGrpDelta,
+          Y - fNorms[0].Y *fGrpDelta));
+        with fInPath[0] do AddPoint(Point64(
+          X + fNorms[0].X *fGrpDelta,
+          Y + fNorms[0].Y *fGrpDelta));
+      end;
+    etRound: DoRound(0,0, PI);
+    else DoSquare(0, 0);
   end;
 
-  // reverse normals ...
-  for i := highI -1 downto 1 do
+  // offset the left side going forward
+  k := 0;
+  for i := 1 to highI -1 do //nb: -1 is important
+    OffsetPoint(i, k);
+  AddPoint(GetPerpendic(fInPath[highI], fNorms[highI-1], fGrpDelta));
+
+  // reverse the normals ...
+  for i := HighI downto 1 do
   begin
     fNorms[i].X := -fNorms[i-1].X;
     fNorms[i].Y := -fNorms[i-1].Y;
   end;
-  fNorms[0].X := -fNorms[1].X;
-  fNorms[0].Y := -fNorms[1].Y;
+  fNorms[0].X := fNorms[highI].X;
+  fNorms[0].Y := fNorms[highI].Y;
 
-  k := highI;
-  for i := highI -1 downto 1 do
-    OffsetPoint(i, k);
-
-  // now cap the start ...
+ // do the line end cap
   case endType of
-    etButt: DoButtStart;
-    etRound: DoRound(0, 1, PI);
-    else doSquare(0, 1);
+    etButt:
+      begin
+        with fInPath[highI] do AddPoint(Point64(
+          X - fNorms[highI].X *fGrpDelta,
+          Y - fNorms[highI].Y *fGrpDelta));
+        with fInPath[highI] do AddPoint(Point64(
+          X + fNorms[highI].X *fGrpDelta,
+          Y + fNorms[highI].Y *fGrpDelta));
+      end;
+    etRound: DoRound(highI,highI, PI);
+    else DoSquare(highI, highI);
   end;
+
+  // offset the left side going back
+  k := 0;
+  for i := highI downto 1 do //and stop at 1!
+    OffsetPoint(i, k);
 end;
 //------------------------------------------------------------------------------
 
@@ -611,9 +609,17 @@ var
 begin
   // using the reciprocal of unit normals (as unit vectors)
   // get the average unit vector ...
-  vec := GetAvgUnitVector(
-        PointD(-fNorms[k].Y, fNorms[k].X),
-        PointD(fNorms[j].Y, -fNorms[j].X));
+
+  if k <> j then
+    vec := GetAvgUnitVector(
+          PointD(-fNorms[k].Y, fNorms[k].X),
+          PointD(fNorms[j].Y, -fNorms[j].X))
+  else if j = k then
+  begin
+    vec.X := fNorms[0].Y;     //squaring a line end
+    vec.Y := -fNorms[0].X;
+  end;
+
   // now offset the original vertex delta units along unit vector
   ptQ := PointD(fInPath[j]);
   ptQ := TranslatePoint(ptQ, fAbsGrpDelta * vec.X, fAbsGrpDelta * vec.Y);
@@ -622,23 +628,30 @@ begin
   pt1 := TranslatePoint(ptQ, fGrpDelta * vec.Y, fGrpDelta * -vec.X);
   pt2 := TranslatePoint(ptQ, fGrpDelta * -vec.Y, fGrpDelta * vec.X);
   // get 2 vertices along one edge offset
-  with fInPath[k] do
-  begin
-    pt3.X := X + fNorms[k].X * fGrpDelta;
-    pt3.Y := Y + fNorms[k].Y * fGrpDelta;
-  end;
-  with fInPath[j] do
-  begin
-    pt4.X := X + fNorms[k].X * fGrpDelta;
-    pt4.Y := Y + fNorms[k].Y * fGrpDelta;
+  pt3 := GetPerpendicD(fInPath[k], fNorms[k], fGrpDelta);
 
-  end;
+  if (j = k) then
+  begin
+    pt4.X := pt3.X + vec.X * fGrpDelta;
+    pt4.Y := pt3.Y + vec.Y * fGrpDelta;
+  end else
+    pt4 := GetPerpendicD(fInPath[j], fNorms[k], fGrpDelta);
+
   // get the intersection point
   pt := IntersectPoint(pt1, pt2, pt3, pt4);
-  AddPoint(pt.X, pt.Y);
-  //get the second intersect point through reflecion
-  with ReflectPoint(pt, ptQ) do
-    AddPoint(X, Y);
+
+  if (j = k) then
+  begin
+    //reverse order of AddPoint when this is the line start
+    with ReflectPoint(pt, ptQ) do AddPoint(X, Y);
+    AddPoint(pt.X, pt.Y);
+  end else
+  begin
+    AddPoint(pt.X, pt.Y);
+    //get the second intersect point through reflecion
+    with ReflectPoint(pt, ptQ) do AddPoint(X, Y);
+  end;
+
 end;
 //------------------------------------------------------------------------------
 
@@ -658,30 +671,43 @@ var
   i, steps: Integer;
   stepSin, stepCos: double;
   pt: TPoint64;
-  pt2: TPointD;
+   pt2: TPointD;
 begin
 	// nb: even though angle may be negative this is a convex join
   pt := fInPath[j];
   pt2 := PointD(fNorms[k].X * fGrpDelta, fNorms[k].Y * fGrpDelta);
-  AddPoint(pt.X + pt2.X, pt.Y + pt2.Y);
 
   steps := Ceil(fStepsPerRad * abs(angle));
   GetSinCos(angle / steps, stepSin, stepCos);
-  for i := 0 to steps -1 do
+  pt2 := PointD(fNorms[k].X * fGrpDelta, fNorms[k].Y * fGrpDelta);
+
+  if j = k then
   begin
-    pt2 := PointD(pt2.X * stepCos - stepSin * pt2.Y,
-      pt2.X * stepSin + pt2.Y * stepCos);
+    AddPoint(pt.X - pt2.X, pt.Y - pt2.Y);
+    for i := 0 to steps -1 do
+    begin
+      pt2 := PointD(pt2.X * stepCos - stepSin * pt2.Y,
+        pt2.X * stepSin + pt2.Y * stepCos);
+      AddPoint(pt.X - pt2.X, pt.Y - pt2.Y);
+    end;
+  end else
+  begin
+    AddPoint(pt.X + pt2.X, pt.Y + pt2.Y);
+    for i := 0 to steps -1 do
+    begin
+      pt2 := PointD(pt2.X * stepCos - stepSin * pt2.Y,
+        pt2.X * stepSin + pt2.Y * stepCos);
+      AddPoint(pt.X + pt2.X, pt.Y + pt2.Y);
+    end;
+    pt2 := PointD(fNorms[j].X * fGrpDelta, fNorms[j].Y * fGrpDelta);
     AddPoint(pt.X + pt2.X, pt.Y + pt2.Y);
   end;
-  pt2 := PointD(fNorms[j].X * fGrpDelta, fNorms[j].Y * fGrpDelta);
-  AddPoint(pt.X + pt2.X, pt.Y + pt2.Y);
 end;
 //------------------------------------------------------------------------------
 
 procedure TClipperOffset.OffsetPoint(j: Integer; var k: integer);
 var
   sinA, cosA: Double;
-  p1, p2: TPoint64;
   almostNoAngle: Boolean;
 begin
   // Let A = change in angle where edges join
@@ -694,25 +720,15 @@ begin
   if (sinA > 1.0) then sinA := 1.0
   else if (sinA < -1.0) then sinA := -1.0;
 
-  almostNoAngle := ValueAlmostZero(sinA) and (cosA > 0);
+  almostNoAngle := ValueAlmostZero(cosA - 1);
   // when there's almost no angle of deviation or it's concave
   if almostNoAngle or (sinA * fGrpDelta < 0) then
   begin
     //concave
-    // create a simple self-intersection that will be removed later
-    p1 := Point64(
-      fInPath[j].X + fNorms[k].X * fGrpDelta,
-      fInPath[j].Y + fNorms[k].Y * fGrpDelta);
-    p2:= Point64(
-      fInPath[j].X + fNorms[j].X * fGrpDelta,
-      fInPath[j].Y + fNorms[j].Y * fGrpDelta);
-    AddPoint(p1);
-    if not PointsEqual(p1, p2) then
-    begin
-			// when concave add an extra vertex to ensure neat clipping
-      if not almostNoAngle then AddPoint(fInPath[j]);
-      AddPoint(p2);
-    end;
+    AddPoint(GetPerpendic(fInPath[j], fNorms[k], fGrpDelta));
+    // create a simple self-intersection that will be cleaned up later
+    if not almostNoAngle then AddPoint(fInPath[j]);
+    AddPoint(GetPerpendic(fInPath[j], fNorms[j], fGrpDelta));
   end
   else // convex offset
   begin

@@ -3,19 +3,22 @@
 #include "../../Clipper2Lib/clipper.h"
 #include "../../Utils/clipper.svg.h"
 #include "../../Utils/clipper.svg.utils.h"
+#include "../../Utils/Timer.h"
 
 using namespace std;
 using namespace Clipper2Lib;
 
-
-void System(const std::string &filename);
-
-int main(int argc, char* argv[])
+void System(const std::string& filename)
 {
-  Paths64 subject, clip, ignored, solution;
-  ClipType ct = ClipType::Intersection;;
-  FillRule fr = FillRule::EvenOdd;
-  
+#ifdef _WIN32
+  system(filename.c_str());
+#else
+  system(("firefox " + filename).c_str());
+#endif
+}
+
+void DoSimpleShapes() 
+{
   //triangle offset - with large miter
   Paths64 p, pp;
   p.push_back(MakePath("30, 150, 60, 350, 0, 350"));
@@ -23,8 +26,9 @@ int main(int argc, char* argv[])
 
   for (int i = 0; i < 5; ++i)
   {
-    //nb: the following '10' parameter greatly increases miter limit
-    p = InflatePaths(p, 5, JoinType::Miter, EndType::Polygon, 10);
+    //note the relatively large miter limit set here (10)
+    p = InflatePaths(p, 5, 
+      JoinType::Miter, EndType::Polygon, 10);
     pp.insert(pp.end(), p.begin(), p.end());
   }
 
@@ -42,48 +46,43 @@ int main(int argc, char* argv[])
   p = co.Execute(20);
   pp.insert(pp.end(), p.begin(), p.end());
 
+  FillRule fr = FillRule::EvenOdd;
   SvgWriter svg;
   SvgAddSolution(svg, Paths64ToPathsD(pp), fr, false);
   SvgSaveToFile(svg, "solution_off.svg", 800, 600, 20);
   System("solution_off.svg");
+}
 
-  // Because ClipperOffset uses integer coordinates,
-  // you'll need to scale coordinates when you 
-  // want/need fractional values ...
-  const double scale = 100;
-
+void DoRabbit()
+{
   SvgReader svg_reader;
   svg_reader.LoadFromFile("./rabbit.svg");
-  p = ScalePaths<int64_t, double>(svg_reader.GetPaths(), scale);          //scale up
+  PathsD p = svg_reader.GetPaths();
 
-  pp.clear();
-  pp.reserve(p.size());
-  pp.insert(pp.end(), p.begin(), p.end());
+  JoinType jt = JoinType::Round;
+  PathsD solution(p);
 
   while (p.size())
   {
     //nb: don't forget to scale the delta offset too!
-    p = InflatePaths(p, -2.5 * scale, JoinType::Round, EndType::Polygon);
+    p = InflatePaths(p, -2.5, jt, EndType::Polygon);
     //RamerDouglasPeucker - not essential but
     //speeds up the loop and also tidies up the result
-    p = RamerDouglasPeucker(p, 0.025 * scale);
-    pp.reserve(pp.size() + p.size());
-    copy(p.begin(), p.end(), back_inserter(pp));
+    p = RamerDouglasPeucker(p, 0.025);
+    solution.reserve(solution.size() + p.size());
+    copy(p.begin(), p.end(), back_inserter(solution));
   }
 
-  svg.Clear();
-  SvgAddSolution(svg, ScalePaths<double, int64_t>(pp, 1/scale), fr, false);   //scale back down
+  FillRule fr = FillRule::EvenOdd;
+  SvgWriter svg;
+  SvgAddSolution(svg, solution, fr, false); 
   SvgSaveToFile(svg, "solution_off2.svg", 450, 720, 0);
   System("solution_off2.svg");
+}
 
+int main(int argc, char* argv[])
+{
+  DoSimpleShapes();
+  DoRabbit();
 }
 //---------------------------------------------------------------------------
-
-void System(const std::string &filename)
-{
-#ifdef _WIN32
-  system(filename.c_str());
-#else
-  system(("firefox " + filename).c_str());
-#endif
-}

@@ -278,6 +278,8 @@ namespace Clipper2Lib
       return false;
     }
 
+    public void Negate() { x = -x; y = -y; }
+
     public override int GetHashCode() { return 0; }
   }
 
@@ -338,6 +340,15 @@ namespace Clipper2Lib
         rec.top >= top && rec.bottom <= bottom;
     }
 
+    public List<Point64> AsPath()
+    {
+      List < Point64 > result = new List<Point64>(4);
+      result.Add(new Point64(left, top));
+      result.Add(new Point64(right, top));
+      result.Add(new Point64(right, bottom));
+      result.Add(new Point64(left, bottom));
+      return result;
+    }
 
   }
 
@@ -431,7 +442,6 @@ namespace Clipper2Lib
 
   public static class InternalClipper
   {
-
     internal const double floatingPointTolerance = 1E-12;
     internal const double defaultMinimumEdgeLength = 0.1;
 

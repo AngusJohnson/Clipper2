@@ -749,5 +749,51 @@ namespace Clipper2Lib
       return InternalClipper.PointInPolygon(pt, polygon);
     }
 
-  }
+    public static Path64 Ellipse(Point64 center,
+      double radiusX, double radiusY = 0, int steps = 0)
+    {
+      if (radiusX <= 0) return new Path64();
+      if (radiusY <= 0) radiusY = radiusX;
+      if (steps <= 2)
+        steps = (int) Math.Ceiling(Math.PI * Math.Sqrt((radiusX + radiusY) / 2));
+
+      double si = Math.Sin(2 * Math.PI / steps);
+      double co = Math.Cos(2 * Math.PI / steps);
+      double dx = co, dy = si;
+      Path64 result = new Path64(steps);
+      result.Add(new Point64(center.X + radiusX, center.Y));
+      for (int i = 1; i < steps; ++i)
+      {
+        result.Add(new Point64(center.X + radiusX * dx, center.Y + radiusY * dy));
+        double x = dx * co - dy * si;
+        dy = dy * co + dx * si;
+        dx = x;
+      }
+      return result;
+    }
+
+    public static PathD Ellipse(PointD center,
+      double radiusX, double radiusY = 0, int steps = 0)
+    {
+      if (radiusX <= 0) return new PathD();
+      if (radiusY <= 0) radiusY = radiusX;
+      if (steps <= 2)
+        steps = (int) Math.Ceiling(Math.PI * Math.Sqrt((radiusX + radiusY) / 2));
+
+      double si = Math.Sin(2 * Math.PI / steps);
+      double co = Math.Cos(2 * Math.PI / steps);
+      double dx = co, dy = si;
+      PathD result = new PathD(steps);
+      result.Add(new PointD(center.x + radiusX, center.y));
+      for (int i = 1; i < steps; ++i)
+      {
+        result.Add(new PointD(center.x + radiusX * dx, center.y + radiusY * dy));
+        double x = dx * co - dy * si;
+        dy = dy * co + dx * si;
+        dx = x;
+      }
+      return result;
+    }
+
+  } // Clipper
 } // namespace

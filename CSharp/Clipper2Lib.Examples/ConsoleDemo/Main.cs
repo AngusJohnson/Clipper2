@@ -20,7 +20,13 @@ namespace ClipperDemo1
 
   public class Application
   {
+
     public static void Main()
+    {
+      ClipSimpleShapes();
+      ClipTestPolys();
+    }
+    public static void ClipSimpleShapes()
     {
       Paths64 subject = new Paths64();
       Paths64 clip = new Paths64();
@@ -42,12 +48,16 @@ namespace ClipperDemo1
       SvgUtils.AddSolution(svg, solution, false);
       SvgUtils.SaveToFile(svg, "..\\..\\..\\clipperB.svg", fillrule, 400, 300, 20);
       ClipperFileIO.OpenFileWithDefaultApp("..\\..\\..\\clipperB.svg");
+    }
 
-      subject = LoadPathsFromResource("ConsoleDemo.subj.bin");
-      clip = LoadPathsFromResource("ConsoleDemo.clip.bin");
-      solution = Clipper.Intersect(subject, clip, fillrule);
+    public static void ClipTestPolys()
+    {
+      FillRule fillrule = FillRule.NonZero;
+      Paths64 subject = LoadPathsFromResource("ConsoleDemo.subj.bin");
+      Paths64 clip = LoadPathsFromResource("ConsoleDemo.clip.bin");
+      Paths64 solution = Clipper.Intersect(subject, clip, fillrule);
 
-      svg.ClearAll();
+      SimpleSvgWriter svg = new SimpleSvgWriter();
       SvgUtils.AddSubject(svg, subject);
       SvgUtils.AddClip(svg, clip);
       SvgUtils.SaveToFile(svg, "..\\..\\..\\clipperC.svg", fillrule, 800, 600, 20);
@@ -59,9 +69,8 @@ namespace ClipperDemo1
       SvgUtils.AddSolution(svg, solution, false);
       SvgUtils.SaveToFile(svg, "..\\..\\..\\clipperD.svg", fillrule, 800, 600, 20);
       ClipperFileIO.OpenFileWithDefaultApp("..\\..\\..\\clipperD.svg");
+    }
 
-    } //end Main()
-    //------------------------------------------------------------------------------
 
     public static Paths64 LoadPathsFromResource(string resourceName)
     {
@@ -87,5 +96,4 @@ namespace ClipperDemo1
     }
 
   } //end Application
-
 } //namespace

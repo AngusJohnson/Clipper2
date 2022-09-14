@@ -15,17 +15,24 @@ using Clipper2Lib;
 namespace ClipperDemo1
 {
 
-  using Path64 = List<Point64>;
   using Paths64 = List<List<Point64>>;
+  using PathD = List<PointD>;
   using PathsD = List<List<PointD>>;
 
   public class Application
   {
+
     public static void Main()
+    {
+      DoSimpleShapes();
+      DoRabbit();
+    }
+
+    public static void DoSimpleShapes()
     {
       //triangle offset - with large miter
       Paths64 p = new Paths64();
-      p.Add(Clipper.MakePath(new int []{ 30, 150, 60, 350, 0, 350}));
+      p.Add(Clipper.MakePath(new int[] { 30, 150, 60, 350, 0, 350 }));
       Paths64 pp = new Paths64();
       pp.AddRange(p);
 
@@ -54,52 +61,46 @@ namespace ClipperDemo1
       SvgUtils.AddSolution(svg, pp, false);
       SvgUtils.SaveToFile(svg, "../../../inflate.svg", FillRule.EvenOdd, 800, 600, 20);
       ClipperFileIO.OpenFileWithDefaultApp("../../../inflate.svg");
+    }
 
-      // Because ClipperOffset uses integer coordinates,
-      // you'll need to scale coordinates when you 
-      // want/need fractional values ...
-      const double scale = 100;
+    public static void DoRabbit()
+    {
+      PathsD pd = LoadPathsFromResource("InflateDemo.rabbit.bin");
 
-      p = LoadPathsFromResource("InflateDemo.rabbit.bin");
-      p = Clipper.ScalePaths(p, scale);                    //scale up
-      pp.Clear();
-      pp.AddRange(p);
-
-      while (p.Count > 0)
+      PathsD solution = new PathsD(pd);
+      while (pd.Count > 0)
       {
         //don't forget to scale the delta offset
-        p = Clipper.InflatePaths(p, -2.5 * scale, JoinType.Round, EndType.Polygon);
+        pd = Clipper.InflatePaths(pd, -2.5, JoinType.Round, EndType.Polygon);
         //RamerDouglasPeucker - not essential but not only 
         //speeds up the loop but also tidies the result
-        p = Clipper.RamerDouglasPeucker(p, 0.025 * scale);
-        pp.AddRange(p);
+        pd = Clipper.RamerDouglasPeucker(pd, 0.025);
+        solution.AddRange(pd);
       }
-      PathsD ppp = Clipper.ScalePathsD(pp, 1/scale);       //scale back down
-      svg.ClearAll();
-      SvgUtils.AddSolution(svg, ppp, false);
+
+      SimpleSvgWriter svg = new SimpleSvgWriter();
+      SvgUtils.AddSolution(svg, solution, false);
       SvgUtils.SaveToFile(svg, "../../../rabbit2.svg", FillRule.EvenOdd, 450, 720, 10);
       ClipperFileIO.OpenFileWithDefaultApp("../../../rabbit2.svg");
+    }
 
-    } //end Main()
-    //------------------------------------------------------------------------------
-
-    public static Paths64 LoadPathsFromResource(string resourceName)
+    public static PathsD LoadPathsFromResource(string resourceName)
     {
       using Stream stream = Assembly.GetExecutingAssembly().
         GetManifestResourceStream(resourceName);
-      if (stream == null) return new Paths64();
+      if (stream == null) return new PathsD();
       using BinaryReader reader = new BinaryReader(stream);
       int len = reader.ReadInt32();
-      Paths64 result = new Paths64(len);
+      PathsD result = new PathsD(len);
       for (int i = 0; i < len; i++)
       {
         int len2 = reader.ReadInt32();
-        Path64 p = new Path64(len2);
+        PathD p = new PathD(len2);
         for (int j = 0; j < len2; j++)
         {
           long X = reader.ReadInt64();
           long Y = reader.ReadInt64();
-          p.Add(new Point64(X, Y));
+          p.Add(new PointD(X, Y));
         }
         result.Add(p);
       }

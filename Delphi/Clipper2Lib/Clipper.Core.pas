@@ -254,7 +254,8 @@ procedure AppendPaths(var paths: TPathsD; const extra: TPathsD); overload;
 
 function ArrayOfPathsToPaths(const ap: TArrayOfPaths): TPaths64;
 function GetIntersectPoint64(const ln1a, ln1b, ln2a, ln2b: TPoint64): TPoint64;
-function GetIntersectPointD(const ln1a, ln1b, ln2a, ln2b: TPoint64): TPointD;
+function GetIntersectPointD(const ln1a, ln1b, ln2a, ln2b: TPoint64): TPointD; overload;
+function GetIntersectPointD(const ln1a, ln1b, ln2a, ln2b: TPointD): TPointD; overload;
 
 function PointInPolygon(const pt: TPoint64; const polygon: TPath64): TPointInPolygonResult;
 
@@ -1546,6 +1547,44 @@ end;
 //------------------------------------------------------------------------------
 
 function GetIntersectPointD(const ln1a, ln1b, ln2a, ln2b: TPoint64): TPointD;
+var
+  m1,b1,m2,b2: double;
+begin
+  // see http://astronomy.swin.edu.au/~pbourke/geometry/lineline2d/
+  if (ln1B.X = ln1A.X) then
+  begin
+    if (ln2B.X = ln2A.X) then exit; // parallel lines
+    m2 := (ln2B.Y - ln2A.Y)/(ln2B.X - ln2A.X);
+    b2 := ln2A.Y - m2 * ln2A.X;
+    Result.X := ln1A.X;
+    Result.Y := m2*ln1A.X + b2;
+  end
+  else if (ln2B.X = ln2A.X) then
+  begin
+    m1 := (ln1B.Y - ln1A.Y)/(ln1B.X - ln1A.X);
+    b1 := ln1A.Y - m1 * ln1A.X;
+    Result.X := ln2A.X;
+    Result.Y := m1*ln2A.X + b1;
+  end else
+  begin
+    m1 := (ln1B.Y - ln1A.Y)/(ln1B.X - ln1A.X);
+    b1 := ln1A.Y - m1 * ln1A.X;
+    m2 := (ln2B.Y - ln2A.Y)/(ln2B.X - ln2A.X);
+    b2 := ln2A.Y - m2 * ln2A.X;
+    if Abs(m1 - m2) > 1.0E-15 then
+    begin
+      Result.X := (b2 - b1)/(m1 - m2);
+      Result.Y := m1 * Result.X + b1;
+    end else
+    begin
+      Result.X := (ln1a.X + ln1b.X) * 0.5;
+      Result.Y := (ln1a.Y + ln1b.Y) * 0.5;
+    end;
+  end;
+end;
+//------------------------------------------------------------------------------
+
+function GetIntersectPointD(const ln1a, ln1b, ln2a, ln2b: TPointD): TPointD; overload;
 var
   m1,b1,m2,b2: double;
 begin
