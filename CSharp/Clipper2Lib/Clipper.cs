@@ -25,11 +25,14 @@ namespace Clipper2Lib
   public static class Clipper
   {
 
-    public static Rect64 MaxInvalidRect64 = new Rect64(
+    private static Rect64 maxInvalidRect64 = new Rect64(
       long.MaxValue, long.MaxValue, long.MinValue, long.MinValue);
 
-    public static RectD MaxInvalidRectD = new RectD(
+    private static RectD maxInvalidRectD = new RectD(
       double.MaxValue, -double.MaxValue, -double.MaxValue, -double.MaxValue);
+
+    public static Rect64 MaxInvalidRect64 => maxInvalidRect64;
+    public static RectD MaxInvalidRectD => maxInvalidRectD;
 
     public static Paths64 Intersect(Paths64 subject, Paths64 clip, FillRule fillRule)
     {
@@ -206,28 +209,28 @@ namespace Clipper2Lib
     {
       string result = "";
       foreach (Point64 pt in path)
-        result = result + pt.ToString();
+        result += pt.ToString();
       return result + '\n';
     }
     public static string Paths64ToString(Paths64 paths)
     {
       string result = "";
       foreach (Path64 path in paths)
-        result = result + Path64ToString(path);
+        result += Path64ToString(path);
       return result;
     }
     public static string PathDToString(PathD path)
     {
       string result = "";
       foreach (PointD pt in path)
-        result = result + pt.ToString();
+        result += pt.ToString();
       return result + '\n';
     }
     public static string PathsDToString(PathsD paths)
     {
       string result = "";
       foreach (PathD path in paths)
-        result = result + PathDToString(path);
+        result += PathDToString(path);
       return result;
     }
     public static Path64 OffsetPath(Path64 path, long dx, long dy)
@@ -575,7 +578,7 @@ namespace Clipper2Lib
     public static PathsD PolyTreeToPathsD(PolyTreeD polyTree)
     {
       PathsD result = new PathsD();
-      foreach (var polyPathBase in polyTree)
+      foreach (PolyPathBase polyPathBase in polyTree)
       {
         PolyPathD p = (PolyPathD)polyPathBase;
         AddPolyNodeToPathsD(p, result);
@@ -720,7 +723,7 @@ namespace Clipper2Lib
       else
       {
         while (result.Count > 2 && InternalClipper.CrossProduct(
-          result[result.Count - 1], result[result.Count - 2], result[0]) == 0)
+          result[^1], result[^2], result[0]) == 0)
             result.RemoveAt(result.Count - 1);
         if (result.Count < 3)
           result.Clear();
@@ -754,8 +757,7 @@ namespace Clipper2Lib
       double si = Math.Sin(2 * Math.PI / steps);
       double co = Math.Cos(2 * Math.PI / steps);
       double dx = co, dy = si;
-      Path64 result = new Path64(steps);
-      result.Add(new Point64(center.X + radiusX, center.Y));
+      Path64 result = new Path64(steps) { new Point64(center.X + radiusX, center.Y) };
       for (int i = 1; i < steps; ++i)
       {
         result.Add(new Point64(center.X + radiusX * dx, center.Y + radiusY * dy));
@@ -777,8 +779,7 @@ namespace Clipper2Lib
       double si = Math.Sin(2 * Math.PI / steps);
       double co = Math.Cos(2 * Math.PI / steps);
       double dx = co, dy = si;
-      PathD result = new PathD(steps);
-      result.Add(new PointD(center.x + radiusX, center.y));
+      PathD result = new PathD(steps) { new PointD(center.x + radiusX, center.y) };
       for (int i = 1; i < steps; ++i)
       {
         result.Add(new PointD(center.x + radiusX * dx, center.y + radiusY * dy));

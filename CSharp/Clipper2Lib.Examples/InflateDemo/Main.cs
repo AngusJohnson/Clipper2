@@ -26,9 +26,8 @@ namespace ClipperDemo1
     public static void DoSimpleShapes()
     {
       //triangle offset - with large miter
-      Paths64 p = new Paths64();
-      p.Add(Clipper.MakePath(new int[] { 30, 150, 60, 350, 0, 350 }));
-      Paths64 pp = new Paths64();
+      Paths64 p = new() { Clipper.MakePath(new int[] { 30, 150, 60, 350, 0, 350 }) };
+      Paths64 pp = new ();
       pp.AddRange(p);
 
       for (int i = 0; i < 5; ++i)
@@ -44,7 +43,7 @@ namespace ClipperDemo1
       pp.AddRange(p);
       //nb: using the ClipperOffest class directly here to control 
       //different join types within the same offset operation
-      ClipperOffset co = new ClipperOffset();
+      ClipperOffset co = new ();
       co.AddPaths(p, JoinType.Miter, EndType.Joined);
       p = Clipper.TranslatePaths(p, 120, 100);
       pp.AddRange(p);
@@ -52,7 +51,7 @@ namespace ClipperDemo1
       p = co.Execute(20);
       pp.AddRange(p);
 
-      SimpleSvgWriter svg = new SimpleSvgWriter();
+      SimpleSvgWriter svg = new ();
       SvgUtils.AddSolution(svg, pp, false);
       SvgUtils.SaveToFile(svg, "../../../inflate.svg", FillRule.EvenOdd, 800, 600, 20);
       ClipperFileIO.OpenFileWithDefaultApp("../../../inflate.svg");
@@ -62,7 +61,7 @@ namespace ClipperDemo1
     {
       PathsD pd = LoadPathsFromResource("InflateDemo.rabbit.bin");
 
-      PathsD solution = new PathsD(pd);
+      PathsD solution = new (pd);
       while (pd.Count > 0)
       {
         //don't forget to scale the delta offset
@@ -73,7 +72,7 @@ namespace ClipperDemo1
         solution.AddRange(pd);
       }
 
-      SimpleSvgWriter svg = new SimpleSvgWriter();
+      SimpleSvgWriter svg = new ();
       SvgUtils.AddSolution(svg, solution, false);
       SvgUtils.SaveToFile(svg, "../../../rabbit2.svg", FillRule.EvenOdd, 450, 720, 10);
       ClipperFileIO.OpenFileWithDefaultApp("../../../rabbit2.svg");
@@ -84,13 +83,13 @@ namespace ClipperDemo1
       using Stream stream = Assembly.GetExecutingAssembly().
         GetManifestResourceStream(resourceName);
       if (stream == null) return new PathsD();
-      using BinaryReader reader = new BinaryReader(stream);
+      using BinaryReader reader = new (stream);
       int len = reader.ReadInt32();
-      PathsD result = new PathsD(len);
+      PathsD result = new (len);
       for (int i = 0; i < len; i++)
       {
         int len2 = reader.ReadInt32();
-        PathD p = new PathD(len2);
+        PathD p = new (len2);
         for (int j = 0; j < len2; j++)
         {
           long X = reader.ReadInt64();

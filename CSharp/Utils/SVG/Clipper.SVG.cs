@@ -29,10 +29,12 @@ namespace Clipper2Lib
     public const uint fuscia = 0xFFFF00FF;
     public const uint aqua = 0xFF00FFFF;
 
-    public static RectD RectMax =
-      new RectD(double.MaxValue, double.MaxValue, -double.MaxValue, -double.MaxValue);
-    public static RectD RectEmpty = new RectD(0, 0, 0, 0);
+    private static RectD rectMax =
+      new (double.MaxValue, double.MaxValue, -double.MaxValue, -double.MaxValue);
+    public static RectD RectMax => rectMax;
 
+    private static RectD rectEmpty = new (0, 0, 0, 0);
+    public static RectD RectEmpty => rectEmpty;
     internal static bool IsValidRect(RectD rec)
     {
       return rec.right >= rec.left && rec.bottom >= rec.top;
@@ -90,8 +92,8 @@ namespace Clipper2Lib
     }
 
     public FillRule FillRule { get; set; }
-    private readonly List<PolyInfo> PolyInfoList = new List<PolyInfo>();
-    private readonly List<TextInfo> textInfos = new List<TextInfo>();
+    private readonly List<PolyInfo> PolyInfoList = new ();
+    private readonly List<TextInfo> textInfos = new ();
     private readonly CoordStyle coordStyle;
 
     private const string svg_header = "<?xml version=\"1.0\" standalone=\"no\"?>\n" +
@@ -151,7 +153,7 @@ namespace Clipper2Lib
 
     private RectD GetBounds()
     {
-      RectD bounds = new RectD(RectMax);
+      RectD bounds = new (RectMax);
       foreach (PolyInfo pi in PolyInfoList)
         foreach (PathD path in pi.paths)
           foreach (PointD pt in path)

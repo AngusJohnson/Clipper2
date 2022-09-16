@@ -8,6 +8,7 @@
 * License   :  http://www.boost.org/LICENSE_1_0.txt                            *
 *******************************************************************************/
 
+#nullable enable
 using System;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
@@ -151,9 +152,9 @@ namespace Clipper2Lib
     }
 
 #endif
-    public override bool Equals(object obj)
+    public override bool Equals(object? obj)
     {
-      if (obj is Point64 p)
+      if (obj != null && obj is Point64 p)
         return this == p;
       return false;
     }
@@ -271,9 +272,9 @@ namespace Clipper2Lib
         !InternalClipper.IsAlmostZero(lhs.y - rhs.y);
     }
 
-    public override bool Equals(object obj)
+    public override bool Equals(object? obj)
     {
-      if (obj is PointD p)
+      if (obj != null && obj is PointD p)
         return this == p;
       return false;
     }
@@ -342,11 +343,13 @@ namespace Clipper2Lib
 
     public Path64 AsPath()
     {
-      Path64 result = new Path64(4);
-      result.Add(new Point64(left, top));
-      result.Add(new Point64(right, top));
-      result.Add(new Point64(right, bottom));
-      result.Add(new Point64(left, bottom));
+      Path64 result = new Path64(4)
+      {
+        new Point64(left, top),
+        new Point64(right, top),
+        new Point64(right, bottom),
+        new Point64(left, bottom)
+      };
       return result;
     }
 
