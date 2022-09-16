@@ -1,23 +1,17 @@
 ﻿/*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  3 July 2022                                                     *
+* Date      :  16 September 2022                                               *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
-* License:                                                                     *
-* Use, modification & distribution is subject to Boost Software License Ver 1. *
-* http://www.boost.org/LICENSE_1_0.txt                                         *
+* License   :  http://www.boost.org/LICENSE_1_0.txt                            *
 *******************************************************************************/
 
 using System;
-using System.Collections.Generic;
 using System.IO;
 using System.Diagnostics;
 
 namespace Clipper2Lib
 {
-
-  using Path64 = List<Point64>;
-  using Paths64 = List<List<Point64>>;
 
   public static class ClipperFileIO
   {

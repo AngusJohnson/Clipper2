@@ -1,10 +1,7 @@
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using System;
-using System.Collections.Generic;
 
 namespace Clipper2Lib.UnitTests
 {
-  using Paths64 = List<List<Point64>>;
 
   [TestClass]
   public class TestLines

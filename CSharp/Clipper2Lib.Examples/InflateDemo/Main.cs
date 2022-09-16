@@ -1,7 +1,6 @@
 ﻿/*******************************************************************************
-*                                                                              *
 * Author    :  Angus Johnson                                                   *
-* Date      :  16 May 2022                                                     *
+* Date      :  16 September 2022                                               *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * License   :  http://www.boost.org/LICENSE_1_0.txt                            *
@@ -14,10 +13,6 @@ using Clipper2Lib;
 
 namespace ClipperDemo1
 {
-
-  using Paths64 = List<List<Point64>>;
-  using PathD = List<PointD>;
-  using PathsD = List<List<PointD>>;
 
   public class Application
   {

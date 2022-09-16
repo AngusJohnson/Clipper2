@@ -1,5 +1,4 @@
 ﻿/*******************************************************************************
-*                                                                              *
 * Author    :  Angus Johnson                                                   *
 * Date      :  17 July 2022                                                    *
 * Website   :  http://www.angusj.com                                           *
@@ -14,10 +13,6 @@ using Clipper2Lib;
 
 namespace ClipperDemo1
 {
-
-  using Path64 = List<Point64>;
-  using Paths64 = List<List<Point64>>;
-
   public class Application
   {
 
@@ -70,7 +65,6 @@ namespace ClipperDemo1
       SvgUtils.SaveToFile(svg, "..\\..\\..\\clipperD.svg", fillrule, 800, 600, 20);
       ClipperFileIO.OpenFileWithDefaultApp("..\\..\\..\\clipperD.svg");
     }
-
 
     public static Paths64 LoadPathsFromResource(string resourceName)
     {

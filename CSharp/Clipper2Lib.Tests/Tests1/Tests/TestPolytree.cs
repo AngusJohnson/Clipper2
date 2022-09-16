@@ -1,11 +1,7 @@
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using System;
-using System.Collections.Generic;
 
 namespace Clipper2Lib.UnitTests
 {
-  using Path64 = List<Point64>;
-  using Paths64 = List<List<Point64>>;
 
   [TestClass]
   public class TestPolytree

@@ -1,10 +1,7 @@
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using System;
-using System.Collections.Generic;
 
 namespace Clipper2Lib.UnitTests
 {
-  using Paths64 = List<List<Point64>>;
 
   [TestClass]
   public class TestPolygons
@@ -43,9 +40,9 @@ namespace Clipper2Lib.UnitTests
         }
 
         if (count > 0 && Math.Abs(solution.Count - count) > 2 && 
-            (double)Math.Abs(solution.Count - count)/count > 0.02)
+            (double)Math.Abs(solution.Count - count)/count > 0.03)
         {
-          Assert.IsTrue(Math.Abs(solution.Count - count) < 4,
+          Assert.IsTrue(Math.Abs(solution.Count - count) <= 4,
             string.Format("Incorrect count in test {0}", i));
         }
 

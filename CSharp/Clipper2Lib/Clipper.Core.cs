@@ -1,7 +1,7 @@
 ﻿/*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Version   :  Clipper2 - ver.1.0.3                                            *
-* Date      :  23 August 2022                                                  *
+* Version   :  Clipper2 - ver.1.0.4                                            *
+* Date      :  16 September 2022                                               *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  Core structures and functions for the Clipper Library           *
@@ -340,9 +340,9 @@ namespace Clipper2Lib
         rec.top >= top && rec.bottom <= bottom;
     }
 
-    public List<Point64> AsPath()
+    public Path64 AsPath()
     {
-      List < Point64 > result = new List<Point64>(4);
+      Path64 result = new Path64(4);
       result.Add(new Point64(left, top));
       result.Add(new Point64(right, top));
       result.Add(new Point64(right, bottom));
@@ -404,6 +404,30 @@ namespace Clipper2Lib
     }
 
   }
+
+  public class Path64 : List<Point64> 
+  {
+    public Path64(int reserve = 0) : base(reserve) { }
+    public Path64(Path64 path) : base(path) { }
+  }
+  public class Paths64 : List<Path64>
+  {
+    public Paths64(int reserve = 0) : base(reserve) { }
+    public Paths64(Paths64 paths) : base(paths) { }
+  }
+
+  public class PathD : List<PointD>
+  {
+    public PathD(int reserve = 0) : base(reserve) { }
+    public PathD(PathD path) : base(path) { }
+  }
+
+  public class PathsD : List<PathD>
+  {
+    public PathsD(int reserve = 0) : base(reserve) { }
+    public PathsD(PathsD paths) : base(paths) { }
+  }
+
 
   // Note: all clipping operations except for Difference are commutative.
   public enum ClipType

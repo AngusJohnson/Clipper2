@@ -1,14 +1,9 @@
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using System;
-using System.Collections.Generic;
-using System.IO;
 
 // USINGZ compiler directive should have been set in project properties
 
 namespace Clipper2Lib.UnitTests
 {
-  using Paths64 = List<List<Point64>>;
-  using PathsD = List<List<PointD>>;
 
   [TestClass]
   public class TestingZ_1
@@ -141,12 +136,12 @@ namespace Clipper2Lib.UnitTests
     public void TestMysteryD()
     {
       ClipperD c = new ClipperD(5);
-      var bitePoly = new List<PointD>()
+      var bitePoly = new PathD()
       {
         new PointD(5, 5, 5), new PointD(10, 5, 5), new PointD(10, 10, 5), new PointD(5, 10, 5)
       };
 
-      var surfacePoly = new List<PointD>()
+      var surfacePoly = new PathD()
       {
         new PointD(0, 0, 5), new PointD(15, 0, 5), new PointD(15, 15, 5), new PointD(0, 15, 5)
       };

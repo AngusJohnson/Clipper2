@@ -6,9 +6,6 @@ using BenchmarkDotNet.Jobs;
 
 namespace Clipper2Lib.Benchmark
 {
-  using Path64 = List<Point64>;
-  using Paths64 = List<List<Point64>>;
-
   public class FastConfig : ManualConfig
     {
       public FastConfig()
@@ -16,7 +13,7 @@ namespace Clipper2Lib.Benchmark
         Add(DefaultConfig.Instance); 
         AddJob(Job.Default
             .WithLaunchCount(1)
-            .WithWarmupCount(1) 
+            .WithWarmupCount(1)
             .WithIterationCount(1)
         );
       }
