@@ -417,7 +417,6 @@ namespace Clipper2Lib
   {
     public Paths64(int reserve = 0) : base(reserve) { }
     public Paths64(Paths64 paths) : base(paths) { }
-
     public Paths64(IEnumerable<Path64> paths) : base(paths) { }
   }
 
