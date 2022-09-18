@@ -1,7 +1,7 @@
 ﻿/*******************************************************************************
 * Author    :  Angus Johnson                                                   *
 * Version   :  Clipper2 - ver.1.0.4                                            *
-* Date      :  16 September 2022                                               *
+* Date      :  18 September 2022                                               *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  This is the main polygon clipping module                        *
@@ -513,9 +513,12 @@ namespace Clipper2Lib
     {
       public int Compare(IntersectNode a, IntersectNode b)
       {
-        int cmp = b.pt.Y.CompareTo(a.pt.Y);             //sorting Y dsc
-        if (cmp == 0) return a.pt.X.CompareTo(b.pt.X);  //sorting X asc
-        return cmp;
+        if (a.pt.Y == b.pt.Y)
+        {
+          if (a.pt.X == b.pt.X) return 0;
+          return (a.pt.X < b.pt.X) ? -1 : 1;
+        }
+        return (a.pt.Y > b.pt.Y) ? -1 : 1;
       }
     }
 
