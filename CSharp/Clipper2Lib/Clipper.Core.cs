@@ -410,26 +410,25 @@ namespace Clipper2Lib
 
   public class Path64 : List<Point64> 
   {
-    public Path64(int reserve = 0) : base(reserve) { }
-    public Path64(Path64 path) : base(path) { }
+    public Path64(int capacity = 0) : base(capacity) { }
+    public Path64(IEnumerable<Point64> path) : base(path) { }
   }
   public class Paths64 : List<Path64>
   {
-    public Paths64(int reserve = 0) : base(reserve) { }
-    public Paths64(Paths64 paths) : base(paths) { }
+    public Paths64(int capacity = 0) : base(capacity) { }
     public Paths64(IEnumerable<Path64> paths) : base(paths) { }
   }
 
   public class PathD : List<PointD>
   {
-    public PathD(int reserve = 0) : base(reserve) { }
-    public PathD(PathD path) : base(path) { }
+    public PathD(int capacity = 0) : base(capacity) { }
+    public PathD(IEnumerable<PointD> path) : base(path) { }
   }
 
   public class PathsD : List<PathD>
   {
-    public PathsD(int reserve = 0) : base(reserve) { }
-    public PathsD(PathsD paths) : base(paths) { }
+    public PathsD(int capacity = 0) : base(capacity) { }
+    public PathsD(IEnumerable<PathD> paths) : base(paths) { }
   }
 
 

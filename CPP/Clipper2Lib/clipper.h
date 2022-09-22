@@ -293,25 +293,24 @@ namespace Clipper2Lib
       val = 0;
       bool is_neg = *iter == '-';
       if (is_neg) ++iter;
-      int dec_pos = -1;
-      std::string::const_iterator start_iter = iter;
+      int dec_pos = 1;
+      const std::string::const_iterator start_iter = iter;
       while (iter != end_iter && (*iter == '.' ||
         ((*iter >= '0') && (*iter <= '9'))))
       {
         if (*iter == '.')
         {
-          if (dec_pos >= 0) return false;
+          if (dec_pos != 1) break;
           dec_pos = 0;
           ++iter;
           continue;
         }
-
-        if (dec_pos >= 0) dec_pos++;
+        if (dec_pos != 1) --dec_pos;
         val = val * 10 + ((int64_t)(*iter++) - '0');
       }
       if (iter == start_iter || dec_pos == 0) return false;
-      if (dec_pos > 0)
-        val *= std::pow(10, -dec_pos);
+      if (dec_pos < 0)
+        val *= std::pow(10, dec_pos);
       if (is_neg)
         val *= -1;
       return true;
@@ -455,7 +454,7 @@ namespace Clipper2Lib
     else
     {
       while (dst.size() > 2 &&
-        !CrossProduct(dst.end()[-1], dst.end()[-2], dst[0]))
+        !CrossProduct(dst[dst.size() - 1], dst[dst.size() - 2], dst[0]))
           dst.pop_back();
       if (dst.size() < 3) return Path64();
     }

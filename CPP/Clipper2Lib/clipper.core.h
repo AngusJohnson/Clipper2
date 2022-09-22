@@ -370,12 +370,12 @@ struct Rect {
 		return result;
 	}
 
-	bool Contains(const Point<T> pt)
+	bool Contains(const Point<T>& pt)
 	{
 		return pt.x > left && pt.x < right&& pt.y > top && pt.y < bottom;
 	}
 
-	bool Contains(const Rect<T> rec)
+	bool Contains(const Rect<T>& rec)
 	{
 		return rec.left >= left && rec.right <= right && 
 			rec.top >= top && rec.bottom <= bottom;

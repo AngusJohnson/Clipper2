@@ -159,12 +159,12 @@ PointD IntersectPoint(const PointD& pt1a, const PointD& pt1b,
 	}
 }
 
-inline Point64 GetPerpendic(const Point64& pt, const PointD norm, double  delta)
+inline Point64 GetPerpendic(const Point64& pt, const PointD& norm, double  delta)
 {
 	return Point64(pt.x + norm.x * delta, pt.y + norm.y * delta);
 }
 
-inline PointD GetPerpendicD(const Point64& pt, const PointD norm, double  delta)
+inline PointD GetPerpendicD(const Point64& pt, const PointD& norm, double  delta)
 {
 	return PointD(pt.x + norm.x * delta, pt.y + norm.y * delta);
 }
