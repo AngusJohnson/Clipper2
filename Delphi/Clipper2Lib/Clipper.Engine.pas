@@ -3,7 +3,7 @@ unit Clipper.Engine;
 (*******************************************************************************
 * Author    :  Angus Johnson                                                   *
 * Version   :  Clipper2 - ver.1.0.4                                            *
-* Date      :  10 September 2022                                                *
+* Date      :  22 September 2022                                               *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  This is the main polygon clipping module                        *
@@ -2361,12 +2361,21 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-function PointBetween(const pt, corner1, corner2: TPoint64): Boolean;
+function PointEqualOrBetween(const pt, corner1, corner2: TPoint64): Boolean;
   {$IFDEF INLINING} inline; {$ENDIF}
 begin
   // nb: points may not be collinear
   Result := ValueEqualOrBetween(pt.X, corner1.X, corner2.X) and
     ValueEqualOrBetween(pt.Y, corner1.Y, corner2.Y);
+end;
+//------------------------------------------------------------------------------
+
+function PointBetween(const pt, corner1, corner2: TPoint64): Boolean;
+  {$IFDEF INLINING} inline; {$ENDIF}
+begin
+  // nb: points may not be collinear
+  Result := ValueBetween(pt.X, corner1.X, corner2.X) and
+    ValueBetween(pt.Y, corner1.Y, corner2.Y);
 end;
 //------------------------------------------------------------------------------
 
@@ -2457,7 +2466,7 @@ begin
         // by inserting an extra vertex if needed
         if not PointsEqual(op1.prev.pt, op2.next.pt) then
         begin
-          if PointBetween(op1.prev.pt, op2.pt, op2.next.pt) then
+          if PointEqualOrBetween(op1.prev.pt, op2.pt, op2.next.pt) then
             op2.next := InsertOp(op1.prev.pt, op2) else
             op1.prev := InsertOp(op2.next.pt, op1.prev);
         end;
@@ -2517,7 +2526,7 @@ begin
         // by inserting an extra vertex if needed
         if not PointsEqual(op1.next.pt, op2.prev.pt) then
         begin
-          if PointBetween(op2.prev.pt, op1.pt, op1.next.pt) then
+          if PointEqualOrBetween(op2.prev.pt, op1.pt, op1.next.pt) then
             op1.next := InsertOp(op2.prev.pt, op1) else
             op2.prev := InsertOp(op1.next.pt, op2.prev);
         end;

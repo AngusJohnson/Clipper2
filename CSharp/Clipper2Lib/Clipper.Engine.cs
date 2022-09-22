@@ -1,7 +1,7 @@
 ﻿/*******************************************************************************
 * Author    :  Angus Johnson                                                   *
 * Version   :  Clipper2 - ver.1.0.4                                            *
-* Date      :  18 September 2022                                               *
+* Date      :  22 September 2022                                               *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  This is the main polygon clipping module                        *
@@ -2451,12 +2451,20 @@ namespace Clipper2Lib
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static bool PointBetween(Point64 pt, Point64 corner1, Point64 corner2)
+    private static bool PointEqualOrBetween(Point64 pt, Point64 corner1, Point64 corner2)
     {
       // NB points may not be collinear
       return
         ValueEqualOrBetween(pt.X, corner1.X, corner2.X) &&
         ValueEqualOrBetween(pt.Y, corner1.Y, corner2.Y);
+    }
+
+    private static bool PointBetween(Point64 pt, Point64 corner1, Point64 corner2)
+    {
+      // NB points may not be collinear
+      return
+        ValueBetween(pt.X, corner1.X, corner2.X) &&
+        ValueBetween(pt.Y, corner1.Y, corner2.Y);
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -2990,7 +2998,7 @@ namespace Clipper2Lib
             // by inserting an extra vertex if needed
             if (op1.prev.pt != op2.next.pt)
             {
-              if (PointBetween(op1.prev.pt, op2.pt, op2.next.pt))
+              if (PointEqualOrBetween(op1.prev.pt, op2.pt, op2.next.pt))
                 op2.next = InsertOp(op1.prev.pt, op2);
               else
                 op1.prev = InsertOp(op2.next.pt, op1.prev);
@@ -3055,7 +3063,7 @@ namespace Clipper2Lib
             // by inserting an extra vertex if needed
             if (op2.prev.pt != op1.next.pt)
             {
-              if (PointBetween(op2.prev.pt, op1.pt, op1.next.pt))
+              if (PointEqualOrBetween(op2.prev.pt, op1.pt, op1.next.pt))
                 op1.next = InsertOp(op2.prev.pt, op1);
               else
                 op2.prev = InsertOp(op1.next.pt, op2.prev);
