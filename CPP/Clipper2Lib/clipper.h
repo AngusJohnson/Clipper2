@@ -455,7 +455,7 @@ namespace Clipper2Lib
     else
     {
       while (dst.size() > 2 &&
-        !CrossProduct(dst.end()[-1], dst.end()[-2], dst[0]))
+        !CrossProduct(dst[dst.size() - 1], dst[dst.size() - 2], dst[0]))
           dst.pop_back();
       if (dst.size() < 3) return Path64();
     }
