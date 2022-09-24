@@ -216,10 +216,10 @@ namespace Clipper2Lib {
 			b2 = e2.bot.x - e2.bot.y * e2.dx;
 			double q = (b2 - b1) / (e1.dx - e2.dx);
 			return (abs(e1.dx) < abs(e2.dx)) ?
-				Point64(static_cast<int64_t>(std::round(e1.dx * q + b1)),
-					static_cast<int64_t>(std::round(q))) :
-				Point64(static_cast<int64_t>(std::round(e2.dx * q + b2)),
-					static_cast<int64_t>(std::round(q)));
+				Point64(static_cast<int64_t>((e1.dx * q + b1)),
+					static_cast<int64_t>((q))) :
+				Point64(static_cast<int64_t>((e2.dx * q + b2)),
+					static_cast<int64_t>((q)));
 		}
 	}
 

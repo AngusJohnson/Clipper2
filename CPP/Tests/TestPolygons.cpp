@@ -11,6 +11,15 @@ inline Clipper2Lib::PathD MakeRandomPath(int width, int height, unsigned vertCnt
   return result;
 }
 
+template <size_t N>
+inline bool IsInList(int num, const int (&intArray)[N])
+{  
+  const int* list = &intArray[0];
+  for (int cnt = N; cnt; --cnt)
+    if (num == *list++) return true;
+  return false;
+}
+
 TEST(Clipper2Tests, TestMultiplePolygons)
 {
   std::ifstream ifs("Polygons.txt");
@@ -20,112 +29,30 @@ TEST(Clipper2Tests, TestMultiplePolygons)
   ASSERT_TRUE(ifs.good());
 
   int test_number = 1;
-
   while (true)
   {
     Clipper2Lib::Paths64 subject, subject_open, clip;
     Clipper2Lib::Paths64 solution, solution_open;
     Clipper2Lib::ClipType ct;
     Clipper2Lib::FillRule fr;
-    int64_t area, count;
+    int64_t stored_area, stored_count;
 
     if (!LoadTestNum(ifs, test_number, 
-      subject, subject_open, clip, area, count, ct, fr)) break;
-   
+      subject, subject_open, clip, stored_area, stored_count, ct, fr)) break;
+
+    // check Paths64 solutions
     Clipper2Lib::Clipper64 c;
     c.AddSubject(subject);
     c.AddOpenSubject(subject_open);
     c.AddClip(clip);
     c.Execute(ct, fr, solution, solution_open);
 
-    const int64_t area2 = static_cast<int64_t>(Area(solution));
-    const int64_t count2 = static_cast<int64_t>(solution.size() + solution_open.size());
-    const int64_t count_diff = std::abs(count2 - count);
-    const int64_t area_diff = std::abs(area2 - area);
-    const double relative_count_diff = count ? count_diff / static_cast<double>(count) : 0;
-    const double relative_area_diff = area ? area_diff / static_cast<double>(area) : 0;
+    const int64_t measured_area = static_cast<int64_t>(Area(solution));
+    const int64_t measured_count = static_cast<int64_t>(solution.size() + solution_open.size());    
+    const int64_t count_diff = std::abs(measured_count - stored_count);
+    const int64_t area_diff = std::abs(measured_area - stored_area);
 
-    if (test_number == 1)
-    {
-      EXPECT_EQ(count_diff, 0);
-      EXPECT_EQ(area_diff, 0);
-      EXPECT_EQ(solution.size(), 1);
-      //clipping solutions should always be positive irrespective of orientation
-      EXPECT_TRUE(IsPositive(solution[0]));
-    }
-    else if (test_number < 7 || test_number == 8 || test_number == 10)
-    {
-      EXPECT_EQ(count, count2);
-      EXPECT_EQ(area, area2);
-    }
-    else if (test_number < 14)
-    {
-      EXPECT_EQ(count, count2);
-      EXPECT_LE(count_diff, 1);
-      EXPECT_LE(relative_count_diff, 0.01);
-    }
-    else if (test_number == 22)
-    {
-      EXPECT_LE(count2, 2);
-      EXPECT_LE(area2, 2);
-    }
-    else if (test_number == 23)
-    {
-      EXPECT_LE(count2, 1);
-      EXPECT_LE(area2, 2);
-    }
-    else if (test_number == 27)
-    {
-      EXPECT_EQ(count_diff, 2);
-      EXPECT_EQ(area, area2);
-    }
-    else if (test_number == 53 || test_number == 54)
-    {
-      EXPECT_EQ(count, count2);
-      EXPECT_LE(relative_area_diff, 0.0056);
-    }
-    else if (test_number == 64 || test_number == 94)
-    {
-      EXPECT_EQ(count, count2);
-      EXPECT_LE(relative_area_diff, 0.014);
-    }
-    else if (test_number == 66)
-    {
-      EXPECT_EQ(count, count2);
-      EXPECT_LE(relative_area_diff, 0.022);
-    }
-    else if (test_number == 102)
-    {
-      EXPECT_LE(count_diff, 1);
-      EXPECT_EQ(area_diff, 0);
-    }
-    else if (test_number < 160)
-    {
-      if (count > 50) EXPECT_LE(relative_count_diff, 0.02);
-      else EXPECT_LE(count_diff, 2);
-      if (area > 0)  EXPECT_LE(relative_area_diff, 0.035);
-      else           EXPECT_EQ(area, 0);
-    }
-    else if (test_number == 168)
-    {
-      EXPECT_LE(count_diff, 9);
-      EXPECT_LE(relative_count_diff, 0.1);
-      EXPECT_LE(relative_area_diff, 0.0005);
-    }
-    else if (test_number == 183)
-    {
-      EXPECT_LE(count_diff, 2);
-      EXPECT_EQ(area_diff, 0);
-    }
-    else
-    {
-      EXPECT_LE(count_diff, 8);
-      if (count_diff > 1) 
-        EXPECT_LE(relative_count_diff, 0.1);
-      EXPECT_LE(relative_area_diff, 0.0005);
-    }
-
-    // Make sure that the polytree variant gives results similar to the paths-only version.
+    // check the polytree variant too
     Clipper2Lib::PolyTree64 solution_polytree;
     Clipper2Lib::Paths64 solution_polytree_open;
     Clipper2Lib::Clipper64 clipper_polytree;
@@ -133,14 +60,45 @@ TEST(Clipper2Tests, TestMultiplePolygons)
     clipper_polytree.AddOpenSubject(subject_open);
     clipper_polytree.AddClip(clip);
     clipper_polytree.Execute(ct, fr, solution_polytree, solution_polytree_open);
-
+    
+    const int64_t measured_area_pt = 
+      static_cast<int64_t>(solution_polytree.Area());
     const auto solution_polytree_paths = PolyTreeToPaths(solution_polytree);
+    const int64_t measured_count_pt = static_cast<int64_t>(solution_polytree_paths.size());
 
-    const int64_t area3 = static_cast<int64_t>(Area(solution_polytree_paths));
-    const auto count3 = solution_polytree_paths.size() + solution_polytree_open.size();
+    if (test_number == 23)
+    {
+      EXPECT_LE(count_diff, 4);
+    }
+    else if (test_number == 27)
+    {
+      EXPECT_LE(count_diff, 2);
+    }
+    else if (IsInList(test_number, 
+      { 18, 32, 42, 43, 45, 87, 102, 103, 111, 118, 183 }))
+    {
+      EXPECT_LE(count_diff, 1);
+    }
+    else if (test_number >= 120)
+    {
+      if (stored_count > 0)
+        EXPECT_LE(count_diff/ stored_count, 0.02);
+    }
+    else if (stored_count > 0) 
+      EXPECT_EQ(count_diff, 0);
 
-    EXPECT_EQ(area2, area3);
-    EXPECT_EQ(count2, count3);
+    if (IsInList(test_number,
+      { 22, 23, 24 }))
+    {
+      EXPECT_LE(area_diff, 8);
+    }
+    else if (stored_area > 0 && area_diff > 100)
+    {
+      EXPECT_LE(area_diff/stored_area, 0.02);
+    }
+
+    EXPECT_EQ(measured_area, measured_area_pt);
+    EXPECT_EQ(measured_count, measured_count_pt);
 
     ++test_number;
   }

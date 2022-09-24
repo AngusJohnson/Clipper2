@@ -426,8 +426,10 @@ namespace Clipper2Lib
       b2 = ae2.bot.X - ae2.bot.Y * ae2.dx;
       double q = (b2 - b1) / (ae1.dx - ae2.dx);
       return (Math.Abs(ae1.dx) < Math.Abs(ae2.dx))
-        ? new Point64((long) Math.Round(ae1.dx * q + b1), (long) Math.Round(q))
-        : new Point64((long) Math.Round(ae2.dx * q + b2), (long) Math.Round(q));
+        //? new Point64((long) Math.Round(ae1.dx * q + b1), (long) Math.Round(q))
+        //: new Point64((long) Math.Round(ae2.dx * q + b2), (long) Math.Round(q));
+        ? new Point64((long)(ae1.dx * q + b1), (long)(q))
+        : new Point64((long)(ae2.dx * q + b2), (long)(q));
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]

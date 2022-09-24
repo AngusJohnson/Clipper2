@@ -3,7 +3,7 @@ unit Clipper.Engine;
 (*******************************************************************************
 * Author    :  Angus Johnson                                                   *
 * Version   :  Clipper2 - ver.1.0.4                                            *
-* Date      :  22 September 2022                                               *
+* Date      :  24 September 2022                                               *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  This is the main polygon clipping module                        *
@@ -517,6 +517,22 @@ begin
 end;
 //------------------------------------------------------------------------------
 
+function DblToInt64(val: double): Int64; {$IFDEF INLINE} inline; {$ENDIF}
+var
+  exp: integer;
+  i64: UInt64 absolute val;
+begin
+  //https://en.wikipedia.org/wiki/Double-precision_floating-point_format
+  Result := 0;
+  if i64 = 0 then Exit;
+  exp := Integer(Cardinal(i64 shr 52) and $7FF) - 1023;
+  //nb: when exp == 1024 then val == INF or NAN.
+  if exp < 0 then Exit;
+  Result := ((i64 and $1FFFFFFFFFFFFF) shr (52 - exp)) or (UInt64(1) shl exp);
+  if val < 0 then Result := -Result;
+end;
+//------------------------------------------------------------------------------
+
 function GetIntersectPoint(e1, e2: PActive): TPoint64;
 var
   b1, b2, m: Double;
@@ -552,10 +568,13 @@ begin
     with e1^ do b1 := bot.X - bot.Y * dx;
     with e2^ do b2 := bot.X - bot.Y * dx;
     m := (b2-b1)/(e1.dx - e2.dx);
-    Result.Y := round(m);
+    //Result.Y := Round(m); //Round(m);
+    Result.Y := DblToInt64(m); //Round(m);
     if Abs(e1.dx) < Abs(e2.dx) then
-      Result.X := round(e1.dx * m + b1) else
-      Result.X := round(e2.dx * m + b2);
+      Result.X := DblToInt64(e1.dx * m + b1) else
+      Result.X := DblToInt64(e2.dx * m + b2);
+//      Result.X := Round(e1.dx * m + b1) else
+//      Result.X := Round(e2.dx * m + b2);
   end;
 end;
 //------------------------------------------------------------------------------
@@ -2489,9 +2508,6 @@ begin
         opB.prev := opA;
         op1.prev := op2;
         op2.next := op1;
-
-//        SafeDeleteOutPtJoiners(op2);
-//        DisposeOutPt(op2);
 
         if (or1.idx < or2.idx) then
         begin
