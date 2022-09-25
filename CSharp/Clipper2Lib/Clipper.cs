@@ -30,7 +30,7 @@ namespace Clipper2Lib
       long.MaxValue, long.MaxValue, long.MinValue, long.MinValue);
 
     private static RectD maxInvalidRectD = new RectD(
-      double.MaxValue, -double.MaxValue, -double.MaxValue, -double.MaxValue);
+      double.MaxValue, double.MaxValue, -double.MaxValue, -double.MaxValue);
 
     public static Rect64 MaxInvalidRect64 => maxInvalidRect64;
     public static RectD MaxInvalidRectD => maxInvalidRectD;
