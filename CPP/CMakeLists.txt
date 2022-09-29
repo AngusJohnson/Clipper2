@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.10)
-project(Clipper2 LANGUAGES C CXX)
+project(Clipper2 VERSION 1.0.4 LANGUAGES C CXX)
 
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 set(CMAKE_CXX_STANDARD 17)
@@ -10,6 +10,7 @@ set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 option(CLIPPER2_UTILS "Build utilities" ON)
 option(CLIPPER2_EXAMPLES "Build examples" ON)
 option(CLIPPER2_TESTS "Build tests" ON)
+option(BUILD_SHARED_LIBS "Build shared libs" OFF)
 
 set(CLIPPER2_INC
   Clipper2Lib/clipper.core.h
@@ -53,7 +54,10 @@ else()
   target_link_libraries(Clipper2Z PUBLIC -lm)
 endif()
 
-set_target_properties(Clipper2 Clipper2Z PROPERTIES FOLDER Libraries)
+set_target_properties(Clipper2 Clipper2Z PROPERTIES FOLDER Libraries
+                                         VERSION ${PROJECT_VERSION}
+                                         SOVERSION ${PROJECT_VERSION_MAJOR}
+)
 
 if(CLIPPER2_UTILS OR CLIPPER2_TESTS OR CLIPPER2_EXAMPLES)
   set(CLIPPER2_UTILS_INC
