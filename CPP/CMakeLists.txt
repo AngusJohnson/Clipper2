@@ -12,6 +12,8 @@ option(CLIPPER2_EXAMPLES "Build examples" ON)
 option(CLIPPER2_TESTS "Build tests" ON)
 option(BUILD_SHARED_LIBS "Build shared libs" OFF)
 
+include(GNUInstallDirs)
+
 set(CLIPPER2_INC
   Clipper2Lib/clipper.core.h
   Clipper2Lib/clipper.engine.h
@@ -26,21 +28,19 @@ set(CLIPPER2_SRC
 )
 
 # 2d version of Clipper2
-add_library(Clipper2 STATIC ${CLIPPER2_INC} ${CLIPPER2_SRC})
+add_library(Clipper2 ${CLIPPER2_SRC})
 
 target_include_directories(Clipper2
   PUBLIC Clipper2Lib
-  SYSTEM INTERFACE Clipper2Lib
 )
 
 # Clipper2 but with USINGZ defined
-add_library(Clipper2Z STATIC ${CLIPPER2_INC} ${CLIPPER2_SRC})
+add_library(Clipper2Z ${CLIPPER2_SRC})
 
 target_compile_definitions(Clipper2Z PUBLIC USINGZ)
 
 target_include_directories(Clipper2Z
   PUBLIC Clipper2Lib
-  SYSTEM INTERFACE Clipper2Lib
 )
 
 if (WIN32)
@@ -57,6 +57,7 @@ endif()
 set_target_properties(Clipper2 Clipper2Z PROPERTIES FOLDER Libraries
                                          VERSION ${PROJECT_VERSION}
                                          SOVERSION ${PROJECT_VERSION_MAJOR}
+                                         PUBLIC_HEADER "${CLIPPER2_INC}"
 )
 
 if(CLIPPER2_UTILS OR CLIPPER2_TESTS OR CLIPPER2_EXAMPLES)
@@ -71,20 +72,18 @@ if(CLIPPER2_UTILS OR CLIPPER2_TESTS OR CLIPPER2_EXAMPLES)
     Utils/ClipFileSave.cpp
   )
 
-  add_library(Clipper2utils STATIC ${CLIPPER2_UTILS_INC} ${CLIPPER2_UTILS_SRC})
+  add_library(Clipper2utils STATIC ${CLIPPER2_UTILS_SRC})
 
   target_link_libraries(Clipper2utils PUBLIC Clipper2)
   target_include_directories(Clipper2utils
     PUBLIC Utils
-    SYSTEM INTERFACE Utils
   )
 
-  add_library(Clipper2Zutils STATIC ${CLIPPER2_UTILS_INC} ${CLIPPER2_UTILS_SRC})
+  add_library(Clipper2Zutils STATIC ${CLIPPER2_UTILS_SRC})
 
   target_link_libraries(Clipper2Zutils PUBLIC Clipper2Z)
   target_include_directories(Clipper2Zutils
     PUBLIC Utils
-    SYSTEM INTERFACE Utils
   )
 
   set_target_properties(Clipper2utils Clipper2Zutils PROPERTIES FOLDER Libraries)
@@ -173,10 +172,6 @@ endif()
   file(COPY ../Tests/Polygons.txt DESTINATION ${CMAKE_BINARY_DIR} FILE_PERMISSIONS OWNER_READ GROUP_READ WORLD_READ )
 endif()
 
-install(TARGETS Clipper2 Clipper2Z)
-
-install(
-  DIRECTORY Clipper2Lib/
-  DESTINATION include
-  FILES_MATCHING PATTERN "*.h"
+install(TARGETS Clipper2 Clipper2Z
+        PUBLIC_HEADER DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/clipper2
 )
