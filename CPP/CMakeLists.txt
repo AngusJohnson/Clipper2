@@ -88,7 +88,10 @@ if(CLIPPER2_UTILS OR CLIPPER2_TESTS OR CLIPPER2_EXAMPLES)
   )
 
   set_target_properties(Clipper2utils Clipper2Zutils PROPERTIES FOLDER Libraries)
-
+if (NOT WIN32)
+  target_compile_options(Clipper2utils PRIVATE -Wno-unused-variable -Wno-unused-function)
+  target_compile_options(Clipper2Zutils PRIVATE -Wno-unused-variable -Wno-unused-function)
+endif()
 endif()
 
 if(CLIPPER2_EXAMPLES)
@@ -143,6 +146,11 @@ if(CLIPPER2_TESTS)
 
   add_executable(ClipperTestsZ ${ClipperTests_SRC})
   target_link_libraries(ClipperTestsZ gtest gtest_main Clipper2Z Clipper2Zutils)
+
+if (NOT WIN32)
+  target_compile_options(ClipperTests PRIVATE -Wno-unused-variable -Wno-unused-function)
+  target_compile_options(ClipperTestsZ PRIVATE -Wno-unused-variable -Wno-unused-function)
+endif()
 
   set_target_properties(ClipperTests ClipperTestsZ PROPERTIES FOLDER Tests)
 
