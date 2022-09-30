@@ -64,7 +64,7 @@ private:
   {
     while (current < end)
     {
-      uint8_t i = shift[*current];  //compare last byte first
+      uint8_t i = shift[(unsigned)*current];  //compare last byte first
       if (!i)                   //last byte matches if i == 0
       {
         char* j = current - needle_len_less1;
@@ -88,12 +88,12 @@ private:
   {
     while (current < end)
     {
-      uint8_t i = shift[case_table[*current]];
+      uint8_t i = shift[case_table[(unsigned)*current]];
       if (!i)                          
       {
         char* j = current - needle_len_less1;
         while (i < needle_len_less1 &&
-          needle_ic_[i] == case_table[*(j + i)]) ++i;
+          needle_ic_[i] == case_table[(unsigned)*(j + (unsigned)i)]) ++i;
         if (i == needle_len_less1)
         {
           ++current;
@@ -154,8 +154,8 @@ public:
     needle_ic_ = new uint8_t[needle_len_ +1];
     std::memcpy(needle_ic_, needle_, needle_len_);
     uint8_t* c = needle_ic_;
-    for (uint8_t i = 0; i < needle_len_; ++i)
-      *c = case_table[*c++];
+    for (uint8_t i = 0; i < needle_len_; ++i, c++)
+      *c = case_table[*c];
 
     std::fill(std::begin(shift), std::begin(shift) + 256, needle_len_);
     for (uint8_t j = 0; j < needle_len_less1; ++j)
