@@ -159,7 +159,7 @@ namespace Clipper2Lib {
 
 	// ClipperBase -------------------------------------------------------------
 
-	class ClipperBase {
+	class CLIPPER2_DLL ClipperBase {
 	private:
 		ClipType cliptype_ = ClipType::None;
 		FillRule fillrule_ = FillRule::EvenOdd;
@@ -338,10 +338,10 @@ namespace Clipper2Lib {
 	};
 
 
-	void Polytree64ToPolytreeD(const PolyPath64& polytree, PolyPathD& result);
+	void CLIPPER2_DLL Polytree64ToPolytreeD(const PolyPath64& polytree, PolyPathD& result);
 
 
-	class Clipper64 : public ClipperBase
+	class CLIPPER2_DLL Clipper64 : public ClipperBase
 	{
 	public:
 #ifdef USINGZ
@@ -384,7 +384,7 @@ namespace Clipper2Lib {
 		}
 	};
 
-	class ClipperD : public ClipperBase {
+	class CLIPPER2_DLL ClipperD : public ClipperBase {
 	private:
 		double scale_ = 1.0, invScale_ = 1.0;
 #ifdef USINGZ

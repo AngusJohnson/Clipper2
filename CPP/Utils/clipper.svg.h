@@ -15,7 +15,7 @@
 
 namespace Clipper2Lib {
 
-    class PathInfo {
+    class CLIPPER2_DLL PathInfo {
     private:
         PathsD paths_;
         bool is_open_path;
@@ -40,7 +40,7 @@ namespace Clipper2Lib {
   // SvgWriter
   //---------------------------------------------------------------------------
 
-  class SvgWriter
+  class CLIPPER2_DLL SvgWriter
   {
     class CoordsStyle {
     public:
@@ -104,7 +104,7 @@ namespace Clipper2Lib {
   // SvgReader
   //---------------------------------------------------------------------------
 
-  class SvgReader
+  class CLIPPER2_DLL SvgReader
   {
   private:
       PathInfoList path_infos;

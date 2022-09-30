@@ -17,6 +17,7 @@
 #include <string>
 #include <iostream>
 #include <algorithm>
+#include "clipperdll.h"
 
 namespace Clipper2Lib 
 {

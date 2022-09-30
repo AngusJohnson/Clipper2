@@ -24,7 +24,7 @@ enum class EndType {Polygon, Joined, Butt, Square, Round};
 //Joined : offsets both sides of a path, with joined ends
 //Polygon: offsets only one side of a closed path
 
-class ClipperOffset {
+class CLIPPER2_DLL ClipperOffset {
 private:
 
 	class Group {

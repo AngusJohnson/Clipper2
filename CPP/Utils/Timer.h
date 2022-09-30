@@ -34,7 +34,7 @@ Example:
 
 */
 
-struct Timer {
+struct CLIPPER2_DLL Timer {
 private:
   std::streamsize old_precision = std::cout.precision(0);
   std::ios_base::fmtflags old_flags = std::cout.flags();

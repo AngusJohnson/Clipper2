@@ -20,7 +20,7 @@ inline bool FileExists(const std::string& name)
   return (stat(name.c_str(), &buffer) == 0);
 }
 
-bool LoadTestNum(std::ifstream& source, int test_num,
+bool CLIPPER2_DLL LoadTestNum(std::ifstream& source, int test_num,
   Clipper2Lib::Paths64& subj, Clipper2Lib::Paths64& subj_open, Clipper2Lib::Paths64& clip,
   int64_t& area, int64_t& count, Clipper2Lib::ClipType& ct, Clipper2Lib::FillRule& fr);
 
