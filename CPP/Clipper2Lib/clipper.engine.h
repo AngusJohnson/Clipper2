@@ -130,7 +130,7 @@ namespace Clipper2Lib {
 		bool is_left_bound = false;
 	};
 
-	struct LocalMinima {
+  struct CLIPPER2_DLL LocalMinima {
 		Vertex* vertex;
 		PathType polytype;
 		bool is_open;
@@ -138,7 +138,7 @@ namespace Clipper2Lib {
 			vertex(v), polytype(pt), is_open(open){}
 	};
 
-	struct IntersectNode {
+	struct CLIPPER2_DLL IntersectNode {
 		Point64 pt;
 		Active* edge1;
 		Active* edge2;
