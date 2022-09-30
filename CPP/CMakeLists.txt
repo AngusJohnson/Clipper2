@@ -134,6 +134,7 @@ if(CLIPPER2_TESTS)
   if (WIN32)
     set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
   endif()
+  option(INSTALL_GTEST "Install Googletest's GTest?" OFF)
   set(BUILD_GMOCK OFF)
   include(GoogleTest)
 
@@ -186,3 +187,4 @@ install(
   DESTINATION include
   FILES_MATCHING PATTERN "*.h"
 )
+
