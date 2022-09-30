@@ -26,6 +26,7 @@ set(CLIPPER2_INC
   Clipper2Lib/clipper.h
   Clipper2Lib/clipper.minkowski.h
   Clipper2Lib/clipper.offset.h
+  Clipper2Lib/clipperdll.h
 )
 
 set(CLIPPER2_SRC
