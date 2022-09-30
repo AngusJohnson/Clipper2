@@ -11,6 +11,15 @@ option(CLIPPER2_UTILS "Build utilities" ON)
 option(CLIPPER2_EXAMPLES "Build examples" ON)
 option(CLIPPER2_TESTS "Build tests" ON)
 
+set(CMAKE_CONFIGURATION_TYPES "Debug;Release;RelWithDebInfo" CACHE STRING "Configs" FORCE)
+if(DEFINED CMAKE_BUILD_TYPE)
+   SET_PROPERTY(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS ${CMAKE_CONFIGURATION_TYPES})
+endif()
+if(NOT CMAKE_BUILD_TYPE)
+  set(CMAKE_BUILD_TYPE "Release")
+endif()
+message(STATUS "The build type is: ${CMAKE_BUILD_TYPE}")
+
 set(CLIPPER2_INC
   Clipper2Lib/clipper.core.h
   Clipper2Lib/clipper.engine.h
