@@ -87,10 +87,10 @@ if(CLIPPER2_UTILS OR CLIPPER2_TESTS OR CLIPPER2_EXAMPLES)
   )
 
   set_target_properties(Clipper2utils Clipper2Zutils PROPERTIES FOLDER Libraries)
-if (NOT WIN32)
-  target_compile_options(Clipper2utils PRIVATE -Wno-unused-variable -Wno-unused-function)
-  target_compile_options(Clipper2Zutils PRIVATE -Wno-unused-variable -Wno-unused-function)
-endif()
+  if (NOT WIN32)
+    target_compile_options(Clipper2utils PRIVATE -Wno-unused-variable -Wno-unused-function)
+    target_compile_options(Clipper2Zutils PRIVATE -Wno-unused-variable -Wno-unused-function)
+  endif()
 endif()
 
 if(CLIPPER2_EXAMPLES)
@@ -112,6 +112,12 @@ if(CLIPPER2_EXAMPLES)
   target_link_libraries(UsingZ1 PRIVATE Clipper2Z Clipper2Zutils)
 
   set_target_properties(ConsoleDemo1 ConsoleDemo2 InflateDemo1 UsingZ1 PROPERTIES FOLDER Examples)
+  if (NOT WIN32)
+    target_compile_options(ConsoleDemo1 PRIVATE -Wno-unused-result -Wno-unused-function)
+    target_compile_options(ConsoleDemo2 PRIVATE -Wno-unused-result -Wno-unused-function)
+    target_compile_options(InflateDemo1 PRIVATE -Wno-unused-result -Wno-unused-function)
+    target_compile_options(UsingZ1 PRIVATE -Wno-unused-result -Wno-unused-function)
+  endif()
 endif()
 
 
@@ -146,10 +152,10 @@ if(CLIPPER2_TESTS)
   add_executable(ClipperTestsZ ${ClipperTests_SRC})
   target_link_libraries(ClipperTestsZ gtest gtest_main Clipper2Z Clipper2Zutils)
 
-if (NOT WIN32)
-  target_compile_options(ClipperTests PRIVATE -Wno-unused-variable -Wno-unused-function)
-  target_compile_options(ClipperTestsZ PRIVATE -Wno-unused-variable -Wno-unused-function)
-endif()
+  if (NOT WIN32)
+    target_compile_options(ClipperTests PRIVATE -Wno-unused-variable -Wno-unused-function)
+    target_compile_options(ClipperTestsZ PRIVATE -Wno-unused-variable -Wno-unused-function)
+  endif()
 
   set_target_properties(ClipperTests ClipperTestsZ PROPERTIES FOLDER Tests)
 

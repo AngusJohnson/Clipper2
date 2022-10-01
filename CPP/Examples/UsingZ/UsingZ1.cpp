@@ -1,6 +1,6 @@
 
 #include <cstdlib>
-#include "../../Clipper2Lib/include/clipper2/clipper.h"
+#include "clipper2/clipper.h"
 #include "../../Utils/clipper.svg.h"
 #include "../../Utils/clipper.svg.utils.h"
 
