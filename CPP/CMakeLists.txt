@@ -27,6 +27,8 @@ set(CLIPPER2_SRC
   Clipper2Lib/src/clipper.offset.cpp
 )
 
+set(PCFILE "${CMAKE_CURRENT_BINARY_DIR}/Clipper2.pc")
+
 # 2d version of Clipper2
 add_library(Clipper2 ${CLIPPER2_INC} ${CLIPPER2_SRC})
 
@@ -87,7 +89,7 @@ if(CLIPPER2_UTILS OR CLIPPER2_TESTS OR CLIPPER2_EXAMPLES)
   )
 
   set_target_properties(Clipper2utils Clipper2Zutils PROPERTIES FOLDER Libraries)
-  if (NOT WIN32)
+  if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
     target_compile_options(Clipper2utils PRIVATE -Wno-unused-variable -Wno-unused-function)
     target_compile_options(Clipper2Zutils PRIVATE -Wno-unused-variable -Wno-unused-function)
   endif()
@@ -112,7 +114,7 @@ if(CLIPPER2_EXAMPLES)
   target_link_libraries(UsingZ1 PRIVATE Clipper2Z Clipper2Zutils)
 
   set_target_properties(ConsoleDemo1 ConsoleDemo2 InflateDemo1 UsingZ1 PROPERTIES FOLDER Examples)
-  if (NOT WIN32)
+  if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
     target_compile_options(ConsoleDemo1 PRIVATE -Wno-unused-result -Wno-unused-function)
     target_compile_options(ConsoleDemo2 PRIVATE -Wno-unused-result -Wno-unused-function)
     target_compile_options(InflateDemo1 PRIVATE -Wno-unused-result -Wno-unused-function)
@@ -152,7 +154,7 @@ if(CLIPPER2_TESTS)
   add_executable(ClipperTestsZ ${ClipperTests_SRC})
   target_link_libraries(ClipperTestsZ gtest gtest_main Clipper2Z Clipper2Zutils)
 
-  if (NOT WIN32)
+  if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
     target_compile_options(ClipperTests PRIVATE -Wno-unused-variable -Wno-unused-function)
     target_compile_options(ClipperTestsZ PRIVATE -Wno-unused-variable -Wno-unused-function)
   endif()
@@ -178,6 +180,9 @@ if(CLIPPER2_TESTS)
   file(COPY ../Tests/Polygons.txt DESTINATION ${CMAKE_BINARY_DIR} FILE_PERMISSIONS OWNER_READ GROUP_READ WORLD_READ )
 endif()
 
+CONFIGURE_FILE(Clipper2.pc.cmakein "${PCFILE}" @ONLY)
+
 install(TARGETS Clipper2 Clipper2Z
         PUBLIC_HEADER DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/clipper2
 )
+install(FILES ${PCFILE} DESTINATION ${CMAKE_INSTALL_LIBDIR}/pkconfig)
