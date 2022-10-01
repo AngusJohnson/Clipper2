@@ -12,6 +12,10 @@ include(GNUInstallDirs)
 option(CLIPPER2_UTILS      "Build utilities" ON)
 option(CLIPPER2_EXAMPLES   "Build examples"  ON)
 option(CLIPPER2_TESTS      "Build tests"     ON)
+if (NOT WIN32)
+  # Shared libraries on Windows is not supported.
+  option(BUILD_SHARED_LIBS "Build shared libs" ON)
+endif()
 
 set(CMAKE_CONFIGURATION_TYPES "Debug;Release;RelWithDebInfo" CACHE STRING "Configs" FORCE)
 if(DEFINED CMAKE_BUILD_TYPE)
@@ -36,26 +40,20 @@ set(CLIPPER2_SRC
 )
 
 # 2d version of Clipper2
-add_library(Clipper2 SHARED ${CLIPPER2_INC} ${CLIPPER2_SRC})
-target_compile_definitions(Clipper2 PUBLIC CLIPPER2_DLL_EXPORT)
-if (WIN32)
-  target_compile_definitions(Clipper2 PUBLIC _CRT_SECURE_NO_WARNINGS)
+add_library(Clipper2 ${CLIPPER2_SRC})
+if (NOT WIN32)
+  set_target_properties(Clipper2 PROPERTIES CXX_VISIBILITY_PRESET hidden POSITION_INDEPENDENT_CODE 1)
 endif()
-set_target_properties(Clipper2 PROPERTIES CXX_VISIBILITY_PRESET hidden)
-set_target_properties(Clipper2 PROPERTIES POSITION_INDEPENDENT_CODE 1)
 target_include_directories(Clipper2
   PUBLIC Clipper2Lib
 )
 
 # Clipper2 but with USINGZ defined
-add_library(Clipper2Z SHARED ${CLIPPER2_INC} ${CLIPPER2_SRC})
+add_library(Clipper2Z ${CLIPPER2_SRC})
 target_compile_definitions(Clipper2Z PUBLIC USINGZ)
-if (WIN32)
-  target_compile_definitions(Clipper2Z PUBLIC _CRT_SECURE_NO_WARNINGS)
+if (NOT WIN32)
+  set_target_properties(Clipper2Z PROPERTIES CXX_VISIBILITY_PRESET hidden POSITION_INDEPENDENT_CODE 1)
 endif()
-target_compile_definitions(Clipper2Z PUBLIC CLIPPER2_DLL_EXPORT)
-set_target_properties(Clipper2Z PROPERTIES CXX_VISIBILITY_PRESET hidden)
-set_target_properties(Clipper2Z PROPERTIES POSITION_INDEPENDENT_CODE 1)
 
 target_include_directories(Clipper2Z
   PUBLIC Clipper2Lib
@@ -90,27 +88,21 @@ if(CLIPPER2_UTILS OR CLIPPER2_TESTS OR CLIPPER2_EXAMPLES)
     Utils/ClipFileSave.cpp
   )
 
-  add_library(Clipper2utils SHARED ${CLIPPER2_UTILS_INC} ${CLIPPER2_UTILS_SRC})
-  target_compile_definitions(Clipper2utils PUBLIC CLIPPER2_DLL_EXPORT)
-  if (WIN32)
-    target_compile_definitions(Clipper2utils PUBLIC _CRT_SECURE_NO_WARNINGS)
+  add_library(Clipper2utils ${CLIPPER2_UTILS_SRC})
+  if (NOT WIN32)
+    set_target_properties(Clipper2utils PROPERTIES CXX_VISIBILITY_PRESET hidden POSITION_INDEPENDENT_CODE 1)
   endif()
-  set_target_properties(Clipper2utils PROPERTIES CXX_VISIBILITY_PRESET hidden)
-  set_target_properties(Clipper2utils PROPERTIES POSITION_INDEPENDENT_CODE 1)
   target_link_libraries(Clipper2utils PUBLIC Clipper2)
   target_include_directories(Clipper2utils
     PUBLIC Utils
   )
 
-  add_library(Clipper2Zutils SHARED ${CLIPPER2_UTILS_INC} ${CLIPPER2_UTILS_SRC})
+  add_library(Clipper2Zutils SHARED ${CLIPPER2_UTILS_SRC})
   target_compile_definitions(Clipper2Zutils PUBLIC USINGZ)
-  if (WIN32)
-    target_compile_definitions(Clipper2Zutils PUBLIC CLIPPER2_DLL_EXPORT)
+  if (NOT WIN32)
+    set_target_properties(Clipper2Zutils PROPERTIES CXX_VISIBILITY_PRESET hidden POSITION_INDEPENDENT_CODE 1)
   endif()
-  target_compile_definitions(Clipper2Zutils PUBLIC _CRT_SECURE_NO_WARNINGS)
   target_link_libraries(Clipper2Zutils PUBLIC Clipper2Z)
-  set_target_properties(Clipper2Zutils PROPERTIES CXX_VISIBILITY_PRESET hidden)
-  set_target_properties(Clipper2Zutils PROPERTIES POSITION_INDEPENDENT_CODE 1)
   target_include_directories(Clipper2Zutils
     PUBLIC Utils
   )
