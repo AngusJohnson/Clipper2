@@ -2,15 +2,16 @@ cmake_minimum_required(VERSION 3.10)
 project(Clipper2 VERSION 1.0.4 LANGUAGES C CXX)
 
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
-set(CMAKE_CXX_STANDARD 17)
-set(CMAKE_CXX_STANDARD_REQUIRED ON)
-set(CMAKE_CXX_EXTENSIONS OFF)
+set(CMAKE_CXX_STANDARD              17)
+set(CMAKE_CXX_STANDARD_REQUIRED     ON)
+set(CMAKE_CXX_EXTENSIONS            OFF)
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 
-option(CLIPPER2_UTILS "Build utilities" ON)
-option(CLIPPER2_EXAMPLES "Build examples" ON)
-option(CLIPPER2_TESTS "Build tests" ON)
-option(BUILD_SHARED_LIBS "Build shared libs" OFF)
+include(GNUInstallDirs)
+
+option(CLIPPER2_UTILS      "Build utilities" ON)
+option(CLIPPER2_EXAMPLES   "Build examples"  ON)
+option(CLIPPER2_TESTS      "Build tests"     ON)
 
 set(CMAKE_CONFIGURATION_TYPES "Debug;Release;RelWithDebInfo" CACHE STRING "Configs" FORCE)
 if(DEFINED CMAKE_BUILD_TYPE)
@@ -25,8 +26,6 @@ message(STATUS "CMAKE_HOST_SYSTEM_VERSION ${CMAKE_HOST_SYSTEM_VERSION}")
 message(STATUS "CMAKE_HOST_WIN32 ${CMAKE_HOST_WIN32}")
 message(STATUS "WIN32 ${WIN32}")
 
-
-include(GNUInstallDirs)
 
 set(CLIPPER2_INC
   Clipper2Lib/clipper.core.h
@@ -123,10 +122,10 @@ if(CLIPPER2_UTILS OR CLIPPER2_TESTS OR CLIPPER2_EXAMPLES)
   )
 
   set_target_properties(Clipper2utils Clipper2Zutils PROPERTIES FOLDER Libraries)
-if (NOT WIN32)
-  target_compile_options(Clipper2utils PRIVATE -Wno-unused-variable -Wno-unused-function)
-  target_compile_options(Clipper2Zutils PRIVATE -Wno-unused-variable -Wno-unused-function)
-endif()
+  if (NOT WIN32)
+    target_compile_options(Clipper2utils PRIVATE -Wno-unused-variable -Wno-unused-function)
+    target_compile_options(Clipper2Zutils PRIVATE -Wno-unused-variable -Wno-unused-function)
+  endif()
 endif()
 
 if(CLIPPER2_EXAMPLES)
@@ -183,10 +182,10 @@ if(CLIPPER2_TESTS)
   add_executable(ClipperTestsZ ${ClipperTests_SRC})
   target_link_libraries(ClipperTestsZ gtest gtest_main Clipper2Z Clipper2Zutils)
 
-if (NOT WIN32)
-  target_compile_options(ClipperTests PRIVATE -Wno-unused-variable -Wno-unused-function)
-  target_compile_options(ClipperTestsZ PRIVATE -Wno-unused-variable -Wno-unused-function)
-endif()
+  if (NOT WIN32)
+    target_compile_options(ClipperTests PRIVATE -Wno-unused-variable -Wno-unused-function)
+    target_compile_options(ClipperTestsZ PRIVATE -Wno-unused-variable -Wno-unused-function)
+  endif()
 
   set_target_properties(ClipperTests ClipperTestsZ PROPERTIES FOLDER Tests)
 
