@@ -107,7 +107,11 @@ if(CLIPPER2_UTILS OR CLIPPER2_TESTS OR CLIPPER2_EXAMPLES)
     PUBLIC Utils
   )
 
-  set_target_properties(Clipper2utils Clipper2Zutils PROPERTIES FOLDER Libraries)
+  set_target_properties(Clipper2utils Clipper2Zutils PROPERTIES FOLDER Libraries
+                                         VERSION ${PROJECT_VERSION}
+                                         SOVERSION ${PROJECT_VERSION_MAJOR}
+                                         PUBLIC_HEADER "${CLIPPER2_UTILS_INC}"
+  )
   if (NOT WIN32)
     target_compile_options(Clipper2utils PRIVATE -Wno-unused-variable -Wno-unused-function)
     target_compile_options(Clipper2Zutils PRIVATE -Wno-unused-variable -Wno-unused-function)
