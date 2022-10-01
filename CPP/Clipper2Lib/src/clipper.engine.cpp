@@ -14,7 +14,7 @@
 #include <vector>
 #include <numeric>
 #include <algorithm>
-#include "clipper.engine.h"
+#include "clipper2/clipper.engine.h"
 
 namespace Clipper2Lib {
 

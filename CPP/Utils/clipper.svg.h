@@ -11,7 +11,7 @@
 
 #include <cstdlib>
 #include <string>
-#include "clipper.h"
+#include "clipper2/clipper.h"
 
 namespace Clipper2Lib {
 

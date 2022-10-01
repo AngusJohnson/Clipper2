@@ -15,23 +15,23 @@ option(BUILD_SHARED_LIBS "Build shared libs" OFF)
 include(GNUInstallDirs)
 
 set(CLIPPER2_INC
-  Clipper2Lib/clipper.core.h
-  Clipper2Lib/clipper.engine.h
-  Clipper2Lib/clipper.h
-  Clipper2Lib/clipper.minkowski.h
-  Clipper2Lib/clipper.offset.h
+  Clipper2Lib/include/clipper2/clipper.core.h
+  Clipper2Lib/include/clipper2/clipper.engine.h
+  Clipper2Lib/include/clipper2/clipper.h
+  Clipper2Lib/include/clipper2/clipper.minkowski.h
+  Clipper2Lib/include/clipper2/clipper.offset.h
 )
 
 set(CLIPPER2_SRC
-  Clipper2Lib/clipper.engine.cpp
-  Clipper2Lib/clipper.offset.cpp
+  Clipper2Lib/src/clipper.engine.cpp
+  Clipper2Lib/src/clipper.offset.cpp
 )
 
 # 2d version of Clipper2
 add_library(Clipper2 ${CLIPPER2_INC} ${CLIPPER2_SRC})
 
 target_include_directories(Clipper2
-  PUBLIC Clipper2Lib
+  PUBLIC Clipper2Lib/include
 )
 
 # Clipper2 but with USINGZ defined
@@ -40,7 +40,7 @@ add_library(Clipper2Z ${CLIPPER2_INC} ${CLIPPER2_SRC})
 target_compile_definitions(Clipper2Z PUBLIC USINGZ)
 
 target_include_directories(Clipper2Z
-  PUBLIC Clipper2Lib
+  PUBLIC Clipper2Lib/include
 )
 
 if (WIN32)

@@ -11,7 +11,7 @@
 
 #include <cstdlib>
 #include <string>
-#include "clipper.h"
+#include "clipper2/clipper.h"
 #include "clipper.svg.h"
 #ifndef _WIN32
 #include <sys/types.h>

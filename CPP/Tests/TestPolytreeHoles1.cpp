@@ -1,5 +1,5 @@
 #include <gtest/gtest.h>
-#include "clipper.h"
+#include "clipper2/clipper.h"
 #include "ClipFileLoad.h"
 
 using namespace Clipper2Lib;
