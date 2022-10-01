@@ -15,32 +15,34 @@ option(BUILD_SHARED_LIBS "Build shared libs" OFF)
 include(GNUInstallDirs)
 
 set(CLIPPER2_INC
-  Clipper2Lib/clipper.core.h
-  Clipper2Lib/clipper.engine.h
-  Clipper2Lib/clipper.h
-  Clipper2Lib/clipper.minkowski.h
-  Clipper2Lib/clipper.offset.h
+  Clipper2Lib/include/clipper2/clipper.core.h
+  Clipper2Lib/include/clipper2/clipper.engine.h
+  Clipper2Lib/include/clipper2/clipper.h
+  Clipper2Lib/include/clipper2/clipper.minkowski.h
+  Clipper2Lib/include/clipper2/clipper.offset.h
 )
 
 set(CLIPPER2_SRC
-  Clipper2Lib/clipper.engine.cpp
-  Clipper2Lib/clipper.offset.cpp
+  Clipper2Lib/src/clipper.engine.cpp
+  Clipper2Lib/src/clipper.offset.cpp
 )
 
+set(PCFILE "${CMAKE_CURRENT_BINARY_DIR}/Clipper2.pc")
+
 # 2d version of Clipper2
-add_library(Clipper2 ${CLIPPER2_SRC})
+add_library(Clipper2 ${CLIPPER2_INC} ${CLIPPER2_SRC})
 
 target_include_directories(Clipper2
-  PUBLIC Clipper2Lib
+  PUBLIC Clipper2Lib/include
 )
 
 # Clipper2 but with USINGZ defined
-add_library(Clipper2Z ${CLIPPER2_SRC})
+add_library(Clipper2Z ${CLIPPER2_INC} ${CLIPPER2_SRC})
 
 target_compile_definitions(Clipper2Z PUBLIC USINGZ)
 
 target_include_directories(Clipper2Z
-  PUBLIC Clipper2Lib
+  PUBLIC Clipper2Lib/include
 )
 
 if (WIN32)
@@ -72,14 +74,14 @@ if(CLIPPER2_UTILS OR CLIPPER2_TESTS OR CLIPPER2_EXAMPLES)
     Utils/ClipFileSave.cpp
   )
 
-  add_library(Clipper2utils STATIC ${CLIPPER2_UTILS_SRC})
+  add_library(Clipper2utils STATIC ${CLIPPER2_UTILS_INC} ${CLIPPER2_UTILS_SRC})
 
   target_link_libraries(Clipper2utils PUBLIC Clipper2)
   target_include_directories(Clipper2utils
     PUBLIC Utils
   )
 
-  add_library(Clipper2Zutils STATIC ${CLIPPER2_UTILS_SRC})
+  add_library(Clipper2Zutils STATIC ${CLIPPER2_UTILS_INC} ${CLIPPER2_UTILS_SRC})
 
   target_link_libraries(Clipper2Zutils PUBLIC Clipper2Z)
   target_include_directories(Clipper2Zutils
@@ -87,10 +89,10 @@ if(CLIPPER2_UTILS OR CLIPPER2_TESTS OR CLIPPER2_EXAMPLES)
   )
 
   set_target_properties(Clipper2utils Clipper2Zutils PROPERTIES FOLDER Libraries)
-if (NOT WIN32)
-  target_compile_options(Clipper2utils PRIVATE -Wno-unused-variable -Wno-unused-function)
-  target_compile_options(Clipper2Zutils PRIVATE -Wno-unused-variable -Wno-unused-function)
-endif()
+  if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+    target_compile_options(Clipper2utils PRIVATE -Wno-unused-variable -Wno-unused-function)
+    target_compile_options(Clipper2Zutils PRIVATE -Wno-unused-variable -Wno-unused-function)
+  endif()
 endif()
 
 if(CLIPPER2_EXAMPLES)
@@ -112,6 +114,12 @@ if(CLIPPER2_EXAMPLES)
   target_link_libraries(UsingZ1 PRIVATE Clipper2Z Clipper2Zutils)
 
   set_target_properties(ConsoleDemo1 ConsoleDemo2 InflateDemo1 UsingZ1 PROPERTIES FOLDER Examples)
+  if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+    target_compile_options(ConsoleDemo1 PRIVATE -Wno-unused-result -Wno-unused-function)
+    target_compile_options(ConsoleDemo2 PRIVATE -Wno-unused-result -Wno-unused-function)
+    target_compile_options(InflateDemo1 PRIVATE -Wno-unused-result -Wno-unused-function)
+    target_compile_options(UsingZ1 PRIVATE -Wno-unused-result -Wno-unused-function)
+  endif()
 endif()
 
 
@@ -146,10 +154,10 @@ if(CLIPPER2_TESTS)
   add_executable(ClipperTestsZ ${ClipperTests_SRC})
   target_link_libraries(ClipperTestsZ gtest gtest_main Clipper2Z Clipper2Zutils)
 
-if (NOT WIN32)
-  target_compile_options(ClipperTests PRIVATE -Wno-unused-variable -Wno-unused-function)
-  target_compile_options(ClipperTestsZ PRIVATE -Wno-unused-variable -Wno-unused-function)
-endif()
+  if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+    target_compile_options(ClipperTests PRIVATE -Wno-unused-variable -Wno-unused-function)
+    target_compile_options(ClipperTestsZ PRIVATE -Wno-unused-variable -Wno-unused-function)
+  endif()
 
   set_target_properties(ClipperTests ClipperTestsZ PROPERTIES FOLDER Tests)
 
@@ -172,6 +180,9 @@ endif()
   file(COPY ../Tests/Polygons.txt DESTINATION ${CMAKE_BINARY_DIR} FILE_PERMISSIONS OWNER_READ GROUP_READ WORLD_READ )
 endif()
 
+CONFIGURE_FILE(Clipper2.pc.cmakein "${PCFILE}" @ONLY)
+
 install(TARGETS Clipper2 Clipper2Z
         PUBLIC_HEADER DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/clipper2
 )
+install(FILES ${PCFILE} DESTINATION ${CMAKE_INSTALL_LIBDIR}/pkconfig)

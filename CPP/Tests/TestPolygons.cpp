@@ -1,5 +1,5 @@
 #include <gtest/gtest.h>
-#include "clipper.h"
+#include "clipper2/clipper.h"
 #include "ClipFileLoad.h"
 
 inline Clipper2Lib::PathD MakeRandomPath(int width, int height, unsigned vertCnt)

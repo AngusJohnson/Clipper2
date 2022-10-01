@@ -2,7 +2,7 @@
 #include <string>
 #include <chrono> 
 
-#include "../../Clipper2Lib/clipper.h"
+#include "clipper2/clipper.h"
 #include "../../Utils/clipper.svg.utils.h"
 #include "../../Utils/ClipFileLoad.h"
 #include "../../Utils/ClipFileSave.h"

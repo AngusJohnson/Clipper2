@@ -5,7 +5,7 @@
 #ifndef CLIPPER_TEST_SAVE_H
 #define CLIPPER_TEST_SAVE_H
 
-#include "clipper.h"
+#include "clipper2/clipper.h"
 
 bool SaveTest(const std::string& filename, bool append,
   Clipper2Lib::Paths64* subj, Clipper2Lib::Paths64* subj_open, Clipper2Lib::Paths64* clip,
