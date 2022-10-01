@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.10)
-project(Clipper2 LANGUAGES C CXX)
+project(Clipper2 VERSION 1.0.4 LANGUAGES C CXX)
 
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 set(CMAKE_CXX_STANDARD 17)
@@ -10,6 +10,7 @@ set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 option(CLIPPER2_UTILS "Build utilities" ON)
 option(CLIPPER2_EXAMPLES "Build examples" ON)
 option(CLIPPER2_TESTS "Build tests" ON)
+option(BUILD_SHARED_LIBS "Build shared libs" OFF)
 
 set(CMAKE_CONFIGURATION_TYPES "Debug;Release;RelWithDebInfo" CACHE STRING "Configs" FORCE)
 if(DEFINED CMAKE_BUILD_TYPE)
@@ -24,6 +25,8 @@ message(STATUS "CMAKE_HOST_SYSTEM_VERSION ${CMAKE_HOST_SYSTEM_VERSION}")
 message(STATUS "CMAKE_HOST_WIN32 ${CMAKE_HOST_WIN32}")
 message(STATUS "WIN32 ${WIN32}")
 
+
+include(GNUInstallDirs)
 
 set(CLIPPER2_INC
   Clipper2Lib/clipper.core.h
@@ -49,7 +52,6 @@ set_target_properties(Clipper2 PROPERTIES CXX_VISIBILITY_PRESET hidden)
 set_target_properties(Clipper2 PROPERTIES POSITION_INDEPENDENT_CODE 1)
 target_include_directories(Clipper2
   PUBLIC Clipper2Lib
-  SYSTEM INTERFACE Clipper2Lib
 )
 
 # Clipper2 but with USINGZ defined
@@ -64,7 +66,6 @@ set_target_properties(Clipper2Z PROPERTIES POSITION_INDEPENDENT_CODE 1)
 
 target_include_directories(Clipper2Z
   PUBLIC Clipper2Lib
-  SYSTEM INTERFACE Clipper2Lib
 )
 
 if (WIN32)
@@ -78,7 +79,11 @@ else()
   target_link_libraries(Clipper2Z PUBLIC -lm)
 endif()
 
-set_target_properties(Clipper2 Clipper2Z PROPERTIES FOLDER Libraries)
+set_target_properties(Clipper2 Clipper2Z PROPERTIES FOLDER Libraries
+                                         VERSION ${PROJECT_VERSION}
+                                         SOVERSION ${PROJECT_VERSION_MAJOR}
+                                         PUBLIC_HEADER "${CLIPPER2_INC}"
+)
 
 if(CLIPPER2_UTILS OR CLIPPER2_TESTS OR CLIPPER2_EXAMPLES)
   set(CLIPPER2_UTILS_INC
@@ -102,7 +107,6 @@ if(CLIPPER2_UTILS OR CLIPPER2_TESTS OR CLIPPER2_EXAMPLES)
   target_link_libraries(Clipper2utils PUBLIC Clipper2)
   target_include_directories(Clipper2utils
     PUBLIC Utils
-    SYSTEM INTERFACE Utils
   )
 
   add_library(Clipper2Zutils SHARED ${CLIPPER2_UTILS_INC} ${CLIPPER2_UTILS_SRC})
@@ -116,11 +120,13 @@ if(CLIPPER2_UTILS OR CLIPPER2_TESTS OR CLIPPER2_EXAMPLES)
   set_target_properties(Clipper2Zutils PROPERTIES POSITION_INDEPENDENT_CODE 1)
   target_include_directories(Clipper2Zutils
     PUBLIC Utils
-    SYSTEM INTERFACE Utils
   )
 
   set_target_properties(Clipper2utils Clipper2Zutils PROPERTIES FOLDER Libraries)
-
+if (NOT WIN32)
+  target_compile_options(Clipper2utils PRIVATE -Wno-unused-variable -Wno-unused-function)
+  target_compile_options(Clipper2Zutils PRIVATE -Wno-unused-variable -Wno-unused-function)
+endif()
 endif()
 
 if(CLIPPER2_EXAMPLES)
@@ -177,6 +183,11 @@ if(CLIPPER2_TESTS)
   add_executable(ClipperTestsZ ${ClipperTests_SRC})
   target_link_libraries(ClipperTestsZ gtest gtest_main Clipper2Z Clipper2Zutils)
 
+if (NOT WIN32)
+  target_compile_options(ClipperTests PRIVATE -Wno-unused-variable -Wno-unused-function)
+  target_compile_options(ClipperTestsZ PRIVATE -Wno-unused-variable -Wno-unused-function)
+endif()
+
   set_target_properties(ClipperTests ClipperTestsZ PROPERTIES FOLDER Tests)
 
   gtest_discover_tests(ClipperTests
@@ -198,11 +209,7 @@ if(CLIPPER2_TESTS)
   file(COPY ../Tests/Polygons.txt DESTINATION ${CMAKE_BINARY_DIR} FILE_PERMISSIONS OWNER_READ GROUP_READ WORLD_READ )
 endif()
 
-install(TARGETS Clipper2 Clipper2Z)
-
-install(
-  DIRECTORY Clipper2Lib/
-  DESTINATION include
-  FILES_MATCHING PATTERN "*.h"
+install(TARGETS Clipper2 Clipper2Z
+        PUBLIC_HEADER DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/clipper2
 )
 
