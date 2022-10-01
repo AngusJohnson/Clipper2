@@ -12,11 +12,7 @@
 
 #ifndef CLIPPER2_DLL
 #  if defined(_WIN32)
-#    ifdef CLIPPER2_DLL_EXPORT
-#      define CLIPPER2_DLL __declspec(dllexport)
-#    else
-#      define CLIPPER2_DLL __declspec(dllimport)
-#    endif
+#    define CLIPPER2_DLL
 #  else
 #    if __GNUC__ >= 4
 #      define CLIPPER2_DLL __attribute__((visibility("default")))
