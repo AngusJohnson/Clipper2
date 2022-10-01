@@ -64,7 +64,7 @@ private:
   {
     while (current < end)
     {
-      uint8_t i = shift[(unsigned)*current];  //compare last byte first
+      uint8_t i = shift[static_cast<unsigned>(*current)];  //compare last byte first
       if (!i)                   //last byte matches if i == 0
       {
         char* j = current - needle_len_less1;
@@ -88,12 +88,12 @@ private:
   {
     while (current < end)
     {
-      uint8_t i = shift[case_table[(unsigned)*current]];
+      uint8_t i = shift[case_table[static_cast<unsigned>(*current)]];
       if (!i)                          
       {
         char* j = current - needle_len_less1;
         while (i < needle_len_less1 &&
-          needle_ic_[i] == case_table[(unsigned)*(j + (unsigned)i)]) ++i;
+          needle_ic_[i] == case_table[static_cast<unsigned>(*(j + i))]) ++i;
         if (i == needle_len_less1)
         {
           ++current;
