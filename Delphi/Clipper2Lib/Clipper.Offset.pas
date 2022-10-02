@@ -2,8 +2,8 @@ unit Clipper.Offset;
 
 (*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Version   :  Clipper2 - ver.1.0.4                                            *
-* Date      :  12 September 2022                                               *
+* Version   :  Clipper2 - ver.1.0.5                                            *
+* Date      :  2 October 2022                                                  *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  Path Offset (Inflate/Shrink)                                    *
@@ -59,7 +59,7 @@ type
     procedure AddPoint(const pt: TPoint64); overload;
       {$IFDEF INLINING} inline; {$ENDIF}
     procedure DoSquare(j, k: Integer);
-    procedure DoMiter(j, k: Integer; cosAplus1: Double);
+    procedure DoMiter(j, k: Integer; cosA: Double);
     procedure DoRound(j, k: integer; angle: double);
     procedure OffsetPoint(j: Integer; var k: integer);
 
@@ -438,11 +438,9 @@ begin
     etButt:
       begin
         with fInPath[0] do AddPoint(Point64(
-          X - fNorms[0].X *fGrpDelta,
-          Y - fNorms[0].Y *fGrpDelta));
-        with fInPath[0] do AddPoint(Point64(
-          X + fNorms[0].X *fGrpDelta,
-          Y + fNorms[0].Y *fGrpDelta));
+          X - fNorms[0].X * fGrpDelta,
+          Y - fNorms[0].Y * fGrpDelta));
+        AddPoint(GetPerpendic(fInPath[0], fNorms[0], fGrpDelta));
       end;
     etRound: DoRound(0,0, PI);
     else DoSquare(0, 0);
@@ -452,7 +450,6 @@ begin
   k := 0;
   for i := 1 to highI -1 do //nb: -1 is important
     OffsetPoint(i, k);
-  AddPoint(GetPerpendic(fInPath[highI], fNorms[highI-1], fGrpDelta));
 
   // reverse the normals ...
   for i := HighI downto 1 do
@@ -460,8 +457,7 @@ begin
     fNorms[i].X := -fNorms[i-1].X;
     fNorms[i].Y := -fNorms[i-1].Y;
   end;
-  fNorms[0].X := fNorms[highI].X;
-  fNorms[0].Y := fNorms[highI].Y;
+  fNorms[0] := fNorms[highI];
 
  // do the line end cap
   case endType of
@@ -470,9 +466,7 @@ begin
         with fInPath[highI] do AddPoint(Point64(
           X - fNorms[highI].X *fGrpDelta,
           Y - fNorms[highI].Y *fGrpDelta));
-        with fInPath[highI] do AddPoint(Point64(
-          X + fNorms[highI].X *fGrpDelta,
-          Y + fNorms[highI].Y *fGrpDelta));
+        AddPoint(GetPerpendic(fInPath[highI], fNorms[highI], fGrpDelta));
       end;
     etRound: DoRound(highI,highI, PI);
     else DoSquare(highI, highI);
@@ -607,17 +601,17 @@ procedure TClipperOffset.DoSquare(j, k: Integer);
 var
   vec, pt1,pt2,pt3,pt4, pt,ptQ : TPointD;
 begin
-  // using the reciprocal of unit normals (as unit vectors)
-  // get the average unit vector ...
-
-  if k <> j then
-    vec := GetAvgUnitVector(
-          PointD(-fNorms[k].Y, fNorms[k].X),
-          PointD(fNorms[j].Y, -fNorms[j].X))
-  else if j = k then
+  if k = j then
   begin
     vec.X := fNorms[0].Y;     //squaring a line end
     vec.Y := -fNorms[0].X;
+  end else
+  begin
+    // using the reciprocal of unit normals (as unit vectors)
+    // get the average unit vector ...
+    vec := GetAvgUnitVector(
+      PointD(-fNorms[k].Y, fNorms[k].X),
+      PointD(fNorms[j].Y, -fNorms[j].X));
   end;
 
   // now offset the original vertex delta units along unit vector
@@ -627,6 +621,7 @@ begin
   // get perpendicular vertices
   pt1 := TranslatePoint(ptQ, fGrpDelta * vec.Y, fGrpDelta * -vec.X);
   pt2 := TranslatePoint(ptQ, fGrpDelta * -vec.Y, fGrpDelta * vec.X);
+
   // get 2 vertices along one edge offset
   pt3 := GetPerpendicD(fInPath[k], fNorms[k], fGrpDelta);
 
@@ -634,33 +629,28 @@ begin
   begin
     pt4.X := pt3.X + vec.X * fGrpDelta;
     pt4.Y := pt3.Y + vec.Y * fGrpDelta;
-  end else
-    pt4 := GetPerpendicD(fInPath[j], fNorms[k], fGrpDelta);
-
-  // get the intersection point
-  pt := IntersectPoint(pt1, pt2, pt3, pt4);
-
-  if (j = k) then
-  begin
-    //reverse order of AddPoint when this is the line start
+    // get the intersection point
+    pt := IntersectPoint(pt1, pt2, pt3, pt4);
     with ReflectPoint(pt, ptQ) do AddPoint(X, Y);
     AddPoint(pt.X, pt.Y);
   end else
   begin
+    pt4 := GetPerpendicD(fInPath[j], fNorms[k], fGrpDelta);
+    // get the intersection point
+    pt := IntersectPoint(pt1, pt2, pt3, pt4);
     AddPoint(pt.X, pt.Y);
     //get the second intersect point through reflecion
     with ReflectPoint(pt, ptQ) do AddPoint(X, Y);
   end;
-
 end;
 //------------------------------------------------------------------------------
 
-procedure TClipperOffset.DoMiter(j, k: Integer; cosAplus1: Double);
+procedure TClipperOffset.DoMiter(j, k: Integer; cosA: Double);
 var
   q: Double;
 begin
   // see offset_triginometry4.svg
-  q := fGrpDelta / cosAplus1;
+  q := fGrpDelta / (cosA +1);
   AddPoint(fInPath[j].X + (fNorms[k].X + fNorms[j].X)*q,
     fInPath[j].Y + (fNorms[k].Y + fNorms[j].Y)*q);
 end;
@@ -676,32 +666,17 @@ begin
 	// nb: even though angle may be negative this is a convex join
   pt := fInPath[j];
   pt2 := PointD(fNorms[k].X * fGrpDelta, fNorms[k].Y * fGrpDelta);
-
+  if j = k then pt2 := Negate(pt2);
   steps := Ceil(fStepsPerRad * abs(angle));
   GetSinCos(angle / steps, stepSin, stepCos);
-  pt2 := PointD(fNorms[k].X * fGrpDelta, fNorms[k].Y * fGrpDelta);
-
-  if j = k then
+  AddPoint(pt.X + pt2.X, pt.Y + pt2.Y);
+  for i := 0 to steps -1 do
   begin
-    AddPoint(pt.X - pt2.X, pt.Y - pt2.Y);
-    for i := 0 to steps -1 do
-    begin
-      pt2 := PointD(pt2.X * stepCos - stepSin * pt2.Y,
-        pt2.X * stepSin + pt2.Y * stepCos);
-      AddPoint(pt.X - pt2.X, pt.Y - pt2.Y);
-    end;
-  end else
-  begin
-    AddPoint(pt.X + pt2.X, pt.Y + pt2.Y);
-    for i := 0 to steps -1 do
-    begin
-      pt2 := PointD(pt2.X * stepCos - stepSin * pt2.Y,
-        pt2.X * stepSin + pt2.Y * stepCos);
-      AddPoint(pt.X + pt2.X, pt.Y + pt2.Y);
-    end;
-    pt2 := PointD(fNorms[j].X * fGrpDelta, fNorms[j].Y * fGrpDelta);
+    pt2 := PointD(pt2.X * stepCos - stepSin * pt2.Y,
+      pt2.X * stepSin + pt2.Y * stepCos);
     AddPoint(pt.X + pt2.X, pt.Y + pt2.Y);
   end;
+  AddPoint(GetPerpendic(pt, fNorms[j], fGrpDelta));
 end;
 //------------------------------------------------------------------------------
 
@@ -710,6 +685,12 @@ var
   sinA, cosA: Double;
   almostNoAngle: Boolean;
 begin
+  if PointsEqual(fInPath[j], fInPath[k]) then
+  begin
+    k := j;
+    Exit;
+  end;
+
   // Let A = change in angle where edges join
   // A == 0: ie no change in angle (flat join)
   // A == PI: edges 'spike'
@@ -736,13 +717,13 @@ begin
       DoRound(j, k, ArcTan2(sinA, cosA))
     // only miter when the angle isn't too acute (and exceeds ML)
     else if (fJoinType = jtMiter) and (cosA > fTmpLimit -1) then
-      DoMiter(j, k, 1 + cosA)
+      DoMiter(j, k, cosA)
     // only do squaring when the angle of deviation > 90 degrees
     else if (cosA < -0.001) then
       DoSquare(j, k)
     else
       // don't square shallow angles that are safe to miter
-      DoMiter(j, k, 1 + cosA);
+      DoMiter(j, k, cosA);
   end;
   k := j;
 end;

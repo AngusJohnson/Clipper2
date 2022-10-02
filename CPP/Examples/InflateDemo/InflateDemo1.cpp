@@ -19,6 +19,30 @@ void System(const std::string& filename)
 
 void DoSimpleShapes() 
 {
+
+  //open path offsets 
+  Paths64 op1, op2;
+
+  FillRule fr2 = FillRule::EvenOdd;
+  SvgWriter svg2;
+  op1.push_back(MakePath("100,100, 20,20 180,20 180,180, 20,180"));
+  op2 = InflatePaths(op1, 20, JoinType::Square, EndType::Square);
+  SvgAddOpenSubject(svg2, op1, fr2, false);
+  SvgAddSolution(svg2, Paths64ToPathsD(op2), fr2, false);
+
+  op1 = TranslatePaths(op1, 250, 0);
+  op2 = InflatePaths(op1, 20, JoinType::Miter, EndType::Butt, 5);
+  SvgAddOpenSubject(svg2, op1, fr2, false);
+  SvgAddSolution(svg2, Paths64ToPathsD(op2), fr2, false);
+
+  op1 = TranslatePaths(op1, 250, 0);
+  op2 = InflatePaths(op1, 20, JoinType::Round, EndType::Round);
+  SvgAddOpenSubject(svg2, op1, fr2, false);
+  SvgAddSolution(svg2, Paths64ToPathsD(op2), fr2, false);
+
+  SvgSaveToFile(svg2, "open_paths.svg", 800, 600, 20);
+  System("open_paths.svg");
+
   //triangle offset - with large miter
   Paths64 p, pp;
   p.push_back(MakePath("30, 150, 60, 350, 0, 350"));

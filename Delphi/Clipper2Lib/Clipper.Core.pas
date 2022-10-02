@@ -2,8 +2,8 @@ unit Clipper.Core;
 
 (*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Version   :  Clipper2 - ver.1.0.4                                            *
-* Date      :  3 September 2022                                                *
+* Version   :  Clipper2 - ver.1.0.5                                            *
+* Date      :  2 October 2022                                                  *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  Core Clipper Library module                                     *
 *              Contains structures and functions used throughout the library   *
@@ -69,7 +69,7 @@ type
     Top    : Int64;
     Right  : Int64;
     Bottom : Int64;
-    function Contains(const pt: TPoint64): Boolean; overload;
+    function Contains(const pt: TPoint64; inclusive: Boolean = false): Boolean; overload;
     function Contains(const rec: TRect64): Boolean; overload;
     function AsPath: TPath64;
     property Width: Int64 read GetWidth;
@@ -134,7 +134,8 @@ function DistanceSqr(const pt1, pt2: TPointD): double; overload;
 function DistanceFromLineSqrd(const pt, linePt1, linePt2: TPoint64): double; overload;
 function DistanceFromLineSqrd(const pt, linePt1, linePt2: TPointD): double; overload;
 
-function SegmentsIntersect(const s1a, s1b, s2a, s2b: TPoint64): boolean;
+function SegmentsIntersect(const s1a, s1b, s2a, s2b: TPoint64;
+  inclusive: Boolean = false): boolean; {$IFDEF INLINING} inline; {$ENDIF}
 
 function PointsEqual(const pt1, pt2: TPoint64): Boolean; overload;
   {$IFDEF INLINING} inline; {$ENDIF}
@@ -155,6 +156,8 @@ function Point64(const X, Y: Int64): TPoint64; overload; {$IFDEF INLINING} inlin
 function Point64(const X, Y: Double): TPoint64; overload; {$IFDEF INLINING} inline; {$ENDIF}
 function PointD(const X, Y: Double): TPointD; overload; {$IFDEF INLINING} inline; {$ENDIF}
 {$ENDIF}
+
+function Negate(const pt: TPointD): TPointD; {$IFDEF INLINING} inline; {$ENDIF}
 
 function Point64(const pt: TPointD): TPoint64; overload; {$IFDEF INLINING} inline; {$ENDIF}
 function PointD(const pt: TPoint64): TPointD; overload;
@@ -311,10 +314,14 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-function TRect64.Contains(const pt: TPoint64): Boolean;
+function TRect64.Contains(const pt: TPoint64; inclusive: Boolean = false): Boolean;
 begin
-  result := (pt.X > Left) and (pt.X < Right) and
-    (pt.Y > Top) and (pt.Y < Bottom);
+  if inclusive then
+    result := (pt.X >= Left) and (pt.X <= Right) and
+      (pt.Y >= Top) and (pt.Y <= Bottom)
+  else
+    result := (pt.X > Left) and (pt.X < Right) and
+      (pt.Y > Top) and (pt.Y < Bottom);
 end;
 //------------------------------------------------------------------------------
 
@@ -469,7 +476,7 @@ end;
 function ValueEqualOrBetween(val, end1, end2: Int64): Boolean;
 begin
   Result := (val = end1) or (val = end2) or
-    (val > end1) = (val < end2);
+    ((val > end1) = (val < end2));
 end;
 //------------------------------------------------------------------------------
 
@@ -1039,6 +1046,13 @@ end;
 //------------------------------------------------------------------------------
 {$ENDIF}
 
+function Negate(const pt: TPointD): TPointD;
+begin
+  Result.X := -pt.X;
+  Result.Y := -pt.Y;
+end;
+//------------------------------------------------------------------------------
+
 function Rect64(const left, top, right, bottom: Int64): TRect64;
 begin
   Result.Left   := left;
@@ -1499,11 +1513,27 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-function SegmentsIntersect(const s1a, s1b, s2a, s2b: TPoint64): boolean;
+function SegmentsIntersect(const s1a, s1b, s2a, s2b: TPoint64;
+  inclusive: Boolean): boolean;
+var
+  res1, res2, res3, res4: double;
 begin
-  // nb: result excludes overlapping collinear segments
-  result := (CrossProduct(s1a, s2a, s2b) * CrossProduct(s1b, s2a, s2b) < 0) and
-    (CrossProduct(s2a, s1a, s1b) * CrossProduct(s2b, s1a, s1b) < 0);
+  if inclusive then
+  begin
+//    result := (CrossProduct(s1a, s2a, s2b) * CrossProduct(s1b, s2a, s2b) <= 0) and
+//      (CrossProduct(s2a, s1a, s1b) * CrossProduct(s2b, s1a, s1b) <= 0);
+    Result := false;
+    res1 := CrossProduct(s1a, s2a, s2b);
+    res2 := CrossProduct(s1b, s2a, s2b);
+    if (res1 * res2 > 0) then Exit;
+    res3 := CrossProduct(s2a, s1a, s1b);
+    res4 := CrossProduct(s2b, s1a, s1b);
+    if (res3 * res4 > 0) then Exit;
+    Result := (res1 <> 0) or (res2 <> 0) or
+      (res3 <> 0) or (res4 <> 0); // ensures not collinear
+  end else
+    result := (CrossProduct(s1a, s2a, s2b) * CrossProduct(s1b, s2a, s2b) < 0) and
+      (CrossProduct(s2a, s1a, s1b) * CrossProduct(s2b, s1a, s1b) < 0);
 end;
 //------------------------------------------------------------------------------
 

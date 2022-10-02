@@ -1,7 +1,7 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Version   :  Clipper2 - ver.1.0.4                                            *
-* Date      :  14 August 2022                                                  *
+* Version   :  Clipper2 - ver.1.0.5                                            *
+* Date      :  2 October 2022                                                  *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  Path Offset (Inflate/Shrink)                                    *
@@ -77,6 +77,16 @@ inline PointD GetAvgUnitVector(const PointD& vec1, const PointD& vec2)
 inline bool IsClosedPath(EndType et)
 {
 	return et == EndType::Polygon || et == EndType::Joined;
+}
+
+inline Point64 GetPerpendic(const Point64& pt, const PointD& norm, double delta)
+{
+	return Point64(pt.x + norm.x * delta, pt.y + norm.y * delta);
+}
+
+inline PointD GetPerpendicD(const Point64& pt, const PointD& norm, double delta)
+{
+	return PointD(pt.x + norm.x * delta, pt.y + norm.y * delta);
 }
 
 //------------------------------------------------------------------------------
@@ -159,16 +169,6 @@ PointD IntersectPoint(const PointD& pt1a, const PointD& pt1b,
 	}
 }
 
-inline Point64 GetPerpendic(const Point64& pt, const PointD& norm, double  delta)
-{
-	return Point64(pt.x + norm.x * delta, pt.y + norm.y * delta);
-}
-
-inline PointD GetPerpendicD(const Point64& pt, const PointD& norm, double  delta)
-{
-	return PointD(pt.x + norm.x * delta, pt.y + norm.y * delta);
-}
-
 void ClipperOffset::DoSquare(Group& group, const Path64& path, size_t j, size_t k)
 {
 	PointD vec;
@@ -242,6 +242,8 @@ void ClipperOffset::OffsetPoint(Group& group, Path64& path, size_t j, size_t& k)
 	// sin(A) < 0: right turning
 	// cos(A) < 0: change in angle is more than 90 degree
 
+	if (path[j] == path[k]) { k = j; return; }
+
 	double sin_a = CrossProduct(norms[j], norms[k]);
 	double cos_a = DotProduct(norms[j], norms[k]);
 	if (sin_a > 1.0) sin_a = 1.0;
@@ -309,9 +311,7 @@ void ClipperOffset::OffsetOpenPath(Group& group, Path64& path, EndType end_type)
 		group.path_.push_back(Point64(
 			path[0].x - norms[0].x * group_delta_,
 			path[0].y - norms[0].y * group_delta_));
-		group.path_.push_back(Point64(
-			path[0].x + norms[0].x * group_delta_,
-			path[0].y + norms[0].y * group_delta_));
+		group.path_.push_back(GetPerpendic(path[0], norms[0], group_delta_));
 		break;
 	case EndType::Round:
 		DoRound(group, path, 0,0, PI);
@@ -339,9 +339,7 @@ void ClipperOffset::OffsetOpenPath(Group& group, Path64& path, EndType end_type)
 		group.path_.push_back(Point64(
 			path[highI].x - norms[highI].x * group_delta_,
 			path[highI].y - norms[highI].y * group_delta_));
-		group.path_.push_back(Point64(
-			path[highI].x + norms[highI].x * group_delta_,
-			path[highI].y + norms[highI].y * group_delta_));
+		group.path_.push_back(GetPerpendic(path[highI], norms[highI], group_delta_));
 		break;
 	case EndType::Round:
 		DoRound(group, path, highI, highI, PI);
@@ -358,7 +356,7 @@ void ClipperOffset::OffsetOpenPath(Group& group, Path64& path, EndType end_type)
 
 void ClipperOffset::DoGroupOffset(Group& group, double delta)
 {
-	if (group.end_type_ != EndType::Polygon) delta = std::abs(delta) / 2;
+	if (group.end_type_ != EndType::Polygon) delta = std::abs(delta) * 0.5;
 	bool isClosedPaths = IsClosedPath(group.end_type_);
 
 	if (isClosedPaths)

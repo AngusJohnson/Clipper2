@@ -1,7 +1,7 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Version   :  Clipper2 - ver.1.0.4                                            *
-* Date      :  7 August 2022                                                   *
+* Version   :  Clipper2 - ver.1.0.5                                            *
+* Date      :  2 October 2022                                                  *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  Core Clipper Library structures and functions                   *
@@ -36,25 +36,24 @@ struct Point {
 	T y;
 #ifdef USINGZ
 	int64_t z;
-#endif
 
 	template <typename T2>
-	inline void Init(const T2 x_ = 0, const T2 y_ = 0)
+	inline void Init(const T2 x_ = 0, const T2 y_ = 0, const int64_t z_ = 0)
 	{
 		if constexpr (std::numeric_limits<T>::is_integer &&
 			!std::numeric_limits<T2>::is_integer)
 		{
 			x = static_cast<T>(std::round(x_));
 			y = static_cast<T>(std::round(y_));
+			z = z_;
 		}
 		else
 		{
 			x = static_cast<T>(x_);
 			y = static_cast<T>(y_);
-		}		
+			z = z_;
+		}
 	}
-
-#ifdef USINGZ
 
 	explicit Point() : x(0), y(0), z(0) {};
 
@@ -66,9 +65,9 @@ struct Point {
 	}
 
 	template <typename T2>
-	explicit Point<T>(const Point<T2>& p) 
-	{ 
-		Init(p.x, p.y);
+	explicit Point<T>(const Point<T2>& p)
+	{
+		Init(p.x, p.y, p.z);
 		z = 0;
 	}
 
@@ -85,6 +84,22 @@ struct Point {
 	}
 
 #else
+
+	template <typename T2>
+	inline void Init(const T2 x_ = 0, const T2 y_ = 0)
+	{
+		if constexpr (std::numeric_limits<T>::is_integer &&
+			!std::numeric_limits<T2>::is_integer)
+		{
+			x = static_cast<T>(std::round(x_));
+			y = static_cast<T>(std::round(y_));
+		}
+		else
+		{
+			x = static_cast<T>(x_);
+			y = static_cast<T>(y_);
+		}
+	}
 
 	explicit Point() : x(0), y(0) {};
 
@@ -104,7 +119,6 @@ struct Point {
 		os << point.x << "," << point.y << " ";
 		return os;
 	}
-
 #endif
 
 	friend bool operator==(const Point &a, const Point &b) 

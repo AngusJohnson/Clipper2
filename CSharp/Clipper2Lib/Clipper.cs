@@ -1,7 +1,7 @@
 ﻿/*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Version   :  Clipper2 - ver.1.0.4                                            *
-* Date      :  16 September 2022                                               *
+* Version   :  Clipper2 - ver.1.0.5                                            *
+* Date      :  2 October 2022                                                  *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  This module contains simple functions that will likely cover    *
@@ -724,7 +724,7 @@ namespace Clipper2Lib
       else
       {
         while (result.Count > 2 && InternalClipper.CrossProduct(
-          result[^1], result[^2], result[0]) == 0)
+          result[result.Count - 1], result[result.Count - 2], result[0]) == 0)
             result.RemoveAt(result.Count - 1);
         if (result.Count < 3)
           result.Clear();

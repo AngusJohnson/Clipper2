@@ -22,9 +22,9 @@ private:
   size_t haystack_len;
   uint8_t shift[256];
   uint8_t jump_;
-  uint8_t* needle_;
-  uint8_t* needle_ic_;
-  char *haystack_;
+  std::vector<uint8_t> needle_;
+  std::vector<uint8_t> needle_ic_;
+  char *haystack_ = nullptr;
   char *current, *end, *last_found;
   bool case_sensitive_;
 
@@ -54,10 +54,6 @@ private:
   {    
     case_sensitive_ = false;
     current = nullptr; end = nullptr; last_found = nullptr;
-    //case blind table
-    for (int c = 0; c < 0x61; ++c) case_table[c] = c;
-    for (int c = 0x61; c < 0x7B; ++c) case_table[c] = c - 0x20;
-    for (int c = 0x7B; c < 256; ++c) case_table[c] = c;
   }
 
   bool FindNext_CaseSensitive()
@@ -114,6 +110,12 @@ public:
   explicit BMH_Search(std::ifstream& stream, 
     const std::string& needle = "")
   {
+    //case blind table
+    for (int c = 0; c < 0x61; ++c) case_table[c] = c;
+    for (int c = 0x61; c < 0x7B; ++c) case_table[c] = c - 0x20;
+    for (int c = 0x7B; c < 256; ++c) case_table[c] = c;
+
+
     Init();
     SetHayStack(stream);
     if (needle.size() > 0) SetNeedle(needle);
@@ -147,29 +149,27 @@ public:
 
     //case sensitive needle
     needle_len_less1 = needle_len_ - 1;
-    needle_ = new uint8_t[needle_len_ +1];
-    needle.copy(reinterpret_cast<char*>(needle_), needle_len_);
+    needle_.clear();
+    needle_.reserve(needle_len_);
+    for (const char& c : needle) needle_.push_back(static_cast<uint8_t>(c));
     
     //case insensitive needle
-    needle_ic_ = new uint8_t[needle_len_ +1];
-    std::memcpy(needle_ic_, needle_, needle_len_);
-    uint8_t* c = needle_ic_;
-    for (uint8_t i = 0; i < needle_len_; ++i, c++)
-      *c = case_table[*c];
+    needle_ic_ = needle_;
+    for (std::vector< uint8_t>::iterator ui = needle_ic_.begin(); ui != needle_ic_.end(); ++ui)
+      *ui = case_table[*ui];
 
     std::fill(std::begin(shift), std::begin(shift) + 256, needle_len_);
     for (uint8_t j = 0; j < needle_len_less1; ++j)
       shift[needle_[j]] = needle_len_less1 - j;
+
     jump_ = shift[needle_[needle_len_less1]];
     shift[needle_[needle_len_less1]] = 0;
   }
 
   inline void ClearNeedle()
   {
-    if (needle_) delete[] needle_;
-    if (needle_ic_) delete[] needle_ic_;
-    needle_ = nullptr;
-    needle_ic_ = nullptr;
+    needle_.clear();
+    needle_ic_.clear();
   }
 
   inline void ClearHaystack()
@@ -228,21 +228,21 @@ void PathsToStream(const Paths64& paths, std::ostream& stream)
 static bool GetInt(string::const_iterator& s_it,
   const string::const_iterator& it_end, int64_t& value)
 {
-  //value = 0;
-  //while (s_it != it_end && *s_it == ' ') ++s_it;
-  //if (s_it == it_end) return false;
-  //bool is_neg = (*s_it == '-');
-  //if (is_neg) ++s_it;
-  //string::const_iterator s_it2 = s_it;
-  //while (s_it != it_end && *s_it >= '0' && *s_it <= '9')
-  //{
-  //  value = value * 10 + static_cast<int64_t>(*s_it++) - 48;
-  //}
-  //if (s_it == s_it2) return false; //no value
-  ////trim trailing space and a comma if present
-  //while (s_it != it_end && *s_it == ' ') ++s_it;
-  //if (s_it != it_end && *s_it == ',') ++s_it;
-  //if (is_neg) value = -value;
+  value = 0;
+  while (s_it != it_end && *s_it == ' ') ++s_it;
+  if (s_it == it_end) return false;
+  bool is_neg = (*s_it == '-');
+  if (is_neg) ++s_it;
+  string::const_iterator s_it2 = s_it;
+  while (s_it != it_end && *s_it >= '0' && *s_it <= '9')
+  {
+    value = value * 10 + static_cast<int64_t>(*s_it++) - 48;
+  }
+  if (s_it == s_it2) return false; //no value
+  //trim trailing space and a comma if present
+  while (s_it != it_end && *s_it == ' ') ++s_it;
+  if (s_it != it_end && *s_it == ',') ++s_it;
+  if (is_neg) value = -value;
   return true;
 }
 
@@ -253,25 +253,25 @@ bool SaveTest(const std::string& filename, bool append,
   string line;
   bool found = false;
   int last_cap_pos = 0, curr_cap_pos = 0;
-  int64_t last_text_no = 0;
+  int64_t last_test_no = 0;
   if (append && FileExists(filename)) //get the number of the preceeding test
   {
     ifstream file;
     file.open(filename, std::ios::binary);
- 
+    if (!file) return false;
     BMH_Search bmh = BMH_Search(file, "CAPTION:");
     while (bmh.FindNext()) ;
     if (bmh.LastFound())
     {
       line.assign(bmh.LastFound()+8, bmh.FindNextEndLine());
       string::const_iterator s_it = line.cbegin(), s_end = line.cend();
-      GetInt(s_it, s_end, last_text_no);
+      GetInt(s_it, s_end, last_test_no);
     }
   } 
   else if (FileExists(filename)) 
     remove(filename.c_str());
 
-  last_text_no++;
+  ++last_test_no;
 
   std::ofstream source;
   if (append && FileExists(filename))
@@ -298,7 +298,7 @@ bool SaveTest(const std::string& filename, bool append,
     case FillRule::Negative: fillrule_string = "NEGATIVE"; break;
   }
 
-  source << "CAPTION: " << last_text_no <<"." << endl;
+  source << "CAPTION: " << last_test_no <<"." << endl;
   source << "CLIPTYPE: " << cliptype_string << endl;
   source << "FILLRULE: " << fillrule_string << endl;
   source << "SOL_AREA: " << area << endl;
