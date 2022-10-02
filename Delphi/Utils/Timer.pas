@@ -6,6 +6,22 @@ uses
   Windows,
   SysUtils;
 
+(*******************************************************************************
+*  Example:                                                                    *
+*                                                                              *
+*    var                                                                       *
+*      time: double;                                                           *
+*    begin                                                                     *
+*      ...                                                                     *
+*      begin                                                                   *
+*        InitTimer(time);                                                      *
+*        DoSomeLengthyOp();                                                    *
+*      end;                                                                    *
+*      Caption := Format('DoSomeLengthyOp took %1.3n secs', [time]);              *
+*      ....                                                                    *
+*    end;                                                                      *
+*******************************************************************************)
+
 {$IFDEF FPC}
   {$MODE DELPHI}
 {$ENDIF}
@@ -16,7 +32,7 @@ type
   ['{A50173E8-6497-4F83-B4A8-9C0D5D709834}']
   end;
 
-function DoTimer(out timeResult: double): ITimer;
+function InitTimer(out timeResult: double): ITimer;
 
 implementation
 
@@ -81,7 +97,7 @@ begin
   Dispose(Inst);
 end;
 
-function DoTimer(out timeResult: double): ITimer;
+function InitTimer(out timeResult: double): ITimer;
 var
   timer: PTimerData;
 begin

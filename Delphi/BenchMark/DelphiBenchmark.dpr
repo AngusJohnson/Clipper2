@@ -50,7 +50,7 @@ begin
       clip[0] := MakeRandomPath(maxWidth, maxHeight, edgeCount);
 
       begin
-        DoTimer(timerResult);
+        InitTimer(timerResult);
         solution := Intersect(subj, clip, frNonZero);
       end;
       timeTotal := timeTotal + timerResult;
