@@ -11,7 +11,7 @@
 #ifndef clipper_engine_h
 #define clipper_engine_h
 
-#define CLIPPER2_VERSION "1.0.0"
+#define CLIPPER2_VERSION "1.0.5"
 
 #include <cstdlib>
 #include <queue>
