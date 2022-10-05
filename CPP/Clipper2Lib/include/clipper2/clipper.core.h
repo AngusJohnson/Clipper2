@@ -1,7 +1,7 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
 * Version   :  Clipper2 - ver.1.0.5                                            *
-* Date      :  2 October 2022                                                  *
+* Date      :  4 October 2022                                                  *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  Core Clipper Library structures and functions                   *
@@ -68,7 +68,6 @@ struct Point {
 	explicit Point<T>(const Point<T2>& p)
 	{
 		Init(p.x, p.y, p.z);
-		z = 0;
 	}
 
 	Point operator * (const double scale) const
