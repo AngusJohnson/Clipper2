@@ -71,6 +71,8 @@ type
     Bottom : Int64;
     function Contains(const pt: TPoint64; inclusive: Boolean = false): Boolean; overload;
     function Contains(const rec: TRect64): Boolean; overload;
+    function Intersect(const rec: TRect64): TRect64;
+    function Intersects(const rec: TRect64): Boolean;
     function AsPath: TPath64;
     property Width: Int64 read GetWidth;
     property Height: Int64 read GetHeight;
@@ -329,6 +331,23 @@ function TRect64.Contains(const rec: TRect64): Boolean;
 begin
   result := (rec.Left >= Left) and (rec.Right <= Right) and
     (rec.Top >= Top) and (rec.Bottom <= Bottom);
+end;
+//------------------------------------------------------------------------------
+
+function TRect64.Intersects(const rec: TRect64): Boolean;
+begin
+  Result := (Max(Left, rec.Left) < Min(Right, rec.Right)) and
+    (Max(Top, rec.Top) < Min(Bottom, rec.Bottom));
+end;
+//------------------------------------------------------------------------------
+
+function TRect64.Intersect(const rec: TRect64): TRect64;
+begin
+  Result.Left := Max(Left, rec.Left);
+  Result.Top := Max(Top, rec.Top);
+  Result.Right := Min(Right, rec.Right);
+  Result.Bottom := Min(Bottom, rec.Bottom);
+  if IsEmpty then Result := NullRect64;
 end;
 //------------------------------------------------------------------------------
 
@@ -1518,10 +1537,8 @@ function SegmentsIntersect(const s1a, s1b, s2a, s2b: TPoint64;
 var
   res1, res2, res3, res4: double;
 begin
-  if inclusive then
+  if inclusive then //result can include segments that only touch
   begin
-//    result := (CrossProduct(s1a, s2a, s2b) * CrossProduct(s1b, s2a, s2b) <= 0) and
-//      (CrossProduct(s2a, s1a, s1b) * CrossProduct(s2b, s1a, s1b) <= 0);
     Result := false;
     res1 := CrossProduct(s1a, s2a, s2b);
     res2 := CrossProduct(s1b, s2a, s2b);

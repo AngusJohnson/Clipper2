@@ -17,7 +17,8 @@ interface
 uses
   Math, SysUtils, Clipper.Core;
 
-function RectClip(const rect: TRect64; const path: TPath64): TPath64;
+function RectClip(const rect: TRect64; const path: TPath64): TPath64; overload;
+function RectClip(const rect: TRect64; const paths: TPaths64): TPaths64; overload;
 
 implementation
 
@@ -32,13 +33,16 @@ type
     fRectPath       : TPath64;
     fFirstCrossLoc  : TLocation;
     fResult         : TPath64;
+    procedure Reset;
     procedure Add(const pt: TPoint64);
       {$IFDEF INLINING} inline; {$ENDIF}
     procedure AddCorner(prevLoc, currLoc: TLocation);
       {$IFDEF INLINING} inline; {$ENDIF}
     procedure CheckCorners(prevLoc, currLoc: TLocation; const pt: TPoint64);
   public
-    function Execute(const rect: TRect64; const path: TPath64): TPath64;
+    constructor Create(const rect: TRect64);
+    function Execute(const path: TPath64): TPath64; overload;
+    function Execute(const paths: TPaths64): TPaths64; overload;
   end;
 
 //------------------------------------------------------------------------------
@@ -183,6 +187,21 @@ end;
 // TRectClip class
 //------------------------------------------------------------------------------
 
+constructor TRectClip.Create(const rect: TRect64);
+begin
+  fRect := rect;
+  fRectPath := fRect.AsPath;
+end;
+//------------------------------------------------------------------------------
+
+procedure TRectClip.Reset;
+begin
+  fResultCnt := 0;
+  fCapacity := 0;
+  fResult := nil;
+end;
+//------------------------------------------------------------------------------
+
 procedure TRectClip.Add(const pt: TPoint64);
 begin
   if fResultCnt = fCapacity then
@@ -266,7 +285,7 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-function TRectClip.Execute(const rect: TRect64; const path: TPath64): TPath64;
+function TRectClip.Execute(const path: TPath64): TPath64;
 var
   i,k, highI    : integer;
   pathLen       : integer;
@@ -277,21 +296,16 @@ var
   prevCrossLoc  : TLocation;
 begin
   Result := nil;
-  fResult := nil;
-  fRect := rect;
-  fRectPath := fRect.AsPath;
   pathLen := Length(path);
-  highI := pathLen -1;
-  if (pathLen = 0) or fRect.IsEmpty then Exit;
+  if (pathLen < 3) or fRect.IsEmpty then Exit;
+  Reset;
 
   i := 0;
-  fResultCnt := 0;
-  fCapacity := 32;
-  SetLength(fResult, fCapacity);
+  highI := pathLen -1;
   crossingLoc     := locInside;
   fFirstCrossLoc   := locInside;
 
-  GetLocation(rect, path[highI], prevLoc);
+  GetLocation(fRect, path[highI], prevLoc);
   loc := prevLoc;
   while i < pathLen do
   begin
@@ -389,7 +403,7 @@ begin
       if PointsEqual(ip, ip2) then
       begin
         // it's very likely that path[i] is on rect
-        GetLocation(rect, path[i], loc);
+        GetLocation(fRect, path[i], loc);
         AddCorner(crossingLoc, loc);
         crossingLoc := loc;
         Continue;
@@ -401,12 +415,12 @@ begin
         fFirstCrossLoc := crossingLoc;
     end;
     Add(ip);
-  end;
+  end; //while i < pathLen
 
   if (fFirstCrossLoc = locInside) then
   begin
     tmpRect := GetBounds(path);
-    if tmpRect.Contains(rect) then
+    if tmpRect.Contains(fRect) then
       Result := fRectPath
     else if fRect.Contains(tmpRect) then
       Result := path
@@ -444,19 +458,55 @@ begin
   else
     SetLength(Result, k +1);
 end;
+//------------------------------------------------------------------------------
+
+function TRectClip.Execute(const paths: TPaths64): TPaths64;
+var
+  i, len: integer;
+begin
+  len := Length(paths);
+  SetLength(Result, len);
+  for i := 0 to len -1 do
+    Result[i] := Execute(paths[i]);
+end;
 
 //------------------------------------------------------------------------------
 //------------------------------------------------------------------------------
 
 function RectClip(const rect: TRect64; const path: TPath64): TPath64;
 begin
-  with TRectClip.Create do
+  with TRectClip.Create(rect) do
   try
-    Result := Execute(rect, path);
+    Result := Execute(path);
   finally
     Free;
   end;
 end;
+//------------------------------------------------------------------------------
+
+function RectClip(const rect: TRect64; const paths: TPaths64): TPaths64;
+var
+  i,j, len: integer;
+begin
+  Result := nil;
+  len := Length(paths);
+  if rect.IsEmpty or (len = 0) then Exit;
+  SetLength(Result, len);
+  j := 0;
+  with TRectClip.Create(rect) do
+  try
+    for i := 0 to len -1 do
+      if  rect.Intersects(GetBounds(paths[i])) then
+      begin
+        Result[j] := Execute(paths[i]);
+        inc(j);
+      end;
+  finally
+    Free;
+  end;
+  SetLength(Result, j);
+end;
+//------------------------------------------------------------------------------
 
 end.
 

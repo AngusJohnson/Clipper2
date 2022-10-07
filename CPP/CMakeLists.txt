@@ -15,11 +15,12 @@ option(BUILD_SHARED_LIBS "Build shared libs" OFF)
 include(GNUInstallDirs)
 
 set(CLIPPER2_INC
+  Clipper2Lib/include/clipper2/clipper.h
   Clipper2Lib/include/clipper2/clipper.core.h
   Clipper2Lib/include/clipper2/clipper.engine.h
-  Clipper2Lib/include/clipper2/clipper.h
   Clipper2Lib/include/clipper2/clipper.minkowski.h
   Clipper2Lib/include/clipper2/clipper.offset.h
+  Clipper2Lib/include/clipper2/clipper.rectclip.h
 )
 
 set(CLIPPER2_SRC
@@ -110,14 +111,18 @@ if(CLIPPER2_EXAMPLES)
   add_executable(InflateDemo1 Examples/InflateDemo/InflateDemo1.cpp)
   target_link_libraries(InflateDemo1 PRIVATE Clipper2 Clipper2utils)
 
+  add_executable(RectClipDemo1 Examples/RectClipDemo/RectClipDemo1.cpp)
+  target_link_libraries(RectClipDemo1 PRIVATE Clipper2 Clipper2utils)
+
   add_executable(UsingZ1 Examples/UsingZ/UsingZ1.cpp)
   target_link_libraries(UsingZ1 PRIVATE Clipper2Z Clipper2Zutils)
 
-  set_target_properties(ConsoleDemo1 ConsoleDemo2 InflateDemo1 UsingZ1 PROPERTIES FOLDER Examples)
+  set_target_properties(ConsoleDemo1 ConsoleDemo2 InflateDemo1 RectClipDemo1 UsingZ1 PROPERTIES FOLDER Examples)
   if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
     target_compile_options(ConsoleDemo1 PRIVATE -Wno-unused-result -Wno-unused-function)
     target_compile_options(ConsoleDemo2 PRIVATE -Wno-unused-result -Wno-unused-function)
     target_compile_options(InflateDemo1 PRIVATE -Wno-unused-result -Wno-unused-function)
+    target_compile_options(RectClipDemo1 PRIVATE -Wno-unused-result -Wno-unused-function)
     target_compile_options(UsingZ1 PRIVATE -Wno-unused-result -Wno-unused-function)
   endif()
 endif()

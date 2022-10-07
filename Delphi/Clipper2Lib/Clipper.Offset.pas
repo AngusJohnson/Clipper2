@@ -3,7 +3,7 @@ unit Clipper.Offset;
 (*******************************************************************************
 * Author    :  Angus Johnson                                                   *
 * Version   :  Clipper2 - ver.1.0.5                                            *
-* Date      :  2 October 2022                                                  *
+* Date      :  5 October 2022                                                  *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  Path Offset (Inflate/Shrink)                                    *
@@ -715,15 +715,18 @@ begin
   begin
     if (fJoinType = jtRound) then
       DoRound(j, k, ArcTan2(sinA, cosA))
-    // only miter when the angle isn't too acute (and exceeds ML)
-    else if (fJoinType = jtMiter) and (cosA > fTmpLimit -1) then
+    else if (fJoinType = jtMiter) then
+    begin
+			// miter unless the angle is so acute the miter would exceeds ML
+      if (cosA > fTmpLimit -1) then DoMiter(j, k, cosA)
+      else DoSquare(j, k);
+    end
+    // don't bother squaring angles that deviate < ~20 degrees because
+    // squaring will be indistinguishable from mitering and just be a lot slower
+    else if (cosA > 0.9) then
       DoMiter(j, k, cosA)
-    // only do squaring when the angle of deviation > 90 degrees
-    else if (cosA < -0.001) then
-      DoSquare(j, k)
     else
-      // don't square shallow angles that are safe to miter
-      DoMiter(j, k, cosA);
+      DoSquare(j, k);
   end;
   k := j;
 end;

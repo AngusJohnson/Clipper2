@@ -1,7 +1,7 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
 * Version   :  Clipper2 - ver.1.0.5                                            *
-* Date      :  2 October 2022                                                  *
+* Date      :  5 October 2022                                                  *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  Path Offset (Inflate/Shrink)                                    *
@@ -271,15 +271,18 @@ void ClipperOffset::OffsetPoint(Group& group, Path64& path, size_t j, size_t& k)
 	{
 		if (join_type_ == JoinType::Round)
 			DoRound(group, path, j, k, std::atan2(sin_a, cos_a));
-		// else miter when the angle isn't too acute (and hence exceed ML)
-		else if (join_type_ == JoinType::Miter && cos_a > temp_lim_ - 1)
-			DoMiter(group, path, j, k, cos_a);
-		// else only square angles that deviate > 90 degrees
-		else if (cos_a < -0.001)
-			DoSquare(group, path, j, k);
+		else if (join_type_ == JoinType::Miter)
+		{
+			// miter unless the angle is so acute the miter would exceeds ML
+			if (cos_a > temp_lim_ - 1) DoMiter(group, path, j, k, cos_a);
+			else DoSquare(group, path, j, k);
+		}
+		// don't bother squaring angles that deviate < ~20 degrees because
+		// squaring will be indistinguishable from mitering and just be a lot slower
+		else if (std::fabs(sin_a) < 0.35)
+			DoMiter(group, path, j, k, cos_a);			
 		else
-			// don't square shallow angles that are safe to miter
-			DoMiter(group, path, j, k, cos_a);
+			DoSquare(group, path, j, k);			
 	}
 	k = j;
 }

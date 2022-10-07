@@ -1,7 +1,7 @@
 ﻿/*******************************************************************************
 * Author    :  Angus Johnson                                                   *
 * Version   :  Clipper2 - ver.1.0.5                                            *
-* Date      :  2 October 2022                                                  *
+* Date      :  5 October 2022                                                  *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  Path Offset (Inflate/Shrink)                                    *
@@ -342,7 +342,6 @@ namespace Clipper2Lib
       double cosA = InternalClipper.DotProduct(_normals[j], _normals[k]);
       if (sinA > 1.0) sinA = 1.0;
       else if (sinA < -1.0) sinA = -1.0;
-
       bool almostNoAngle = (AlmostZero(sinA) && cosA > 0); 
       if (almostNoAngle || (sinA * _group_delta < 0))
       {
@@ -354,15 +353,18 @@ namespace Clipper2Lib
       {
         if (_joinType == JoinType.Round)
           DoRound(group, path, j, k, Math.Atan2(sinA, cosA));
-        // else miter when the angle isn't too acute (and hence exceed ML)
-        else if (_joinType == JoinType.Miter && cosA > _tmpLimit - 1)
-          DoMiter(group, path, j, k, cosA);
-        // else only square angles that deviate > 90 degrees
-        else if (cosA < -0.001)
-          DoSquare(group, path, j, k);
+        else if (_joinType == JoinType.Miter)
+        {
+          // miter unless the angle is so acute the miter would exceeds ML
+          if (cosA > _tmpLimit - 1) DoMiter(group, path, j, k, cosA);
+          else DoSquare(group, path, j, k);
+        }
+        // don't bother squaring angles that deviate < ~20 degrees because
+        // squaring will be indistinguishable from mitering and just be a lot slower
+        else if (Math.Abs(sinA) < 0.25)
+          DoMiter(group, path, j, k, cosA); 
         else
-          // don't square shallow angles that are safe to miter
-          DoMiter(group, path, j, k, cosA);
+          DoSquare(group, path, j, k);
       }
 
       k = j;
