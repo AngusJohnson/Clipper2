@@ -383,12 +383,12 @@ struct Rect {
 		return result;
 	}
 
-	bool Contains(const Point<T>& pt)
+	bool Contains(const Point<T>& pt) const
 	{
 		return pt.x > left && pt.x < right&& pt.y > top && pt.y < bottom;
 	}
 
-	bool Contains(const Rect<T>& rec)
+	bool Contains(const Rect<T>& rec) const
 	{
 		return rec.left >= left && rec.right <= right && 
 			rec.top >= top && rec.bottom <= bottom;
@@ -402,6 +402,12 @@ struct Rect {
 	}
 
 	bool IsEmpty() const { return bottom <= top || right <= left; };
+
+	bool Intersects(const Rect<T>& rec) const 
+	{ 
+		return (std::max(left, rec.left) < std::min(right, rec.right)) &&
+			(std::max(top, rec.top) < std::min(bottom, rec.bottom));
+	};
 
 	friend std::ostream &operator<<(std::ostream &os, const Rect<T> &rect) {
 		os << "("
@@ -507,6 +513,31 @@ inline bool IsPositive(const Path<T>& poly)
 	//https://mathworld.wolfram.com/CurveOrientation.html
 	//nb: This statement is premised on using Cartesian coordinates
 	return Area<T>(poly) >= 0;
+}
+
+inline bool SegmentsIntersect(const Point64& seg1a, const Point64& seg1b,
+	const Point64& seg2a, const Point64& seg2b, bool inclusive = false)
+{
+	if (inclusive) 
+	{
+		double res1 = CrossProduct(seg1a, seg2a, seg2b);
+		double res2 = CrossProduct(seg1b, seg2a, seg2b);
+		if (res1 * res2 > 0) return false;
+		double res3 = CrossProduct(seg2a, seg1a, seg1b);
+		double res4 = CrossProduct(seg2b, seg1a, seg1b);
+		if (res3 * res4 > 0) return false;
+		return (res1 || res2 || res3 || res4); // ensures not collinear
+	}
+	else {
+		double dx1 = static_cast<double>(seg1a.x - seg1b.x);
+		double dy1 = static_cast<double>(seg1a.y - seg1b.y);
+		double dx2 = static_cast<double>(seg2a.x - seg2b.x);
+		double dy2 = static_cast<double>(seg2a.y - seg2b.y);
+		return (((dy1 * (seg2a.x - seg1a.x) - dx1 * (seg2a.y - seg1a.y)) *
+			(dy1 * (seg2b.x - seg1a.x) - dx1 * (seg2b.y - seg1a.y)) < 0) &&
+			((dy2 * (seg1a.x - seg2a.x) - dx2 * (seg1a.y - seg2a.y)) *
+				(dy2 * (seg1b.x - seg2a.x) - dx2 * (seg1b.y - seg2a.y)) < 0));
+	}
 }
 
 
