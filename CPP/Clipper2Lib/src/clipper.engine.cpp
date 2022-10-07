@@ -1483,21 +1483,6 @@ namespace Clipper2Lib {
 		FixSelfIntersects(outrec);
 	}
 
-
-	inline bool SegmentsIntersect(const Point64& seg1a, const Point64& seg1b,
-		const Point64& seg2a, const Point64& seg2b)
-	{
-		double dx1 = static_cast<double>(seg1a.x - seg1b.x);
-		double dy1 = static_cast<double>(seg1a.y - seg1b.y);
-		double dx2 = static_cast<double>(seg2a.x - seg2b.x);
-		double dy2 = static_cast<double>(seg2a.y - seg2b.y);
-		return (((dy1 * (seg2a.x - seg1a.x) - dx1 * (seg2a.y - seg1a.y)) *
-			(dy1 * (seg2b.x - seg1a.x) - dx1 * (seg2b.y - seg1a.y)) < 0) &&
-			((dy2 * (seg1a.x - seg2a.x) - dx2 * (seg1a.y - seg2a.y)) *
-				(dy2 * (seg1b.x - seg2a.x) - dx2 * (seg1b.y - seg2a.y)) < 0));
-	}
-
-
 	OutPt* ClipperBase::DoSplitOp(OutPt* outRecOp, OutPt* splitOp)
 	{
 		OutPt* prevOp = splitOp->prev; 

@@ -279,7 +279,7 @@ void ClipperOffset::OffsetPoint(Group& group, Path64& path, size_t j, size_t& k)
 		}
 		// don't bother squaring angles that deviate < ~20 degrees because
 		// squaring will be indistinguishable from mitering and just be a lot slower
-		else if (std::fabs(sin_a) < 0.35)
+		else if (cos_a > 0.9)
 			DoMiter(group, path, j, k, cos_a);			
 		else
 			DoSquare(group, path, j, k);			
