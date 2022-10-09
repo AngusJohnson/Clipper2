@@ -356,7 +356,6 @@ namespace Clipper2Lib {
 				std::string caption = polypath.IsHole() ? "Hole " : "Outer Polygon ";
 				std::string childs = polypath.Count() == 1 ? " child" : " children";
 				outstream << level_padding.c_str() << caption << "with " << polypath.Count() << childs << std::endl;
-				int cnt = 0;
 				int last_on_line = coords_per_line - 1;
 				outstream << level_padding;
 				int i = 0, highI = polypath.Polygon().size() - 1;
