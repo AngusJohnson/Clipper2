@@ -18,6 +18,7 @@ void SavePaths(const std::string& filename, const Paths64& paths);
 void LoadPaths(const std::string& filename, Paths64& paths);
 
 void DoEllipses();
+void DoRectangles();
 void DoRandomPoly();
 
 const int width = 800, height = 600;
@@ -28,11 +29,12 @@ int main(int argc, char* argv[])
   srand((unsigned)time(0));
 
   DoEllipses();
+  DoRectangles();
   DoRandomPoly();
 
-  //std::string s;
-  //std::cout << "Press Enter to continue" << std::endl;
-  //std::getline(std::cin, s);
+  std::string s;
+  std::cout << std::endl << "Press Enter to continue" << std::endl;
+  std::getline(std::cin, s);
 }
 
 void DoEllipses()
@@ -46,10 +48,12 @@ void DoEllipses()
   Rect64 rect = Rect64(100, 100, width - 100, height - 100);
   clp.push_back(rect.AsPath());
   for (int i = 0; i < cnt; ++i)
-    sub.push_back(TranslatePath(ellipse, 
+    sub.push_back(TranslatePath(ellipse,
       rand() % (width - radius), rand() % (height - radius)));
-  
+
+  //////////////////////////////////
   sol = RectClip64(rect, sub);
+  //////////////////////////////////
 
   FillRule fr = FillRule::EvenOdd;
   SvgWriter svg;
@@ -60,27 +64,45 @@ void DoEllipses()
   System("rectclip1.svg");
 }
 
-void DoRandomPoly()
+Path64 MakeRandomRectangle(int minWidth, int minHeight, int maxWidth, int maxHeight,
+  int maxRight, int maxBottom)
 {
-  const int cnt = 29;
+  int w = minWidth + rand() % (maxWidth - minWidth);
+  int h = minHeight + rand() % (maxHeight - minHeight);
+  int l = rand() % (maxRight - w);
+  int t = rand() % (maxBottom - h);
+  Path64 result;
+  result.reserve(4);
+  result.push_back(Point64(l, t));
+  result.push_back(Point64(l+w, t));
+  result.push_back(Point64(l+w, t+h));
+  result.push_back(Point64(l, t+h));
+  return result;
+}
+
+void DoRectangles()
+{
   clp.clear();
   sub.clear();
 
-  Rect64 rect = Rect64(200, 200, width - 200, height - 200);
+  const int cnt = 1000;
+  Rect64 rect = Rect64(100, 100, width - 100, height - 100);
   clp.push_back(rect.AsPath());
-  sub.push_back(MakeRandomPoly(width, height, cnt));
-  // save to file
-  store.push_back(sub[0]);
-  store.push_back(clp[0]);
-  SavePaths("rectclip.txt", store);
+  for (int i = 0; i < cnt; ++i)
+    sub.push_back(MakeRandomRectangle(10, 10, 100, 100, 800, 600));
 
-  // alternatively, load from file
-  //LoadPaths("rectclip.txt", store);
-  //sub.push_back(store[0]);
-  //clp.push_back(store[1]);
-  //rect = Bounds(clp);
+  //////////////////////////////////
+  {
+    Timer t("\nRectClip");
+    sol = RectClip64(rect, sub);
+  }
+  //////////////////////////////////
 
-  sol = RectClip64(rect, sub);
+  {
+    Timer t("\nClipper64");
+    sol = Intersect(sub, clp, FillRule::EvenOdd);
+  }
+
 
   FillRule fr = FillRule::EvenOdd;
   SvgWriter svg;
@@ -91,6 +113,50 @@ void DoRandomPoly()
   System("rectclip2.svg");
 }
 
+void DoRandomPoly()
+{
+  const int cnt = 59;
+  clp.clear();
+  sub.clear();
+  Rect64 rect;
+
+  bool load_saved = false;//true;//
+  if (load_saved)
+  {
+    // load from file
+    try {
+      LoadPaths("rectclip3.txt", store);
+    }
+    catch (...) { std::cout << "can't find the file." << std::endl; return; }
+    sub.push_back(store[0]);
+    clp.push_back(store[1]);
+    rect = Bounds(clp);
+  }
+  else
+  {
+    // generate random poly
+    rect = Rect64(200, 200, width - 200, height - 200);
+    clp.push_back(rect.AsPath());
+    sub.push_back(MakeRandomPoly(width, height, cnt));
+
+    // save to file
+    store.push_back(sub[0]);
+    store.push_back(clp[0]);
+    SavePaths("rectclip3.txt", store);
+  }
+
+  //////////////////////////////////
+  sol = RectClip64(rect, sub);
+  //////////////////////////////////
+
+  FillRule fr = FillRule::EvenOdd;
+  SvgWriter svg;
+  svg.AddPaths(sub, false, fr, 0x200066FF, 0x400066FF, 1, false);
+  svg.AddPaths(clp, false, fr, 0x10FFAA00, 0xFFFF0000, 1, false);
+  svg.AddPaths(sol, false, fr, 0x8066FF66, 0xFF006600, 1, false);
+  svg.SaveToFile("rectclip3.svg", width, height, 0);
+  System("rectclip3.svg");
+}
 
 Path64 MakeRandomPoly(int width, int height, unsigned vertCnt)
 {
@@ -113,7 +179,7 @@ void System(const std::string& filename)
 void SavePaths(const std::string& filename, const Paths64& paths)
 {
   std::ofstream stream;
-  stream.open(filename);
+  stream.open(filename, std::ios::trunc);
 
   for (Paths64::const_iterator paths_it = paths.cbegin();
     paths_it != paths.cend(); ++paths_it)
@@ -123,7 +189,7 @@ void SavePaths(const std::string& filename, const Paths64& paths)
     Path64::const_iterator path_it, path_it_last;
     for (path_it = paths_it->cbegin(), path_it_last = --paths_it->cend();
       path_it != path_it_last; ++path_it)
-      stream << *path_it << ", ";
+      stream << *path_it << " ";
     stream << *path_it_last << endl;
   }
 }

@@ -1,7 +1,7 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
 * Version   :  Clipper2 - ver.1.0.5                                            *
-* Date      :  6 October 2022                                                  *
+* Date      :  10 October 2022                                                 *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  Simple FAST rectangular clipping                                *
@@ -20,9 +20,9 @@
 namespace Clipper2Lib 
 {
 
-
   namespace detail
   {
+
     enum class Location { Left, Top, Right, Bottom, Inside };
 
     inline bool GetLocation(const Rect64& rec,
@@ -197,166 +197,147 @@ namespace Clipper2Lib
     class RectClip {
     private:
       const Rect64 rect_;
+      const Point64 mp_;
       const Path64 rectPath_;
-      Location first_cross_;
       Path64 result_;
+      std::vector<Location> start_locs_;
 
-      inline void Reset() { result_.clear(); }
+      inline void Reset() 
+      { 
+        result_.clear(); 
+        start_locs_.clear();
+      }
+
+      inline void GetNextLocation(const Path64& path, 
+        Location& loc, size_t & i, size_t highI)
+      {
+        switch (loc)
+        {
+        case Location::Left:
+          while (i <= highI && path[i].x <= rect_.left) ++i;
+          if (i > highI) break;
+          else if (path[i].y <= rect_.top) loc = Location::Top;
+          else if (path[i].y >= rect_.bottom) loc = Location::Bottom;
+          else if (path[i].x < rect_.right) loc = Location::Inside;
+          else loc = Location::Right;
+          break;
+
+        case Location::Top:
+          while (i <= highI && path[i].y <= rect_.top) ++i;
+          if (i > highI) break;
+          else if (path[i].x <= rect_.left) loc = Location::Left;
+          else if (path[i].x >= rect_.right) loc = Location::Right;
+          else if (path[i].y < rect_.bottom) loc = Location::Inside;
+          else loc = Location::Bottom;
+          break;
+
+        case Location::Right:
+          while (i <= highI && path[i].x >= rect_.right) ++i;
+          if (i > highI) break;
+          else if (path[i].y <= rect_.top) loc = Location::Top;
+          else if (path[i].y >= rect_.bottom) loc = Location::Bottom;
+          else if (path[i].x > rect_.left) loc = Location::Inside;
+          else loc = Location::Left;
+          break;
+
+        case Location::Bottom:
+          while (i <= highI && path[i].y >= rect_.bottom) ++i;
+          if (i > highI) break;
+          else if (path[i].x <= rect_.left) loc = Location::Left;
+          else if (path[i].x >= rect_.right) loc = Location::Right;
+          else if (path[i].y > rect_.top) loc = Location::Inside;
+          else loc = Location::Top;
+          break;
+
+        case Location::Inside:
+          while (i <= highI)
+          {
+            if (path[i].x < rect_.left) loc = Location::Left;
+            else if (path[i].x > rect_.right) loc = Location::Right;
+            else if (path[i].y > rect_.bottom) loc = Location::Bottom;
+            else if (path[i].y < rect_.top) loc = Location::Top;
+            else { result_.push_back(path[i]); ++i; continue; }
+            break; //inner loop
+          }
+          break;
+        } //switch          
+      }
+
+      inline bool AreOpposites(Location prev, Location curr)
+      {
+        return abs(static_cast<int>(prev) - static_cast<int>(curr)) == 2;
+      }
+
+      inline bool HeadingClockwise(Location prev, Location curr)
+      {
+        return (static_cast<int>(prev) + 1) % 4 == static_cast<int>(curr);
+      }
+
+      inline Location GetAdjacentLocation(Location loc, bool isClockwise)
+      {
+        int delta = (isClockwise) ? 1 : 3;
+        return static_cast<Location>((static_cast<int>(loc) + delta) % 4);
+      }
 
       inline void AddCorner(Location prev, Location curr)
       {
-        unsigned i = static_cast<unsigned>(prev);
-        unsigned j = static_cast<unsigned>(curr);
-        if (i > 3 || j > 3 || i == j) return;
-        if ((i + 1) % 4 == j)
-          result_.push_back(rectPath_[i]);
+        if (HeadingClockwise(prev, curr))
+          result_.push_back(rectPath_[static_cast<int>(prev)]);
         else
-          result_.push_back(rectPath_[j]);
+          result_.push_back(rectPath_[static_cast<int>(curr)]);
       }
 
-      void CheckCorners(Location prev, Location curr, const Point64& pt)
+      inline void AddCorner(Location& loc, bool isClockwise)
       {
-        if (prev == Location::Inside) return;
-        unsigned i = static_cast<unsigned>(prev);
-        unsigned j = static_cast<unsigned>(curr);
-        if (first_cross_ == Location::Inside) first_cross_ = prev;
-
-        if (j != (i + 2) % 4)           
-          AddCorner(prev, curr);
+        if (isClockwise)
+        {
+          result_.push_back(rectPath_[static_cast<int>(loc)]);
+          loc = GetAdjacentLocation(loc, true);
+        }
         else
         {
-          switch (prev) 
-          {
-          case Location::Left:
-            if (pt.y < rect_.top)
-            {
-              result_.push_back(rectPath_[0]);
-              result_.push_back(rectPath_[1]);
-            }
-            else
-            {
-              result_.push_back(rectPath_[3]);
-              result_.push_back(rectPath_[2]);
-            }
-            break;
-
-          case Location::Top:
-            if (pt.x < rect_.left)
-            {
-              result_.push_back(rectPath_[0]);
-              result_.push_back(rectPath_[3]);
-            }
-            else
-            {
-              result_.push_back(rectPath_[1]);
-              result_.push_back(rectPath_[2]);
-            }
-            break;
-
-          case Location::Right:
-            if (pt.y < rect_.top)
-            {
-              result_.push_back(rectPath_[1]);
-              result_.push_back(rectPath_[0]);
-            }
-            else
-            {
-              result_.push_back(rectPath_[2]);
-              result_.push_back(rectPath_[3]);
-            }
-            break;
-
-          case Location::Bottom:
-            if (pt.x < rect_.left)
-            {
-              result_.push_back(rectPath_[3]);
-              result_.push_back(rectPath_[0]);
-            }
-            else
-            {
-              result_.push_back(rectPath_[2]);
-              result_.push_back(rectPath_[1]);
-            }
-            break;
-          }
+          loc = GetAdjacentLocation(loc, false);
+          result_.push_back(rectPath_[static_cast<int>(loc)]);
         }
       }
+
 
     public:
       
       RectClip(const Rect64& rect) : 
-        rect_(rect), 
-        rectPath_(rect.AsPath()), 
-        first_cross_(Location::Inside) {}
+        rect_(rect),
+        mp_(rect.MidPoint()),
+        rectPath_(rect.AsPath()) {}
 
       Path64 Execute(const Path64& path) 
       {
         if (rect_.IsEmpty() || path.size() < 3) return Path64();
-        Reset();
 
-        size_t i = 0, highI = path.size() - 1;
+        Reset();
+        size_t i = 0, highI = path.size() - 1;        
         Location prev, loc;
         Location crossing_loc = Location::Inside;
-        first_cross_ = Location::Inside;
-        detail::GetLocation(rect_, path[highI], loc);
+        Location first_cross_ = Location::Inside;
+        bool last_on_boundary = !detail::GetLocation(rect_, path[highI], loc);
+
+        if (last_on_boundary) 
+        {
+          i = highI - 1;
+          while (i >= 0 && !detail::GetLocation(rect_, path[i], prev)) --i;
+          if (i < 0) return path;
+          if (prev == Location::Inside) loc = prev;
+          i = 0;
+        }
+
+        ///////////////////////////////////////////////////
         while (i <= highI)
         {
           prev = loc;
           Location crossing_prev = crossing_loc;
 
-
-          switch (loc)
-          {
-          case Location::Left:
-            while (i <= highI && path[i].x <= rect_.left) ++i;
-            if (i > highI) break;
-            else if (path[i].y <= rect_.top) loc = Location::Top;
-            else if (path[i].y >= rect_.bottom) loc = Location::Bottom;
-            else if (path[i].x < rect_.right) loc = Location::Inside;
-            else loc = Location::Right;
-            break;
-
-          case Location::Top:
-            while (i <= highI && path[i].y <= rect_.top) ++i;
-            if (i > highI) break;
-            else if (path[i].x <= rect_.left) loc = Location::Left;
-            else if (path[i].x >= rect_.right) loc = Location::Right;
-            else if (path[i].y < rect_.bottom) loc = Location::Inside;
-            else loc = Location::Bottom;
-            break;
-
-          case Location::Right:
-            while (i <= highI && path[i].x >= rect_.right) ++i;
-            if (i > highI) break;
-            else if (path[i].y <= rect_.top) loc = Location::Top;
-            else if (path[i].y >= rect_.bottom) loc = Location::Bottom;
-            else if (path[i].x > rect_.left) loc = Location::Inside;
-            else loc = Location::Left;
-            break;
-
-          case Location::Bottom:
-            while (i <= highI && path[i].y >= rect_.bottom) ++i;
-            if (i > highI) break;
-            else if (path[i].x <= rect_.left) loc = Location::Left;
-            else if (path[i].x >= rect_.right) loc = Location::Right;
-            else if (path[i].y > rect_.top) loc = Location::Inside;
-            else loc = Location::Top;
-            break;
-
-          case Location::Inside:
-            while (i <= highI)
-            {
-              if (path[i].x < rect_.left) loc = Location::Left;
-              else if (path[i].x > rect_.right) loc = Location::Right;
-              else if (path[i].y > rect_.bottom) loc = Location::Bottom;
-              else if (path[i].y < rect_.top) loc = Location::Top;
-              else { result_.push_back(path[i]); ++i; continue; }
-              break; //inner loop
-            }
-            break;
-          } //switch          
+          GetNextLocation(path, loc, i, highI);
+          
           if (i > highI) break;
-
           Point64 ip, ip2;
           Point64 prev_pt = (i) ? path[i - 1] : path[highI];
 
@@ -364,32 +345,69 @@ namespace Clipper2Lib
           if (!GetIntersection(rectPath_, path[i], prev_pt, crossing_loc, ip))
           {
             // ie remaining outside
-            CheckCorners(prev, crossing_loc, prev_pt);
+            
+            if (crossing_prev == Location::Inside)
+            {
+              if (AreOpposites(prev, loc))
+              {
+                start_locs_.push_back(prev);
+                prev = GetAdjacentLocation(prev, CrossProduct(prev_pt, mp_, path[i]) < 0);
+              }
+              start_locs_.push_back(prev);
+              crossing_loc = crossing_prev; // never crossed 
+            }
+            else if (prev != Location::Inside && prev != crossing_loc)
+            {
+              if (AreOpposites(prev, crossing_loc))
+              {
+                bool isClockwise = CrossProduct(prev_pt, mp_, path[i]) < 0;
+                AddCorner(prev, isClockwise);
+                AddCorner(prev, isClockwise);
+              }
+              else AddCorner(prev, HeadingClockwise(prev, crossing_loc));
+            }
             ++i;
             continue;
           }
 
+          ////////////////////////////////////////////////////
           // we must be crossing the rect boundary to get here
+          ////////////////////////////////////////////////////
 
-          if (loc == Location::Inside)
+          if (loc == Location::Inside) // path must be entering rect
           {
-            // path must be entering rect
             if (first_cross_ == Location::Inside)
+            {
               first_cross_ = crossing_loc;
-            else
-              AddCorner(prev, crossing_loc);
+              start_locs_.push_back(prev);
+            }
+            else 
+            {
+              if (AreOpposites(prev, crossing_loc))
+              {
+                bool isClockwise = CrossProduct(prev_pt, mp_, path[i]) < 0;
+                AddCorner(prev, isClockwise);
+                AddCorner(prev, isClockwise);
+              }
+              else
+                AddCorner(prev, crossing_loc);
+            }
           }
           else if (prev != Location::Inside)
           {
-            // passing right through but ip will be the second intersect pt
-            // so get the first intersect pt
-
+            // passing right through rect. 'ip' here will be the second 
+            // intersect pt but we'll also need the first intersect pt (ip2)
             loc = prev;
             GetIntersection(rectPath_, prev_pt, path[i], loc, ip2);
-            AddCorner(crossing_prev, loc);
+            if (crossing_prev != Location::Inside)
+              AddCorner(crossing_prev, loc);
 
-            if (first_cross_ == Location::Inside) 
-              first_cross_  = loc;
+            if (first_cross_ == Location::Inside)
+            {
+              first_cross_ = loc;
+              start_locs_.push_back(prev);
+            }
+
             loc = crossing_loc;
             result_.push_back(ip2);
             if (ip == ip2)
@@ -404,12 +422,23 @@ namespace Clipper2Lib
           else
           {
             loc = crossing_loc;
-            if (first_cross_ == Location::Inside) 
+            if (first_cross_ == Location::Inside)
+            {
               first_cross_ = crossing_loc;
+              if (AreOpposites(prev, loc))
+              {
+                start_locs_.push_back(prev);
+                prev = GetAdjacentLocation(prev, 
+                  CrossProduct(prev_pt, mp_, path[i]) < 0);
+              }
+              start_locs_.push_back(prev);
+            }
           }
+
           result_.push_back(ip);
 
         } //while i <= highI
+        ///////////////////////////////////////////////////
 
         if (first_cross_ == Location::Inside)
         {
@@ -419,8 +448,22 @@ namespace Clipper2Lib
           else return Path64();
         }
 
-        if (loc != Location::Inside)
-          CheckCorners(crossing_loc, first_cross_, path[highI]);
+        if (loc != Location::Inside && loc != first_cross_)
+        {
+          if (start_locs_.size() > 0)
+          {
+            prev = loc;
+            for (auto loc2 : start_locs_)
+            {
+              if (prev == loc2) continue; 
+              AddCorner(prev, HeadingClockwise(prev, loc2));
+              prev = loc2;
+            }
+            loc = prev;
+          }
+          if (loc != first_cross_)
+            AddCorner(loc, HeadingClockwise(loc, first_cross_));
+        }
 
         if (result_.size() < 3) return Path64();
 
@@ -430,7 +473,8 @@ namespace Clipper2Lib
         size_t k = 0; highI = result_.size() - 1;
         Point64 prev_pt = result_[highI];
         res.push_back(result_[0]);
-        for (Path64::const_iterator cit = result_.cbegin() + 1; cit != result_.cend(); ++cit)
+        Path64::const_iterator cit;
+        for (cit = result_.cbegin() + 1; cit != result_.cend(); ++cit)
         {
           if (CrossProduct(prev_pt, res[k], *cit))
           {
@@ -450,6 +494,7 @@ namespace Clipper2Lib
     }; //RectClip class
 
   } // namespace detail
+
 
   inline Path64 RectClip64(const Rect64& rect, const Path64& path) 
   {

@@ -31,21 +31,21 @@ namespace Clipper2Lib
 
       if (isSum)
       {
-        for (Point64 pt : path)
+        for (const Point64& p : path)
         {
           Path64 path2(pattern.size());
           std::transform(pattern.cbegin(), pattern.cend(),
-            path2.begin(), [pt](const Point64& pt2) {return pt + pt2; });
+            path2.begin(), [p](const Point64& pt2) {return p + pt2; });
           tmp.push_back(path2);
         }
       }
       else
       {
-        for (Point64 pt : path)
+        for (const Point64& p : path)
         {
           Path64 path2(pattern.size());
           std::transform(pattern.cbegin(), pattern.cend(),
-            path2.begin(), [pt](const Point64& pt2) {return pt - pt2; });
+            path2.begin(), [p](const Point64& pt2) {return p - pt2; });
           tmp.push_back(path2);
         }
       }

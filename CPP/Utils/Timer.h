@@ -87,7 +87,7 @@ public:
     int nsecs_log10 = static_cast<int>(std::log10(
       std::chrono::duration_cast<std::chrono::nanoseconds>(duration_).count()));
     std::cout << std::fixed << 
-      std::setprecision((2 - static_cast<uint8_t>(nsecs_log10 % 3))) << time_text_;
+      std::setprecision(static_cast<uint8_t>(2.0 - (nsecs_log10 % 3))) << time_text_;
     if (nsecs_log10 < 6) 
       std::cout << std::chrono::duration_cast<std::chrono::nanoseconds>
       (duration_).count() * 1.0e-3 << " microsecs" << std::endl;

@@ -1,7 +1,7 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Version   :  Clipper2 - ver.1.0.5                                            *
-* Date      :  4 October 2022                                                  *
+* Version   :  Clipper2 - ver.1.0.6                                            *
+* Date      :  9 October 2022                                                  *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  Core Clipper Library structures and functions                   *
@@ -115,7 +115,7 @@ struct Point {
 
 	friend std::ostream& operator<<(std::ostream& os, const Point& point)
 	{
-		os << point.x << "," << point.y << " ";
+		os << point.x << "," << point.y;
 		return os;
 	}
 #endif

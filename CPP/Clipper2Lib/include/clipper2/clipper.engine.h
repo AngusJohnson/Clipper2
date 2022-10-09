@@ -1,7 +1,7 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Version   :  Clipper2 - ver.1.0.5                                            *
-* Date      :  2 October 2022                                                  *
+* Version   :  Clipper2 - ver.1.0.6                                            *
+* Date      :  9 October 2022                                                  *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  This is the main polygon clipping module                        *
@@ -299,6 +299,14 @@ namespace Clipper2Lib {
 			childs_.resize(0); 
 		}
 
+		unsigned Level() const
+		{
+			unsigned result = 0;
+			const PolyPath<T>* p = parent_;
+			while (p) { ++result; p = p->parent_; }
+			return result;
+		}
+
 		void reserve(size_t size)
 		{
 			if (size > childs_.size()) childs_.reserve(size);
@@ -335,11 +343,41 @@ namespace Clipper2Lib {
 			return result;
 		}
 
+		friend std::ostream& operator << (std::ostream& outstream, const PolyPath& polypath)
+		{
+			const unsigned level_indent = 4;
+			const unsigned coords_per_line = 4;
+
+			unsigned level = polypath.Level();
+			if (level > 0)
+			{
+				std::string level_padding;
+				level_padding.insert(0, (level -1) * level_indent, ' ');
+				std::string caption = polypath.IsHole() ? "Hole " : "Outer Polygon ";
+				std::string childs = polypath.Count() == 1 ? " child" : " children";
+				outstream << level_padding.c_str() << caption << "with " << polypath.Count() << childs << std::endl;
+				int cnt = 0;
+				int last_on_line = coords_per_line - 1;
+				outstream << level_padding;
+				int i = 0, highI = polypath.Polygon().size() - 1;
+				for (; i < highI; ++i)
+				{
+					outstream << polypath.Polygon()[i] << ' ';
+					if ((i % coords_per_line) == last_on_line)
+					outstream << std::endl << level_padding;
+				}
+				if (highI >= 0)
+					outstream << polypath.Polygon()[i];
+				outstream << std::endl;
+			}
+			for (auto child : polypath)
+				outstream << *child;
+			return outstream;
+		}
+
 	};
 
-
 	void Polytree64ToPolytreeD(const PolyPath64& polytree, PolyPathD& result);
-
 
 	class Clipper64 : public ClipperBase
 	{
