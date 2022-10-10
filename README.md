@@ -35,3 +35,9 @@ The <b>Clipper2</b> library performs **intersection**, **union**, **difference**
         clip[0] := MakePath([98, 63, 4, 68, 77, 8, 52, 100, 19, 12]);
         solution := Intersect( subject, clip, frNonZero);</pre>
 ![clipperB](https://user-images.githubusercontent.com/5280692/178123810-1719a1f5-25c3-4a9e-b419-e575ff056272.svg)
+
+<hr>
+
+### Ports to other languages
+**Java**: https://github.com/micycle1/Clipper2-java/
+
