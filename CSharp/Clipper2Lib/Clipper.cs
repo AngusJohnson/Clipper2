@@ -139,6 +139,19 @@ namespace Clipper2Lib
       return ScalePathsD(tmp, 1 / scale);
     }
 
+    public static Path64 RectClip(Rect64 rect, Path64 path)
+    {
+      RectClip rc = new RectClip(rect);
+      return rc.ExecuteInternal(path);
+    }
+
+    public static Paths64 RectClip(Rect64 rect, Paths64 paths)
+    {
+      RectClip rc = new RectClip(rect);
+      return rc.ExecuteInternal(paths);
+    }
+
+
     public static Paths64 MinkowskiSum(Path64 pattern, Path64 path, bool isClosed)
     {
       return Minkowski.Sum(pattern, path, isClosed);
@@ -444,6 +457,19 @@ namespace Clipper2Lib
       return result;
     }
 
+    public static Rect64 GetBounds(Path64 path)
+    {
+      Rect64 result = MaxInvalidRect64;
+      foreach (Point64 pt in path)
+      {
+        if (pt.X < result.left) result.left = pt.X;
+        if (pt.X > result.right) result.right = pt.X;
+        if (pt.Y < result.top) result.top = pt.Y;
+        if (pt.Y > result.bottom) result.bottom = pt.Y;
+      }
+      return result.IsEmpty() ? new Rect64() : result;
+    }
+
     public static Rect64 GetBounds(Paths64 paths)
     {
       Rect64 result = MaxInvalidRect64;
@@ -579,7 +605,7 @@ namespace Clipper2Lib
     public static PathsD PolyTreeToPathsD(PolyTreeD polyTree)
     {
       PathsD result = new PathsD();
-      foreach (PolyPathBase polyPathBase in polyTree)
+      foreach (PolyPathNode polyPathBase in polyTree)
       {
         PolyPathD p = (PolyPathD)polyPathBase;
         AddPolyNodeToPathsD(p, result);

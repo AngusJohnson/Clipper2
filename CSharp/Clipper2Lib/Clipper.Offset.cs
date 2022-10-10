@@ -361,7 +361,7 @@ namespace Clipper2Lib
         }
         // don't bother squaring angles that deviate < ~20 degrees because
         // squaring will be indistinguishable from mitering and just be a lot slower
-        else if (Math.Abs(sinA) < 0.25)
+        else if (cosA > 0.9)
           DoMiter(group, path, j, k, cosA); 
         else
           DoSquare(group, path, j, k);
