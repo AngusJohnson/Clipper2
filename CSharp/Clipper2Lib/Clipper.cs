@@ -605,7 +605,7 @@ namespace Clipper2Lib
     public static PathsD PolyTreeToPathsD(PolyTreeD polyTree)
     {
       PathsD result = new PathsD();
-      foreach (PolyPathNode polyPathBase in polyTree)
+      foreach (PolyPathD polyPathBase in polyTree)
       {
         PolyPathD p = (PolyPathD)polyPathBase;
         AddPolyNodeToPathsD(p, result);
