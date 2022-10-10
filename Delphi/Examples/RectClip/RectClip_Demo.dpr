@@ -15,19 +15,16 @@ uses
   Timer in '..\..\Utils\Timer.pas',
   ClipMisc in '..\..\Utils\ClipMisc.pas';
 
-var
-  sub, clp, sol: TPaths64;
-  rec: TRect64;
 const
   width   = 800;
   height  = 600;
-  radius  = 100;
+  fillrule: TFillRule = frEvenOdd;//frNonZero;//
 
-  procedure TestEllipse;
+  procedure TestEllipse(radius, count: integer);
   var
     i: integer;
-  const
-    count   = 50;
+    sub, clp, sol: TPaths64;
+    rec: TRect64;
   begin
     SetLength(clp, 1);
     clp[0] := Clipper.Core.Ellipse(Rect64(0, 0, radius, radius));
@@ -39,11 +36,25 @@ const
     rec := Rect64(200, 200, width - 200, height - 200);
     clp[0] := rec.AsPath;
     sol := RectClip(rec, sub);
+
+    //display
+    with TSimpleClipperSvgWriter.Create(fillrule) do
+    try
+      AddPaths(sub, false, $100066FF, $400066FF, 1);
+      AddPaths(clp, false, $10FFAA00, $FFFF0000, 1);
+      AddPaths(sol, false, $8066FF66, $FF006600, 1);
+      SaveToFile('RectClip1.svg', width, height);
+    finally
+      Free;
+    end;
+    ShellExecute(0, 'open','RectClip1.svg', nil, nil, SW_SHOW);
   end;
 
-  procedure TestRandomPoly;
-  const
-    count   = 19;
+  procedure TestRandomPoly(count: integer);
+  var
+    i: integer;
+    sub, clp, sol: TPaths64;
+    rec: TRect64;
   begin
     rec := Rect64(200, 200, width - 200, height - 200);
     SetLength(clp, 1);
@@ -51,35 +62,23 @@ const
     SetLength(sub, 1);
     sub[0] := MakeRandomPath(width, height, count);
     sol := RectClip(rec, sub);
+
+    //display
+    with TSimpleClipperSvgWriter.Create(fillrule) do
+    try
+      AddPaths(sub, false, $100066FF, $400066FF, 1);
+      AddPaths(clp, false, $10FFAA00, $FFFF0000, 1);
+      AddPaths(sol, false, $8066FF66, $FF006600, 1);
+      SaveToFile('RectClip2.svg', width, height);
+    finally
+      Free;
+    end;
+    ShellExecute(0, 'open','RectClip2.svg', nil, nil, SW_SHOW);
   end;
 
 begin
   Randomize;
-
-  TestEllipse;
-  //display ellipses
-  with TSimpleClipperSvgWriter.Create(frEvenOdd) do
-  try
-    AddPaths(sub, false, $100066FF, $400066FF, 1);
-    AddPaths(clp, false, $10FFAA00, $FFFF0000, 1);
-    AddPaths(sol, false, $8066FF66, $FF006600, 1);
-    SaveToFile('RectClip1.svg', width, height);
-  finally
-    Free;
-  end;
-  ShellExecute(0, 'open','RectClip1.svg', nil, nil, SW_SHOW);
-
-  TestRandomPoly;
-  //display ramdom polygon
-  with TSimpleClipperSvgWriter.Create(frEvenOdd) do
-  try
-    AddPaths(sub, false, $100066FF, $400066FF, 1);
-    AddPaths(clp, false, $10FFAA00, $FFFF0000, 1);
-    AddPaths(sol, false, $8066FF66, $FF006600, 1);
-    SaveToFile('RectClip2.svg', width, height);
-  finally
-    Free;
-  end;
-  ShellExecute(0, 'open','RectClip2.svg', nil, nil, SW_SHOW);
+  TestEllipse(100, 100);
+  TestRandomPoly(19);
 
 end.

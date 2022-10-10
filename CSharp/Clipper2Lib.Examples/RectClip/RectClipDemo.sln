@@ -1,0 +1,42 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.32126.315
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "RectClipDemo", "RectClipDemo.csproj", "{1D87809D-586C-4202-967E-11EBC8E44746}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{82897A5C-39B4-4D45-AEF1-38653D6A07E9}"
+	ProjectSection(SolutionItems) = preProject
+		.editorconfig = .editorconfig
+	EndProjectSection
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Clipper2Lib", "..\..\Clipper2Lib\Clipper2Lib.csproj", "{91DACBAE-8661-4AF3-A13E-2F7D56F10348}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Clipper2.SVG", "..\..\Utils\SVG\Clipper2.SVG.csproj", "{9CDE3E1A-58CE-4397-B7F3-9576C64469DB}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{1D87809D-586C-4202-967E-11EBC8E44746}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{1D87809D-586C-4202-967E-11EBC8E44746}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{1D87809D-586C-4202-967E-11EBC8E44746}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{1D87809D-586C-4202-967E-11EBC8E44746}.Release|Any CPU.Build.0 = Release|Any CPU
+		{91DACBAE-8661-4AF3-A13E-2F7D56F10348}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{91DACBAE-8661-4AF3-A13E-2F7D56F10348}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{91DACBAE-8661-4AF3-A13E-2F7D56F10348}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{91DACBAE-8661-4AF3-A13E-2F7D56F10348}.Release|Any CPU.Build.0 = Release|Any CPU
+		{9CDE3E1A-58CE-4397-B7F3-9576C64469DB}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{9CDE3E1A-58CE-4397-B7F3-9576C64469DB}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{9CDE3E1A-58CE-4397-B7F3-9576C64469DB}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{9CDE3E1A-58CE-4397-B7F3-9576C64469DB}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {278478F4-9ED6-4AAD-AA42-9F0BC22D605C}
+	EndGlobalSection
+EndGlobal

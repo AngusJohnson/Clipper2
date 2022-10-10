@@ -2,11 +2,11 @@ unit Clipper.RectClip;
 
 (*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Version   :  Clipper2 - ver.1.0.5                                            *
-* Date      :  2 October 2022                                                  *
+* Version   :  Clipper2 - ver.1.0.6                                            *
+* Date      :  11 October 2022                                                 *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
-* Purpose   :  Simple FAST rectangular clipping                                *
+* Purpose   :  FAST rectangular clipping                                       *
 * License   :  http://www.boost.org/LICENSE_1_0.txt                            *
 *******************************************************************************)
 
@@ -15,7 +15,7 @@ interface
 {$I Clipper.inc}
 
 uses
-  Math, SysUtils, Clipper.Core;
+  Classes, Math, SysUtils, Clipper.Core;
 
 function RectClip(const rect: TRect64; const path: TPath64): TPath64; overload;
 function RectClip(const rect: TRect64; const paths: TPaths64): TPaths64; overload;
@@ -31,16 +31,23 @@ type
     fCapacity       : integer;
     fRect           : TRect64;
     fRectPath       : TPath64;
+    fRectMidPt   : TPoint64;
     fFirstCrossLoc  : TLocation;
     fResult         : TPath64;
+    fStartLocs      : TList;
     procedure Reset;
     procedure Add(const pt: TPoint64);
       {$IFDEF INLINING} inline; {$ENDIF}
-    procedure AddCorner(prevLoc, currLoc: TLocation);
+    procedure AddCorner(prev, curr: TLocation); overload;
       {$IFDEF INLINING} inline; {$ENDIF}
-    procedure CheckCorners(prevLoc, currLoc: TLocation; const pt: TPoint64);
+    procedure AddCorner(var loc: TLocation; isClockwise: Boolean); overload;
+      {$IFDEF INLINING} inline; {$ENDIF}
+    procedure GetNextLocation(const path: TPath64;
+      var loc: TLocation; var i: integer; highI: integer);
+
   public
     constructor Create(const rect: TRect64);
+    destructor Destroy; override;
     function Execute(const path: TPath64): TPath64; overload;
     function Execute(const paths: TPaths64): TPaths64; overload;
   end;
@@ -49,8 +56,8 @@ type
 // Miscellaneous functions
 //------------------------------------------------------------------------------
 
-function GetLocation(const rec: TRect64;
-  const pt: TPoint64; out loc: TLocation): Boolean; //inline;
+function GetLocation(const rec: TRect64; const pt: TPoint64;
+  out loc: TLocation): Boolean; {$IFDEF INLINING} inline; {$ENDIF}
 begin
   Result := false; // only returns false when pt on rect
   if (pt.X = rec.Left) and
@@ -87,7 +94,7 @@ end;
 //------------------------------------------------------------------------------
 
 function GetIntersection(const rectPath: TPath64;
-  p, p2: TPoint64; var loc: TLocation; out ip: TPoint64): Boolean;
+  const p, p2: TPoint64; var loc: TLocation; out ip: TPoint64): Boolean;
 begin
   // gets the intersection closest to 'p'
   // when Result = false, loc will remain unchanged
@@ -182,6 +189,40 @@ begin
   end;
   Result := true;
 end;
+//------------------------------------------------------------------------------
+
+
+function AreOpposites(prev, curr: TLocation): Boolean;
+{$IFDEF INLINING} inline; {$ENDIF}
+begin
+  Result := Abs(Ord(prev) - Ord(curr)) = 2;
+end;
+//------------------------------------------------------------------------------
+
+function HeadingClockwise(prev, curr: TLocation): Boolean;
+{$IFDEF INLINING} inline; {$ENDIF}
+begin
+  Result := (Ord(prev) + 1) mod 4 = Ord(curr);
+end;
+//------------------------------------------------------------------------------
+
+function GetAdjacentLocation(loc: TLocation; isClockwise: Boolean): TLocation;
+var
+  delta: integer;
+begin
+  if isClockwise then delta := 1 else delta := 3;
+  Result := TLocation((Ord(loc) + delta) mod 4);
+end;
+//------------------------------------------------------------------------------
+
+function IsClockwise(prev, curr: TLocation;
+  const prevPt, currPt, rectMidPt: TPoint64): Boolean;
+{$IFDEF INLINING} inline; {$ENDIF}
+begin
+  if AreOpposites(prev, curr) then
+    Result := CrossProduct(prevPt, rectMidPt, currPt) < 0 else
+    Result := HeadingClockwise(prev, curr);
+end;
 
 //------------------------------------------------------------------------------
 // TRectClip class
@@ -191,6 +232,14 @@ constructor TRectClip.Create(const rect: TRect64);
 begin
   fRect := rect;
   fRectPath := fRect.AsPath;
+  fRectMidPt := rect.MidPoint;
+  fStartLocs := TList.Create;
+end;
+//------------------------------------------------------------------------------
+
+destructor TRectClip.Destroy;
+begin
+  fStartLocs.Free;
 end;
 //------------------------------------------------------------------------------
 
@@ -199,6 +248,7 @@ begin
   fResultCnt := 0;
   fCapacity := 0;
   fResult := nil;
+  fStartLocs.Clear;
 end;
 //------------------------------------------------------------------------------
 
@@ -214,73 +264,80 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-procedure TRectClip.AddCorner(prevLoc, currLoc: TLocation);
-var
-  i: Byte absolute prevLoc;
-  j: Byte absolute currLoc;
+procedure TRectClip.AddCorner(prev, curr: TLocation);
 begin
-  if (i > 3) or (j > 3) or (i = j) then Exit;
-  if (i + 1) mod 4 = j then
-    Add(fRectPath[i]) else
-    Add(fRectPath[j]);
+  if (HeadingClockwise(prev, curr)) then
+    Add(fRectPath[Ord(prev)]) else
+    Add(fRectPath[Ord(curr)]);
 end;
 //------------------------------------------------------------------------------
 
-procedure TRectClip.CheckCorners(prevLoc, currLoc: TLocation; const pt: TPoint64);
-var
-  i: Byte absolute prevLoc;
-  j: Byte absolute currLoc;
+procedure TRectClip.AddCorner(var loc: TLocation; isClockwise: Boolean);
 begin
-  if (prevLoc  = locInside) then Exit;
-  if fFirstCrossLoc = locInside then fFirstCrossLoc := prevLoc;
-
-  if (j <> (i + 2) mod 4) then
+  if (isClockwise) then
   begin
-    AddCorner(prevLoc, currLoc);
+    Add(fRectPath[Ord(loc)]);
+    loc := GetAdjacentLocation(loc, true);
   end else
   begin
-    case prevLoc of
-      locLeft:
-        if pt.Y < fRect.Top then
+    loc := GetAdjacentLocation(loc, false);
+    Add(fRectPath[Ord(loc)]);
+  end;
+end;
+//------------------------------------------------------------------------------
+
+procedure TRectClip.GetNextLocation(const path: TPath64;
+  var loc: TLocation; var i: integer; highI: integer);
+begin
+  case loc of
+    locLeft:
+      begin
+        while (i <= highI) and (path[i].X <= fRect.Left) do inc(i);
+        if (i > highI) then Exit;
+        if path[i].X >= fRect.Right then loc := locRight
+        else if path[i].Y <= fRect.Top then loc := locTop
+        else if path[i].Y >= fRect.Bottom then loc := locBottom
+        else loc := locInside;
+      end;
+    locTop:
+      begin
+        while (i <= highI) and (path[i].Y <= fRect.Top) do inc(i);
+        if (i > highI) then Exit;
+        if path[i].Y >= fRect.Bottom then loc := locBottom
+        else if path[i].X <= fRect.Left then loc := locLeft
+        else if path[i].X >= fRect.Right then loc := locRight
+        else loc := locInside;
+      end;
+    locRight:
+      begin
+        while (i <= highI) and (path[i].X >= fRect.Right) do inc(i);
+        if (i > highI) then Exit;
+        if path[i].X <= fRect.Left then loc := locLeft
+        else if path[i].Y <= fRect.Top then loc := locTop
+        else if path[i].Y >= fRect.Bottom then loc := locBottom
+        else loc := locInside;
+      end;
+    locBottom:
+      begin
+        while (i <= highI) and (path[i].Y >= fRect.Bottom) do inc(i);
+        if (i > highI) then Exit;
+        if path[i].Y <= fRect.Top then loc := locTop
+        else if path[i].X <= fRect.Left then loc := locLeft
+        else if path[i].X >= fRect.Right then loc := locRight
+        else loc := locInside;
+      end;
+    locInside:
+      begin
+        while (i <= highI) do
         begin
-          Add(fRectPath[0]);
-          Add(fRectPath[1]);
-        end else
-        begin
-          Add(fRectPath[3]);
-          Add(fRectPath[2]);
+          if path[i].X < fRect.Left then loc := locLeft
+          else if path[i].X > fRect.Right then loc := locRight
+          else if path[i].Y > fRect.Bottom then loc := locBottom
+          else if path[i].Y < fRect.Top then loc := locTop
+          else begin Add(path[i]); inc(i); continue; end;
+          break; //inner loop
         end;
-      locTop:
-        if pt.X < fRect.Left then
-        begin
-          Add(fRectPath[0]);
-          Add(fRectPath[3]);
-        end else
-        begin
-          Add(fRectPath[1]);
-          Add(fRectPath[2]);
-        end;
-      locRight:
-        if pt.Y < fRect.Top then
-        begin
-          Add(fRectPath[1]);
-          Add(fRectPath[0]);
-        end else
-        begin
-          Add(fRectPath[2]);
-          Add(fRectPath[3]);
-        end;
-      locBottom:
-        if pt.X < fRect.Left then
-        begin
-          Add(fRectPath[3]);
-          Add(fRectPath[0]);
-        end else
-        begin
-          Add(fRectPath[2]);
-          Add(fRectPath[1]);
-        end;
-    end;
+      end;
   end;
 end;
 //------------------------------------------------------------------------------
@@ -288,116 +345,110 @@ end;
 function TRectClip.Execute(const path: TPath64): TPath64;
 var
   i,k, highI    : integer;
-  pathLen       : integer;
   prevPt,ip,ip2 : TPoint64;
-  loc, prevLoc  : TLocation;
-  tmpRect       : TRect64;
+  loc, prev     : TLocation;
+  loc2          : TLocation;
   crossingLoc   : TLocation;
   prevCrossLoc  : TLocation;
+  tmpRect       : TRect64;
+  lastOnRect    : Boolean;
+  isClockw      : Boolean;
 begin
   Result := nil;
-  pathLen := Length(path);
-  if (pathLen < 3) or fRect.IsEmpty then Exit;
+  if (Length(path) < 3) or fRect.IsEmpty then Exit;
   Reset;
 
   i := 0;
-  highI := pathLen -1;
+  highI := Length(path) -1;
   crossingLoc     := locInside;
   fFirstCrossLoc   := locInside;
 
-  GetLocation(fRect, path[highI], prevLoc);
-  loc := prevLoc;
-  while i < pathLen do
+  lastOnRect := not GetLocation(fRect, path[highI], loc);
+  if lastOnRect then
   begin
-    prevLoc := loc;
-    prevCrossLoc := crossingLoc;
-    case loc of
-      locLeft:
-        begin
-          while (i < pathLen) and (path[i].X <= fRect.Left) do inc(i);
-          if (i = pathLen) then break
-          else if path[i].Y <= fRect.Top then loc := locTop
-          else if path[i].Y >= fRect.Bottom then loc := locBottom
-          else if path[i].X < fRect.Right then loc := locInside
-          else loc := locRight;
-        end;
-      locTop:
-        begin
-          while (i < pathLen) and (path[i].Y <= fRect.Top) do inc(i);
-          if (i = pathLen) then break
-          else if path[i].X <= fRect.Left then loc := locLeft
-          else if path[i].X >= fRect.Right then loc := locRight
-          else if path[i].Y < fRect.Bottom then loc := locInside
-          else loc := locBottom;
-        end;
-      locRight:
-        begin
-          while (i < pathLen) and (path[i].X >= fRect.Right) do inc(i);
-          if (i = pathLen) then break
-          else if path[i].Y <= fRect.Top then loc := locTop
-          else if path[i].Y >= fRect.Bottom then loc := locBottom
-          else if path[i].X > fRect.Left then loc := locInside
-          else loc := locLeft;
-        end;
-      locBottom:
-        begin
-          while (i < pathLen) and (path[i].Y >= fRect.Bottom) do inc(i);
-          if (i = pathLen) then break
-          else if path[i].X <= fRect.Left then loc := locLeft
-          else if path[i].X >= fRect.Right then loc := locRight
-          else if path[i].Y > fRect.Top then loc := locInside
-          else loc := locTop;
-        end;
-      locInside:
-        begin
-          while (i < pathLen) do
-          begin
-            if path[i].X < fRect.Left then loc := locLeft
-            else if path[i].X > fRect.Right then loc := locRight
-            else if path[i].Y > fRect.Bottom then loc := locBottom
-            else if path[i].Y < fRect.Top then loc := locTop
-            else begin Add(path[i]); inc(i); continue; end;
-            break; //inner loop
-          end;
-          if (i = pathLen) then break;
-        end;
+    i := highI - 1;
+    while (i >= 0) and
+      not GetLocation(fRect, path[i], prev) do
+        dec(i);
+    if (i < 0) then
+    begin
+      Result := path;
+      Exit;
     end;
+    if (prev = locInside) then
+      loc := locInside;
+    i := 0;
+  end;
+
+  ///////////////////////////////////////////////////
+  while i <= highI do
+  begin
+    prev := loc;
+    prevCrossLoc := crossingLoc;
+    GetNextLocation(path, loc, i, highI);
+    if i > highI then Break;
 
     if i = 0 then
       prevPt := path[highI] else
       prevPt := path[i-1];
-
     crossingLoc := loc;
-    if not GetIntersection(fRectPath, path[i],
-      prevPt, crossingLoc, ip) then
+    if not GetIntersection(fRectPath, path[i], prevPt, crossingLoc, ip) then
     begin
-      // ie remaining outside
-      CheckCorners(prevLoc, crossingLoc, prevPt);
+      // ie remains outside (and crossingLoc still == loc)
+      if (prevCrossLoc = locInside) then //ie rect still uncrossed
+      begin
+        isClockw := IsClockwise(prev, loc, prevPt, path[i], fRectMidPt);
+        repeat
+          fStartLocs.Add(Pointer(prev));
+          prev := GetAdjacentLocation(prev, isClockw);
+        until prev = loc;
+        crossingLoc := prevCrossLoc; // because still not crossed
+      end
+      else if (prev <> locInside) and (prev <> loc) then
+      begin
+        isClockw := IsClockwise(prev, loc, prevPt, path[i], fRectMidPt);
+        repeat
+          AddCorner(prev, isClockw);
+        until prev = loc;
+      end;
       inc(i);
       Continue;
     end;
 
+    ////////////////////////////////////////////////////
     // we must be crossing the rect boundary to get here
+    ////////////////////////////////////////////////////
 
-    if (loc = locInside) then
+    if (loc = locInside) then // path must be entering rect
     begin
-      // path must be entering rect
-      if fFirstCrossLoc = locInside then
-        fFirstCrossLoc := crossingLoc
-      else
-        AddCorner(prevLoc, crossingLoc);
+      if (fFirstCrossLoc = locInside) then
+      begin
+        fFirstCrossLoc := crossingLoc;
+        fStartLocs.Add(Pointer(prev));
+      end
+      else if (prev <> crossingLoc) then
+      begin
+        isClockw := IsClockwise(prev, crossingLoc, prevPt, path[i], fRectMidPt);
+        repeat
+          AddCorner(prev, isClockw);
+        until prev = crossingLoc;
+      end;
     end
-    else if (prevLoc <> locInside) then
+    else if (prev <> locInside) then
     begin
-      // passing right through but ip will be the second intersect pt
-      // so get the first intersect pt
-
-      loc := prevLoc;
+      // passing right through rect. 'ip' here will be the second
+      // intersect pt but we'll also need the first intersect pt (ip2)
+      loc := prev;
       GetIntersection(fRectPath, prevPt, path[i], loc, ip2);
-      AddCorner(prevCrossLoc, loc);
+      if (prevCrossLoc <> locInside) then
+        AddCorner(prevCrossLoc, loc);
 
       if (fFirstCrossLoc = locInside) then
+      begin
         fFirstCrossLoc := loc;
+        fStartLocs.Add(Pointer(prev));
+      end;
+
       loc := crossingLoc;
       Add(ip2);
       if PointsEqual(ip, ip2) then
@@ -408,14 +459,15 @@ begin
         crossingLoc := loc;
         Continue;
       end;
-    end else
+    end else // path must be exiting rect
     begin
       loc := crossingLoc;
       if (fFirstCrossLoc = locInside) then
         fFirstCrossLoc := crossingLoc;
     end;
     Add(ip);
-  end; //while i < pathLen
+  end; //while i <= highI
+  ///////////////////////////////////////////////////
 
   if (fFirstCrossLoc = locInside) then
   begin
@@ -429,8 +481,23 @@ begin
     Exit;
   end;
 
-  if (loc <> locInside) then
-    CheckCorners(crossingLoc, fFirstCrossLoc, path[highI]);
+  if (loc <> locInside) and (loc <> fFirstCrossLoc) then
+  begin
+    if (fStartLocs.Count > 0) then
+    begin
+      prev := loc;
+      for i := 0 to fStartLocs.Count -1 do
+      begin
+        loc2 := TLocation(fStartLocs[i]);
+        if (prev = loc2) then Continue;
+        AddCorner(prev, HeadingClockwise(prev, loc2));
+        prev := loc2;
+      end;
+      loc := prev;
+    end;
+    if (loc <> fFirstCrossLoc) then
+      AddCorner(loc, HeadingClockwise(loc, fFirstCrossLoc));
+  end;
 
   if fResultCnt < 3 then Exit;
 

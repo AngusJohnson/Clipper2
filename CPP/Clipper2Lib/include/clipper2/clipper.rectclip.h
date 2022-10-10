@@ -1,10 +1,10 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Version   :  Clipper2 - ver.1.0.5                                            *
-* Date      :  10 October 2022                                                 *
+* Version   :  Clipper2 - ver.1.0.6                                            *
+* Date      :  11 October 2022                                                 *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
-* Purpose   :  Simple FAST rectangular clipping                                *
+* Purpose   :  FAST rectangular clipping                                       *
 * License   :  http://www.boost.org/LICENSE_1_0.txt                            *
 *******************************************************************************/
 
@@ -194,6 +194,32 @@ namespace Clipper2Lib
       return true;
     }
 
+    inline bool AreOpposites(Location prev, Location curr)
+    {
+      return abs(static_cast<int>(prev) - static_cast<int>(curr)) == 2;
+    }
+
+    inline bool HeadingClockwise(Location prev, Location curr)
+    {
+      return (static_cast<int>(prev) + 1) % 4 == static_cast<int>(curr);
+    }
+
+    inline Location GetAdjacentLocation(Location loc, bool isClockwise)
+    {
+      int delta = (isClockwise) ? 1 : 3;
+      return static_cast<Location>((static_cast<int>(loc) + delta) % 4);
+    }
+
+    inline bool IsClockwise(Location prev, Location curr,
+      Point64 prev_pt, Point64 curr_pt, Point64 rect_mp)
+    {
+      if (AreOpposites(prev, curr))
+        return CrossProduct(prev_pt, rect_mp, curr_pt) < 0;
+      else
+        return HeadingClockwise(prev, curr);
+    }
+
+
     class RectClip {
     private:
       const Rect64 rect_;
@@ -216,37 +242,37 @@ namespace Clipper2Lib
         case Location::Left:
           while (i <= highI && path[i].x <= rect_.left) ++i;
           if (i > highI) break;
+          else if (path[i].x >= rect_.right) loc = Location::Right;
           else if (path[i].y <= rect_.top) loc = Location::Top;
           else if (path[i].y >= rect_.bottom) loc = Location::Bottom;
-          else if (path[i].x < rect_.right) loc = Location::Inside;
-          else loc = Location::Right;
+          else loc = Location::Inside;
           break;
 
         case Location::Top:
           while (i <= highI && path[i].y <= rect_.top) ++i;
           if (i > highI) break;
+          else if (path[i].y >= rect_.bottom) loc = Location::Bottom;
           else if (path[i].x <= rect_.left) loc = Location::Left;
           else if (path[i].x >= rect_.right) loc = Location::Right;
-          else if (path[i].y < rect_.bottom) loc = Location::Inside;
-          else loc = Location::Bottom;
+          else loc = Location::Inside;
           break;
 
         case Location::Right:
           while (i <= highI && path[i].x >= rect_.right) ++i;
           if (i > highI) break;
+          else if (path[i].x <= rect_.left) loc = Location::Left;
           else if (path[i].y <= rect_.top) loc = Location::Top;
           else if (path[i].y >= rect_.bottom) loc = Location::Bottom;
-          else if (path[i].x > rect_.left) loc = Location::Inside;
-          else loc = Location::Left;
+          else loc = Location::Inside;
           break;
 
         case Location::Bottom:
           while (i <= highI && path[i].y >= rect_.bottom) ++i;
           if (i > highI) break;
+          else if (path[i].y <= rect_.top) loc = Location::Top;
           else if (path[i].x <= rect_.left) loc = Location::Left;
           else if (path[i].x >= rect_.right) loc = Location::Right;
-          else if (path[i].y > rect_.top) loc = Location::Inside;
-          else loc = Location::Top;
+          else loc = Location::Inside;
           break;
 
         case Location::Inside:
@@ -261,22 +287,6 @@ namespace Clipper2Lib
           }
           break;
         } //switch          
-      }
-
-      inline bool AreOpposites(Location prev, Location curr)
-      {
-        return abs(static_cast<int>(prev) - static_cast<int>(curr)) == 2;
-      }
-
-      inline bool HeadingClockwise(Location prev, Location curr)
-      {
-        return (static_cast<int>(prev) + 1) % 4 == static_cast<int>(curr);
-      }
-
-      inline Location GetAdjacentLocation(Location loc, bool isClockwise)
-      {
-        int delta = (isClockwise) ? 1 : 3;
-        return static_cast<Location>((static_cast<int>(loc) + delta) % 4);
       }
 
       inline void AddCorner(Location prev, Location curr)
@@ -348,23 +358,19 @@ namespace Clipper2Lib
             
             if (crossing_prev == Location::Inside)
             {
-              if (AreOpposites(prev, loc))
-              {
+              bool isClockw = IsClockwise(prev, loc, prev_pt, path[i], mp_);
+              do {
                 start_locs_.push_back(prev);
-                prev = GetAdjacentLocation(prev, CrossProduct(prev_pt, mp_, path[i]) < 0);
-              }
-              start_locs_.push_back(prev);
-              crossing_loc = crossing_prev; // never crossed 
+                prev = GetAdjacentLocation(prev, isClockw);
+              } while (prev != loc);
+              crossing_loc = crossing_prev; // still not crossed 
             }
-            else if (prev != Location::Inside && prev != crossing_loc)
+            else if (prev != Location::Inside && prev != loc)
             {
-              if (AreOpposites(prev, crossing_loc))
-              {
-                bool isClockwise = CrossProduct(prev_pt, mp_, path[i]) < 0;
-                AddCorner(prev, isClockwise);
-                AddCorner(prev, isClockwise);
-              }
-              else AddCorner(prev, HeadingClockwise(prev, crossing_loc));
+              bool isClockw = IsClockwise(prev, loc, prev_pt, path[i], mp_);
+              do {
+                AddCorner(prev, isClockw);
+              } while (prev != loc);
             }
             ++i;
             continue;
@@ -381,16 +387,12 @@ namespace Clipper2Lib
               first_cross_ = crossing_loc;
               start_locs_.push_back(prev);
             }
-            else 
+            else if (prev != crossing_loc)
             {
-              if (AreOpposites(prev, crossing_loc))
-              {
-                bool isClockwise = CrossProduct(prev_pt, mp_, path[i]) < 0;
-                AddCorner(prev, isClockwise);
-                AddCorner(prev, isClockwise);
-              }
-              else
-                AddCorner(prev, crossing_loc);
+              bool isClockw = IsClockwise(prev, crossing_loc, prev_pt, path[i], mp_);
+              do {
+                AddCorner(prev, isClockw);
+              } while (prev != crossing_loc);
             }
           }
           else if (prev != Location::Inside)
@@ -419,20 +421,11 @@ namespace Clipper2Lib
               continue;
             }
           }
-          else
+          else // path must be exiting rect
           {
             loc = crossing_loc;
             if (first_cross_ == Location::Inside)
-            {
               first_cross_ = crossing_loc;
-              if (AreOpposites(prev, loc))
-              {
-                start_locs_.push_back(prev);
-                prev = GetAdjacentLocation(prev, 
-                  CrossProduct(prev_pt, mp_, path[i]) < 0);
-              }
-              start_locs_.push_back(prev);
-            }
           }
 
           result_.push_back(ip);

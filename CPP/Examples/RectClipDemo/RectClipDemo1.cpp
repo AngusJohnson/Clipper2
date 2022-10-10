@@ -20,6 +20,7 @@ void LoadPaths(const std::string& filename, Paths64& paths);
 void DoEllipses();
 void DoRectangles();
 void DoRandomPoly();
+void PressEnterToExit();
 
 const int width = 800, height = 600;
 Paths64 sub, clp, sol, store;
@@ -32,9 +33,7 @@ int main(int argc, char* argv[])
   DoRectangles();
   DoRandomPoly();
 
-  std::string s;
-  std::cout << std::endl << "Press Enter to continue" << std::endl;
-  std::getline(std::cin, s);
+  PressEnterToExit();
 }
 
 void DoEllipses()
@@ -246,4 +245,10 @@ void LoadPaths(const std::string& filename, Paths64& paths)
   source.close();
 }
 
+void PressEnterToExit()
+{
+  std::string s;
+  std::cout << std::endl << "Press Enter to exit" << std::endl;
+  std::getline(std::cin, s);
+}
 
