@@ -313,8 +313,8 @@ namespace Clipper2Lib {
     if (last_on_boundary)
     {
       i = highI - 1;
-      while (i >= 0 && !GetLocation(rect_, path[i], prev)) --i;
-      if (i < 0) return path;
+      while (i > 0 && !GetLocation(rect_, path[i], prev)) --i;
+      if (i == 0 && !GetLocation(rect_, path[0], prev)) return path;
       if (prev == Location::Inside) loc = prev;
       i = 0;
     }
