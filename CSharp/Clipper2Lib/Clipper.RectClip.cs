@@ -468,7 +468,8 @@ namespace Clipper2Lib
     {
       Paths64 result = new Paths64(paths.Count);
       foreach(Path64 path in paths) 
-        result.Add(ExecuteInternal(path)); 
+        if (rect_.Intersects(Clipper.GetBounds(path)))
+          result.Add(ExecuteInternal(path)); 
       return result;
     }
 

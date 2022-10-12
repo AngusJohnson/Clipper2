@@ -17,11 +17,6 @@ interface
 uses
   Classes, Math, SysUtils, Clipper.Core;
 
-function RectClip(const rect: TRect64; const path: TPath64): TPath64; overload;
-function RectClip(const rect: TRect64; const paths: TPaths64): TPaths64; overload;
-
-implementation
-
 type
   TLocation = (locLeft, locTop, locRight, locBottom, locInside);
 
@@ -44,13 +39,14 @@ type
       {$IFDEF INLINING} inline; {$ENDIF}
     procedure GetNextLocation(const path: TPath64;
       var loc: TLocation; var i: integer; highI: integer);
-
   public
     constructor Create(const rect: TRect64);
     destructor Destroy; override;
     function Execute(const path: TPath64): TPath64; overload;
     function Execute(const paths: TPaths64): TPaths64; overload;
   end;
+
+implementation
 
 //------------------------------------------------------------------------------
 // Miscellaneous functions
@@ -538,41 +534,6 @@ begin
 end;
 
 //------------------------------------------------------------------------------
-//------------------------------------------------------------------------------
-
-function RectClip(const rect: TRect64; const path: TPath64): TPath64;
-begin
-  with TRectClip.Create(rect) do
-  try
-    Result := Execute(path);
-  finally
-    Free;
-  end;
-end;
-//------------------------------------------------------------------------------
-
-function RectClip(const rect: TRect64; const paths: TPaths64): TPaths64;
-var
-  i,j, len: integer;
-begin
-  Result := nil;
-  len := Length(paths);
-  if rect.IsEmpty or (len = 0) then Exit;
-  SetLength(Result, len);
-  j := 0;
-  with TRectClip.Create(rect) do
-  try
-    for i := 0 to len -1 do
-      if  rect.Intersects(GetBounds(paths[i])) then
-      begin
-        Result[j] := Execute(paths[i]);
-        inc(j);
-      end;
-  finally
-    Free;
-  end;
-  SetLength(Result, j);
-end;
 //------------------------------------------------------------------------------
 
 end.

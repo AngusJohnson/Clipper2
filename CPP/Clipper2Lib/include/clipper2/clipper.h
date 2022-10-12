@@ -18,6 +18,7 @@
 #include "clipper.engine.h"
 #include "clipper.offset.h"
 #include "clipper.minkowski.h"
+#include "clipper.rectclip.h"
 
 namespace Clipper2Lib 
 {
@@ -36,7 +37,7 @@ namespace Clipper2Lib
 
   inline Paths64 BooleanOp(ClipType cliptype, FillRule fillrule,
     const Paths64& subjects, const Paths64& clips)
-  {
+  {    
     Paths64 result;
     Clipper64 clipper;
     clipper.AddSubject(subjects);
@@ -245,6 +246,60 @@ namespace Clipper2Lib
       }
     if (rec.IsEmpty()) return RectD();
     return rec;
+  }
+
+  inline Path64 RectClip(const Rect64& rect, const Path64& path)
+  {
+    if (rect.IsEmpty() || path.empty() ||
+      !rect.Contains(Bounds(path))) return Path64();
+    RectClip64 rc(rect);
+    return rc.Execute(path);
+  }
+  
+  inline Paths64 RectClip(const Rect64& rect, const Paths64& paths)
+  {
+    if (rect.IsEmpty() || paths.empty()) return Paths64();
+    RectClip64 rc(rect);
+    Paths64 result;
+    result.reserve(paths.size());
+
+    for (const Path64& p : paths)
+    {
+      if (!rect.Intersects(Bounds(p))) continue;
+      result.push_back(rc.Execute(p));
+    }
+    return result;
+  }
+
+  inline PathD RectClip(const RectD& rect, const PathD& path, int precision = 2)
+  {
+    if (rect.IsEmpty() || path.empty() ||
+      !rect.Contains(Bounds(path))) return PathD();
+    if (precision < -8 || precision > 8)
+      throw new Clipper2Exception("Error: Precision exceeds the allowed range.");
+    const double scale = std::pow(10, precision);
+    Rect64 r = ScaleRect<int64_t, double>(rect, scale);
+    RectClip64 rc(r);
+    Path64 p = ScalePath<int64_t, double>(path, scale);
+    return ScalePath<double, int64_t>(rc.Execute(p), 1 / scale);
+  }
+
+  inline PathsD RectClip(const RectD& rect, const PathsD& paths, int precision = 2)
+  {
+    if (rect.IsEmpty() || paths.empty()) return PathsD();
+    if (precision < -8 || precision > 8)
+      throw new Clipper2Exception("Error: Precision exceeds the allowed range.");
+    const double scale = std::pow(10, precision);
+    Rect64 r = ScaleRect<int64_t, double>(rect, scale);
+    RectClip64 rc(r);
+    PathsD result;
+    result.reserve(paths.size());
+    for (const PathD& path : paths) {
+      if (!rect.Intersects(Bounds(path))) continue;
+      Path64 p = ScalePath<int64_t, double>(path, scale);
+      result.push_back(ScalePath<double, int64_t>(rc.Execute(p), 1 / scale));
+    }
+    return result;
   }
 
   namespace details

@@ -93,6 +93,7 @@ type
     Bottom : double;
     function Contains(const pt: TPointD): Boolean; overload;
     function Contains(const rec: TRectD): Boolean; overload;
+    function Intersects(const rec: TRectD): Boolean;
     function AsPath: TPathD;
     property Width: double read GetWidth;
     property Height: double read GetHeight;
@@ -176,6 +177,7 @@ function GetBounds(const paths: TArrayOfPaths): TRect64; overload;
 function GetBounds(const paths: TPaths64): TRect64; overload;
 function GetBounds(const paths: TPathsD): TRectD; overload;
 function GetBounds(const path: TPath64): TRect64; overload;
+function GetBounds(const path: TPathD): TRectD; overload;
 
 function TranslatePoint(const pt: TPoint64; dx, dy: Int64): TPoint64; overload;
 function TranslatePoint(const pt: TPointD; dx, dy: double): TPointD; overload;
@@ -197,6 +199,11 @@ function  RotateRect(const rec: TRectD; angleRad: double): TRectD; overload;
 procedure OffsetRect(var rec: TRect64; dx, dy: Int64); overload;
   {$IFDEF INLINING} inline; {$ENDIF}
 procedure OffsetRect(var rec: TRectD; dx, dy: double); overload;
+  {$IFDEF INLINING} inline; {$ENDIF}
+
+function ScaleRect(const rec: TRect64; scale: double): TRect64; overload;
+  {$IFDEF INLINING} inline; {$ENDIF}
+function ScaleRect(const rec: TRectD; scale: double): TRectD; overload;
   {$IFDEF INLINING} inline; {$ENDIF}
 
 function ScalePoint(const pt: TPoint64; scale: double): TPointD;
@@ -402,6 +409,13 @@ begin
 end;
 //------------------------------------------------------------------------------
 
+function TRectD.Intersects(const rec: TRectD): Boolean;
+begin
+  Result := (Max(Left, rec.Left) < Min(Right, rec.Right)) and
+    (Max(Top, rec.Top) < Min(Bottom, rec.Bottom));
+end;
+//------------------------------------------------------------------------------
+
 function TRectD.AsPath: TPathD;
 begin
   SetLength(Result, 4);
@@ -496,6 +510,24 @@ function ValueEqualOrBetween(val, end1, end2: Int64): Boolean;
 begin
   Result := (val = end1) or (val = end2) or
     ((val > end1) = (val < end2));
+end;
+//------------------------------------------------------------------------------
+
+function ScaleRect(const rec: TRect64; scale: double): TRect64;
+begin
+  Result.Left := Round(rec.Left * scale);
+  Result.Top := Round(rec.Top * scale);
+  Result.Right := Round(rec.Right * scale);
+  Result.Bottom := Round(rec.Bottom * scale);
+end;
+//------------------------------------------------------------------------------
+
+function ScaleRect(const rec: TRectD; scale: double): TRectD;
+begin
+  Result.Left := rec.Left * scale;
+  Result.Top := rec.Top * scale;
+  Result.Right := rec.Right * scale;
+  Result.Bottom := rec.Bottom * scale;
 end;
 //------------------------------------------------------------------------------
 
@@ -1191,6 +1223,31 @@ begin
   end;
 
   Result := Rect64(MaxInt64, MaxInt64, -MaxInt64, -MaxInt64);
+  p := @path[0];
+  for i := 0 to High(path) do
+  begin
+    if p.X < Result.Left then Result.Left := p.X;
+    if p.X > Result.Right then Result.Right := p.X;
+    if p.Y < Result.Top then Result.Top := p.Y;
+    if p.Y > Result.Bottom then Result.Bottom := p.Y;
+    inc(p);
+  end;
+end;
+//------------------------------------------------------------------------------
+
+function GetBounds(const path: TPathD): TRectD;
+var
+  i, len: Integer;
+  p: PPointD;
+begin
+  len := Length(path);
+  if len = 0 then
+  begin
+    Result := NullRectD;
+    Exit;
+  end;
+
+  Result := RectD(infinity, infinity, -infinity, -infinity);
   p := @path[0];
   for i := 0 to High(path) do
   begin

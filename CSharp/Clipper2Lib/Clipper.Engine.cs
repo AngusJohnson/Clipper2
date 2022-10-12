@@ -15,6 +15,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
+using System.Runtime.ConstrainedExecution;
 
 namespace Clipper2Lib
 {
@@ -145,7 +146,7 @@ namespace Clipper2Lib
     public Active? frontEdge;
     public Active? backEdge;
     public OutPt? pts;
-    public PolyPathBase? polypath;
+    public PolyPathNode? polypath;
     public Rect64 bounds;
     public Path64 path;
     public bool isOpen;
@@ -3481,7 +3482,7 @@ namespace Clipper2Lib
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    protected bool BuildTree(PolyPathBase polytree, Paths64 solutionOpen)
+    protected bool BuildTree(PolyPathNode polytree, Paths64 solutionOpen)
     {
       polytree.Clear();
       solutionOpen.Clear();
@@ -3522,7 +3523,7 @@ namespace Clipper2Lib
             DeepCheckOwner(outrec, outrec.owner);
         }
 
-        PolyPathBase ownerPP;
+        PolyPathNode ownerPP;
         if (outrec.owner != null && outrec.owner.polypath != null)
           ownerPP = outrec.owner.polypath;
         else
@@ -3647,6 +3648,8 @@ namespace Clipper2Lib
 
   public class ClipperD : ClipperBase
   {
+    private static string precision_range_error = "Error: Precision is out of range.";
+
     private readonly double _scale;
     private readonly double _invScale;
 
@@ -3668,7 +3671,7 @@ namespace Clipper2Lib
     public ClipperD(int roundingDecimalPrecision = 2)
     {
       if (roundingDecimalPrecision < -8 || roundingDecimalPrecision > 8)
-        throw new ClipperLibException("Error - RoundingDecimalPrecision exceeds the allowed range.");
+        throw new ClipperLibException(precision_range_error);
       _scale = Math.Pow(10, roundingDecimalPrecision);
       _invScale = 1 / _scale;
     }
@@ -3818,29 +3821,66 @@ namespace Clipper2Lib
     }
   } // ClipperD class
 
-  public abstract class PolyPathBase : IEnumerable
+  public abstract class PolyPathNode : IEnumerable
   {
-    internal PolyPathBase? _parent;
-    internal List<PolyPathBase> _childs = new List<PolyPathBase>();
+    internal PolyPathNode? _parent;
+    internal List<PolyPathNode> _childs = new List<PolyPathNode>();
 
-    public PolyPathEnum GetEnumerator()
+    public IEnumerator GetEnumerator()
     {
-      return new PolyPathEnum(_childs);
+      return new NodeEnumerator(_childs);
     }
-    IEnumerator IEnumerable.GetEnumerator()
+    private class NodeEnumerator : IEnumerator
     {
-      return GetEnumerator();
-    }
+      private int position = -1;
+      private readonly List<PolyPathNode> _nodes;
+
+      [MethodImpl(MethodImplOptions.AggressiveInlining)]
+      public NodeEnumerator(List<PolyPathNode> nodes)
+      {
+        _nodes = new List<PolyPathNode>(nodes);
+      }
+
+      [MethodImpl(MethodImplOptions.AggressiveInlining)]
+      private IEnumerator getEnumerator()
+      {
+        return (IEnumerator) this;
+      }
+
+      [MethodImpl(MethodImplOptions.AggressiveInlining)]
+      public bool MoveNext()
+      {
+        position++;
+        return (position < _nodes.Count);
+      }
+
+      [MethodImpl(MethodImplOptions.AggressiveInlining)]
+      public void Reset()
+      {
+        position = -1;
+      }
+
+      public object Current
+      {
+        get
+        {
+          if (position < 0 || position >= _nodes.Count)
+            throw new InvalidOperationException();
+          return _nodes[position];
+        }
+      }
+
+    };
 
     public bool IsHole => GetIsHole();
 
-    public PolyPathBase(PolyPathBase? parent = null) { _parent = parent; }
+    public PolyPathNode(PolyPathNode? parent = null) { _parent = parent; }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private bool GetIsHole()
     {
       bool result = true;
-      PolyPathBase? pp = _parent;
+      PolyPathNode? pp = _parent;
       while (pp != null)
       {
         result = !result;
@@ -3852,7 +3892,7 @@ namespace Clipper2Lib
 
     public int Count => _childs.Count;
 
-    internal abstract PolyPathBase AddChild(Path64 p);
+    internal abstract PolyPathNode AddChild(Path64 p);
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void Clear()
@@ -3861,52 +3901,16 @@ namespace Clipper2Lib
     }
   } // PolyPathBase class
 
-  public class PolyPathEnum : IEnumerator
-  {
-    public List<PolyPathBase> _ppbList;
-    private int position = -1;
-    public PolyPathEnum(List<PolyPathBase> childs)
-    {
-      _ppbList = childs;
-    }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public bool MoveNext()
-    {
-      position++;
-      return (position < _ppbList.Count);
-    }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public void Reset()
-    {
-      position = -1;
-    }
-
-    public PolyPathBase Current
-    {
-      get
-      {
-        if (position < 0 || position >= _ppbList.Count)
-          throw new InvalidOperationException();
-        return _ppbList[position];
-      }
-    }
-
-    object IEnumerator.Current => Current;
-
-  }
-
-  public class PolyPath64 : PolyPathBase
+  public class PolyPath64 : PolyPathNode
   {
     public Path64? Polygon { get; private set; } // polytree root's polygon == null
 
-    public PolyPath64(PolyPathBase? parent = null) : base(parent) {}
+    public PolyPath64(PolyPathNode? parent = null) : base(parent) {}
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    internal override PolyPathBase AddChild(Path64 p)
+    internal override PolyPathNode AddChild(Path64 p)
     {
-      PolyPathBase newChild = new PolyPath64(this);
+      PolyPathNode newChild = new PolyPath64(this);
       (newChild as PolyPath64)!.Polygon = p;
       _childs.Add(newChild);
       return newChild;
@@ -3926,7 +3930,7 @@ namespace Clipper2Lib
     public double Area()
     {
       double result = Polygon == null ? 0 : Clipper.Area(Polygon);
-      foreach (PolyPathBase polyPathBase in _childs)
+      foreach (PolyPathNode polyPathBase in _childs)
       {
         PolyPath64 child = (PolyPath64) polyPathBase;
         result += child.Area();
@@ -3935,17 +3939,17 @@ namespace Clipper2Lib
     }
   }
 
-  public class PolyPathD : PolyPathBase
+  public class PolyPathD : PolyPathNode
   {
     internal double Scale { get; set; }
     public PathD? Polygon { get; private set; }
 
-    public PolyPathD(PolyPathBase? parent = null) : base(parent) {}
+    public PolyPathD(PolyPathNode? parent = null) : base(parent) {}
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    internal override PolyPathBase AddChild(Path64 p)
+    internal override PolyPathNode AddChild(Path64 p)
     {
-      PolyPathBase newChild = new PolyPathD(this);
+      PolyPathNode newChild = new PolyPathD(this);
       (newChild as PolyPathD)!.Scale = Scale;
       (newChild as PolyPathD)!.Polygon = Clipper.ScalePathD(p, 1 / Scale);
       _childs.Add(newChild);
@@ -3966,7 +3970,7 @@ namespace Clipper2Lib
     public double Area()
     {
       double result = Polygon == null ? 0 : Clipper.Area(Polygon);
-      foreach (PolyPathBase polyPathBase in _childs)
+      foreach (PolyPathNode polyPathBase in _childs)
       {
         PolyPathD child = (PolyPathD) polyPathBase;
         result += child.Area();

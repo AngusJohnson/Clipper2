@@ -2,8 +2,8 @@ unit Clipper;
 
 (*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Version   :  Clipper2 - ver.1.0.5                                            *
-* Date      :  2 October 2022                                                  *
+* Version   :  Clipper2 - ver.1.0.6                                            *
+* Date      :  11 October 2022                                                 *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  This module provides a simple interface to the Clipper Library  *
@@ -15,7 +15,8 @@ interface
 {$I Clipper.inc}
 
 uses
-  Math, SysUtils, Clipper.Core, Clipper.Engine, Clipper.Offset;
+  Math, SysUtils,
+  Clipper.Core, Clipper.Engine, Clipper.Offset, Clipper.RectClip;
 
 // Redeclare here a number of structures defined in
 // other units so those units won't need to be declared
@@ -91,6 +92,13 @@ function InflatePaths(const paths: TPaths64; delta: Double;
 function InflatePaths(const paths: TPathsD; delta: Double;
 jt: TJoinType = jtRound; et: TEndType = etPolygon;
 miterLimit: double = 2.0; precision: integer = 2): TPathsD; overload;
+
+function RectClip(const rect: TRect64; const path: TPath64): TPath64; overload;
+function RectClip(const rect: TRect64; const paths: TPaths64): TPaths64; overload;
+function RectClip(const rect: TRectD; const path: TPathD;
+  precision: integer = 2): TPathD; overload;
+function RectClip(const rect: TRectD; const paths: TPathsD;
+  precision: integer = 2): TPathsD; overload;
 
 function TranslatePath(const path: TPath64; dx, dy: Int64): TPath64; overload;
 function TranslatePath(const path: TPathD; dx, dy: double): TPathD; overload;
@@ -329,7 +337,7 @@ var
   scale, invScale: double;
 begin
   if (precision < -8) or (precision > 8) then
-    raise Exception.Create(rsClipper_RoundingErr);
+    raise Exception.Create(rsClipper_PrecisonErr);
   scale := Power(10, precision);
   invScale := 1/scale;
   pp := ScalePaths(paths, scale, scale);
@@ -342,6 +350,97 @@ begin
     free;
   end;
   Result := ScalePathsD(pp, invScale, invScale);
+end;
+//------------------------------------------------------------------------------
+
+function RectClip(const rect: TRect64; const path: TPath64): TPath64;
+begin
+  Result := nil;
+  if rect.IsEmpty or (Length(path) = 0) or
+    not rect.Intersects(GetBounds(path)) then Exit;
+  with TRectClip.Create(rect) do
+  try
+    Result := Execute(path);
+  finally
+    Free;
+  end;
+end;
+//------------------------------------------------------------------------------
+
+function RectClip(const rect: TRect64; const paths: TPaths64): TPaths64;
+var
+  i,j, len: integer;
+begin
+  Result := nil;
+  len := Length(paths);
+  if rect.IsEmpty or (len = 0) then Exit;
+  SetLength(Result, len);
+  j := 0;
+  with TRectClip.Create(rect) do
+  try
+    for i := 0 to len -1 do
+    begin
+      if not rect.Intersects(GetBounds(paths[i])) then Continue;
+      Result[j] := Execute(paths[i]);
+      inc(j);
+    end;
+  finally
+    Free;
+  end;
+  SetLength(Result, j);
+end;
+//------------------------------------------------------------------------------
+
+function RectClip(const rect: TRectD; const path: TPathD;
+  precision: integer): TPathD;
+var
+  scale: double;
+  tmpPath: TPath64;
+  rec: TRect64;
+begin
+  Result := nil;
+  if not rect.Intersects(GetBounds(path)) then Exit;
+  if (precision < -8) or (precision > 8) then
+    Raise EClipperLibException(rsClipper_PrecisonErr);
+  scale := Math.Power(10, precision);
+  rec := Rect64(ScaleRect(rect, scale));
+  tmpPath := ScalePath(path, scale);
+  tmpPath := RectClip(rec, tmpPath);
+  Result := ScalePathD(tmpPath, 1/scale);
+end;
+//------------------------------------------------------------------------------
+
+function RectClip(const rect: TRectD;
+  const paths: TPathsD; precision: integer): TPathsD;
+var
+  i,j, len: integer;
+  scale: double;
+  tmpPath: TPath64;
+  rec: TRect64;
+begin
+  if (precision < -8) or (precision > 8) then
+    Raise EClipperLibException(rsClipper_PrecisonErr);
+  scale := Math.Power(10, precision);
+  rec := Rect64(ScaleRect(rect, scale));
+
+  j := 0;
+  len := Length(paths);
+  SetLength(Result, len);
+
+  with TRectClip.Create(rec) do
+  try
+    for i := 0 to len -1 do
+    begin
+      if not rect.Intersects(GetBounds(paths[i])) then Continue;
+      tmpPath := ScalePath(paths[i], scale);
+      tmpPath := Execute(tmpPath);
+      Result[j] := ScalePathD(tmpPath, 1/scale);
+      inc(j);
+    end;
+  finally
+    Free;
+  end;
+  SetLength(Result, j);
 end;
 //------------------------------------------------------------------------------
 

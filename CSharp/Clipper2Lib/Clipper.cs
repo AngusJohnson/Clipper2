@@ -15,6 +15,7 @@
 #nullable enable
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Runtime.CompilerServices;
 
 namespace Clipper2Lib
@@ -25,6 +26,8 @@ namespace Clipper2Lib
 
   public static class Clipper
   {
+    private static readonly string 
+      precision_range_error = "Error: Precision is out of range.";
 
     private static Rect64 maxInvalidRect64 = new Rect64(
       long.MaxValue, long.MaxValue, long.MinValue, long.MinValue);
@@ -41,10 +44,10 @@ namespace Clipper2Lib
     }
 
     public static PathsD Intersect(PathsD subject, PathsD clip, 
-      FillRule fillRule, int roundingDecimalPrecision = 2)
+      FillRule fillRule, int precision = 2)
     {
       return BooleanOp(ClipType.Intersection,
-        subject, clip, fillRule, roundingDecimalPrecision);
+        subject, clip, fillRule, precision);
     }
 
     public static Paths64 Union(Paths64 subject, FillRule fillRule)
@@ -63,10 +66,10 @@ namespace Clipper2Lib
     }
 
     public static PathsD Union(PathsD subject, PathsD clip, 
-      FillRule fillRule, int roundingDecimalPrecision = 2)
+      FillRule fillRule, int precision = 2)
     {
       return BooleanOp(ClipType.Union,
-        subject, clip, fillRule, roundingDecimalPrecision);
+        subject, clip, fillRule, precision);
     }
 
     public static Paths64 Difference(Paths64 subject, Paths64 clip, FillRule fillRule)
@@ -75,10 +78,10 @@ namespace Clipper2Lib
     }
 
     public static PathsD Difference(PathsD subject, PathsD clip, 
-      FillRule fillRule, int roundingDecimalPrecision = 2)
+      FillRule fillRule, int precision = 2)
     {
       return BooleanOp(ClipType.Difference,
-        subject, clip, fillRule, roundingDecimalPrecision);
+        subject, clip, fillRule, precision);
     }
 
     public static Paths64 Xor(Paths64 subject, Paths64 clip, FillRule fillRule)
@@ -87,10 +90,10 @@ namespace Clipper2Lib
     }
 
     public static PathsD Xor(PathsD subject, PathsD clip, 
-      FillRule fillRule, int roundingDecimalPrecision = 2)
+      FillRule fillRule, int precision = 2)
     {
       return BooleanOp(ClipType.Xor, 
-        subject, clip, fillRule, roundingDecimalPrecision);
+        subject, clip, fillRule, precision);
     }
 
     public static Paths64 BooleanOp(ClipType clipType, 
@@ -107,10 +110,10 @@ namespace Clipper2Lib
     }
 
     public static PathsD BooleanOp(ClipType clipType, PathsD subject, PathsD? clip, 
-      FillRule fillRule, int roundingDecimalPrecision = 2)
+      FillRule fillRule, int precision = 2)
     {
       PathsD solution = new PathsD();
-      ClipperD c = new ClipperD(roundingDecimalPrecision);
+      ClipperD c = new ClipperD(precision);
       c.AddSubject(subject);
       if (clip != null)
         c.AddClip(clip);
@@ -130,7 +133,7 @@ namespace Clipper2Lib
       EndType endType, double miterLimit = 2.0, int precision = 2)
     {
       if (precision < -8 || precision > 8)
-        throw new Exception("Error: Precision is out of range.");
+        throw new Exception(precision_range_error);
       double scale = Math.Pow(10, precision);
       Paths64 tmp = ScalePaths64(paths, scale);
       ClipperOffset co = new ClipperOffset(miterLimit);
@@ -141,16 +144,48 @@ namespace Clipper2Lib
 
     public static Path64 RectClip(Rect64 rect, Path64 path)
     {
+      if (rect.IsEmpty() || path.Count == 0) return new Path64();
       RectClip rc = new RectClip(rect);
       return rc.ExecuteInternal(path);
     }
 
     public static Paths64 RectClip(Rect64 rect, Paths64 paths)
     {
+      if (rect.IsEmpty() || paths.Count == 0) return new Paths64();
       RectClip rc = new RectClip(rect);
       return rc.ExecuteInternal(paths);
     }
 
+    public static PathD RectClip(RectD rect, PathD path, int precision = 2)
+    {
+      if (precision < -8 || precision > 8)
+        throw new Exception(precision_range_error);
+      if (rect.IsEmpty() || path.Count == 0) return new PathD();
+      double scale = Math.Pow(10, precision);
+      Rect64 r = ScaleRect(rect, scale);
+      Path64 tmpPath = ScalePath64(path, scale);
+      RectClip rc = new RectClip(r);
+      tmpPath = rc.ExecuteInternal(tmpPath);
+      return ScalePathD(tmpPath, 1 / scale);
+    }
+
+    public static PathsD RectClip(RectD rect, PathsD paths, int precision = 2)
+    {
+      if (precision < -8 || precision > 8)
+        throw new Exception(precision_range_error);
+      if (rect.IsEmpty() || paths.Count == 0) return new PathsD();
+      double scale = Math.Pow(10, precision);
+      Rect64 r = ScaleRect(rect, scale);
+      RectClip rc = new RectClip(r);
+      PathsD tmpPaths = new PathsD(paths.Count);
+      foreach (PathD p in paths)
+      {
+        Path64 tmpPath = ScalePath64(p, scale);
+        tmpPath = rc.ExecuteInternal(tmpPath);
+        tmpPaths.Add(ScalePathD(tmpPath, 1 / scale));
+      }
+      return tmpPaths;
+    }
 
     public static Paths64 MinkowskiSum(Path64 pattern, Path64 path, bool isClosed)
     {
@@ -279,6 +314,20 @@ namespace Clipper2Lib
 #if USINGZ
         z = pt.Z,
 #endif
+      };
+      return result;
+    }
+
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static Rect64 ScaleRect(RectD rec, double scale)
+    {
+      Rect64 result = new Rect64()
+      {
+        left = (long) (rec.left * scale),
+        top = (long) (rec.top * scale),
+        right = (long) (rec.right * scale),
+        bottom = (long) (rec.bottom * scale)
       };
       return result;
     }
@@ -761,7 +810,7 @@ namespace Clipper2Lib
     public static PathD TrimCollinear(PathD path, int precision, bool isOpen = false)
     {
       if (precision < -8 || precision > 8)
-        throw new Exception("Error: Precision is out of range.");
+        throw new Exception(precision_range_error);
       double scale = Math.Pow(10, precision);
       Path64 p = ScalePath64(path, scale);
       p = TrimCollinear(p, isOpen);

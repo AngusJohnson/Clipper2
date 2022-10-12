@@ -366,7 +366,7 @@ type
   end;
 
 resourcestring
-  rsClipper_RoundingErr = 'The decimal rounding value is invalid';
+  rsClipper_PrecisonErr = 'The decimal rounding value is invalid';
 
 implementation
 
@@ -4277,7 +4277,7 @@ begin
   inherited Create;
   if (roundingDecimalPrecision < -8) or
     (roundingDecimalPrecision > 8) then
-      Raise EClipperLibException(rsClipper_RoundingErr);
+      Raise EClipperLibException(rsClipper_PrecisonErr);
   FScale := Math.Power(10, roundingDecimalPrecision);
   FInvScale := 1/FScale;
 end;

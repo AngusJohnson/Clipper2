@@ -341,6 +341,12 @@ namespace Clipper2Lib
         rec.top >= top && rec.bottom <= bottom;
     }
 
+    public bool Intersects(Rect64 rec)
+    {
+      return (Math.Max(left, rec.left) < Math.Min(right, rec.right)) &&
+        (Math.Max(top, rec.top) < Math.Min(bottom, rec.bottom));
+    }
+
     public Path64 AsPath()
     {
       Path64 result = new Path64(4)
@@ -400,10 +406,34 @@ namespace Clipper2Lib
       return new PointD((left + right) / 2, (top + bottom) / 2);
     }
 
-    public bool PtIsInside(PointD pt)
+    public bool Contains(PointD pt)
     {
       return pt.x > left && pt.x < right &&
         pt.y > top && pt.y < bottom;
+    }
+
+    public bool Contains(RectD rec)
+    {
+      return rec.left >= left && rec.right <= right &&
+        rec.top >= top && rec.bottom <= bottom;
+    }
+
+    public bool Intersects(RectD rec)
+    {
+      return (Math.Max(left, rec.left) < Math.Min(right, rec.right)) &&
+        (Math.Max(top, rec.top) < Math.Min(bottom, rec.bottom));
+    }
+
+    public PathD AsPath()
+    {
+      PathD result = new PathD(4)
+      {
+        new PointD(left, top),
+        new PointD(right, top),
+        new PointD(right, bottom),
+        new PointD(left, bottom)
+      };
+      return result;
     }
 
   }

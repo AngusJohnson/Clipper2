@@ -26,6 +26,7 @@ set(CLIPPER2_INC
 set(CLIPPER2_SRC
   Clipper2Lib/src/clipper.engine.cpp
   Clipper2Lib/src/clipper.offset.cpp
+  Clipper2Lib/src/clipper.rectclip.cpp
 )
 
 set(PCFILE "${CMAKE_CURRENT_BINARY_DIR}/Clipper2.pc")

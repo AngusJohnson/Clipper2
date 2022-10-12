@@ -7,10 +7,7 @@
 *******************************************************************************/
 
 using System;
-using System.Collections.Generic;
 using System.IO;
-using System.Reflection;
-using System.Reflection.PortableExecutable;
 using Clipper2Lib;
 
 namespace ClipperDemo1
@@ -86,12 +83,26 @@ namespace ClipperDemo1
       long y = rand.Next(maxHeight);
       return new Point64(x, y);
     }
+    private static PointD MakeRandomPtD(int maxWidth, int maxHeight, Random rand)
+    {
+      double x = rand.Next(maxWidth);
+      double y = rand.Next(maxHeight);
+      return new PointD(x, y);
+    }
 
     public static Path64 MakeRandomPath(int width, int height, int count, Random rand)
     {
       Path64 result = new(count);
       for (int i = 0; i < count; ++i)
         result.Add(MakeRandomPt(width, height, rand));
+      return result;
+    }
+
+    public static PathD MakeRandomPathD(int width, int height, int count, Random rand)
+    {
+      PathD result = new(count);
+      for (int i = 0; i < count; ++i)
+        result.Add(MakeRandomPtD(width, height, rand));
       return result;
     }
 

@@ -9,7 +9,6 @@ uses
   ShellAPI,
   SysUtils,
   Clipper in '..\..\Clipper2Lib\Clipper.pas',
-  Clipper.RectClip in '..\..\Clipper2Lib\Clipper.RectClip.pas',
   Clipper.Core in '..\..\Clipper2Lib\Clipper.Core.pas',
   Clipper.SVG in '..\..\Utils\Clipper.SVG.pas',
   Timer in '..\..\Utils\Timer.pas',
@@ -52,15 +51,14 @@ const
 
   procedure TestRandomPoly(count: integer);
   var
-    i: integer;
-    sub, clp, sol: TPaths64;
-    rec: TRect64;
+    sub, clp, sol: TPathsD;
+    rec: TRectD;
   begin
-    rec := Rect64(200, 200, width - 200, height - 200);
+    rec := RectD(200, 200, width - 200, height - 200);
     SetLength(clp, 1);
     clp[0] := rec.AsPath;
     SetLength(sub, 1);
-    sub[0] := MakeRandomPath(width, height, count);
+    sub[0] := PathD(MakeRandomPath(width, height, count));
     sol := RectClip(rec, sub);
 
     //display
