@@ -19,11 +19,10 @@ void LoadPaths(const std::string& filename, Paths64& paths);
 
 void DoEllipses();
 void DoRectangles();
-void DoRandomPoly();
+void DoRandomPoly(int count);
 void PressEnterToExit();
 
 const int width = 800, height = 600;
-Paths64 sub, clp, sol, store;
 
 int main(int argc, char* argv[])
 {
@@ -31,27 +30,26 @@ int main(int argc, char* argv[])
 
   DoEllipses();
   DoRectangles();
-  DoRandomPoly();
+  DoRandomPoly(31);
 
   PressEnterToExit();
 }
 
 void DoEllipses()
 {
-  clp.clear();
-  sub.clear();
+  PathsD sub, clp, sol, store;
 
   const int cnt = 100;
   const int radius = 100;
-  Path64 ellipse = Ellipse(Rect64(0, 0, radius, radius));
-  Rect64 rect = Rect64(100, 100, width - 100, height - 100);
+  PathD ellipse = Ellipse(RectD(0, 0, radius, radius));
+  RectD rect = RectD(100, 100, width - 100, height - 100);
   clp.push_back(rect.AsPath());
   for (int i = 0; i < cnt; ++i)
     sub.push_back(TranslatePath(ellipse,
       rand() % (width - radius), rand() % (height - radius)));
 
   //////////////////////////////////
-  sol = RectClip64(rect, sub);
+  sol = RectClip(rect, sub);
   //////////////////////////////////
 
   FillRule fr = FillRule::EvenOdd;
@@ -81,9 +79,7 @@ Path64 MakeRandomRectangle(int minWidth, int minHeight, int maxWidth, int maxHei
 
 void DoRectangles()
 {
-  clp.clear();
-  sub.clear();
-
+  Paths64 sub, clp, sol, store;
   const int cnt = 1000;
   Rect64 rect = Rect64(100, 100, width - 100, height - 100);
   clp.push_back(rect.AsPath());
@@ -93,7 +89,7 @@ void DoRectangles()
   //////////////////////////////////
   {
     Timer t("\nRectClip");
-    sol = RectClip64(rect, sub);
+    sol = RectClip(rect, sub);
   }
   //////////////////////////////////
 
@@ -112,11 +108,9 @@ void DoRectangles()
   System("rectclip2.svg");
 }
 
-void DoRandomPoly()
+void DoRandomPoly(int count)
 {
-  const int cnt = 59;
-  clp.clear();
-  sub.clear();
+  Paths64 sub, clp, sol, store;
   Rect64 rect;
 
   bool load_saved = false;//true;//
@@ -136,7 +130,7 @@ void DoRandomPoly()
     // generate random poly
     rect = Rect64(200, 200, width - 200, height - 200);
     clp.push_back(rect.AsPath());
-    sub.push_back(MakeRandomPoly(width, height, cnt));
+    sub.push_back(MakeRandomPoly(width, height, count));
 
     // save to file
     store.push_back(sub[0]);
@@ -145,7 +139,7 @@ void DoRandomPoly()
   }
 
   //////////////////////////////////
-  sol = RectClip64(rect, sub);
+  sol = RectClip(rect, sub);
   //////////////////////////////////
 
   FillRule fr = FillRule::EvenOdd;
