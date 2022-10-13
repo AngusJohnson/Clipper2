@@ -203,6 +203,7 @@ end;
 //------------------------------------------------------------------------------
 
 function GetAdjacentLocation(loc: TLocation; isClockwise: Boolean): TLocation;
+{$IFDEF INLINING} inline; {$ENDIF}
 var
   delta: integer;
 begin

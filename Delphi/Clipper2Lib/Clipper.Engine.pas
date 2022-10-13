@@ -195,6 +195,7 @@ type
     function  StartOpenPath(e: PActive; const pt: TPoint64): POutPt;
     procedure UpdateEdgeIntoAEL(var e: PActive);
     function  IntersectEdges(e1, e2: PActive; pt: TPoint64): POutPt;
+    procedure DeleteEdges(var e: PActive);
     procedure DeleteFromAEL(e: PActive);
     procedure AdjustCurrXAndCopyToSEL(topY: Int64);
     procedure DoIntersections(const topY: Int64);
@@ -1171,7 +1172,7 @@ var
 begin
   try
     // in case of exceptions ...
-    while assigned(FActives) do DeleteFromAEL(FActives);
+    DeleteEdges(FActives);
     while assigned(FScanLine) do PopScanLine(dummy);
     DisposeIntersectNodes;
 
@@ -2960,6 +2961,19 @@ begin
   if Result then Exit;
   if Assigned(op) then
     SafeDisposeOutPts(op);
+end;
+//------------------------------------------------------------------------------
+
+procedure TClipperBase.DeleteEdges(var e: PActive);
+var
+  e2: PActive;
+begin
+  while Assigned(e) do
+  begin
+    e2 := e;
+    e := e.nextInAEL;
+    Dispose(e2);
+  end;
 end;
 //------------------------------------------------------------------------------
 

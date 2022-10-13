@@ -3,7 +3,7 @@ unit Clipper;
 (*******************************************************************************
 * Author    :  Angus Johnson                                                   *
 * Version   :  Clipper2 - ver.1.0.6                                            *
-* Date      :  11 October 2022                                                 *
+* Date      :  14 October 2022                                                 *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  This module provides a simple interface to the Clipper Library  *
@@ -370,6 +370,7 @@ end;
 function RectClip(const rect: TRect64; const paths: TPaths64): TPaths64;
 var
   i,j, len: integer;
+  pathRec: TRect64;
 begin
   Result := nil;
   len := Length(paths);
@@ -380,8 +381,13 @@ begin
   try
     for i := 0 to len -1 do
     begin
-      if not rect.Intersects(GetBounds(paths[i])) then Continue;
-      Result[j] := Execute(paths[i]);
+      pathRec := GetBounds(paths[i]);
+      if not rect.Intersects(pathRec) then
+        Continue
+      else if rect.Contains(pathRec) then
+        Result[j] := Copy(paths[i], 0, MaxInt)
+      else
+        Result[j] := Execute(paths[i]);
       inc(j);
     end;
   finally
@@ -417,6 +423,7 @@ var
   scale: double;
   tmpPath: TPath64;
   rec: TRect64;
+  pathRec: TRectD;
 begin
   if (precision < -8) or (precision > 8) then
     Raise EClipperLibException(rsClipper_PrecisonErr);
@@ -431,10 +438,17 @@ begin
   try
     for i := 0 to len -1 do
     begin
-      if not rect.Intersects(GetBounds(paths[i])) then Continue;
-      tmpPath := ScalePath(paths[i], scale);
-      tmpPath := Execute(tmpPath);
-      Result[j] := ScalePathD(tmpPath, 1/scale);
+      pathRec := GetBounds(paths[i]);
+      if not rect.Intersects(pathRec) then
+        Continue
+      else if rect.Contains(pathRec) then
+        Result[j] := Copy(paths[i], 0, MaxInt)
+      else
+      begin
+        tmpPath := ScalePath(paths[i], scale);
+        tmpPath := Execute(tmpPath);
+        Result[j] := ScalePathD(tmpPath, 1/scale);
+      end;
       inc(j);
     end;
   finally

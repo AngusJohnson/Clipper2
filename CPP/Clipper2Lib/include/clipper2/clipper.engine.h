@@ -169,7 +169,7 @@ namespace Clipper2Lib {
 		bool minima_list_sorted_ = false;
 		bool using_polytree_ = false;
 		bool succeeded_ = true;
-		Active *actives_ = nullptr;
+		Active* actives_ = nullptr;
 		Active *sel_ = nullptr;
 		Joiner *horz_joiners_ = nullptr;
 		std::vector<LocalMinima*> minima_list_;		//pointers in case of memory reallocs
@@ -185,6 +185,7 @@ namespace Clipper2Lib {
 		bool PopLocalMinima(int64_t y, LocalMinima *&local_minima);
 		void DisposeAllOutRecs();
 		void DisposeVerticesAndLocalMinima();
+		void DeleteEdges(Active*& e);
 		void AddLocMin(Vertex &vert, PathType polytype, bool is_open);
 		bool IsContributingClosed(const Active &e) const;
 		inline bool IsContributingOpen(const Active &e) const;

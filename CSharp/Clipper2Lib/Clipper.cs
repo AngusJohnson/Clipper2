@@ -1,7 +1,7 @@
 ﻿/*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Version   :  Clipper2 - ver.1.0.5                                            *
-* Date      :  2 October 2022                                                  *
+* Version   :  Clipper2 - ver.1.0.6                                            *
+* Date      :  14 October 2022                                                 *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  This module contains simple functions that will likely cover    *
@@ -152,8 +152,20 @@ namespace Clipper2Lib
     public static Paths64 RectClip(Rect64 rect, Paths64 paths)
     {
       if (rect.IsEmpty() || paths.Count == 0) return new Paths64();
+
+      Paths64 result = new Paths64(paths.Count);
       RectClip rc = new RectClip(rect);
-      return rc.ExecuteInternal(paths);
+      foreach(Path64 path in paths)
+      {
+        Rect64 pathRec = Clipper.GetBounds(path);
+        if (!rect.Intersects(pathRec))
+          continue;
+        else if (rect.Contains(pathRec))
+          result.Add(path);
+        else
+          result.Add(rc.ExecuteInternal(path));
+      }
+      return result;
     }
 
     public static PathD RectClip(RectD rect, PathD path, int precision = 2)
@@ -177,14 +189,22 @@ namespace Clipper2Lib
       double scale = Math.Pow(10, precision);
       Rect64 r = ScaleRect(rect, scale);
       RectClip rc = new RectClip(r);
-      PathsD tmpPaths = new PathsD(paths.Count);
+      PathsD result = new PathsD(paths.Count);
       foreach (PathD p in paths)
       {
-        Path64 tmpPath = ScalePath64(p, scale);
-        tmpPath = rc.ExecuteInternal(tmpPath);
-        tmpPaths.Add(ScalePathD(tmpPath, 1 / scale));
+        RectD pathRec = Clipper.GetBounds(p);
+        if (!rect.Intersects(pathRec))
+          continue;
+        else if (rect.Contains(pathRec))
+          result.Add(p);
+        else
+        {
+          Path64 p64 = ScalePath64(p, scale);
+          p64 = rc.ExecuteInternal(p64);
+          result.Add(ScalePathD(p64, 1 / scale));
+        }
       }
-      return tmpPaths;
+      return result;
     }
 
     public static Paths64 MinkowskiSum(Path64 pattern, Path64 path, bool isClosed)
@@ -531,6 +551,19 @@ namespace Clipper2Lib
           if (pt.Y > result.bottom) result.bottom = pt.Y;
         }
       return result.IsEmpty() ? new Rect64() : result;
+    }
+
+    public static RectD GetBounds(PathD path)
+    {
+      RectD result = MaxInvalidRectD;
+      foreach (PointD pt in path)
+      {
+        if (pt.x < result.left) result.left = pt.x;
+        if (pt.x > result.right) result.right = pt.x;
+        if (pt.y < result.top) result.top = pt.y;
+        if (pt.y > result.bottom) result.bottom = pt.y;
+      }
+      return result.IsEmpty() ? new RectD() : result;
     }
 
     public static RectD GetBounds(PathsD paths)
