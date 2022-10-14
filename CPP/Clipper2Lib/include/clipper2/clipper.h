@@ -273,7 +273,11 @@ namespace Clipper2Lib {
       else if (rect.Contains(pathRec))
         result.push_back(p);
       else
-        result.push_back(rc.Execute(p));
+      {
+        Path64 path = rc.Execute(p);
+        if (!path.empty())
+          result.push_back(std::move(path));
+      }
     }
     return result;
   }
