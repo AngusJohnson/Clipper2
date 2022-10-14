@@ -273,7 +273,10 @@ namespace Clipper2Lib {
       else if (rect.Contains(pathRec))
         result.push_back(p);
       else
-        result.push_back(rc.Execute(p));
+      {
+        Path64 p2 = rc.Execute(p);
+        if (!p2.empty()) result.push_back(std::move(p2));
+      }
     }
     return result;
   }
@@ -311,7 +314,9 @@ namespace Clipper2Lib {
       else
       {
         Path64 p = ScalePath<int64_t, double>(path, scale);
-        result.push_back(ScalePath<double, int64_t>(rc.Execute(p), 1 / scale));
+        p = rc.Execute(p);
+        if (!p.empty()) 
+          result.push_back(ScalePath<double, int64_t>(p, 1 / scale));
       }
     }
     return result;

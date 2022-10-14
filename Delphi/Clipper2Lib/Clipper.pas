@@ -387,7 +387,10 @@ begin
       else if rect.Contains(pathRec) then
         Result[j] := Copy(paths[i], 0, MaxInt)
       else
+      begin
         Result[j] := Execute(paths[i]);
+        if Result[j] = nil then Continue;
+      end;
       inc(j);
     end;
   finally
@@ -447,6 +450,7 @@ begin
       begin
         tmpPath := ScalePath(paths[i], scale);
         tmpPath := Execute(tmpPath);
+        if tmpPath = nil then Continue;
         Result[j] := ScalePathD(tmpPath, 1/scale);
       end;
       inc(j);

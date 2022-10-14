@@ -163,7 +163,10 @@ namespace Clipper2Lib
         else if (rect.Contains(pathRec))
           result.Add(path);
         else
-          result.Add(rc.ExecuteInternal(path));
+        {
+          Path64 p = rc.ExecuteInternal(path);
+          if (p.Count > 0) result.Add(p);
+        }
       }
       return result;
     }
@@ -201,7 +204,8 @@ namespace Clipper2Lib
         {
           Path64 p64 = ScalePath64(p, scale);
           p64 = rc.ExecuteInternal(p64);
-          result.Add(ScalePathD(p64, 1 / scale));
+          if (p64.Count > 0)
+            result.Add(ScalePathD(p64, 1 / scale));
         }
       }
       return result;
