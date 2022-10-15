@@ -252,8 +252,12 @@ namespace Clipper2Lib {
 
   inline Path64 RectClip(const Rect64& rect, const Path64& path)
   {
-    if (rect.IsEmpty() || path.empty() ||
-      !rect.Contains(Bounds(path))) return Path64();
+    if (rect.IsEmpty() || path.empty()) return Path64();
+
+    Rect64 pathRec = Bounds(path);
+    if (!rect.Intersects(pathRec)) return Path64();
+    if (rect.Contains(pathRec)) return path;
+
     RectClip64 rc(rect);
     return rc.Execute(path);
   }
