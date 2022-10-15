@@ -53,8 +53,8 @@ TEST(Clipper2Tests, TestRectClip)
   EXPECT_TRUE(sol.empty());
 
   sub.clear();
-  sub.push_back(MakePath("2089,662 3661,1126 4029,3038 2345,3329 2332,2629 2433,1401 2150,1263 403,1721"));
-  rect = Rect64(2379, 1646, 3221, 2488);
+  sub.push_back(MakePath("208,66 366,112 402,303 234,332 233,262 243,140 215,126 40,172"));
+  rect = Rect64(237, 164, 322, 248);
   sol = RectClip(rect, sub);
   const auto solBounds = Bounds(sol);
   EXPECT_EQ(solBounds.Width(), rect.Width());
