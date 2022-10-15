@@ -2,8 +2,7 @@ unit Clipper.RectClip;
 
 (*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Version   :  Clipper2 - ver.1.0.6                                            *
-* Date      :  11 October 2022                                                 *
+* Date      :  15 October 2022                                                 *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  FAST rectangular clipping                                       *
@@ -498,7 +497,8 @@ begin
     Exit;
   end;
 
-  if (loc <> locInside) and (loc <> fFirstCrossLoc) then
+  if (loc <> locInside) and
+    ((loc <> fFirstCrossLoc) or (fStartLocs.Count > 2)) then
   begin
     if (fStartLocs.Count > 0) then
     begin

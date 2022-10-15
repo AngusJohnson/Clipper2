@@ -1,7 +1,6 @@
 ﻿/*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Version   :  Clipper2 - ver.1.0.6                                            *
-* Date      :  11 October 2022                                                 *
+* Date      :  15 October 2022                                                 *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  FAST rectangular clipping                                       *
@@ -435,7 +434,8 @@ namespace Clipper2Lib
         return new Path64();        
       }
 
-      if (loc != Location.inside && loc != firstCross_)
+      if (loc != Location.inside && 
+        (loc != firstCross_ || startLocs_.Count > 2))
       {
         if (startLocs_.Count > 0)
         {

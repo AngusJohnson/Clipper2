@@ -1,7 +1,6 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Version   :  Clipper2 - ver.1.0.6                                            *
-* Date      :  11 October 2022                                                 *
+* Date      :  15 October 2022                                                 *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  FAST rectangular clipping                                       *
@@ -339,7 +338,7 @@ namespace Clipper2Lib {
 
       if (i > highI) break;
       Point64 ip, ip2;
-      Point64 prev_pt = (i) ? path[i - 1] : path[highI];
+      Point64 prev_pt = (i) ? path[static_cast<size_t>(i - 1)] : path[highI];
 
       crossing_loc = loc;
       if (!GetIntersection(rectPath_, path[i], prev_pt, crossing_loc, ip))
@@ -434,7 +433,8 @@ namespace Clipper2Lib {
         return Path64();
     }
 
-    if (loc != Location::Inside && loc != first_cross_)
+    if (loc != Location::Inside && 
+      (loc != first_cross_ || start_locs_.size() > 2))
     {
       if (start_locs_.size() > 0)
       {

@@ -1,7 +1,6 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Version   :  Clipper2 - ver.1.0.5                                            *
-* Date      :  2 October 2022                                                  *
+* Date      :  15 October 2022                                                 *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  This is the main polygon clipping module                        *
@@ -147,6 +146,7 @@ namespace Clipper2Lib {
 		if ((currentY == ae.top.y) || (ae.top.x == ae.bot.x)) return ae.top.x;
 		else if (currentY == ae.bot.y) return ae.bot.x;
 		else return ae.bot.x + static_cast<int64_t>(std::round(ae.dx * (currentY - ae.bot.y)));
+		//nb: std::round above substantially *improves* performance
 	}
 
 
@@ -1230,8 +1230,11 @@ namespace Clipper2Lib {
 				if (!IsHorizontal(*right_bound) &&
 					TestJoinWithNext1(*right_bound))
 				{
+#pragma warning(push)							// right_bound->next_in_ael & right_bound->outrec 
+#pragma warning(disable:6011)			// will always be assigned here
 					OutPt* op = AddOutPt(*right_bound->next_in_ael, right_bound->bot);
 					AddJoin(right_bound->outrec->pts, op);
+#pragma warning(pop)
 				}
 
 				if (IsHorizontal(*right_bound))

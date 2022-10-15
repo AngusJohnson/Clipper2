@@ -1,7 +1,6 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Version   :  Clipper2 - ver.1.0.6                                            *
-* Date      :  14 October 2022                                                 *
+* Date      :  15 October 2022                                                 *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  This module provides a simple interface to the Clipper Library  *
@@ -253,11 +252,9 @@ namespace Clipper2Lib {
   inline Path64 RectClip(const Rect64& rect, const Path64& path)
   {
     if (rect.IsEmpty() || path.empty()) return Path64();
-
     Rect64 pathRec = Bounds(path);
     if (!rect.Intersects(pathRec)) return Path64();
     if (rect.Contains(pathRec)) return path;
-
     RectClip64 rc(rect);
     return rc.Execute(path);
   }

@@ -1,7 +1,6 @@
 ﻿/*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Version   :  Clipper2 - ver.1.0.5                                            *
-* Date      :  2 October 2022                                                  *
+* Date      :  15 October 2022                                                 *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  Core structures and functions for the Clipper Library           *
@@ -440,27 +439,30 @@ namespace Clipper2Lib
 
   public class Path64 : List<Point64> 
   {
+    private Path64() : base() { }
     public Path64(int capacity = 0) : base(capacity) { }
     public Path64(IEnumerable<Point64> path) : base(path) { }
   }
   public class Paths64 : List<Path64>
   {
+    private Paths64() : base() { }
     public Paths64(int capacity = 0) : base(capacity) { }
     public Paths64(IEnumerable<Path64> paths) : base(paths) { }
   }
 
   public class PathD : List<PointD>
   {
+    private PathD() : base() { }
     public PathD(int capacity = 0) : base(capacity) { }
     public PathD(IEnumerable<PointD> path) : base(path) { }
   }
 
   public class PathsD : List<PathD>
   {
+    private PathsD() : base() { }
     public PathsD(int capacity = 0) : base(capacity) { }
     public PathsD(IEnumerable<PathD> paths) : base(paths) { }
   }
-
 
   // Note: all clipping operations except for Difference are commutative.
   public enum ClipType
