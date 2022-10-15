@@ -18,6 +18,17 @@ namespace Clipper2Lib {
   // Miscellaneous methods
   //------------------------------------------------------------------------------
 
+  inline PointInPolygonResult Path1ContainsPath2(Path64 path1, Path64 path2)
+  {
+    PointInPolygonResult result = PointInPolygonResult::IsOn;
+    for(const Point64& pt : path2)
+    {
+      result = PointInPolygon(pt, path1);
+      if (result != PointInPolygonResult::IsOn) break;
+    }
+    return result;
+  }
+
   inline bool GetLocation(const Rect64& rec,
     const Point64& pt, Location& loc)
   {
@@ -245,7 +256,7 @@ namespace Clipper2Lib {
   }
 
   void RectClip64::GetNextLocation(const Path64& path,
-      Location& loc, size_t& i, size_t highI)
+      Location& loc, int& i, int highI)
   {
     switch (loc)
     {
@@ -304,20 +315,19 @@ namespace Clipper2Lib {
     if (rect_.IsEmpty() || path.size() < 3) return Path64();
 
     Reset();
-    size_t i = 0, highI = path.size() - 1;
+    int i = 0, highI = static_cast<int>(path.size()) - 1;
     Location prev = Location::Inside, loc;
     Location crossing_loc = Location::Inside;
     Location first_cross_ = Location::Inside;
-    bool last_on_boundary = !GetLocation(rect_, path[highI], loc);
-
-    if (last_on_boundary)
+    if (!GetLocation(rect_, path[highI], loc))
     {
       i = highI - 1;
-      while (i > 0 && !GetLocation(rect_, path[i], prev)) --i;
-      if (i == 0 && !GetLocation(rect_, path[0], prev)) return path;
-      if (prev == Location::Inside) loc = prev;
+      while (i >= 0 && !GetLocation(rect_, path[i], prev)) --i;
+      if (i < 0) return path;
+      if (prev == Location::Inside) loc = Location::Inside;
       i = 0;
     }
+    Location starting_loc = loc;
 
     ///////////////////////////////////////////////////
     while (i <= highI)
@@ -415,10 +425,13 @@ namespace Clipper2Lib {
 
     if (first_cross_ == Location::Inside)
     {
+      if (starting_loc == Location::Inside) return path;
       Rect64 tmp_rect = Bounds(path);
-      if (tmp_rect.Contains(rect_)) return rectPath_;
-      else if (rect_.Contains(tmp_rect)) return path;
-      else return Path64();
+      if (tmp_rect.Contains(rect_) &&
+        Path1ContainsPath2(path, rectPath_) != 
+          PointInPolygonResult::IsOutside) return rectPath_;
+      else 
+        return Path64();
     }
 
     if (loc != Location::Inside && loc != first_cross_)
@@ -443,7 +456,7 @@ namespace Clipper2Lib {
     // tidy up duplicates and collinear segments
     Path64 res;
     res.reserve(result_.size());
-    size_t k = 0; highI = result_.size() - 1;
+    size_t k = 0; highI = static_cast<int>(result_.size()) - 1;
     Point64 prev_pt = result_[highI];
     res.push_back(result_[0]);
     Path64::const_iterator cit;

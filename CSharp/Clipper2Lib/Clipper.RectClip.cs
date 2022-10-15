@@ -39,6 +39,17 @@ namespace Clipper2Lib
       rectPath_ = rect_.AsPath();
     }
 
+    private static PointInPolygonResult Path1ContainsPath2(Path64 path1, Path64 path2)
+    {
+      PointInPolygonResult result = PointInPolygonResult.IsOn;
+      foreach (Point64 pt in path2)
+      {
+        result = Clipper.PointInPolygon(pt, path1);
+        if (result != PointInPolygonResult.IsOn) break;
+      }
+      return result;
+    }
+
     private static bool IsClockwise(Location prev, Location curr, 
       Point64 prevPt, Point64 currPt, Point64 rectMidPoint)
     {
@@ -307,17 +318,17 @@ namespace Clipper2Lib
       Reset();      
       int i = 0, highI = path.Count - 1;
       firstCross_ = Location.inside;
-      Location crossingLoc = Location.inside;
-      bool last_on_boundary = !GetLocation(rect_, path[highI], out Location loc);
-      Location prev = loc;
-      if (last_on_boundary)
+      Location crossingLoc = Location.inside, prev;
+      if (!GetLocation(rect_, path[highI], out Location loc))
       {
+        prev = loc;
         i = highI - 1;
         while (i >= 0 && !GetLocation(rect_, path[i], out prev)) i--;
         if (i < 0) return path;
-        if (prev == Location.inside) loc = prev;
+        if (prev == Location.inside) loc = Location.inside;
         i = 0;
       }
+      Location startingLoc = loc;
 
       ///////////////////////////////////////////////////
       while (i <= highI)
@@ -416,12 +427,13 @@ namespace Clipper2Lib
       // path must be entering rect
       if (firstCross_ == Location.inside)
       {
+        if (startingLoc == Location.inside) return path;
         Rect64 tmp_rect = Clipper.GetBounds(path);
-        if (tmp_rect.Contains(rect_)) return rectPath_;
-        else if (rect_.Contains(tmp_rect)) return path;
-        else return new Path64();
+        if (tmp_rect.Contains(rect_) &&
+          Path1ContainsPath2(path, rectPath_) 
+            != PointInPolygonResult.IsOutside) return rectPath_;
+        return new Path64();        
       }
-
 
       if (loc != Location.inside && loc != firstCross_)
       {

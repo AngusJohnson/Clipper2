@@ -31,7 +31,7 @@ namespace Clipper2Lib
 
     void Reset();
     void GetNextLocation(const Path64& path,
-      Location& loc, size_t& i, size_t highI);
+      Location& loc, int& i, int highI);
     void AddCorner(Location prev, Location curr);
     void AddCorner(Location& loc, bool isClockwise);
 

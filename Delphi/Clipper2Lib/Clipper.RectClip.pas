@@ -339,16 +339,29 @@ begin
 end;
 //------------------------------------------------------------------------------
 
+function Path1ContainsPath2(const path1, path2: TPath64): TPointInPolygonResult;
+var
+  i: integer;
+begin
+  Result := pipOutside;
+  for i := 0 to High(path2) do
+  begin
+    Result := PointInPolygon(path2[i], path1);
+    if Result <> pipOn then break;
+  end;
+end;
+//------------------------------------------------------------------------------
+
 function TRectClip.Execute(const path: TPath64): TPath64;
 var
   i,k, highI    : integer;
   prevPt,ip,ip2 : TPoint64;
   loc, prev     : TLocation;
   loc2          : TLocation;
+  startingLoc   : TLocation;
   crossingLoc   : TLocation;
   prevCrossLoc  : TLocation;
   tmpRect       : TRect64;
-  lastOnRect    : Boolean;
   isClockw      : Boolean;
 begin
   Result := nil;
@@ -360,8 +373,7 @@ begin
   crossingLoc     := locInside;
   fFirstCrossLoc   := locInside;
 
-  lastOnRect := not GetLocation(fRect, path[highI], loc);
-  if lastOnRect then
+  if not GetLocation(fRect, path[highI], loc) then
   begin
     i := highI - 1;
     while (i >= 0) and
@@ -376,6 +388,7 @@ begin
       loc := locInside;
     i := 0;
   end;
+  startingLoc := loc;
 
   ///////////////////////////////////////////////////
   while i <= highI do
@@ -468,13 +481,20 @@ begin
 
   if (fFirstCrossLoc = locInside) then
   begin
-    tmpRect := GetBounds(path);
-    if tmpRect.Contains(fRect) then
-      Result := fRectPath
-    else if fRect.Contains(tmpRect) then
-      Result := path
-    else
-      Result := nil;
+    // path never intersects with rect
+
+    if startingLoc <> locInside then
+    begin
+      // path is outside rect but may or may not contain rect
+      tmpRect := GetBounds(path);
+      if tmpRect.Contains(fRect) and
+        (Path1ContainsPath2(path, fRectPath) <> pipOutside) then
+          Result := fRectPath
+      else
+        result := nil;
+    end
+    else Result := path;
+
     Exit;
   end;
 

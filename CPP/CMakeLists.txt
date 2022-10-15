@@ -152,6 +152,7 @@ if(CLIPPER2_TESTS)
     Tests/TestPolytreeIntersection.cpp
     Tests/TestPolytreeUnion.cpp
     Tests/TestRandomPaths.cpp
+    Tests/TestRectClip.cpp
     Tests/TestTrimCollinear.cpp
   )
   add_executable(ClipperTests ${ClipperTests_SRC})
