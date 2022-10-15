@@ -1230,11 +1230,8 @@ namespace Clipper2Lib {
 				if (!IsHorizontal(*right_bound) &&
 					TestJoinWithNext1(*right_bound))
 				{
-#pragma warning(push)							// right_bound->next_in_ael & right_bound->outrec 
-#pragma warning(disable:6011)			// will always be assigned here
 					OutPt* op = AddOutPt(*right_bound->next_in_ael, right_bound->bot);
 					AddJoin(right_bound->outrec->pts, op);
-#pragma warning(pop)
 				}
 
 				if (IsHorizontal(*right_bound))
