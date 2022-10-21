@@ -2,7 +2,7 @@ unit Clipper.RectClip;
 
 (*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  15 October 2022                                                 *
+* Date      :  21 October 2022                                                 *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  FAST rectangular clipping                                       *
@@ -20,12 +20,12 @@ type
   TLocation = (locLeft, locTop, locRight, locBottom, locInside);
 
   TRectClip = class
-  private
+  protected
     fResultCnt      : integer;
     fCapacity       : integer;
     fRect           : TRect64;
     fRectPath       : TPath64;
-    fRectMidPt   : TPoint64;
+    fRectMidPt      : TPoint64;
     fFirstCrossLoc  : TLocation;
     fResult         : TPath64;
     fStartLocs      : TList;
@@ -41,8 +41,14 @@ type
   public
     constructor Create(const rect: TRect64);
     destructor Destroy; override;
-    function Execute(const path: TPath64): TPath64; overload;
-    function Execute(const paths: TPaths64): TPaths64; overload;
+    function Execute(const path: TPath64): TPath64;
+  end;
+
+  TRectClipLines = class(TRectClip)
+  private
+    function GetCurrentPath: TPath64;
+  public
+    function Execute(const path: TPath64): TPaths64;
   end;
 
 implementation
@@ -244,7 +250,6 @@ begin
   fResultCnt := 0;
   fCapacity := 0;
   fResult := nil;
-  fStartLocs.Clear;
 end;
 //------------------------------------------------------------------------------
 
@@ -368,6 +373,7 @@ begin
   Reset;
 
   i := 0;
+  fStartLocs.Clear;
   highI := Length(path) -1;
   crossingLoc     := locInside;
   fFirstCrossLoc   := locInside;
@@ -542,16 +548,105 @@ begin
   else
     SetLength(Result, k +1);
 end;
+
+//------------------------------------------------------------------------------
+// TRectClipLines
 //------------------------------------------------------------------------------
 
-function TRectClip.Execute(const paths: TPaths64): TPaths64;
-var
-  i, len: integer;
+function TRectClipLines.GetCurrentPath: TPath64;
 begin
-  len := Length(paths);
-  SetLength(Result, len);
-  for i := 0 to len -1 do
-    Result[i] := Execute(paths[i]);
+  SetLength(fResult, fResultCnt);
+  Result := fResult;
+  Reset;
+end;
+//------------------------------------------------------------------------------
+
+function TRectClipLines.Execute(const path: TPath64): TPaths64;
+var
+  i, highI      : integer;
+  resCnt        : integer;
+  prevPt,ip,ip2 : TPoint64;
+  loc, prev     : TLocation;
+  crossingLoc   : TLocation;
+begin
+  resCnt := 0;
+  Result := nil;
+  if (Length(path) < 2) or fRect.IsEmpty then Exit;
+
+  Reset;
+  i := 1;
+  highI := Length(path) -1;
+
+  if not GetLocation(fRect, path[0], loc) then
+  begin
+    while (i <= highI) and
+      not GetLocation(fRect, path[i], prev) do
+        inc(i);
+    if (i > highI) then
+    begin
+      SetLength(Result, 1);
+      Result[0] := path;
+      Exit;
+    end;
+    if (prev = locInside) then
+      loc := locInside;
+    i := 1;
+  end;
+
+  if loc = locInside then Add(path[0]);
+  ///////////////////////////////////////////////////
+  while i <= highI do
+  begin
+    prev := loc;
+    GetNextLocation(path, loc, i, highI);
+    if i > highI then Break;
+    prevPt := path[i-1];
+    crossingLoc := loc;
+    if not GetIntersection(fRectPath, path[i], prevPt, crossingLoc, ip) then
+    begin
+      // must be remaining outside
+      inc(i);
+      Continue;
+    end;
+
+    ////////////////////////////////////////////////////
+    // we must be crossing the rect boundary to get here
+    ////////////////////////////////////////////////////
+
+    if (loc = locInside) then // path must be entering rect
+    begin
+      Add(ip);
+    end
+    else if (prev <> locInside) then
+    begin
+      // passing right through rect. 'ip' here will be the second
+      // intersect pt but we'll also need the first intersect pt (ip2)
+      crossingLoc := prev;
+      GetIntersection(fRectPath, prevPt, path[i], crossingLoc, ip2);
+
+      Add(ip2);
+      Add(ip);
+      inc(resCnt);
+      SetLength(Result, resCnt);
+      Result[resCnt -1] := GetCurrentPath;
+    end else // path must be exiting rect
+    begin
+      Add(ip);
+      inc(resCnt);
+      SetLength(Result, resCnt);
+      Result[resCnt -1] := GetCurrentPath;
+    end;
+
+  end; //while i <= highI
+  ///////////////////////////////////////////////////
+
+  if fResultCnt > 1 then
+  begin
+    inc(resCnt);
+    SetLength(Result, resCnt);
+    Result[resCnt -1] := GetCurrentPath;
+  end;
+  SetLength(Result, resCnt);
 end;
 
 //------------------------------------------------------------------------------

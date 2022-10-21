@@ -1,6 +1,6 @@
 ﻿/*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  15 October 2022                                                 *
+* Date      :  21 October 2022                                                 *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  FAST rectangular clipping                                       *
@@ -16,26 +16,27 @@ using System.Net.NetworkInformation;
 
 namespace Clipper2Lib
 {
-  public class RectClip
+    public class RectClip
   {
-    private readonly Rect64 rect_;
-    private readonly Point64 mp_;
-    private readonly Path64 rectPath_;
-    private Location firstCross_;
-    private readonly Path64 result_;
-    private readonly List<Location> startLocs_ = new List<Location>();
-    private enum Location
+    protected enum Location
     {
       left, top, right, bottom, inside
     };
 
+    readonly protected Rect64 rect_;
+    readonly protected Point64 mp_;
+    readonly protected Path64 rectPath_;
+    protected Path64 result_;
+    protected Location firstCross_;
+    protected List<Location> startLocs_ = new List<Location>();
+
     internal RectClip(Rect64 rect)
     {
-      result_ = new Path64();
-      firstCross_ = Location.inside; 
       rect_ = rect;
       mp_ = rect.MidPoint();
       rectPath_ = rect_.AsPath();
+      result_ = new Path64();
+      firstCross_ = Location.inside;
     }
 
     private static PointInPolygonResult Path1ContainsPath2(Path64 path1, Path64 path2)
@@ -96,13 +97,7 @@ namespace Clipper2Lib
       }
     }
 
-    private void Reset() 
-    { 
-      result_.Clear();
-      startLocs_.Clear();
-    }
-
-    private static bool GetLocation(Rect64 rec, Point64 pt, out Location loc) 
+    static protected bool GetLocation(Rect64 rec, Point64 pt, out Location loc) 
     {
       if (pt.X == rec.left && pt.Y >= rec.top && pt.Y <= rec.bottom)
       {
@@ -128,7 +123,7 @@ namespace Clipper2Lib
       return true;
     }
 
-    private static bool GetIntersection(Path64 rectPath, Point64 p, Point64 p2, ref Location loc, out Point64 ip)
+    static protected bool GetIntersection(Path64 rectPath, Point64 p, Point64 p2, ref Location loc, out Point64 ip)
     {
       // gets the pt of intersection between rectPath and segment(p, p2) that's closest to 'p'
       // when result == false, loc will remain unchanged
@@ -240,7 +235,7 @@ namespace Clipper2Lib
       return true;
     }
 
-    private void GetNextLocation(Path64 path,
+    protected void GetNextLocation(Path64 path,
       ref Location loc, ref int i, int highI)
     {
       switch (loc)
@@ -313,8 +308,9 @@ namespace Clipper2Lib
     internal Path64 ExecuteInternal(Path64 path)
     {
       if (path.Count < 3 || rect_.IsEmpty()) return new Path64();
-      
-      Reset();      
+
+      result_.Clear();
+      startLocs_.Clear();
       int i = 0, highI = path.Count - 1;
       firstCross_ = Location.inside;
       Location crossingLoc = Location.inside, prev;
@@ -484,7 +480,85 @@ namespace Clipper2Lib
           result.Add(ExecuteInternal(path)); 
       return result;
     }
-
   } // RectClip class
+
+  public class RectClipLines : RectClip
+  {
+    internal RectClipLines(Rect64 rect) : base(rect) { }
+
+    internal new Paths64 ExecuteInternal(Path64 path)
+    {
+      result_.Clear();
+      Paths64 result = new Paths64();
+      if (path.Count < 2 || rect_.IsEmpty()) return result;
+
+      Location prev = Location.inside;
+      int i = 1, highI = path.Count - 1;
+      if (!GetLocation(rect_, path[0], out Location loc))
+      {
+        while (i <= highI && !GetLocation(rect_, path[i], out prev)) i++;
+        if (i > highI)
+        {
+          result.Add(path);
+          return result;
+        }                   
+        if (prev == Location.inside) loc = Location.inside;
+        i = 1;
+      }
+      if (loc == Location.inside) result_.Add(path[0]);
+
+      ///////////////////////////////////////////////////
+      while (i <= highI)
+      {
+        prev = loc;
+        GetNextLocation(path, ref loc, ref i, highI);
+        if (i > highI) break;
+        Point64 prevPt = path[i - 1];
+
+        Location crossingLoc = loc;
+        if (!GetIntersection(rectPath_, path[i], prevPt, ref crossingLoc, out Point64 ip))
+        {
+          // ie remaining outside (& crossingLoc still == loc)
+          ++i;
+          continue;
+        }
+
+        ////////////////////////////////////////////////////
+        // we must be crossing the rect boundary to get here
+        ////////////////////////////////////////////////////
+
+        if (loc == Location.inside) // path must be entering rect
+        {
+          result_.Add(ip);
+        }
+        else if (prev != Location.inside)
+        {
+          // passing right through rect. 'ip' here will be the second 
+          // intersect pt but we'll also need the first intersect pt (ip2)
+          crossingLoc = prev;
+          GetIntersection(rectPath_, prevPt, path[i], ref crossingLoc, out Point64 ip2);
+          result_.Add(ip2);
+          result_.Add(ip);
+          result.Add(result_);
+          result_ = new Path64();
+        }
+        else // path must be exiting rect
+        {
+          result_.Add(ip);
+          result.Add(result_);
+          result_ = new Path64();
+        }
+      } //while i <= highI
+        ///////////////////////////////////////////////////
+
+      if (result_.Count > 1)
+      {
+        result.Add(result_);
+        result_ = new Path64();
+      }
+      return result;
+    } // RectClipOpen.ExecuteInternal
+
+  } // RectClipOpen class
 
 } // namespace

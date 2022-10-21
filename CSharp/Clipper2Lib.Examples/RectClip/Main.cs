@@ -12,7 +12,6 @@ using Clipper2Lib;
 
 namespace ClipperDemo1
 {
-
   public class Application
   {
 
@@ -24,7 +23,7 @@ namespace ClipperDemo1
     public static void DoRandomPoly(bool makeNewPoly)
     {
       Random rand = new();
-      Paths64 subject, clip, solution;
+      Paths64 subjOpen, clip, solOpen;
       Rect64 rec;
 
       if (makeNewPoly)
@@ -33,16 +32,16 @@ namespace ClipperDemo1
         const int count = 75;
         ////////////////////
 
-        rec = new(300, 200, 400, 400);
+        rec = new(100, 100, 700, 500);
         clip = new() { rec.AsPath() };
-        subject = new() { MakeRandomPath(800, 600, count, rand) };
+        subjOpen = new() { MakeRandomPath(800, 600, count, rand) };
 
         // save - useful when debugging 
         StreamWriter writer;
         try
         { writer = new StreamWriter(".\\store.txt", false); }
         catch { return; }
-        foreach (Point64 pt in subject[0])
+        foreach (Point64 pt in subjOpen[0])
           writer.Write("{0},{1} ", pt.X, pt.Y);
         writer.Write("\r\n");
         foreach (Point64 pt in clip[0])
@@ -59,20 +58,20 @@ namespace ClipperDemo1
         { reader = new StreamReader(".\\store.txt"); }
         catch { return; }
         string s = reader.ReadLine();
-        subject = ClipperFileIO.PathFromStr(s);
+        subjOpen = ClipperFileIO.PathFromStr(s);
         s = reader.ReadLine();
         clip = ClipperFileIO.PathFromStr(s);
         rec = Clipper.GetBounds(clip);
       }
 
       /////////////////////////////////////////////////
-      solution = Clipper.RectClip(rec, subject);
+      solOpen = Clipper.RectClipLines(rec, subjOpen);
       /////////////////////////////////////////////////
 
       SimpleSvgWriter svg = new ();
-      SvgUtils.AddSubject(svg, subject, true);
+      SvgUtils.AddSubject(svg, subjOpen, false);
       SvgUtils.AddClip(svg, clip);
-      SvgUtils.AddSolution(svg, solution, false);
+      SvgUtils.AddSolution(svg, solOpen, false, false, false);
       SvgUtils.SaveToFile(svg, "../../../rectclip.svg", FillRule.EvenOdd, 800, 600, 20);
       ClipperFileIO.OpenFileWithDefaultApp("../../../rectclip.svg");
     }

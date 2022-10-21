@@ -1,6 +1,6 @@
 ﻿/*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  15 October 2022                                                 *
+* Date      :  21 October 2022                                                 *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  This module contains simple functions that will likely cover    *
@@ -209,7 +209,73 @@ namespace Clipper2Lib
       }
       return result;
     }
+    public static Paths64 RectClipLines(Rect64 rect, Path64 path)
+    {
+      if (rect.IsEmpty() || path.Count == 0) return new Paths64();
+      RectClipLines rco = new RectClipLines(rect);
+      return rco.ExecuteInternal(path);
+    }
 
+    public static Paths64 RectClipLines(Rect64 rect, Paths64 paths)
+    {
+      Paths64 result = new Paths64(paths.Count);
+      if (rect.IsEmpty() || paths.Count == 0) return result;
+      RectClipLines rco = new RectClipLines(rect);
+      foreach (Path64 path in paths)
+      {
+        Rect64 pathRec = Clipper.GetBounds(path);
+        if (!rect.Intersects(pathRec))
+          continue;
+        else if (rect.Contains(pathRec))
+          result.Add(path);
+        else
+        {
+          Paths64 pp = rco.ExecuteInternal(path);
+          if (pp.Count > 0) result.AddRange(pp);
+        }
+      }
+      return result;
+    }
+
+    public static PathsD RectClipLines(RectD rect, PathD path, int precision = 2)
+    {
+      if (precision < -8 || precision > 8)
+        throw new Exception(precision_range_error);
+      if (rect.IsEmpty() || path.Count == 0) return new PathsD();
+      double scale = Math.Pow(10, precision);
+      Rect64 r = ScaleRect(rect, scale);
+      Path64 tmpPath = ScalePath64(path, scale);
+      RectClipLines rco = new RectClipLines(r);
+      Paths64 tmpPaths = rco.ExecuteInternal(tmpPath);
+      return ScalePathsD(tmpPaths, 1 / scale);
+    }
+    public static PathsD RectClipLines(RectD rect, PathsD paths, int precision = 2)
+    {
+      if (precision < -8 || precision > 8)
+        throw new Exception(precision_range_error);
+      PathsD result = new PathsD(paths.Count);
+      if (rect.IsEmpty() || paths.Count == 0) return result;
+      double scale = Math.Pow(10, precision);
+      Rect64 r = ScaleRect(rect, scale);
+      RectClipLines rco = new RectClipLines(r);
+      foreach (PathD p in paths)
+      {
+        RectD pathRec = Clipper.GetBounds(p);
+        if (!rect.Intersects(pathRec))
+          continue;
+        else if (rect.Contains(pathRec))
+          result.Add(p);
+        else
+        {
+          Path64 p64 = ScalePath64(p, scale);
+          Paths64 pp64 = rco.ExecuteInternal(p64);
+          if (pp64.Count == 0) continue;
+          PathsD ppd = ScalePathsD(pp64, 1 / scale);
+          result.AddRange(ppd);
+        }
+      }
+      return result;
+    }
     public static Paths64 MinkowskiSum(Path64 pattern, Path64 path, bool isClosed)
     {
       return Minkowski.Sum(pattern, path, isClosed);

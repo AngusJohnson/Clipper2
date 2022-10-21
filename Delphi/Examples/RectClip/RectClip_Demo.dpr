@@ -24,6 +24,8 @@ const
     i: integer;
     sub, clp, sol: TPaths64;
     rec: TRect64;
+  const
+    margin: integer = 100;
   begin
     SetLength(clp, 1);
     clp[0] := Clipper.Core.Ellipse(Rect64(0, 0, radius, radius));
@@ -32,7 +34,7 @@ const
       sub[i] := TranslatePath(clp[0],
         Random(width - radius), Random(height - radius));
 
-    rec := Rect64(200, 200, width - 200, height - 200);
+    rec := Rect64(margin, margin, width - margin, height - margin);
     clp[0] := rec.AsPath;
     sol := RectClip(rec, sub);
 
@@ -53,8 +55,10 @@ const
   var
     sub, clp, sol: TPathsD;
     rec: TRectD;
+  const
+    margin: integer = 100;
   begin
-    rec := RectD(200, 200, width - 200, height - 200);
+    rec := RectD(margin, margin, width - margin, height - margin);
     SetLength(clp, 1);
     clp[0] := rec.AsPath;
     SetLength(sub, 1);
@@ -74,9 +78,44 @@ const
     ShellExecute(0, 'open','RectClip2.svg', nil, nil, SW_SHOW);
   end;
 
+  procedure TestLineClip(lineLength: integer);
+  var
+    sub, clp, sol: TPathsD;
+    rec: TRectD;
+  const
+    margin: integer = 100;
+  begin
+    SetLength(clp, 1);
+    rec := RectD(margin, margin, width - margin, height - margin);
+    clp[0] := rec.AsPath;
+
+    SetLength(sub, 1);
+    sub[0] := MakeRandomPathD(width, height, lineLength);
+
+    sol := RectClipLines(rec, sub);
+
+    //display
+    with TSimpleClipperSvgWriter.Create(fillrule) do
+    try
+      AddPaths(sub, true, $0, $AA0066FF, 1);
+      //AddPaths(sub, false, $100066FF, $400066FF, 1);
+
+      AddPaths(clp, false, $10FFAA00, $FFFF0000, 1);
+
+      AddPaths(sol, true, $0, $FF006600, 2.0);
+      //AddPaths(sol, false, $8066FF66, $FF006600, 1.0);
+
+      SaveToFile('RectClipQ.svg', width, height);
+    finally
+      Free;
+    end;
+    ShellExecute(0, 'open','RectClipQ.svg', nil, nil, SW_SHOW);
+  end;
+
 begin
   Randomize;
   TestEllipse(100, 100);
-  TestRandomPoly(19);
+  TestRandomPoly(59);
+  TestLineClip(59);
 
 end.

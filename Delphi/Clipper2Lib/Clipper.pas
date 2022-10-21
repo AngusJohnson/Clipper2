@@ -2,7 +2,7 @@ unit Clipper;
 
 (*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  15 October 2022                                                 *
+* Date      :  21 October 2022                                                 *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  This module provides a simple interface to the Clipper Library  *
@@ -97,6 +97,13 @@ function RectClip(const rect: TRect64; const paths: TPaths64): TPaths64; overloa
 function RectClip(const rect: TRectD; const path: TPathD;
   precision: integer = 2): TPathD; overload;
 function RectClip(const rect: TRectD; const paths: TPathsD;
+  precision: integer = 2): TPathsD; overload;
+
+function RectClipLines(const rect: TRect64; const path: TPath64): TPaths64; overload;
+function RectClipLines(const rect: TRect64; const paths: TPaths64): TPaths64; overload;
+function RectClipLines(const rect: TRectD; const path: TPathD;
+  precision: integer): TPathsD; overload;
+function RectClipLines(const rect: TRectD; const paths: TPathsD;
   precision: integer = 2): TPathsD; overload;
 
 function TranslatePath(const path: TPath64; dx, dy: Int64): TPath64; overload;
@@ -458,6 +465,111 @@ begin
     Free;
   end;
   SetLength(Result, j);
+end;
+//------------------------------------------------------------------------------
+
+function RectClipLines(const rect: TRect64; const path: TPath64): TPaths64; overload;
+begin
+  Result := nil;
+  if rect.IsEmpty or (Length(path) = 0) or
+    not rect.Intersects(GetBounds(path)) then Exit;
+  with TRectClipLines.Create(rect) do
+  try
+    Result := Execute(path);
+  finally
+    Free;
+  end;
+end;
+//------------------------------------------------------------------------------
+
+function RectClipLines(const rect: TRect64; const paths: TPaths64): TPaths64; overload;
+var
+  i,len: integer;
+  pathRec: TRect64;
+  tmp: TPaths64;
+begin
+  Result := nil;
+  len := Length(paths);
+  if rect.IsEmpty or (len = 0) then Exit;
+  SetLength(Result, len);
+  with TRectClipLines.Create(rect) do
+  try
+    for i := 0 to len -1 do
+    begin
+      pathRec := GetBounds(paths[i]);
+      if not rect.Intersects(pathRec) then
+        Continue
+      else if rect.Contains(pathRec) then
+        AppendPath(Result, paths[i])
+      else
+      begin
+        tmp := Execute(paths[i]);
+        AppendPaths(Result, tmp);
+      end;
+    end;
+  finally
+    Free;
+  end;
+end;
+//------------------------------------------------------------------------------
+
+function RectClipLines(const rect: TRectD; const path: TPathD;
+  precision: integer): TPathsD;
+var
+  scale: double;
+  tmpPath: TPath64;
+  tmpPaths: TPaths64;
+  rec: TRect64;
+begin
+  Result := nil;
+  if not rect.Intersects(GetBounds(path)) then Exit;
+  if (precision < -8) or (precision > 8) then
+    Raise EClipperLibException(rsClipper_PrecisonErr);
+  scale := Math.Power(10, precision);
+  rec := Rect64(ScaleRect(rect, scale));
+  tmpPath := ScalePath(path, scale);
+  tmpPaths := RectClipLines(rec, tmpPath);
+  Result := ScalePathsD(tmpPaths, 1/scale);
+end;
+//------------------------------------------------------------------------------
+
+function RectClipLines(const rect: TRectD; const paths: TPathsD;
+  precision: integer = 2): TPathsD;
+var
+  i: integer;
+  scale: double;
+  tmpPath: TPath64;
+  tmpPaths: TPaths64;
+  rec: TRect64;
+  pathRec: TRectD;
+begin
+  Result := nil;
+  if rect.IsEmpty then Exit;
+  if (precision < -8) or (precision > 8) then
+    Raise EClipperLibException(rsClipper_PrecisonErr);
+  scale := Math.Power(10, precision);
+  rec := Rect64(ScaleRect(rect, scale));
+
+  with TRectClipLines.Create(rec) do
+  try
+    for i := 0 to High(paths) do
+    begin
+      pathRec := GetBounds(paths[i]);
+      if not rect.Intersects(pathRec) then
+        Continue
+      else if rect.Contains(pathRec) then
+        AppendPath(Result, paths[i])
+      else
+      begin
+        tmpPath := ScalePath(paths[i], scale);
+        tmpPaths := Execute(tmpPath);
+        if tmpPaths = nil then Continue;
+        AppendPaths(Result, ScalePathsD(tmpPaths, 1/scale));
+      end;
+    end;
+  finally
+    Free;
+  end;
 end;
 //------------------------------------------------------------------------------
 

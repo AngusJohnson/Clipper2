@@ -5,6 +5,8 @@ interface
 uses
   SysUtils, Types, Classes, Math, Clipper, Clipper.Core;
 
+function PathToString(const path: TPath64): string;
+
 function ScaleAndOffset(const paths: TPathsD; scale: single; offset: Clipper.Core.TPointD): TPathsD;
 
 function MakeRandomPath(maxWidth, maxHeight, count: Integer;
@@ -23,6 +25,16 @@ function MakeNPointedStar(const rec: TRect64;
 function PointInPath(const pt: TPointD; const path: TPathD): Boolean;
 
 implementation
+
+function PathToString(const path: TPath64): string;
+var
+  i: integer;
+begin
+  Result := '';
+  for i := 0 to high(path) do
+    Result := Result + format('%d,%d ',[path[i].X,path[i].Y]);
+  Result := Result + #13#10;
+end;
 
 function ScaleAndOffset(const paths: TPathsD; scale: single; offset: Clipper.Core.TPointD): TPathsD;
 var
