@@ -333,6 +333,7 @@ namespace Clipper2Lib {
 		{
 			const size_t level_indent = 4;
 			const size_t coords_per_line = 4;
+			const size_t last_on_line = coords_per_line - 1;
 			unsigned level = polypath.Level();
 			if (level > 0)
 			{
@@ -341,7 +342,6 @@ namespace Clipper2Lib {
 				std::string caption = polypath.IsHole() ? "Hole " : "Outer Polygon ";
 				std::string childs = polypath.Count() == 1 ? " child" : " children";
 				outstream << level_padding.c_str() << caption << "with " << polypath.Count() << childs << std::endl;
-				int last_on_line = coords_per_line - 1;
 				outstream << level_padding;
 				size_t i = 0, highI = polypath.Polygon().size() - 1;
 				for (; i < highI; ++i)
@@ -350,8 +350,7 @@ namespace Clipper2Lib {
 					if ((i % coords_per_line) == last_on_line)
 						outstream << std::endl << level_padding;
 				}
-				if (highI >= 0)
-					outstream << polypath.Polygon()[i];
+				if (highI > 0) outstream << polypath.Polygon()[i];
 				outstream << std::endl;
 			}
 			for (auto child : polypath)
