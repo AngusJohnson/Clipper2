@@ -3488,7 +3488,7 @@ namespace Clipper2Lib {
 		}
 	}
 
-	inline void Polytree64ToPolytreeD(const PolyPath64& polytree, PolyPathD& result)
+	void Polytree64ToPolytreeD(const PolyPath64& polytree, PolyPathD& result)
 	{
 		result.Clear();
 		PolyPath64ToPolyPathD(polytree, result);
