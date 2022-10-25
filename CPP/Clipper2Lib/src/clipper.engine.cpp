@@ -1,6 +1,6 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  15 October 2022                                                 *
+* Date      :  26 October 2022                                                 *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  This is the main polygon clipping module                        *
@@ -2051,52 +2051,6 @@ namespace Clipper2Lib {
 		return succeeded_;
 	}
 
-
-	bool ClipperBase::Execute(ClipType clip_type,
-		FillRule fill_rule, Paths64& solution_closed)
-	{
-		solution_closed.clear();
-		if (ExecuteInternal(clip_type, fill_rule, false))
-			BuildPaths(solution_closed, nullptr);
-		CleanUp();
-		return succeeded_;
-	}
-
-
-	bool ClipperBase::Execute(ClipType clip_type, FillRule fill_rule,
-		Paths64& solution_closed, Paths64& solution_open)
-	{
-		solution_closed.clear();
-		solution_open.clear();
-		if (ExecuteInternal(clip_type, fill_rule, false))
-			BuildPaths(solution_closed, &solution_open);
-		CleanUp();
-		return succeeded_;
-	}
-
-
-	bool ClipperBase::Execute(ClipType clip_type, FillRule fill_rule, PolyTree64& polytree)
-	{
-		Paths64 dummy;
-		polytree.Clear();
-		if (ExecuteInternal(clip_type, fill_rule, true))
-			BuildTree(polytree, dummy);
-		CleanUp();
-		return succeeded_;
-	}
-
-	bool ClipperBase::Execute(ClipType clip_type,
-		FillRule fill_rule, PolyTree64& polytree, Paths64& solution_open)
-	{
-		polytree.Clear();
-		solution_open.clear();
-		if (ExecuteInternal(clip_type, fill_rule, true))
-			BuildTree(polytree, solution_open);
-		CleanUp();
-		return succeeded_;
-	}
-
-
 	void ClipperBase::DoIntersections(const int64_t top_y)
 	{
 		if (BuildIntersectList(top_y))
@@ -3427,8 +3381,7 @@ namespace Clipper2Lib {
 		}
 	}
 
-
-	void ClipperBase::BuildTree(PolyPath64& polytree, Paths64& open_paths)
+	void ClipperBase::BuildTree64(PolyPath64& polytree, Paths64& open_paths)
 	{
 		polytree.Clear();
 		open_paths.resize(0);
@@ -3447,7 +3400,7 @@ namespace Clipper2Lib {
 			}
 
 			if (!BuildPath(outrec->pts, ReverseSolution, false, outrec->path))
-					continue;
+				continue;
 			if (outrec->bounds.IsEmpty()) outrec->bounds = GetBounds(outrec->path);
 			outrec->owner = GetRealOutRec(outrec->owner);
 			if (outrec->owner) DeepCheckOwner(outrec, outrec->owner);
@@ -3469,7 +3422,7 @@ namespace Clipper2Lib {
 				if (outrec->owner) DeepCheckOwner(outrec, outrec->owner);
 			}
 
-			PolyPath64* owner_polypath;
+			PolyPath* owner_polypath;
 			if (outrec->owner && outrec->owner->polypath)
 				owner_polypath = outrec->owner->polypath;
 			else
@@ -3478,20 +3431,55 @@ namespace Clipper2Lib {
 		}
 	}
 
-	static void PolyPath64ToPolyPathD(const PolyPath64& polypath, PolyPathD& result)
+	void ClipperBase::BuildTreeD(PolyPathD& polytree, PathsD& open_paths)
 	{
-		for (auto child : polypath)
-		{
-			PolyPathD* res_child = result.AddChild(
-				Path64ToPathD(child->Polygon()));
-			PolyPath64ToPolyPathD(*child, *res_child);
-		}
-	}
+		polytree.Clear();
+		open_paths.resize(0);
+		if (has_open_paths_)
+			open_paths.reserve(outrec_list_.size());
 
-	inline void Polytree64ToPolytreeD(const PolyPath64& polytree, PolyPathD& result)
-	{
-		result.Clear();
-		PolyPath64ToPolyPathD(polytree, result);
+		for (OutRec* outrec : outrec_list_)
+		{
+			if (!outrec || !outrec->pts) continue;
+			if (outrec->is_open)
+			{
+				Path64 path;
+				if (BuildPath(outrec->pts, ReverseSolution, true, path))
+					open_paths.push_back(
+						ScalePath<double, int64_t>(path, polytree.InvScale()));
+				continue;
+			}
+
+			if (!BuildPath(outrec->pts, ReverseSolution, false, outrec->path))
+				continue;
+			if (outrec->bounds.IsEmpty()) outrec->bounds = GetBounds(outrec->path);
+			outrec->owner = GetRealOutRec(outrec->owner);
+			if (outrec->owner) DeepCheckOwner(outrec, outrec->owner);
+
+			// swap the order when a child preceeds its owner
+			// (because owners must preceed children in polytrees)
+			if (outrec->owner && outrec->idx < outrec->owner->idx)
+			{
+				OutRec* tmp = outrec->owner;
+				outrec_list_[outrec->owner->idx] = outrec;
+				outrec_list_[outrec->idx] = tmp;
+				size_t tmp_idx = outrec->idx;
+				outrec->idx = tmp->idx;
+				tmp->idx = tmp_idx;
+				outrec = tmp;
+				outrec->owner = GetRealOutRec(outrec->owner);
+				BuildPath(outrec->pts, ReverseSolution, false, outrec->path);
+				if (outrec->bounds.IsEmpty()) outrec->bounds = GetBounds(outrec->path);
+				if (outrec->owner) DeepCheckOwner(outrec, outrec->owner);
+			}
+
+			PolyPath* owner_polypath;
+			if (outrec->owner && outrec->owner->polypath)
+				owner_polypath = outrec->owner->polypath;
+			else
+				owner_polypath = &polytree;
+			outrec->polypath = owner_polypath->AddChild(outrec->path);
+		}
 	}
 
 }  // namespace clipper2lib

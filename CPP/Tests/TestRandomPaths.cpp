@@ -148,7 +148,7 @@ TEST(Clipper2Tests, TestRandomPaths)
     clipper_polytree.AddClip(clip);
     clipper_polytree.Execute(ct, fr, solution_polytree, solution_polytree_open);
 
-    const auto solution_polytree_paths = PolyTreeToPaths(solution_polytree);
+    const auto solution_polytree_paths = PolyTreeToPaths64(solution_polytree);
     const auto area_polytree = static_cast<int64_t>(Area(solution_polytree_paths));
     const auto count_polytree = solution_polytree_paths.size() + solution_polytree_open.size();
 

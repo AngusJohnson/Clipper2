@@ -18,6 +18,7 @@ set(CLIPPER2_INC
   Clipper2Lib/include/clipper2/clipper.h
   Clipper2Lib/include/clipper2/clipper.core.h
   Clipper2Lib/include/clipper2/clipper.engine.h
+  Clipper2Lib/include/clipper2/clipper.export.h
   Clipper2Lib/include/clipper2/clipper.minkowski.h
   Clipper2Lib/include/clipper2/clipper.offset.h
   Clipper2Lib/include/clipper2/clipper.rectclip.h

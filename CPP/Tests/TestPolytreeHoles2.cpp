@@ -102,10 +102,10 @@ TEST(Clipper2Tests, TestPolytreeHoles2)
   c.AddClip(clip);
   c.Execute(ct, FillRule::Negative, solution_tree, solution_open);
 
-  const auto solution_paths = PolyTreeToPaths(solution_tree);
+  const auto solution_paths = PolyTreeToPaths64(solution_tree);
 
   ASSERT_FALSE(solution_paths.empty());
-
+  
   const double subject_area         = -Area(subject); //negate (see fillrule)
   const double solution_tree_area   = GetPolytreeArea(solution_tree);
   const double solution_paths_area  = Area(solution_paths);

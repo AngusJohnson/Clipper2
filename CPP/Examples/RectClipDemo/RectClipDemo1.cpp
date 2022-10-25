@@ -1,4 +1,7 @@
 
+
+#include <cstdint>
+
 #include <cstdlib>
 #include <sstream>
 #include <fstream>
@@ -13,24 +16,23 @@ using namespace Clipper2Lib;
 
 void System(const std::string& filename);
 void PressEnterToExit();
-void SavePaths(const std::string& filename, const Paths64& paths);
-void LoadPaths(const std::string& filename, Paths64& paths);
 
 void DoEllipses();
 void DoRectangles();
 void DoRandomPoly(int count);
 void MeasurePerformance(int min, int max, int step);
+void MeasureLineClippingPerformance(int line_length);
 
 const int width = 1600, height = 1200, margin = 200;
 
 int main(int argc, char* argv[])
 {
   srand((unsigned)time(0));
-
   DoEllipses();
   DoRectangles();
   DoRandomPoly(31);
   //MeasurePerformance(500, 2500, 500);
+  //MeasureLineClippingPerformance(250);
 }
 
 Path64 MakeRandomEllipse(int minWidth, int minHeight, int maxWidth, int maxHeight,
@@ -102,7 +104,16 @@ void DoRectangles()
   System("rectclip2.svg");
 }
 
-PathD MakeRandomPoly(int width, int height, unsigned vertCnt)
+Path64 MakeRandomPoly(int width, int height, unsigned vertCnt)
+{
+  Path64 result;
+  result.reserve(vertCnt);
+  for (unsigned i = 0; i < vertCnt; ++i)
+    result.push_back(Point64(rand() % width, rand() % height));
+  return result;
+}
+
+PathD MakeRandomPolyD(int width, int height, unsigned vertCnt)
 {
   PathD result;
   result.reserve(vertCnt);
@@ -119,7 +130,7 @@ void DoRandomPoly(int count)
   // generate random poly
   rect = RectD(margin, margin, width - margin, height - margin);
   clp.push_back(rect.AsPath());
-  sub_open.push_back(MakeRandomPoly(width, height, count));
+  sub_open.push_back(MakeRandomPolyD(width, height, count));
 
   //////////////////////////////////
   sol_open = RectClipLines(rect, sub_open);
@@ -172,6 +183,43 @@ void MeasurePerformance(int min, int max, int step)
   PressEnterToExit();
 }
 
+void MeasureLineClippingPerformance(int line_length)
+{
+  FillRule fr = FillRule::EvenOdd;
+  Paths64 sub_open, clp, sol_open, store;
+
+  // generate random poly
+  Rect64 rect = Rect64(margin, margin, width - margin, height - margin);
+  clp.push_back(rect.AsPath());
+
+  sub_open.push_back(MakeRandomPoly(width, height, line_length));
+
+  std::cout << std::endl << "Measuring line clipping performance" << std::endl;
+  std::cout << "line length: " << line_length << std::endl;
+  {
+    Timer t("Clipper64: ");
+    Paths64 dummy;
+    Clipper64 c;
+    c.AddOpenSubject(sub_open);
+    c.AddClip(clp);
+    c.Execute(ClipType::Intersection, fr, dummy, sol_open);
+    sol_open = Intersect(sub_open, clp, fr);
+  }
+
+  {
+    Timer t("RectClip: ");
+    sol_open = RectClipLines(rect, sub_open);
+  }
+
+  SvgWriter svg;
+  svg.AddPaths(sub_open, true, fr, 0x0, 0x400066FF, 1, false);
+  svg.AddPaths(clp, false, fr, 0x10FFAA00, 0xFFFF0000, 1, false);
+  svg.AddPaths(sol_open, true, fr, 0x0, 0xFF006600, 2.0, false);
+  svg.SaveToFile("RectClipL.svg", 800, 600, 0);
+  System("RectClipL.svg");
+
+  PressEnterToExit();
+}
 
 void System(const std::string& filename)
 {
@@ -180,76 +228,6 @@ void System(const std::string& filename)
 #else
   system(("firefox " + filename).c_str());
 #endif
-}
-
-void SavePaths(const std::string& filename, const Paths64& paths)
-{
-  std::ofstream stream;
-  stream.open(filename, std::ios::trunc);
-
-  for (Paths64::const_iterator paths_it = paths.cbegin();
-    paths_it != paths.cend(); ++paths_it)
-  {
-    //watch out for empty paths
-    if (paths_it->cbegin() == paths_it->cend()) continue;
-    Path64::const_iterator path_it, path_it_last;
-    for (path_it = paths_it->cbegin(), path_it_last = --paths_it->cend();
-      path_it != path_it_last; ++path_it)
-      stream << *path_it << " ";
-    stream << *path_it_last << endl;
-  }
-}
-
-bool GetInt(string::const_iterator& s_it,
-  const string::const_iterator& it_end, int64_t& value)
-{
-  value = 0;
-  while (s_it != it_end && *s_it == ' ') ++s_it;
-  if (s_it == it_end) return false;
-  bool is_neg = (*s_it == '-');
-  if (is_neg) ++s_it;
-  string::const_iterator s_it2 = s_it;
-  while (s_it != it_end && *s_it >= '0' && *s_it <= '9')
-  {
-    value = value * 10 + static_cast<int64_t>(*s_it++) - 48;
-  }
-
-  if (s_it == s_it2) return false; //no value
-  //trim trailing space and a comma if present
-  while (s_it != it_end && *s_it == ' ') ++s_it;
-  if (s_it != it_end && *s_it == ',') ++s_it;
-  if (is_neg) value = -value;
-  return true;
-}
-
-bool GetPath(const string& line, Paths64& paths)
-{
-  Path64 p;
-  int64_t x = 0, y = 0;
-  string::const_iterator s_it = line.cbegin(), s_end = line.cend();
-  while (GetInt(s_it, s_end, x) && GetInt(s_it, s_end, y))
-    p.push_back(Point64(x, y));
-  if (p.empty()) return false;
-  paths.push_back(p);
-  return true;
-}
-
-void LoadPaths(const std::string& filename, Paths64& paths)
-{
-  std::ifstream source;
-  source.open(filename);
-  if (!source) return;
-
-  while (true)
-  {
-    string line;
-    stringstream::pos_type last_read_line_pos = source.tellg();
-    if (getline(source, line) && GetPath(line, paths))
-      continue;
-    source.seekg(last_read_line_pos, ios_base::beg);
-    break;
-  }
-  source.close();
 }
 
 void PressEnterToExit()

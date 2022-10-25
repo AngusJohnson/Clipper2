@@ -1,6 +1,6 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  21 October 2022                                                 *
+* Date      :  26 October 2022                                                 *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  This module provides a simple interface to the Clipper Library  *
@@ -68,6 +68,19 @@ namespace Clipper2Lib {
     clipper.AddClip(clips);
     clipper.Execute(cliptype, fillrule, result);
     return result;
+  }
+
+  inline void BooleanOp(ClipType cliptype, FillRule fillrule,
+    const PathsD& subjects, const PathsD& clips, 
+    PolyTreeD& polytree, int decimal_prec = 2)
+  {
+    if (decimal_prec > 8 || decimal_prec < -8)
+      throw Clipper2Exception(precision_error);
+    PathsD result;
+    ClipperD clipper(decimal_prec);
+    clipper.AddSubject(subjects);
+    clipper.AddClip(clips);
+    clipper.Execute(cliptype, fillrule, polytree);
   }
 
   inline Paths64 Intersect(const Paths64& subjects, const Paths64& clips, FillRule fillrule)
@@ -400,22 +413,29 @@ namespace Clipper2Lib {
   namespace details
   {
 
-    template <typename T>
-    inline void InternalPolyNodeToPaths(const PolyPath<T>& polypath, Paths<T>& paths)
+    inline void PolyPathToPaths64(const PolyPath64& polypath, Paths64& paths)
     {
       paths.push_back(polypath.Polygon());
-      for (auto child : polypath)
-        InternalPolyNodeToPaths(*child, paths);
+      for (const PolyPath* child : polypath)
+        PolyPathToPaths64(*(PolyPath64*)(child), paths);
     }
 
-    inline bool InternalPolyPathContainsChildren(const PolyPath64& pp)
+    inline void PolyPathToPathsD(const PolyPathD& polypath, PathsD& paths)
     {
-      for (auto child : pp)
+      paths.push_back(polypath.Polygon());
+      for (const PolyPath* child : polypath)
+        PolyPathToPathsD(*(PolyPathD*)(child), paths);
+    }
+
+    inline bool PolyPath64ContainsChildren(const PolyPath64& pp)
+    {
+      for (auto ch : pp)
       {
+        PolyPath64* child = (PolyPath64*)ch;
         for (const Point64& pt : child->Polygon())
           if (PointInPolygon(pt, pp.Polygon()) == PointInPolygonResult::IsOutside)
             return false;
-        if (child->Count() > 0 && !InternalPolyPathContainsChildren(*child))
+        if (child->Count() > 0 && !PolyPath64ContainsChildren(*child))
           return false;
       }
       return true;
@@ -511,20 +531,28 @@ namespace Clipper2Lib {
 
   } // end details namespace 
 
-  template <typename T>
-  inline Paths<T> PolyTreeToPaths(const PolyTree<T>& polytree)
+  inline Paths64 PolyTreeToPaths64(const PolyTree64& polytree)
   {
-    Paths<T> result;
+    Paths64 result;
     for (auto child : polytree)
-      details::InternalPolyNodeToPaths(*child, result);
+      details::PolyPathToPaths64(*(PolyPath64*)(child), result);
+    return result;
+  }
+
+  inline PathsD PolyTreeToPathsD(const PolyTreeD& polytree)
+  {
+    PathsD result;
+    for (auto child : polytree)
+      details::PolyPathToPathsD(*(PolyPathD*)(child), result);
     return result;
   }
 
   inline bool CheckPolytreeFullyContainsChildren(const PolyTree64& polytree)
   {
     for (auto child : polytree)
-      if (child->Count() > 0 && !details::InternalPolyPathContainsChildren(*child))
-        return false;
+      if (child->Count() > 0 && 
+        !details::PolyPath64ContainsChildren(*(PolyPath64*)(child)))
+          return false;
     return true;
   }
 

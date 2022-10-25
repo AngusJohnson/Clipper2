@@ -63,7 +63,7 @@ TEST(Clipper2Tests, TestMultiplePolygons)
     
     const int64_t measured_area_pt = 
       static_cast<int64_t>(solution_polytree.Area());
-    const auto solution_polytree_paths = PolyTreeToPaths(solution_polytree);
+    const auto solution_polytree_paths = PolyTreeToPaths64(solution_polytree);
     const int64_t measured_count_pt = static_cast<int64_t>(solution_polytree_paths.size());
 
     if (test_number == 23)

@@ -32,7 +32,7 @@ private:
   {
     ClearHaystack();
     stream.seekg(0, ios::end);
-    haystack_len = stream.tellg();
+    haystack_len = static_cast<size_t>(stream.tellg());
     stream.seekg(0, ios::beg);
     haystack_ = new char[haystack_len];
     stream.read(haystack_, haystack_len);
