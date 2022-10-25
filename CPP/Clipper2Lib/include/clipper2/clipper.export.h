@@ -52,8 +52,8 @@ typedef struct CRectD { double val[4]; } CRectD;
 
 typedef struct CPolyPath64 {
   CPath64       polygon;
-  bool          is_hole;
-  size_t        child_count;
+  uint32_t      is_hole;
+  uint32_t      child_count;
   CPolyPath64*  childs;
 } 
 CPolyTree64;
@@ -308,7 +308,7 @@ EXTERN_DLL_EXPORT CPaths64 RectClip64(const Rect64 rect,
   const CPaths64 paths)
 {
   if (rect.IsEmpty() || !paths) return nullptr;
-  RectClip rc(rect);
+  class RectClip rc(rect);
   Paths64 pp = ConvertCPaths64(paths);
   Paths64 result;
   result.reserve(pp.size());
@@ -337,7 +337,7 @@ EXTERN_DLL_EXPORT CPathsD RectClipD(const RectD rect,
   Rect64 r = ScaleRect<int64_t, double>(rect, scale);
   Paths64 pp = ConvertCPathsD(paths, scale);
 
-  RectClip rc(r);
+  class RectClip rc(r);
   Paths64 result;
   result.reserve(pp.size());
   for (const Path64& p : pp)
@@ -360,7 +360,7 @@ EXTERN_DLL_EXPORT CPaths64 RectClipLines64(const Rect64 rect,
   const CPaths64 paths)
 {
   if (rect.IsEmpty() || !paths) return nullptr;
-  RectClipLines rcl {} (rect);
+  class RectClipLines rcl (rect);
   Paths64 pp = ConvertCPaths64(paths);
   Paths64 result;
   result.reserve(pp.size());
@@ -390,7 +390,7 @@ EXTERN_DLL_EXPORT CPathsD RectClipLinesD(const RectD rect,
   if (precision < -8 || precision > 8) return nullptr;
   const double scale = std::pow(10, precision);
   Rect64 r = ScaleRect<int64_t, double>(rect, scale);
-  RectClipLines rcl(r);
+  class RectClipLines rcl(r);
   Paths64 pp = ConvertCPathsD(paths, scale);
 
   result.reserve(pp.size());
@@ -651,7 +651,7 @@ inline void InitCPolyPath64(CPolyTree64* cpt,
   if (!child_cnt) return;
   cpt->childs = new CPolyPath64[child_cnt];
   CPolyPath64* child = cpt->childs;
-  for (const PolyPath64* pp_child : pp->Childs())
+  for (const PolyPath64* pp_child : *pp)
     InitCPolyPath64(child++, !is_hole, pp_child);  
 }
 
@@ -666,7 +666,7 @@ inline CPolyTree64* CreateCPolyTree64(const PolyTree64& pt)
   if (!child_cnt) return result;
   result->childs = new CPolyPath64[child_cnt];
   CPolyPath64* child = result->childs;
-  for (const PolyPath64* pp : pt.Childs())
+  for (const PolyPath64* pp : pt)
     InitCPolyPath64(child++, true, pp);
   return result;
 }
@@ -698,7 +698,7 @@ inline void InitCPolyPathD(CPolyTreeD* cpt,
   if (!child_cnt) return;
   cpt->childs = new CPolyPathD[child_cnt];
   CPolyPathD* child = cpt->childs;
-  for (const PolyPath64* pp_child : pp->Childs())
+  for (const PolyPath64* pp_child : *pp)
     InitCPolyPathD(child++, !is_hole, pp_child, scale);
 }
 
@@ -713,7 +713,7 @@ inline CPolyTreeD* CreateCPolyTreeD(const PolyTree64& pt, double scale)
   if (!child_cnt) return result;
   result->childs = new CPolyPathD[child_cnt];
   CPolyPathD* child = result->childs;
-  for (const PolyPath64* pp : pt.Childs())
+  for (const PolyPath64* pp : pt)
     InitCPolyPathD(child++, true, pp, scale);
   return result;
 }
