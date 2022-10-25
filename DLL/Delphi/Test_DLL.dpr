@@ -182,7 +182,7 @@ end;
 
 function CPathDCntrs(cnt1, cnt2: integer): CPathD;
 begin
-  GetMem(Result, 2 * sizeof(Int64));
+  GetMem(Result, 2 * sizeof(double));
   Result[0] := cnt1;
   Result[1] := cnt2;
 end;
@@ -198,7 +198,7 @@ begin
     if Length(pp[i]) = 0 then
       dec(len2);
   GetMem(Result, (1 + len2) * sizeof(Pointer));
-  Result[0] := CPath64Cntrs(0, len2);
+  Result[0] := CPath64Cntrs(0, len2); // add the counter 'path'
   j := 1;
   for i := 0 to len -1 do
   begin
@@ -220,7 +220,7 @@ begin
       dec(len2);
 
   GetMem(Result, (1 + len2) * sizeof(Pointer));
-  Result[0] := CPathDCntrs(0, len2);
+  Result[0] := CPathDCntrs(0, len2); // add the counter 'path'
   j := 1;
   for i := 0 to len -1 do
   begin
