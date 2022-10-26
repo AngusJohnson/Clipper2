@@ -1,6 +1,6 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  26 October 2022                                                 *
+* Date      :  27 October 2022                                                 *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  This module exports the Clipper2 Library (ie DLL/so)            *
@@ -99,7 +99,7 @@ EXTERN_DLL_EXPORT void DisposeExportedCPath64(CPath64 p)
   if (p) delete[] p;
 }
 
-EXTERN_DLL_EXPORT void DisposeExportedCPaths64(CPaths64 pp)
+EXTERN_DLL_EXPORT void DisposeExportedCPaths64(CPaths64& pp)
 {
   if (!pp) return;
   CPaths64 v = pp;
@@ -108,6 +108,7 @@ EXTERN_DLL_EXPORT void DisposeExportedCPaths64(CPaths64 pp)
   for (size_t i = 0; i <= cnt; ++i) //nb: cnt +1
     DisposeExportedCPath64(*v++);
   delete[] pp;
+  pp = nullptr;
 }
 
 EXTERN_DLL_EXPORT void DisposeExportedCPathD(CPathD p)
@@ -115,7 +116,7 @@ EXTERN_DLL_EXPORT void DisposeExportedCPathD(CPathD p)
   if (p) delete[] p;
 }
 
-EXTERN_DLL_EXPORT void DisposeExportedCPathsD(CPathsD pp)
+EXTERN_DLL_EXPORT void DisposeExportedCPathsD(CPathsD& pp)
 {
   if (!pp) return;
   CPathsD v = pp;
@@ -124,6 +125,7 @@ EXTERN_DLL_EXPORT void DisposeExportedCPathsD(CPathsD pp)
   for (size_t i = 0; i <= cnt; ++i) //nb: cnt +1
     DisposeExportedCPathD(*v++);
   delete[] pp;
+  pp = nullptr;
 }
 
 EXTERN_DLL_EXPORT int BooleanOp64(uint8_t cliptype, 
@@ -680,7 +682,7 @@ inline void DisposeCPolyPath64(CPolyPath64* cpp)
   delete[] cpp->childs;
 }
 
-EXTERN_DLL_EXPORT void DisposeCPolyTree64(CPolyTree64*& cpt)
+EXTERN_DLL_EXPORT void DisposeExportedCPolyTree64(CPolyTree64*& cpt)
 {
   if (!cpt) return;
   DisposeCPolyPath64(cpt);
@@ -728,7 +730,7 @@ inline void DisposeCPolyPathD(CPolyPathD* cpp)
   delete[] cpp->childs;
 }
 
-EXTERN_DLL_EXPORT void DisposeCPolyTreeD(CPolyTreeD*& cpt)
+EXTERN_DLL_EXPORT void DisposeExportedCPolyTreeD(CPolyTreeD*& cpt)
 {
   if (!cpt) return;
   DisposeCPolyPathD(cpt);

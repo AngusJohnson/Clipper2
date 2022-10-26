@@ -11,8 +11,8 @@ uses
   Windows,
   ShellApi,
   SysUtils,
-  SvgWriter in 'SvgWriter.pas';
-
+  SvgWriter in 'SvgWriter.pas',
+  Timer in 'Timer.pas';           //just for performance testing
 type
 
   ////////////////////////////////////////////////////////
@@ -67,7 +67,7 @@ type
   end;
 
 const
-  CLIPPER2_DLL = 'Clipper2.dll';
+  CLIPPER2_DLL = 'Clipper2_64.dll';
 
 ////////////////////////////////////////////////////////
 // Clipper2 DLL functions
@@ -78,16 +78,16 @@ function Version(): PAnsiChar;
 
 procedure DisposeExportedCPath64(cp: CPath64);
   external CLIPPER2_DLL name 'DisposeExportedCPath64';
-procedure DisposeExportedCPaths64(cps: CPaths64);
+procedure DisposeExportedCPaths64(var cps: CPaths64);
   external CLIPPER2_DLL name 'DisposeExportedCPaths64';
 procedure DisposeExportedCPathD(cp: CPathD);
   external CLIPPER2_DLL name 'DisposeExportedCPathD';
-procedure DisposeExportedCPathsD(cp: CPathsD);
+procedure DisposeExportedCPathsD(var cp: CPathsD);
   external CLIPPER2_DLL name 'DisposeExportedCPathsD';
-procedure DisposeCPolyTree64(cpt: PCPolyTree64);
-  external CLIPPER2_DLL name 'DisposeCPolyTree64';
-procedure DisposeCPolyTreeD(var cpt: PCPolyTreeD);
-  external CLIPPER2_DLL name 'DisposeCPolyTreeD';
+procedure DisposeExportedCPolyTree64(var cpt: PCPolyTree64);
+  external CLIPPER2_DLL name 'DisposeExportedCPolyTree64';
+procedure DisposeExportedCPolyTreeD(var cpt: PCPolyTreeD);
+  external CLIPPER2_DLL name 'DisposeExportedCPolyTreeD';
 
 function BooleanOp64(cliptype: UInt8; fillrule: UInt8;
   const subjects: CPaths64; const subjects_open: CPaths64;
@@ -139,7 +139,7 @@ begin
   FreeMem(cp);
 end;
 
-procedure DisposeLocalCPaths64(cps: CPaths64);
+procedure DisposeLocalCPaths64(var cps: CPaths64);
 var
   i, cnt: integer;
 begin
@@ -147,6 +147,7 @@ begin
   for i := 0 to cnt do //cnt +1
     FreeMem(cps[i]);
   FreeMem(cps);
+  cps := nil;
 end;
 
 procedure DisposeLocalCPathD(cp: CPathD);
@@ -154,7 +155,7 @@ begin
   FreeMem(cp);
 end;
 
-procedure DisposeLocalCPathsD(cps: CPathsD);
+procedure DisposeLocalCPathsD(var cps: CPathsD);
 var
   i, cnt: integer;
 begin
@@ -163,6 +164,7 @@ begin
   for i := 0 to cnt do //cnt +1
     FreeMem(cps[i]);
   FreeMem(cps);
+  cps := nil;
 end;
 
 ////////////////////////////////////////////////////////
@@ -485,16 +487,31 @@ end;
 // main entry here
 ////////////////////////////////////////////////////////
 
+const
+  perform_1000_low  = 1;
+  perform_1000_high = 7;
 var
+  i: integer;
+  elapsed: double;
   s: string;
+  svg: TSvgWriter; // class  (heap storage)
+  //sw: TStopwatch;  // record (stack storage)
+
+  //dynamic arrays // heap storage but with automatic cleanup
   sub, clp, sol: TPathsD;
-  csub, cclp, csol, csolo: CPathsD;
-  cptd: PCPolyTreeD;
-  svg: TSvgWriter;
+  //pointer arrays - locally allocated and requires manual cleanup
+  //While these could also have been defined as dynamic arrays with
+  //automatic cleanup, that might have confused those unfamiliar
+  //with Delphi but still using this code as a template for code
+  //in their preferred language.
+  csub_local, cclp_local: CPathsD;
+  //pointer arrays - external allocation and external cleanup
+  csol_extern, csolo_extern: CPathsD;
+  cptd_extern: PCPolyTreeD;
 begin
 
   Randomize;
-  csolo := nil;
+  csolo_extern := nil;
   svg := TSvgWriter.Create(frNonZero);
   try
 
@@ -505,17 +522,20 @@ begin
     sub[0] := MakePathD([10,10, 100,10, 100,100,10,100]);
     SetLength(clp, 1);
     clp[0] := MakePathD([20,20,110, 20, 110,110, 20,110]);
-    csub := TPathsDToCPathsD(sub);
-    cclp := TPathsDToCPathsD(clp);
+    csub_local := TPathsDToCPathsD(sub);
+    cclp_local := TPathsDToCPathsD(clp);
 
     WriteLn(#10'Testing BooleanOpD:');
     BooleanOpD(Uint8(TClipType.ctIntersection),
-      Uint8(TFillRule.frNonZero), csub, nil, cclp, csol, csolo);
-    WriteCPathsD(csol);
+      Uint8(TFillRule.frNonZero),
+      csub_local, nil, cclp_local,
+      csol_extern, csolo_extern);
+
+    //WriteCPathsD(csol_extern); //write coords to console
 
     AddSubject(svg, sub);
     AddClip(svg, clp);
-    AddSolution(svg, CPathsDToPathsD(csol));
+    AddSolution(svg, CPathsDToPathsD(csol_extern));
     SaveSvg(svg, 'BooleanOpD.svg', 400,400);
     ShowSvgImage('BooleanOpD.svg');
     svg.ClearAll;
@@ -524,48 +544,85 @@ begin
     WriteLn(#10'Testing random path:');
     sub[0] := MakeRandomPathD(400,400,50);
     clp[0] := MakeRandomPathD(400,400,50);
-    csub := TPathsDToCPathsD(sub);
-    cclp := TPathsDToCPathsD(clp);
+    csub_local := TPathsDToCPathsD(sub);
+    cclp_local := TPathsDToCPathsD(clp);
     BooleanOpD(Uint8(TClipType.ctIntersection),
-      Uint8(TFillRule.frNonZero), csub, nil, cclp, csol, csolo);
+      Uint8(TFillRule.frNonZero),
+      csub_local, nil, cclp_local,
+      csol_extern, csolo_extern);
 
     AddSubject(svg, sub);
     AddClip(svg, clp);
-    AddSolution(svg, CPathsDToPathsD(csol));
+    AddSolution(svg, CPathsDToPathsD(csol_extern));
+    //DisposeExportedCPathsD(csol_extern); //used below
+    DisposeExportedCPathsD(csolo_extern);
     SaveSvg(svg, 'Random.svg', 400,400);
     ShowSvgImage('Random.svg');
     svg.ClearAll;
 
     WriteLn(#10'Testing InflatePathsD:');
-    sol := CPathsDToPathsD(csol);
-    csol := InflatePathsD( csol, -10,
+    sol := CPathsDToPathsD(csol_extern);
+    csol_extern := InflatePathsD( csol_extern, -10,
       UInt8(TJoinType.jtMiter), UInt8(TEndType.etPolygon), 2, 4);
-    WriteCPathsD(csol);
+    //WriteCPathsD(csol_extern); //write coords to console
 
     AddSubject(svg, sol);
-    AddSolution(svg, CPathsDToPathsD(csol));
+    AddSolution(svg, CPathsDToPathsD(csol_extern));
+    DisposeExportedCPathsD(csol_extern);
     SaveSvg(svg, 'InflatePathsD.svg', 400,400);
     ShowSvgImage('InflatePathsD.svg');
     svg.ClearAll;
 
     WriteLn(#10'Testing BooleanOpPtD:');
     BooleanOpPtD(Uint8(TClipType.ctIntersection),
-      Uint8(TFillRule.frNonZero), csub, nil, cclp, cptd, csolo);
+      Uint8(TFillRule.frNonZero),
+      csub_local, nil, cclp_local,
+      cptd_extern, csolo_extern);
+    //WriteCPolyTreeD(cptd_extern); //write coords to console
 
-    WriteCPolyTreeD(cptd);
+    WriteLn(#10'Performance testing ...');
+    for i := perform_1000_low to perform_1000_high do
+    begin
+      sub[0] := MakeRandomPathD(800,600,i*1000);
+      clp[0] := MakeRandomPathD(800,600,i*1000);
+      Write(format(#10'  testing %d edges: ', [i*1000]));
+      begin
+        InitTimer(elapsed);
+        csub_local := TPathsDToCPathsD(sub);
+        cclp_local := TPathsDToCPathsD(clp);
+        BooleanOpD(Uint8(TClipType.ctIntersection),
+          Uint8(TFillRule.frNonZero),
+          csub_local, nil, cclp_local,
+          csol_extern, csolo_extern);
+      end;
+      WriteLn(format('%1.3n secs', [elapsed]));
+
+      //clean up here unless the last iteration
+      if i < perform_1000_high then
+      begin
+        DisposeLocalCPathsD(csub_local);
+        DisposeLocalCPathsD(cclp_local);
+        DisposeExportedCPathsD(csol_extern);
+        DisposeExportedCPathsD(csolo_extern);
+      end;
+    end;
+
+    AddSubject(svg, sub);
+    AddClip(svg, clp);
+    AddSolution(svg, CPathsDToPathsD(csol_extern));
+    DisposeExportedCPathsD(csol_extern);
+    DisposeExportedCPathsD(csolo_extern);
+    SaveSvg(svg, 'Performance.svg', 800,600);
+    ShowSvgImage('Performance.svg');
+    svg.ClearAll;
+
+
     // clean up
-    OutputDebugString('DisposeCPolyTreeD');
-    DisposeCPolyTreeD(cptd);
-
     //dispose locally constructed CPaths
-    OutputDebugString('DisposeLocalCPathsD');
-    DisposeLocalCPathsD(csub);
-    DisposeLocalCPathsD(cclp);
-
-    //dispose DLL constructed CPaths
-    OutputDebugString('DisposeExportedCPathsD');
-    DisposeExportedCPathsD(csol);
-    DisposeExportedCPathsD(csolo);
+    DisposeLocalCPathsD(csub_local);
+    DisposeLocalCPathsD(cclp_local);
+    //dispose DLL constructed objects
+    DisposeExportedCPolyTreeD(cptd_extern);
 
   finally
     svg.Free;
