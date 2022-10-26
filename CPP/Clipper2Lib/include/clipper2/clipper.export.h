@@ -682,6 +682,7 @@ inline void DisposeCPolyPath64(CPolyPath64* cpp)
 
 EXTERN_DLL_EXPORT void DisposeCPolyTree64(CPolyTree64*& cpt)
 {
+  if (!cpt) return;
   DisposeCPolyPath64(cpt);
   delete cpt;
   cpt = nullptr;
@@ -723,7 +724,7 @@ inline void DisposeCPolyPathD(CPolyPathD* cpp)
   if (!cpp->child_count) return;
   CPolyPathD* child = cpp->childs;
   for (size_t i = 0; i < cpp->child_count; ++i)
-    DisposeCPolyPathD(child);
+    DisposeCPolyPathD(child++);
   delete[] cpp->childs;
 }
 
@@ -732,6 +733,7 @@ EXTERN_DLL_EXPORT void DisposeCPolyTreeD(CPolyTreeD*& cpt)
   if (!cpt) return;
   DisposeCPolyPathD(cpt);
   delete cpt;
+  cpt = nullptr;
 }
 
 }  // end Clipper2Lib namespace
