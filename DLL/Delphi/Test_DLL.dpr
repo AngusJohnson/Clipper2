@@ -37,20 +37,25 @@ type
   TRect64 = record l,t,r,b: Int64; end;
   TRectD = record l,t,r,b: double; end;
 
+  // nb: Pointer sizes could be 32bit or 64 bits
+  // and this will depend on how the DLL was compiled
+  // Obviously, DLLs compiled for 64bits won't work with
+  // applications compiled for 32bits (and vice versa).
+
   PCPolyTree64 = ^CPolyTree64;
-  CPolyTree64 = record
-    polygon   : CPath64;
-    isHole    : Boolean;
-    childCnt  : integer;
-    childs    : PCPolyTree64;
+  CPolyTree64 = packed record
+    polygon   : CPath64;        //pointer (32bit or 64bit)
+    isHole    : LongBool;       //32 bits
+    childCnt  : Int32;          //32 bits
+    childs    : PCPolyTree64;   //pointer (32bit or 64bit)
   end;
 
   PCPolyTreeD = ^CPolyTreeD;
-  CPolyTreeD = record
-    polygon   : CPathD;
-    isHole    : Boolean;
-    childCnt  : integer;
-    childs    : PCPolyTreeD;
+  CPolyTreeD = packed record
+    polygon   : CPathD;         //pointer (32bit or 64bit)
+    isHole    : LongBool;       //32 bits
+    childCnt  : Int32;          //32 bits
+    childs    : PCPolyTreeD;    //pointer (32bit or 64bit)
   end;
 
 function Version(): PAnsiChar;
@@ -438,12 +443,9 @@ end;
 var
   i, res: integer;
   s: string;
-  sub, clp, sol: TPathsD;
+  sub, clp: TPathsD;
   csub, cclp, csol, csolo: CPathsD;
   cptd: PCPolyTreeD;
-//  sub, clp, sol: TPaths64;
-//  csub, cclp, csol, csolo: CPaths64;
-  r: TRectD;
 begin
   csolo := nil;
 
