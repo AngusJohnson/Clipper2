@@ -7,6 +7,38 @@
 * License   :  http://www.boost.org/LICENSE_1_0.txt                            *
 *******************************************************************************/
 
+// The exported functions below refer to simple structures that
+// can be understood across multiple languages. Consequently
+// Path64, PathD, Polytree64 etc are converted from classes
+// (std::vector<> etc) into the following data structures:
+//
+// CPath64 (int64_t*) & CPathD (double_t*):
+// Path64 and PathD are converted into arrays of x,y coordinates.
+// However in these arrays the first x,y coordinate pair is a
+// counter with 'x' containing the number of following coordinate
+// pairs. ('y' must always be 0.)
+//__________________________________
+// |counter|coord1|coord2|...|coordN|
+// |N ,0   |x1, y1|x2, y2|...|xN, yN|
+// __________________________________
+//
+// CPaths64 (int64_t**) & CPathsD (double_t**):
+// These are arrays of pointers to CPath64 and CPathD where
+// the first pointer is to a 'counter 'path'. This 'counter
+// path' has a single x,y coord pair where 'y' contains
+// the number of paths that follow (and with 'x' always 0).
+//_______________________________
+// |counter|path1|path2|...|pathN|
+// |addr0  |addr1|addr2|...|addrN|  (where *addr0 == 0,N)
+// _______________________________
+//
+// The structures of CPolytree64 and CPolytreeD are defined
+// below and don't need to be repeated or explained here.
+// 
+// The pointer structures created and exported through these
+// functions can't safely be destroyed externally, so a number
+// of 'dispose functions are also exported.
+
 #ifndef CLIPPER2_EXPORT_H
 #define CLIPPER2_EXPORT_H
 
@@ -18,29 +50,10 @@
 #include "clipper2/clipper.offset.h"
 #include "clipper2/clipper.rectclip.h"
 
-namespace Clipper2Lib {
+#include <fstream> // debugging
 
-// The exported functions below refer to simple structures that 
-// can be understood across multiple languages. Consequently 
-// Path64, PathD, Polytree64 etc are converted from classes 
-// (std::vector<> etc) into the following simple structures:
-// 
-// Path64, PathD are converted into simple arrays (int64_t* and double*)
-// and become CPath64 and CPathD respectively. However, the first 
-// coordinate x,y pair in these arrays will contain the coordinate count 
-// excluding the 'counter' coordinate. (x: coordinate count; y: 0)
-// 
-// CPaths64 and CPathsD are arrays of CPath64 and CPathD respectively
-// (ie int64_t**  double**). However the first 'path' contains a single 
-// 'counter' coordinate where the 'y' coordinate contain the path count, 
-// excluding the 'counter' path. (x:0; y: path count)
-// 
-// The structures of CPolytree64 and CPolytreeD are defined below 
-// and don't need to be repeated or explained here.
-// 
-// The pointer structures created and exported through these functions 
-// can't safely be destroyed externally, so 'dispose functions are also 
-// exported.
+
+namespace Clipper2Lib {
 
 typedef int64_t* CPath64;
 typedef int64_t** CPaths64;
@@ -89,7 +102,7 @@ inline CPolyTreeD* CreateCPolyTreeD(const PolyTree64& pt, double scale);
 
 #define EXTERN_DLL_EXPORT extern "C" __declspec(dllexport)
 
-EXTERN_DLL_EXPORT const char* Version() 
+EXTERN_DLL_EXPORT const char* Version()
 {
   return CLIPPER2_VERSION;
 }
@@ -104,7 +117,7 @@ EXTERN_DLL_EXPORT void DisposeExportedCPaths64(CPaths64& pp)
   if (!pp) return;
   CPaths64 v = pp;
   CPath64 cnts = *v;
-  size_t cnt = cnts[1]; //ie get the second value
+  const size_t cnt = static_cast<size_t>(cnts[1]);
   for (size_t i = 0; i <= cnt; ++i) //nb: cnt +1
     DisposeExportedCPath64(*v++);
   delete[] pp;
@@ -139,12 +152,9 @@ EXTERN_DLL_EXPORT int BooleanOp64(uint8_t cliptype,
   if (fillrule > static_cast<uint8_t>(FillRule::Negative))
     return -3;
   Paths64 sub, sub_open, clp;
-  try {
-    sub = ConvertCPaths64(subjects);
-    sub_open  = ConvertCPaths64(subjects_open);
-    clp       = ConvertCPaths64(clips);
-  }
-  catch (...) { return -2; } //invalid cpath
+  sub       = ConvertCPaths64(subjects);
+  sub_open  = ConvertCPaths64(subjects_open);
+  clp       = ConvertCPaths64(clips);
 
   Paths64 sol, sol_open;
   Clipper64 clipper;
@@ -155,7 +165,6 @@ EXTERN_DLL_EXPORT int BooleanOp64(uint8_t cliptype,
   if (clp.size() > 0) clipper.AddClip(clp);
   if (!clipper.Execute(ClipType(cliptype), FillRule(fillrule), sol, sol_open)) 
     return -1; // clipping bug - should never happen :)
-
   solution = CreateCPaths64(sol);
   solution_open = CreateCPaths64(sol_open);
   return 0; //success :))
@@ -172,12 +181,9 @@ EXTERN_DLL_EXPORT int BooleanOpPt64(uint8_t cliptype,
   if (fillrule > static_cast<uint8_t>(FillRule::Negative))
     return -3;
   Paths64 sub, sub_open, clp;
-  try {
-    sub = ConvertCPaths64(subjects);
-    sub_open = ConvertCPaths64(subjects_open);
-    clp = ConvertCPaths64(clips);
-  }
-  catch (...) { return -2; } //invalid cpath
+  sub = ConvertCPaths64(subjects);
+  sub_open = ConvertCPaths64(subjects_open);
+  clp = ConvertCPaths64(clips);
 
   PolyTree64 pt;
   Paths64 sol_open;
@@ -209,12 +215,9 @@ EXTERN_DLL_EXPORT int BooleanOpD(uint8_t cliptype,
   const double scale = std::pow(10, precision);
 
   Paths64 sub, sub_open, clp, sol, sol_open;
-  try {
-    sub = ConvertCPathsD(subjects, scale);
-    sub_open = ConvertCPathsD(subjects_open, scale);
-    clp = ConvertCPathsD(clips, scale);
-  }
-  catch (...) { return -2; } //invalid cpath
+  sub       = ConvertCPathsD(subjects, scale);
+  sub_open  = ConvertCPathsD(subjects_open, scale);
+  clp       = ConvertCPathsD(clips, scale);
 
   Clipper64 clipper;
   clipper.PreserveCollinear = preserve_collinear;
@@ -250,12 +253,9 @@ EXTERN_DLL_EXPORT int BooleanOpPtD(uint8_t cliptype,
 
   PolyTree64 sol;
   Paths64 sub, sub_open, clp, sol_open;
-  try {
-    sub = ConvertCPathsD(subjects, scale);
-    sub_open = ConvertCPathsD(subjects_open, scale);
-    clp = ConvertCPathsD(clips, scale);
-  }
-  catch (...) { return -2; } //invalid cpath
+  sub       = ConvertCPathsD(subjects, scale);
+  sub_open  = ConvertCPathsD(subjects_open, scale);
+  clp       = ConvertCPathsD(clips, scale);
 
   Clipper64 clipper;
   clipper.PreserveCollinear = preserve_collinear;
@@ -280,10 +280,7 @@ EXTERN_DLL_EXPORT CPaths64 InflatePaths64(const CPaths64 paths,
   double arc_tolerance = 0.0, bool reverse_solution = false)
 {
   Paths64 pp;
-  try {
-    pp = ConvertCPaths64(paths);
-  }
-  catch (...) { return nullptr; }
+  pp = ConvertCPaths64(paths);
 
   ClipperOffset clip_offset( miter_limit, 
     arc_tolerance, reverse_solution);
@@ -443,10 +440,10 @@ inline Path64 ConvertCPath64(const CPath64& p)
   if (p && *p)
   {
     CPath64 v = p;
-    int64_t cnt = p[0];
+    const size_t cnt = static_cast<size_t>(p[0]);
     v += 2; // skip counters
     result.reserve(cnt);
-    for (int64_t i = 0; i < cnt; ++i)
+    for (size_t i = 0; i < cnt; ++i)
     {
       // x,y here avoids right to left function evaluation
       // result.push_back(Point64(*v++, *v++));
@@ -484,7 +481,7 @@ inline Paths64 ConvertCPaths64(const CPaths64& pp)
   {
     CPaths64 v = pp;
     CPath64 cnts = pp[0];
-    size_t cnt = cnts[1]; // ie 2nd cnt == CPaths64 count
+    const size_t cnt = static_cast<size_t>(cnts[1]); // nb 2nd cnt
     ++v; // skip cnts
     result.reserve(cnt);
     for (size_t i = 0; i < cnt; ++i)

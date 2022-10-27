@@ -14,7 +14,11 @@ interface
 {$I ..\Clipper2Lib\Clipper.inc}
 
 uses
-  Classes, SysUtils, Math;
+  Classes,
+  {$IFDEF USINGCLIPPER2LIB}
+  Clipper,
+  {$ENDIF}
+  SysUtils, Math;
 
 const
   black   = $FF000000;
@@ -30,15 +34,21 @@ const
   aqua    = $FF00FFFF;
 
 type
-  TFillRule = (frEvenOdd, frNonZero, frPositive, frNegative);
 
-  PPointD = ^TPointD;
+{$IFNDEF USINGCLIPPER2LIB}
+  TFillRule = (frEvenOdd, frNonZero, frPositive, frNegative);
   TPointD = record X,Y: double; end;
   TPathD = array of TPointD;
   TPathsD = array of TPathD;
-
-  TArrayOfInteger = array of Integer;
   TRectD = record left,top,right,bottom: double; end;
+  TPoint64 = record X,Y: Int64; end;
+  TPath64 = array of TPoint64;
+  TPaths64 = array of TPath64;
+  TRect64 = record left,top,right,bottom: double; end;
+{$ENDIF}
+
+  PPointD = ^TPointD;
+  TArrayOfInteger = array of Integer;
 
 {$IFDEF RECORD_METHODS}
   TCoordStyle = record
@@ -103,6 +113,9 @@ type
       coordFontSize: integer = 9;
       coordFontColor: Cardinal = black);
     destructor Destroy; override;
+    procedure AddPaths(const paths: TPaths64; isOpen: Boolean;
+      brushColor, penColor: Cardinal;
+      penWidth: double; showCoords: Boolean = false); overload;
     procedure AddPaths(const paths: TPathsD; isOpen: Boolean;
       brushColor, penColor: Cardinal;
       penWidth: double; showCoords: Boolean = false); overload;
@@ -126,11 +139,17 @@ type
     procedure ClearAll;
   end;
 
-  procedure AddSubject(svg: TSvgWriter; const paths: TPathsD);
-  procedure AddOpenSubject(svg: TSvgWriter; const paths: TPathsD);
-  procedure AddClip(svg: TSvgWriter; const paths: TPathsD);
-  procedure AddSolution(svg: TSvgWriter; const paths: TPathsD);
-  procedure AddOpenSolution(svg: TSvgWriter; const paths: TPathsD);
+  procedure AddSubject(svg: TSvgWriter; const paths: TPaths64); overload;
+  procedure AddOpenSubject(svg: TSvgWriter; const paths: TPaths64); overload;
+  procedure AddClip(svg: TSvgWriter; const paths: TPaths64); overload;
+  procedure AddSolution(svg: TSvgWriter; const paths: TPaths64); overload;
+  procedure AddOpenSolution(svg: TSvgWriter; const paths: TPaths64); overload;
+  procedure AddSubject(svg: TSvgWriter; const paths: TPathsD); overload;
+  procedure AddOpenSubject(svg: TSvgWriter; const paths: TPathsD); overload;
+  procedure AddClip(svg: TSvgWriter; const paths: TPathsD); overload;
+  procedure AddSolution(svg: TSvgWriter; const paths: TPathsD); overload;
+  procedure AddOpenSolution(svg: TSvgWriter; const paths: TPathsD); overload;
+
   procedure SaveSvg(svg: TSvgWriter; const filename: string;
     width: integer = 0; height: integer = 0; margin: integer = 0);
 
@@ -177,6 +196,30 @@ begin
   if Result.Left >= Result.Right then Result := nullRectD;
 end;
 
+function PathD(const path: TPath64): TPathD;
+var
+  i, len: integer;
+begin
+  len := Length(path);
+  setLength(Result, len);
+  for i := 0 to len -1 do
+  begin
+    Result[i].X := path[i].X;
+    Result[i].Y := path[i].Y;
+  end;
+end;
+
+function PathsD(const paths: TPaths64): TPathsD;
+var
+  i, len: integer;
+begin
+  len := Length(paths);
+  setLength(Result, len);
+  for i := 0 to len -1 do
+    Result[i] := PathD(paths[i]);
+end;
+//------------------------------------------------------------------------------
+
 function Ellipse(l,t,r,b: double; steps: integer): TPathD;
 var
   i: Integer;
@@ -216,7 +259,6 @@ begin
   pt.X := tmpX * cosA - tmpY * sinA + center.X;
   pt.Y := tmpX * sinA + tmpY * cosA + center.Y;
 end;
-//------------------------------------------------------------------------------
 
 procedure RotatePath(var path: TPathD;
   const center: TPointD; sinA, cosA: double);
@@ -280,6 +322,23 @@ begin
   fCircleInfos.Free;
   fTextInfos.Free;
   inherited;
+end;
+
+procedure TSvgWriter.AddPaths(const paths: TPaths64; isOpen: Boolean;
+  brushColor, penColor: Cardinal;
+  penWidth: double; showCoords: Boolean = false);
+var
+  pi: PPolyInfo;
+begin
+  if Length(paths) = 0 then Exit;
+  new(pi);
+  pi.paths := PathsD(paths);
+  pi.BrushClr := brushColor;
+  pi.PenClr   := penColor;
+  pi.PenWidth := penWidth;
+  pi.ShowCoords := showCoords;
+  pi.IsOpen := isOpen;
+  fPolyInfos.Add(pi);
 end;
 
 procedure TSvgWriter.AddPaths(const paths: TPathsD; isOpen: Boolean;
@@ -543,28 +602,53 @@ begin
   end;
 end;
 
-
-procedure AddSubject(svg: TSvgWriter; const paths: TPathsD);
+procedure AddSubject(svg: TSvgWriter; const paths: TPaths64);
 begin
   svg.AddPaths(paths, false, $200099FF, $800066FF, 1.0);
 end;
 
-procedure AddOpenSubject(svg: TSvgWriter; const paths: TPathsD);
+procedure AddOpenSubject(svg: TSvgWriter; const paths: TPaths64);
 begin
   svg.AddPaths(paths, true, $0, $800066FF, 2.2);
 end;
 
-procedure AddClip(svg: TSvgWriter; const paths: TPathsD);
+procedure AddClip(svg: TSvgWriter; const paths: TPaths64);
 begin
   svg.AddPaths(paths, false, $10FF9900, $80FF6600, 1.0);
 end;
 
-procedure AddSolution(svg: TSvgWriter; const paths: TPathsD);
+procedure AddSolution(svg: TSvgWriter; const paths: TPaths64);
 begin
   svg.AddPaths(paths, false, $8066FF66, $FF006600, 1.5);
 end;
 
-procedure AddOpenSolution(svg: TSvgWriter; const paths: TPathsD);
+procedure AddOpenSolution(svg: TSvgWriter; const paths: TPaths64);
+begin
+  svg.AddPaths(paths, false, $8066FF66, $FF006600, 1.5);
+end;
+
+
+procedure AddSubject(svg: TSvgWriter; const paths: TPathsD); overload;
+begin
+  svg.AddPaths(paths, false, $200099FF, $800066FF, 1.0);
+end;
+
+procedure AddOpenSubject(svg: TSvgWriter; const paths: TPathsD); overload;
+begin
+  svg.AddPaths(paths, true, $0, $800066FF, 2.2);
+end;
+
+procedure AddClip(svg: TSvgWriter; const paths: TPathsD); overload;
+begin
+  svg.AddPaths(paths, false, $10FF9900, $80FF6600, 1.0);
+end;
+
+procedure AddSolution(svg: TSvgWriter; const paths: TPathsD); overload;
+begin
+  svg.AddPaths(paths, false, $8066FF66, $FF006600, 1.5);
+end;
+
+procedure AddOpenSolution(svg: TSvgWriter; const paths: TPathsD); overload;
 begin
   svg.AddPaths(paths, false, $8066FF66, $FF006600, 1.5);
 end;

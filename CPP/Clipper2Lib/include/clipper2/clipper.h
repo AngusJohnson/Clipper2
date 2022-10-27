@@ -155,7 +155,7 @@ namespace Clipper2Lib {
     JoinType jt, EndType et, double miter_limit = 2.0, double precision = 2)
   {
     if (precision < -8 || precision > 8)
-      throw new Clipper2Exception(precision_error);
+      throw Clipper2Exception(precision_error);
     const double scale = std::pow(10, precision);
     ClipperOffset clip_offset(miter_limit);
     clip_offset.AddPaths(ScalePaths<int64_t,double>(paths, scale), jt, et);
@@ -295,7 +295,7 @@ namespace Clipper2Lib {
     if (rect.IsEmpty() || path.empty() ||
       !rect.Contains(Bounds(path))) return PathD();
     if (precision < -8 || precision > 8)
-      throw new Clipper2Exception(precision_error);
+      throw Clipper2Exception(precision_error);
     const double scale = std::pow(10, precision);
     Rect64 r = ScaleRect<int64_t, double>(rect, scale);
     class RectClip rc(r);
@@ -307,7 +307,7 @@ namespace Clipper2Lib {
   {
     if (rect.IsEmpty() || paths.empty()) return PathsD();
     if (precision < -8 || precision > 8)
-      throw new Clipper2Exception(precision_error);
+      throw Clipper2Exception(precision_error);
     const double scale = std::pow(10, precision);
     Rect64 r = ScaleRect<int64_t, double>(rect, scale);
     class RectClip rc(r);
@@ -373,7 +373,7 @@ namespace Clipper2Lib {
     if (rect.IsEmpty() || path.empty() ||
       !rect.Contains(Bounds(path))) return PathsD();
     if (precision < -8 || precision > 8)
-      throw new Clipper2Exception(precision_error);
+      throw Clipper2Exception(precision_error);
     const double scale = std::pow(10, precision);
     Rect64 r = ScaleRect<int64_t, double>(rect, scale);
     class RectClipLines rcl(r);
@@ -386,7 +386,7 @@ namespace Clipper2Lib {
     PathsD result;
     if (rect.IsEmpty() || paths.empty()) return result;
     if (precision < -8 || precision > 8)
-      throw new Clipper2Exception(precision_error);
+      throw Clipper2Exception(precision_error);
     const double scale = std::pow(10, precision);
     Rect64 r = ScaleRect<int64_t, double>(rect, scale);
     class RectClipLines rcl(r);
@@ -642,7 +642,7 @@ namespace Clipper2Lib {
   inline PathD TrimCollinear(const PathD& path, int precision, bool is_open_path = false)
   {
     if (precision > 8 || precision < -8) 
-      throw new Clipper2Exception(precision_error);
+      throw Clipper2Exception(precision_error);
     const double scale = std::pow(10, precision);
     Path64 p = ScalePath<int64_t, double>(path, scale);
     p = TrimCollinear(p, is_open_path);
