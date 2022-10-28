@@ -15,7 +15,7 @@ interface
 
 uses
   Classes,
-  {$IFDEF USINGCLIPPER2LIB}
+  {$IFDEF USING_CLIPPER2_SRC}
   Clipper,
   {$ENDIF}
   SysUtils, Math;
@@ -35,7 +35,7 @@ const
 
 type
 
-{$IFNDEF USINGCLIPPER2LIB}
+{$IFNDEF USING_CLIPPER2_SRC}
   TFillRule = (frEvenOdd, frNonZero, frPositive, frNegative);
   TPointD = record X,Y: double; end;
   TPathD = array of TPointD;
@@ -44,7 +44,7 @@ type
   TPoint64 = record X,Y: Int64; end;
   TPath64 = array of TPoint64;
   TPaths64 = array of TPath64;
-  TRect64 = record left,top,right,bottom: double; end;
+  TRect64 = record left,top,right,bottom: Int64; end;
 {$ENDIF}
 
   PPointD = ^TPointD;
@@ -609,7 +609,7 @@ end;
 
 procedure AddOpenSubject(svg: TSvgWriter; const paths: TPaths64);
 begin
-  svg.AddPaths(paths, true, $0, $800066FF, 2.2);
+  svg.AddPaths(paths, true, $0, $800066FF, 1.8);
 end;
 
 procedure AddClip(svg: TSvgWriter; const paths: TPaths64);
@@ -624,7 +624,7 @@ end;
 
 procedure AddOpenSolution(svg: TSvgWriter; const paths: TPaths64);
 begin
-  svg.AddPaths(paths, true, $0, $FF006600, 2.5);
+  svg.AddPaths(paths, true, $0, $FF006600, 2.2);
 end;
 
 
@@ -635,7 +635,7 @@ end;
 
 procedure AddOpenSubject(svg: TSvgWriter; const paths: TPathsD); overload;
 begin
-  svg.AddPaths(paths, true, $0, $800066FF, 2.2);
+  svg.AddPaths(paths, true, $0, $800066FF, 1.8);
 end;
 
 procedure AddClip(svg: TSvgWriter; const paths: TPathsD); overload;
@@ -650,7 +650,7 @@ end;
 
 procedure AddOpenSolution(svg: TSvgWriter; const paths: TPathsD); overload;
 begin
-  svg.AddPaths(paths, true, $0, $FF006600, 2.5);
+  svg.AddPaths(paths, true, $0, $FF006600, 2.2);
 end;
 
 procedure SaveSvg(svg: TSvgWriter; const filename: string;

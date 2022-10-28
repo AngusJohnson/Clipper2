@@ -1,6 +1,6 @@
 program Test_DLL;
 
-// Make sure that the Clipper2 DLL is in either
+// Make sure that the Clipper2 DLLS are in either
 // the OS Path or in the application's folder.
 
 {$APPTYPE CONSOLE}
@@ -10,7 +10,7 @@ uses
   Windows,
   ShellApi,
   SysUtils,
-{$IFDEF USINGCLIPPER2LIB}
+{$IFDEF USING_CLIPPER2_SRC}
   Clipper.Core in '..\..\Delphi\Clipper2Lib\Clipper.Core.pas',
   Clipper.Engine in '..\..\Delphi\Clipper2Lib\Clipper.Engine.pas',
   Clipper in '..\..\Delphi\Clipper2Lib\Clipper.pas',
@@ -23,7 +23,7 @@ type
   // Clipper2 DLL structures
   ////////////////////////////////////////////////////////
 
-{$IFNDEF USINGCLIPPER2LIB}
+{$IFNDEF USING_CLIPPER2_SRC}
   TClipType = (ctNone, ctIntersection, ctUnion, ctDifference, ctXor);
   TJoinType = (jtSquare, jtRound, jtMiter);
   TEndType  = (etPolygon, etJoined, etButt, etSquare, etRound);
@@ -83,7 +83,7 @@ const
 // Clipper2 DLL functions
 ////////////////////////////////////////////////////////
 
-function Version(): PAnsiChar;
+function Version(): PAnsiChar; cdecl;
   external CLIPPER2_DLL name 'Version';
 
 procedure DisposeExportedCPath64(cp: CPath64); cdecl;
@@ -335,11 +335,93 @@ begin
     Result[i-1] := CPathDToPathD(cps[i]);
 end;
 
+{$IFNDEF USING_CLIPPER2_SRC}
+
+procedure AppendPath(var paths: TPaths64; const extra: TPath64); overload;
+var
+  len: Integer;
+begin
+  len := length(paths);
+  SetLength(paths, len +1);
+  paths[len] := extra;
+end;
+
+procedure AppendPath(var paths: TPathsD; const extra: TPathD); overload;
+var
+  len: Integer;
+begin
+  len := length(paths);
+  SetLength(paths, len +1);
+  paths[len] := extra;
+end;
+{$ENDIF}
+
+procedure CPt64Internal(cpt: PCPolyTree64; var paths: TPaths64);
+var
+  i: integer;
+  child: PCPolyTree64;
+begin
+  if Assigned(cpt.polygon) then
+    AppendPath(paths, CPath64ToPath64(cpt.polygon));
+  if cpt.childCnt = 0 then Exit;
+  child := cpt.childs;
+  for i := 0 to cpt.childCnt -1 do
+  begin
+    CPt64Internal(child, paths);
+    inc(child);
+  end;
+end;
+
+function CPolytree64ToPaths64(cpt: PCPolyTree64): TPaths64;
+var
+  i: integer;
+  child: PCPolyTree64;
+begin
+  Result := nil;
+  if not Assigned(cpt) or (cpt.childCnt = 0) then Exit;
+  child := cpt.childs;
+  for i := 0 to cpt.childCnt -1 do
+  begin
+    CPt64Internal(child, Result);
+    inc(child);
+  end;
+end;
+
+procedure CPtDInternal(cpt: PCPolyTreeD; var paths: TPathsD);
+var
+  i: integer;
+  child: PCPolyTreeD;
+begin
+  AppendPath(paths, CPathDToPathD(cpt.polygon));
+  if cpt.childCnt = 0 then Exit;
+  child := cpt.childs;
+  for i := 0 to cpt.childCnt -1 do
+  begin
+    CPtDInternal(child, paths);
+    inc(child);
+  end;
+end;
+
+function CPolytreeDToPathsD(cpt: PCPolyTreeD): TPathsD;
+var
+  i: integer;
+  child: PCPolyTreeD;
+begin
+  Result := nil;
+  if not Assigned(cpt) or (cpt.childCnt = 0) then Exit;
+  child := cpt.childs;
+  for i := 0 to cpt.childCnt -1 do
+  begin
+    CPtDInternal(child, Result);
+    inc(child);
+  end;
+end;
+
 ////////////////////////////////////////////////////////
 // miscellaneous functions
 ////////////////////////////////////////////////////////
 
-function MakePath(vals: array of Int64): TPath64;
+function MakePath64(vals: array of Int64): TPath64;
 var
   i, len: integer;
 begin
@@ -394,7 +476,7 @@ end;
 function RectToPath64(const rec: TRect64): TPath64;
 begin
   with rec do
-    Result := MakePath([left, top, right, top,
+    Result := MakePath64([left, top, right, top,
       right, bottom, left, bottom]);
 end;
 
@@ -562,11 +644,11 @@ end;
 
 procedure Test_Version();
 begin
-  WriteLn(#10'Clipper2 DLL version:');
+  Write(#10'Clipper2 DLL version: ');
   WriteLn(Version);
 end;
 
-procedure Test_Random_BooleanOp64(edgeCnt: integer);
+procedure Test_BooleanOp64(edgeCnt: integer);
 var
   sub, clp: TPaths64;
   csub_local, cclp_local: CPaths64;
@@ -575,7 +657,7 @@ var
 begin
     // setup
     csolo_extern := nil;
-    WriteLn(#10'Testing Random BooleanOp64');
+    WriteLn(#10'Testing BooleanOp64');
     SetLength(sub, 1);
     sub[0] := MakeRandomPath(displayWidth, displayHeight, edgeCnt);
     SetLength(clp, 1);
@@ -611,7 +693,100 @@ begin
     DisposeExportedCPaths64(csolo_extern);
 end;
 
-procedure Test_Random_InflatePaths64(delta: double);
+procedure Test_BooleanOpD(edgeCnt: integer);
+var
+  sub, clp: TPathsD;
+  csub_local, cclp_local: CPathsD;
+  csol_extern, csolo_extern: CPathsD;
+  svg: TSvgWriter;
+begin
+    // setup
+    csolo_extern := nil;
+    WriteLn(#10'Testing BooleanOpD');
+    SetLength(sub, 1);
+    sub[0] := MakeRandomPathD(displayWidth, displayHeight, edgeCnt);
+    SetLength(clp, 1);
+    clp[0] := MakeRandomPathD(displayWidth, displayHeight, edgeCnt);
+    // convert paths into DLL structures (will require local clean up)
+    csub_local := TPathsDToCPathsD(sub);
+    cclp_local := TPathsDToCPathsD(clp);
+
+    // do the DLL operation
+    BooleanOpD(Uint8(TClipType.ctIntersection),
+      Uint8(TFillRule.frNonZero),
+      csub_local, nil, cclp_local,
+      csol_extern, csolo_extern);
+
+    // optionally display result on the console
+    //WriteCPaths64(csol_extern);
+
+    // finally, display and clean up
+    svg := TSvgWriter.Create(frNonZero);
+    try
+      AddSubject(svg, sub);
+      AddClip(svg, clp);
+      AddSolution(svg, CPathsDToPathsD(csol_extern));
+      SaveSvg(svg, 'BooleanOpD.svg', displayWidth, displayHeight);
+      ShowSvgImage('BooleanOpD.svg');
+    finally
+      svg.Free;
+    end;
+
+    DisposeLocalCPathsD(csub_local);
+    DisposeLocalCPathsD(cclp_local);
+    DisposeExportedCPathsD(csol_extern);
+    DisposeExportedCPathsD(csolo_extern);
+end;
+
+procedure Test_BooleanOpPtD(edgeCnt: integer);
+var
+  sub, clp, sol: TPathsD;
+  csub_local, cclp_local: CPathsD;
+  csol_extern: PCPolyTreeD;
+  csolo_extern: CPathsD;
+  svg: TSvgWriter;
+begin
+    // setup
+    csolo_extern := nil;
+    WriteLn(#10'Testing BooleanOpPtD');
+    SetLength(sub, 1);
+    sub[0] := MakeRandomPathD(displayWidth, displayHeight, edgeCnt);
+    SetLength(clp, 1);
+    clp[0] := MakeRandomPathD(displayWidth, displayHeight, edgeCnt);
+    // convert paths into DLL structures (will require local clean up)
+    csub_local := TPathsDToCPathsD(sub);
+    cclp_local := TPathsDToCPathsD(clp);
+
+    // do the DLL operation
+    BooleanOpPtD(Uint8(TClipType.ctIntersection),
+      Uint8(TFillRule.frNonZero),
+      csub_local, nil, cclp_local,
+      csol_extern, csolo_extern);
+
+    // optionally display result on the console
+    //WriteCPaths64(csol_extern);
+
+    sol := CPolytreeDToPathsD(csol_extern);
+    DisposeExportedCPolyTreeD(csol_extern);
+    DisposeExportedCPathsD(csolo_extern);
+
+    // finally, display and clean up
+    svg := TSvgWriter.Create(frNonZero);
+    try
+      AddSubject(svg, sub);
+      AddClip(svg, clp);
+      AddSolution(svg, sol);
+      SaveSvg(svg, 'BooleanOpPtD.svg', displayWidth, displayHeight);
+      ShowSvgImage('BooleanOpPtD.svg');
+    finally
+      svg.Free;
+    end;
+
+    DisposeLocalCPathsD(csub_local);
+    DisposeLocalCPathsD(cclp_local);
+end;
+
+procedure Test_InflatePaths64(delta: double);
 var
   sub: TPaths64;
   csub_local: CPaths64;
@@ -619,7 +794,7 @@ var
   svg: TSvgWriter;
 begin
     // setup
-    WriteLn(#10'Testing Random InflatePaths64');
+    WriteLn(#10'Testing InflatePaths64');
     SetLength(sub, 1);
     sub[0] := MakeRandomPath(displayWidth, displayHeight, 7);
     // convert path into DLL structure (will require local clean up)
@@ -647,7 +822,7 @@ begin
     DisposeExportedCPaths64(csol_extern);
 end;
 
-procedure Test_Random_RectClip64(edgeCnt: integer);
+procedure Test_RectClip64(edgeCnt: integer);
 var
   sub, clp: TPaths64;
   csub_local: CPaths64;
@@ -693,7 +868,7 @@ begin
     DisposeExportedCPaths64(csol_extern);
 end;
 
-procedure Test_Random_RectClipLines64(edgeCnt: integer);
+procedure Test_RectClipLines64(edgeCnt: integer);
 var
   sub, clp: TPaths64;
   csub_local: CPaths64;
@@ -739,12 +914,58 @@ begin
     DisposeExportedCPaths64(csolo_extern);
 end;
 
+procedure abc(edgeCnt: integer);
+var
+  sub, clp: TPaths64;
+  csub_local: CPaths64;
+  csolo_extern: CPaths64;
+  rec: TRect64;
+  svg: TSvgWriter;
+begin
+    // setup
+    WriteLn(#10'Testing RectClipLines64:');
+    SetLength(sub, 1);
+
+    sub[0] := MakeRandomPath(540, 400, 25);
+    csub_local := TPaths64ToCPaths64(sub);
+
+    rec.Left := 100;
+    rec.Top := 100;
+    rec.Right := 540 - 100;
+    rec.Bottom := 400 -100;
+
+    // do the DLL operation
+    csolo_extern := RectClipLines64(rec, csub_local);
+
+    // optionally display result on the console
+    //WriteCPaths64(csol_extern);
+
+    // finally, display and clean up
+
+    SetLength(clp, 1);
+    clp[0] := RectToPath64(rec);
+
+    svg := TSvgWriter.Create(frNonZero);
+    try
+      AddOpenSubject(svg, sub);
+      AddClip(svg, clp); //rectangle
+      AddOpenSolution(svg, CPaths64ToPaths64(csolo_extern));
+      SaveSvg(svg, 'RectClipLines.svg', 540, 400);
+      ShowSvgImage('RectClipLines.svg');
+    finally
+      svg.Free;
+    end;
+
+    DisposeLocalCPaths64(csub_local);
+    DisposeExportedCPaths64(csolo_extern);
+end;
+
 
 procedure Test_Performance(lowThousand, hiThousand: integer);
 var
   i: integer;
   elapsed: double;
-  sub, clp, sol: TPaths64;
+  sub, clp: TPaths64;
   csub_local, cclp_local: CPaths64;
   csol_extern, csolo_extern: CPaths64;
   svg: TSvgWriter;
@@ -774,11 +995,11 @@ begin
     end;
     WriteLn(format('%1.3n secs', [elapsed]));
 
-{$IFDEF USINGCLIPPER2LIB}
+{$IFDEF USING_CLIPPER2_SRC}
     Write(format(' Pure delphi - %d edges: ', [i*1000]));
     begin
       InitTimer(elapsed);
-      sol := Clipper.Intersect(sub, clp, Clipper.frNonZero);
+      Clipper.Intersect(sub, clp, Clipper.frNonZero);
     end;
     WriteLn(format('%1.3n secs', [elapsed]));
 {$ENDIF}
@@ -814,15 +1035,17 @@ var
   s: string;
 begin
   Randomize;
-  Test_Version();
-  Test_Random_BooleanOp64(50);
-  Test_Random_InflatePaths64(-10);
-  Test_Random_RectClip64(25);
-  Test_Random_RectClipLines64(25);
-
+//  Test_Version();
+//  Test_BooleanOp64(50);
+//  Test_BooleanOpD(75);
+//  Test_BooleanOpPtD(20);
+//  Test_InflatePaths64(-10);
+//  Test_RectClip64(25);
+//  Test_RectClipLines64(25);
+  abc(100);
   //Test_Performance(1, 5); // 1000 t0 5000
   //Test_MegaStress(10000);
 
-  WriteLn(#10'Press Enter to quit.');
-  ReadLn(s);
+//  WriteLn(#10'Press Enter to quit.');
+//  ReadLn(s);
 end.

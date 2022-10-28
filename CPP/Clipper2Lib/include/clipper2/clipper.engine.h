@@ -10,7 +10,7 @@
 #ifndef CLIPPER_ENGINE_H
 #define CLIPPER_ENGINE_H
 
-#define CLIPPER2_VERSION "1.0.5"
+#define CLIPPER2_VERSION "1.0.6"
 
 #include <cstdlib>
 #include <queue>
@@ -159,7 +159,6 @@ namespace Clipper2Lib {
 		FillRule fillrule_ = FillRule::EvenOdd;
 		FillRule fillpos = FillRule::Positive;
 		int64_t bot_y_ = 0;
-		bool has_open_paths_ = false;
 		bool minima_list_sorted_ = false;
 		bool using_polytree_ = false;
 		Active* actives_ = nullptr;
@@ -170,7 +169,6 @@ namespace Clipper2Lib {
 		std::vector<Vertex*> vertex_lists_;
 		std::priority_queue<int64_t> scanline_list_;
 		std::vector<IntersectNode> intersect_nodes_; 
-		std::vector<OutRec*> outrec_list_;				//pointers in case of memory reallocs
 		std::vector<Joiner*> joiner_list_;				//pointers in case of memory reallocs
 		void Reset();
 		void InsertScanline(int64_t y);
@@ -224,13 +222,12 @@ namespace Clipper2Lib {
 		void DeleteJoin(Joiner* joiner);
 		void ProcessJoinerList();
 		OutRec* ProcessJoin(Joiner* joiner);
-		bool DeepCheckOwner(OutRec* outrec, OutRec* owner);
 	protected:
+		bool has_open_paths_ = false;
 		bool succeeded_ = true;
+		std::vector<OutRec*> outrec_list_; //pointers in case list memory reallocated
 		bool ExecuteInternal(ClipType ct, FillRule ft, bool use_polytrees);
-		void BuildPaths(Paths64& solutionClosed, Paths64* solutionOpen);
-		void BuildTree64(PolyPath64& polytree, Paths64& open_paths);
-		void BuildTreeD(PolyPathD& polytree, PathsD& open_paths);
+		bool DeepCheckOwner(OutRec* outrec, OutRec* owner);
 #ifdef USINGZ
 		ZCallback64 zCallback_ = nullptr;
 		void SetZ(const Active& e1, const Active& e2, Point64& pt);
@@ -412,6 +409,9 @@ namespace Clipper2Lib {
 
 	class Clipper64 : public ClipperBase
 	{
+	private:
+		void BuildPaths64(Paths64& solutionClosed, Paths64* solutionOpen);
+		void BuildTree64(PolyPath64& polytree, Paths64& open_paths);
 	public:
 #ifdef USINGZ
 		void SetZCallback(ZCallback64 cb) { zCallback_ = cb; }
@@ -443,7 +443,7 @@ namespace Clipper2Lib {
 			closed_paths.clear();
 			open_paths.clear();
 			if (ExecuteInternal(clip_type, fill_rule, false))
-				BuildPaths(closed_paths, &open_paths);
+				BuildPaths64(closed_paths, &open_paths);
 			CleanUp();
 			return succeeded_;
 		}
@@ -474,6 +474,8 @@ namespace Clipper2Lib {
 #ifdef USINGZ
 		ZCallbackD zCallback_ = nullptr;
 #endif
+		void BuildPathsD(PathsD& solutionClosed, PathsD* solutionOpen);
+		void BuildTreeD(PolyPathD& polytree, PathsD& open_paths);
 	public:
 		explicit ClipperD(int precision = 2) : ClipperBase()
 		{
@@ -544,10 +546,7 @@ namespace Clipper2Lib {
 #endif
 			if (ExecuteInternal(clip_type, fill_rule, false))
 			{
-				Paths64 sol, solo;
-				BuildPaths(sol, &solo);
-				closed_paths = ScalePaths<double, int64_t>(sol, invScale_);
-				open_paths = ScalePaths<double, int64_t>(solo, invScale_);
+				BuildPathsD(closed_paths, &open_paths);
 			}
 			CleanUp();
 			return succeeded_;

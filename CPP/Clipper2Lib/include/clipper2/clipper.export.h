@@ -57,9 +57,6 @@ typedef int64_t** CPaths64;
 typedef double* CPathD;
 typedef double** CPathsD;
 
-typedef struct CRect64 { int64_t val[4]; } CRect64;
-typedef struct CRectD { double val[4]; } CRectD;
-
 typedef struct CPolyPath64 {
   CPath64       polygon;
   uint32_t      is_hole;
@@ -75,6 +72,34 @@ typedef struct CPolyPathD {
   CPolyPathD*   childs;
 } 
 CPolyTreeD;
+
+template <typename T>
+struct CRect {
+  T left;
+  T top;
+  T right;
+  T bottom;
+};
+
+typedef CRect<int64_t> CRect64;
+typedef CRect<double> CRectD;
+
+template <typename T>
+inline bool CRectIsEmpty(const CRect<T>& rect)
+{
+  return (rect.right <= rect.left) || (rect.bottom <= rect.top);
+}
+
+template <typename T>
+inline Rect<T> CRectToRect(const CRect<T>& rect)
+{
+  Rect<T> result;
+  result.left = rect.left;
+  result.top = rect.top;
+  result.right = rect.right;
+  result.bottom = rect.bottom;
+  return result;
+}
 
 inline CPath64 CreateCPath64(size_t cnt1, size_t cnt2);
 inline CPath64 CreateCPath64(const Path64& p);
@@ -98,6 +123,7 @@ inline CPolyTree64* CreateCPolyTree64(const PolyTree64& pt);
 inline CPolyTreeD* CreateCPolyTreeD(const PolyTree64& pt, double scale);
 
 #define EXTERN_DLL_EXPORT extern "C" __declspec(dllexport)
+
 
 EXTERN_DLL_EXPORT const char* Version()
 {
@@ -258,7 +284,7 @@ EXTERN_DLL_EXPORT int BooleanOpPtD(uint8_t cliptype,
   return 0;
 }
 
-EXTERN_DLL_EXPORT CPaths64 InflatePaths64(const CPaths64 paths, 
+EXTERN_DLL_EXPORT CPaths64 InflatePaths64(const CPaths64 paths,
   double delta, uint8_t jt, uint8_t et, double miter_limit = 2.0,
   double arc_tolerance = 0.0, bool reverse_solution = false)
 {
@@ -272,7 +298,7 @@ EXTERN_DLL_EXPORT CPaths64 InflatePaths64(const CPaths64 paths,
   return CreateCPaths64(result);
 }
 
-EXTERN_DLL_EXPORT CPathsD InflatePathsD(const CPathsD paths, 
+EXTERN_DLL_EXPORT CPathsD InflatePathsD(const CPathsD paths,
   double delta, uint8_t jt, uint8_t et,
   double precision = 2, double miter_limit = 2.0,
   double arc_tolerance = 0.0, bool reverse_solution = false)
@@ -286,20 +312,23 @@ EXTERN_DLL_EXPORT CPathsD InflatePathsD(const CPathsD paths,
   return CreateCPathsD(result, 1/scale);
 }
 
-EXTERN_DLL_EXPORT CPaths64 RectClip64(const Rect64 rect, 
+EXTERN_DLL_EXPORT CPaths64 RectClip64(const CRect64& rect,
   const CPaths64 paths)
 {
-  if (rect.IsEmpty() || !paths) return nullptr;
-  class RectClip rc(rect);
+  log(rect.left);
+  log(rect.right);
+  if (CRectIsEmpty(rect) || !paths) return nullptr;
+  Rect64 r64 = CRectToRect(rect);
+  class RectClip rc(r64);
   Paths64 pp = ConvertCPaths64(paths);
   Paths64 result;
   result.reserve(pp.size());
   for (const Path64& p : pp)
   {
     Rect64 pathRec = Bounds(p);
-    if (!rect.Intersects(pathRec)) continue;    
+    if (!r64.Intersects(pathRec)) continue;
     
-    if (rect.Contains(pathRec))
+    if (r64.Contains(pathRec))
       result.push_back(p);
     else
     {
@@ -310,15 +339,14 @@ EXTERN_DLL_EXPORT CPaths64 RectClip64(const Rect64 rect,
   return CreateCPaths64(result);
 }
 
-EXTERN_DLL_EXPORT CPathsD RectClipD(const RectD rect, 
+EXTERN_DLL_EXPORT CPathsD RectClipD(const CRectD& rect,
   const CPathsD paths, int precision = 2)
 {
-  if (rect.IsEmpty() || !paths) return nullptr;
+  if (CRectIsEmpty(rect) || !paths) return nullptr;
   if (precision < -8 || precision > 8) return nullptr;
   const double scale = std::pow(10, precision);
-  Rect64 r = ScaleRect<int64_t, double>(rect, scale);
+  Rect64 r = ScaleRect<int64_t, double>(CRectToRect(rect), scale);
   Paths64 pp = ConvertCPathsD(paths, scale);
-
   class RectClip rc(r);
   Paths64 result;
   result.reserve(pp.size());
@@ -338,11 +366,12 @@ EXTERN_DLL_EXPORT CPathsD RectClipD(const RectD rect,
   return CreateCPathsD(result, 1/scale);
 }
 
-EXTERN_DLL_EXPORT CPaths64 RectClipLines64(const Rect64 rect, 
+EXTERN_DLL_EXPORT CPaths64 RectClipLines64(const CRect64& rect, 
   const CPaths64 paths)
 {
-  if (rect.IsEmpty() || !paths) return nullptr;
-  class RectClipLines rcl (rect);
+  if (CRectIsEmpty(rect) || !paths) return nullptr;
+  Rect64 r = CRectToRect(rect);
+  class RectClipLines rcl (r);
   Paths64 pp = ConvertCPaths64(paths);
   Paths64 result;
   result.reserve(pp.size());
@@ -350,9 +379,9 @@ EXTERN_DLL_EXPORT CPaths64 RectClipLines64(const Rect64 rect,
   for (const Path64& p : pp)
   {
     Rect64 pathRec = Bounds(p);
-    if (!rect.Intersects(pathRec)) continue;
+    if (!r.Intersects(pathRec)) continue;
     
-    if (rect.Contains(pathRec))
+    if (r.Contains(pathRec))
       result.push_back(p);
     else
     {
@@ -364,14 +393,14 @@ EXTERN_DLL_EXPORT CPaths64 RectClipLines64(const Rect64 rect,
   return CreateCPaths64(result);
 }
 
-EXTERN_DLL_EXPORT CPathsD RectClipLinesD(const RectD rect, 
+EXTERN_DLL_EXPORT CPathsD RectClipLinesD(const CRectD& rect, 
   const CPathsD paths, int precision = 2)
 {
   Paths64 result;
-  if (rect.IsEmpty() || !paths) return nullptr;
+  if (CRectIsEmpty(rect) || !paths) return nullptr;
   if (precision < -8 || precision > 8) return nullptr;
   const double scale = std::pow(10, precision);
-  Rect64 r = ScaleRect<int64_t, double>(rect, scale);
+  Rect64 r = ScaleRect<int64_t, double>(CRectToRect(rect), scale);
   class RectClipLines rcl(r);
   Paths64 pp = ConvertCPathsD(paths, scale);
 
@@ -692,7 +721,7 @@ inline CPolyTreeD* CreateCPolyTreeD(const PolyTree64& pt, double scale)
   result->polygon = nullptr;
   result->is_hole = false;
   size_t child_cnt = pt.Count();
-  result->child_count = child_cnt;
+  result->child_count = static_cast<uint32_t>(child_cnt);
   result->childs = nullptr;
   if (!child_cnt) return result;
   result->childs = new CPolyPathD[child_cnt];
