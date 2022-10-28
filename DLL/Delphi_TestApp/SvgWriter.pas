@@ -624,7 +624,7 @@ end;
 
 procedure AddOpenSolution(svg: TSvgWriter; const paths: TPaths64);
 begin
-  svg.AddPaths(paths, false, $8066FF66, $FF006600, 1.5);
+  svg.AddPaths(paths, true, $0, $FF006600, 2.5);
 end;
 
 
@@ -650,7 +650,7 @@ end;
 
 procedure AddOpenSolution(svg: TSvgWriter; const paths: TPathsD); overload;
 begin
-  svg.AddPaths(paths, false, $8066FF66, $FF006600, 1.5);
+  svg.AddPaths(paths, true, $0, $FF006600, 2.5);
 end;
 
 procedure SaveSvg(svg: TSvgWriter; const filename: string;

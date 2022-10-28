@@ -1,7 +1,7 @@
 program Test_DLL;
 
-// Make sure that Clipper2.dll is in either the OS Path
-// or in the application's folder.
+// Make sure that the Clipper2 DLL is in either
+// the OS Path or in the application's folder.
 
 {$APPTYPE CONSOLE}
 {$R *.res}
@@ -117,12 +117,14 @@ function BooleanOpPt64(cliptype: UInt8; fillrule: UInt8;
 function BooleanOpD(cliptype: UInt8; fillrule: UInt8;
   const subjects: CPathsD; const subjects_open: CPathsD;
   const clips: CPathsD; out solution: CPathsD; out solution_open: CPathsD;
+  precision: integer = 2;
   preserve_collinear: boolean = true;
   reverse_solution: boolean = false): integer; cdecl;
   external CLIPPER2_DLL name 'BooleanOpD';
 function BooleanOpPtD(cliptype: UInt8; fillrule: UInt8;
   const subjects: CPathsD; const subjects_open: CPathsD;
   const clips: CPathsD; out solution: PCPolyTreeD; out solution_open: CPathsD;
+  precision: integer = 2;
   preserve_collinear: boolean = true;
   reverse_solution: boolean = false): integer; cdecl;
   external CLIPPER2_DLL name 'BooleanOpPtD';
@@ -163,6 +165,7 @@ procedure DisposeLocalCPaths64(var cps: CPaths64);
 var
   i, cnt: integer;
 begin
+  if cps = nil then Exit;
   cnt := cps[0][1];
   for i := 0 to cnt do //cnt +1
     FreeMem(cps[i]);
@@ -313,11 +316,8 @@ var
   cnt: Int64;
 begin
   if not Assigned(cps) then
-  begin
-    Result := nil;
-    Exit;
-  end;
-  cnt := cps[0][1];
+    cnt := 0 else
+    cnt := cps[0][1];
   SetLength(Result, cnt);
   for i := 1 to cnt do
     Result[i-1] := CPath64ToPath64(cps[i]);
@@ -328,11 +328,8 @@ var
   i, cnt: integer;
 begin
   if not Assigned(cps) then
-  begin
-    Result := nil;
-    Exit;
-  end;
-  cnt := Round(cps[0][1]);
+    cnt := 0 else
+    cnt := Round(cps[0][1]);
   SetLength(Result, cnt);
   for i := 1 to cnt do
     Result[i-1] := CPathDToPathD(cps[i]);
@@ -392,6 +389,13 @@ begin
     X := Random(maxWidth - 2 * margin) + margin;
     Y := Random(maxHeight - 2 * margin) + margin;
   end;
+end;
+
+function RectToPath64(const rec: TRect64): TPath64;
+begin
+  with rec do
+    Result := MakePath([left, top, right, top,
+      right, bottom, left, bottom]);
 end;
 
 procedure WriteCPath64(p: CPath64);
@@ -515,21 +519,30 @@ begin
   ShellExecute(0, 'open',PChar(svgFilename), nil, nil, SW_SHOW);
 end;
 
-procedure DoRandomStressTest(maxCnt: integer);
+////////////////////////////////////////////////////////
+// test procedures
+////////////////////////////////////////////////////////
+
+const
+  displayWidth = 800;
+  displayHeight = 600;
+
+procedure Test_MegaStress(maxCnt: integer);
 var
   i: integer;
   sub, clp: TPathsD;
   csub_local, cclp_local: CPathsD;
   csol_extern, csolo_extern: CPathsD;
 begin
-  csolo_extern := nil;
+  csol_extern   := nil;
+  csolo_extern  := nil;
   SetLength(sub, 1);
   SetLength(clp, 1);
 
   for i := 1 to maxCnt do
   begin
-    sub[0] := MakeRandomPathD(400, 400, 50);
-    clp[0] := MakeRandomPathD(400, 400, 50);
+    sub[0] := MakeRandomPathD(displayWidth, displayHeight, 50);
+    clp[0] := MakeRandomPathD(displayWidth, displayHeight, 50);
     csub_local := TPathsDToCPathsD(sub);
     cclp_local := TPathsDToCPathsD(clp);
 
@@ -547,164 +560,268 @@ begin
   WriteLn(#10'Passed!');
 end;
 
+procedure Test_Version();
+begin
+  WriteLn(#10'Clipper2 DLL version:');
+  WriteLn(Version);
+end;
+
+procedure Test_Random_BooleanOp64(edgeCnt: integer);
+var
+  sub, clp: TPaths64;
+  csub_local, cclp_local: CPaths64;
+  csol_extern, csolo_extern: CPaths64;
+  svg: TSvgWriter;
+begin
+    // setup
+    csolo_extern := nil;
+    WriteLn(#10'Testing Random BooleanOp64');
+    SetLength(sub, 1);
+    sub[0] := MakeRandomPath(displayWidth, displayHeight, edgeCnt);
+    SetLength(clp, 1);
+    clp[0] := MakeRandomPath(displayWidth, displayHeight, edgeCnt);
+    // convert paths into DLL structures (will require local clean up)
+    csub_local := TPaths64ToCPaths64(sub);
+    cclp_local := TPaths64ToCPaths64(clp);
+
+    // do the DLL operation
+    BooleanOp64(Uint8(TClipType.ctIntersection),
+      Uint8(TFillRule.frNonZero),
+      csub_local, nil, cclp_local,
+      csol_extern, csolo_extern);
+
+    // optionally display result on the console
+    //WriteCPaths64(csol_extern);
+
+    // finally, display and clean up
+    svg := TSvgWriter.Create(frNonZero);
+    try
+      AddSubject(svg, sub);
+      AddClip(svg, clp);
+      AddSolution(svg, CPaths64ToPaths64(csol_extern));
+      SaveSvg(svg, 'BooleanOp64.svg', displayWidth, displayHeight);
+      ShowSvgImage('BooleanOp64.svg');
+    finally
+      svg.Free;
+    end;
+
+    DisposeLocalCPaths64(csub_local);
+    DisposeLocalCPaths64(cclp_local);
+    DisposeExportedCPaths64(csol_extern);
+    DisposeExportedCPaths64(csolo_extern);
+end;
+
+procedure Test_Random_InflatePaths64(delta: double);
+var
+  sub: TPaths64;
+  csub_local: CPaths64;
+  csol_extern: CPaths64;
+  svg: TSvgWriter;
+begin
+    // setup
+    WriteLn(#10'Testing Random InflatePaths64');
+    SetLength(sub, 1);
+    sub[0] := MakeRandomPath(displayWidth, displayHeight, 7);
+    // convert path into DLL structure (will require local clean up)
+    csub_local := TPaths64ToCPaths64(sub);
+
+    // do the DLL operation
+    csol_extern := InflatePaths64(csub_local, delta,
+      UInt8(TJoinType.jtMiter), UInt8(TEndType.etPolygon), 2, 4);
+
+    // optionally display result on the console
+    //WriteCPaths64(csol_extern);
+
+    // finally, display and clean up
+    svg := TSvgWriter.Create(frNonZero);
+    try
+      AddSubject(svg, sub);
+      AddSolution(svg, CPaths64ToPaths64(csol_extern));
+      SaveSvg(svg, 'InflatePaths64.svg', displayWidth, displayHeight);
+      ShowSvgImage('InflatePaths64.svg');
+    finally
+      svg.Free;
+    end;
+
+    DisposeLocalCPaths64(csub_local);
+    DisposeExportedCPaths64(csol_extern);
+end;
+
+procedure Test_Random_RectClip64(edgeCnt: integer);
+var
+  sub, clp: TPaths64;
+  csub_local: CPaths64;
+  csol_extern: CPaths64;
+  rec: TRect64;
+  svg: TSvgWriter;
+begin
+    // setup
+    WriteLn(#10'Testing RectClip64:');
+    SetLength(sub, 1);
+
+    sub[0] := MakeRandomPath(displayWidth, displayHeight, edgeCnt);
+    csub_local := TPaths64ToCPaths64(sub);
+
+    rec.Left := 80;
+    rec.Top := 80;
+    rec.Right := displayWidth - 80;
+    rec.Bottom := displayHeight -80;
+
+    // do the DLL operation
+    csol_extern := RectClip64(rec, csub_local);
+
+    // optionally display result on the console
+    //WriteCPaths64(csol_extern);
+
+    // finally, display and clean up
+
+    SetLength(clp, 1);
+    clp[0] := RectToPath64(rec);
+
+    svg := TSvgWriter.Create(frNonZero);
+    try
+      AddSubject(svg, sub);
+      AddClip(svg, clp);
+      AddSolution(svg, CPaths64ToPaths64(csol_extern));
+      SaveSvg(svg, 'RectClip64.svg', displayWidth, displayHeight);
+      ShowSvgImage('RectClip64.svg');
+    finally
+      svg.Free;
+    end;
+
+    DisposeLocalCPaths64(csub_local);
+    DisposeExportedCPaths64(csol_extern);
+end;
+
+procedure Test_Random_RectClipLines64(edgeCnt: integer);
+var
+  sub, clp: TPaths64;
+  csub_local: CPaths64;
+  csolo_extern: CPaths64;
+  rec: TRect64;
+  svg: TSvgWriter;
+begin
+    // setup
+    WriteLn(#10'Testing RectClipLines64:');
+    SetLength(sub, 1);
+
+    sub[0] := MakeRandomPath(displayWidth, displayHeight, edgeCnt);
+    csub_local := TPaths64ToCPaths64(sub);
+
+    rec.Left := 80;
+    rec.Top := 80;
+    rec.Right := displayWidth - 80;
+    rec.Bottom := displayHeight -80;
+
+    // do the DLL operation
+    csolo_extern := RectClipLines64(rec, csub_local);
+
+    // optionally display result on the console
+    //WriteCPaths64(csol_extern);
+
+    // finally, display and clean up
+
+    SetLength(clp, 1);
+    clp[0] := RectToPath64(rec);
+
+    svg := TSvgWriter.Create(frNonZero);
+    try
+      AddOpenSubject(svg, sub);
+      AddClip(svg, clp); //rectangle
+      AddOpenSolution(svg, CPaths64ToPaths64(csolo_extern));
+      SaveSvg(svg, 'RectClipLines64.svg', displayWidth, displayHeight);
+      ShowSvgImage('RectClipLines64.svg');
+    finally
+      svg.Free;
+    end;
+
+    DisposeLocalCPaths64(csub_local);
+    DisposeExportedCPaths64(csolo_extern);
+end;
+
+
+procedure Test_Performance(lowThousand, hiThousand: integer);
+var
+  i: integer;
+  elapsed: double;
+  sub, clp, sol: TPaths64;
+  csub_local, cclp_local: CPaths64;
+  csol_extern, csolo_extern: CPaths64;
+  svg: TSvgWriter;
+begin
+  csolo_extern := nil;
+  WriteLn(#10'Testing Performance');
+  for i := lowThousand to hiThousand do
+  begin
+    Write(format(#10' C++ DLL     - %d edges: ', [i*1000]));
+    // setup
+    SetLength(sub, 1);
+    sub[0] := MakeRandomPath(displayWidth, displayHeight, i*1000);
+    SetLength(clp, 1);
+    clp[0] := MakeRandomPath(displayWidth, displayHeight, i*1000);
+    // convert paths into DLL structures (will require local clean up)
+    csub_local := TPaths64ToCPaths64(sub);
+    cclp_local := TPaths64ToCPaths64(clp);
+
+    //using a code block for the timer
+    begin
+      InitTimer(elapsed);
+      // do the DLL operation
+      BooleanOp64(Uint8(TClipType.ctIntersection),
+        Uint8(TFillRule.frNonZero),
+        csub_local, nil, cclp_local,
+        csol_extern, csolo_extern);
+    end;
+    WriteLn(format('%1.3n secs', [elapsed]));
+
+{$IFDEF USINGCLIPPER2LIB}
+    Write(format(' Pure delphi - %d edges: ', [i*1000]));
+    begin
+      InitTimer(elapsed);
+      sol := Clipper.Intersect(sub, clp, Clipper.frNonZero);
+    end;
+    WriteLn(format('%1.3n secs', [elapsed]));
+{$ENDIF}
+
+    if i = hiThousand then
+    begin
+      svg := TSvgWriter.Create(frNonZero);
+      try
+        AddSubject(svg, sub);
+        AddClip(svg, clp);
+        AddSolution(svg, CPaths64ToPaths64(csol_extern));
+        SaveSvg(svg, 'Performance.svg', displayWidth, displayHeight);
+        ShowSvgImage('Performance.svg');
+      finally
+        svg.Free;
+      end;
+    end;
+
+    DisposeLocalCPaths64(csub_local);
+    DisposeLocalCPaths64(cclp_local);
+    DisposeExportedCPaths64(csol_extern);
+    DisposeExportedCPaths64(csolo_extern);
+
+  end; //bottom of for loop
+end;
+
+
 ////////////////////////////////////////////////////////
 // main entry here
 ////////////////////////////////////////////////////////
 
-const
-  perform_1000_low  = 1;
-  perform_1000_high = 4;
 var
-  i: int64;
-  elapsed: double;
   s: string;
-  svg: TSvgWriter; // class  (heap storage)
-  //sw: TStopwatch;  // record (stack storage)
-
-  //dynamic arrays // heap storage but with automatic cleanup
-  sub, clp, sol: TPaths64;
-
-  //pointer arrays - locally allocated and requires manual cleanup
-  //While these could also have been defined as dynamic arrays with
-  //automatic cleanup, that might have confused those unfamiliar
-  //with Delphi but still using this code as a template for code
-  //in their preferred language.
-  csub_local, cclp_local: CPaths64;
-
-  //pointer arrays - external allocation and external cleanup
-  csol_extern, csolo_extern: CPaths64;
-  cptd_extern: PCPolyTree64;
 begin
-
   Randomize;
-//  DoRandomStressTest(10000);
-//  ReadLn(s);
-//  Exit;
+  Test_Version();
+  Test_Random_BooleanOp64(50);
+  Test_Random_InflatePaths64(-10);
+  Test_Random_RectClip64(25);
+  Test_Random_RectClipLines64(25);
 
-  csolo_extern := nil;
-  svg := TSvgWriter.Create(frNonZero);
-  try
-
-    WriteLn(#10'Clipper2 DLL version:');
-    WriteLn(Version);
-
-    SetLength(sub, 1);
-    sub[0] := MakePath([10,10, 100,10, 100,100,10,100]);
-    SetLength(clp, 1);
-    clp[0] := MakePath([20,20,110, 20, 110,110, 20,110]);
-    csub_local := TPaths64ToCPaths64(sub);
-    cclp_local := TPaths64ToCPaths64(clp);
-
-    WriteLn(#10'Testing BooleanOpD:');
-    BooleanOp64(Uint8(TClipType.ctIntersection),
-      Uint8(TFillRule.frNonZero),
-      csub_local, nil, cclp_local,
-      csol_extern, csolo_extern);
-    //WriteCPaths64(csol_extern); //write coords to console
-
-    AddSubject(svg, sub);
-    AddClip(svg, clp);
-    AddSolution(svg, CPaths64ToPaths64(csol_extern));
-    SaveSvg(svg, 'BooleanOpD.svg', 400,400);
-    ShowSvgImage('BooleanOpD.svg');
-    svg.ClearAll;
-
-
-    WriteLn(#10'Testing random path:');
-    sub[0] := MakeRandomPath(400,400,50);
-    clp[0] := MakeRandomPath(400,400,50);
-    csub_local := TPaths64ToCPaths64(sub);
-    cclp_local := TPaths64ToCPaths64(clp);
-    BooleanOp64(Uint8(TClipType.ctIntersection),
-      Uint8(TFillRule.frNonZero),
-      csub_local, nil, cclp_local,
-      csol_extern, csolo_extern);
-
-    AddSubject(svg, sub);
-    AddClip(svg, clp);
-    AddSolution(svg, CPaths64ToPaths64(csol_extern));
-    //DisposeExportedCPaths64(csol_extern); //used below
-    DisposeExportedCPaths64(csolo_extern);
-    SaveSvg(svg, 'Random.svg', 400,400);
-    ShowSvgImage('Random.svg');
-    svg.ClearAll;
-
-    WriteLn(#10'Testing InflatePathsD:');
-    sol := CPaths64ToPaths64(csol_extern);
-    csol_extern := InflatePaths64(csol_extern, -10,
-      UInt8(TJoinType.jtMiter), UInt8(TEndType.etPolygon), 2, 4);
-    //WriteCPaths64(csol_extern); //write coords to console
-
-    AddSubject(svg, sol);
-    AddSolution(svg, CPaths64ToPaths64(csol_extern));
-    DisposeExportedCPaths64(csol_extern);
-    SaveSvg(svg, 'InflatePathsD.svg', 400,400);
-    ShowSvgImage('InflatePathsD.svg');
-    svg.ClearAll;
-
-    WriteLn(#10'Testing BooleanOpPtD:');
-    BooleanOpPt64(Uint8(TClipType.ctIntersection),
-      Uint8(TFillRule.frNonZero),
-      csub_local, nil, cclp_local,
-      cptd_extern, csolo_extern);
-    //WriteCPolyTree64(cptd_extern); //write coords to console
-
-    WriteLn(#10'Performance testing ...');
-    for i := perform_1000_low to perform_1000_high do
-    begin
-      sub[0] := MakeRandomPath(800,600,i*1000);
-      clp[0] := MakeRandomPath(800,600,i*1000);
-      Write(format(#10' C++ DLL - %d edges: ', [i*1000]));
-      begin
-        InitTimer(elapsed);
-        csub_local := TPaths64ToCPaths64(sub);
-        cclp_local := TPaths64ToCPaths64(clp);
-        BooleanOp64(Uint8(TClipType.ctIntersection),
-          Uint8(TFillRule.frNonZero),
-          csub_local, nil, cclp_local,
-          csol_extern, csolo_extern);
-      end;
-      WriteLn(format('%1.3n secs', [elapsed]));
-
-{$IFDEF USINGCLIPPER2LIB}
-      Write(format(#10' Pure delphi - %d edges: ', [i*1000]));
-      begin
-        InitTimer(elapsed);
-        sol := Clipper.Intersect(sub, clp, Clipper.frNonZero);
-      end;
-      WriteLn(format('%1.3n secs', [elapsed]));
-      WriteLn('');
-{$ENDIF}
-
-      //clean up here unless the last iteration
-      if i < perform_1000_high then
-      begin
-        DisposeLocalCPaths64(csub_local);
-        DisposeLocalCPaths64(cclp_local);
-        DisposeExportedCPaths64(csol_extern);
-        DisposeExportedCPaths64(csolo_extern);
-      end;
-    end;
-
-    AddSubject(svg, sub);
-    AddClip(svg, clp);
-    AddSolution(svg, CPaths64ToPaths64(csol_extern));
-    DisposeExportedCPaths64(csol_extern);
-    DisposeExportedCPaths64(csolo_extern);
-    SaveSvg(svg, 'Performance.svg', 800,600);
-    ShowSvgImage('Performance.svg');
-    svg.ClearAll;
-
-    // clean up
-    //dispose locally constructed CPaths
-    DisposeLocalCPaths64(csub_local);
-    DisposeLocalCPaths64(cclp_local);
-    //dispose DLL constructed objects
-    DisposeExportedCPolyTree64(cptd_extern);
-
-  finally
-    svg.Free;
-  end;
+  //Test_Performance(1, 5); // 1000 t0 5000
+  //Test_MegaStress(10000);
 
   WriteLn(#10'Press Enter to quit.');
   ReadLn(s);

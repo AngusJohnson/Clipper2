@@ -1,6 +1,6 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  27 October 2022                                                 *
+* Date      :  28 October 2022                                                 *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  This module exports the Clipper2 Library (ie DLL/so)            *
@@ -24,20 +24,20 @@
 //
 // CPaths64 (int64_t**) & CPathsD (double_t**):
 // These are arrays of pointers to CPath64 and CPathD where
-// the first pointer is to a 'counter 'path'. This 'counter
+// the first pointer is to a 'counter path'. This 'counter
 // path' has a single x,y coord pair where 'y' contains
 // the number of paths that follow (and with 'x' always 0).
-//_______________________________
+// _______________________________
 // |counter|path1|path2|...|pathN|
-// |addr0  |addr1|addr2|...|addrN|  (where *addr0 == 0,N)
+// |addr0  |addr1|addr2|...|addrN| (*addr0[0]=0; *addr0[1]=N)
 // _______________________________
 //
 // The structures of CPolytree64 and CPolytreeD are defined
-// below and don't need to be repeated or explained here.
-// 
-// The pointer structures created and exported through these
-// functions can't safely be destroyed externally, so a number
-// of 'dispose functions are also exported.
+// below and they don't need to be repeated or explained here.
+//
+// Finally, the pointer structures created and exported through
+// these functions can't safely be destroyed externally, so
+// a number of 'dispose functions are also exported.
 
 #ifndef CLIPPER2_EXPORT_H
 #define CLIPPER2_EXPORT_H
@@ -49,9 +49,6 @@
 #include "clipper2/clipper.engine.h"
 #include "clipper2/clipper.offset.h"
 #include "clipper2/clipper.rectclip.h"
-
-#include <fstream> // debugging
-
 
 namespace Clipper2Lib {
 
@@ -147,16 +144,14 @@ EXTERN_DLL_EXPORT int BooleanOp64(uint8_t cliptype,
   CPaths64& solution, CPaths64& solution_open,
   bool preserve_collinear = true, bool reverse_solution = false)
 {
-  if (cliptype > static_cast<uint8_t>(ClipType::Xor))
-    return -4;
-  if (fillrule > static_cast<uint8_t>(FillRule::Negative))
-    return -3;
-  Paths64 sub, sub_open, clp;
+  if (cliptype > static_cast<uint8_t>(ClipType::Xor)) return -4;
+  if (fillrule > static_cast<uint8_t>(FillRule::Negative)) return -3;
+  
+  Paths64 sub, sub_open, clp, sol, sol_open;
   sub       = ConvertCPaths64(subjects);
   sub_open  = ConvertCPaths64(subjects_open);
   clp       = ConvertCPaths64(clips);
 
-  Paths64 sol, sol_open;
   Clipper64 clipper;
   clipper.PreserveCollinear = preserve_collinear;
   clipper.ReverseSolution = reverse_solution;
@@ -167,7 +162,7 @@ EXTERN_DLL_EXPORT int BooleanOp64(uint8_t cliptype,
     return -1; // clipping bug - should never happen :)
   solution = CreateCPaths64(sol);
   solution_open = CreateCPaths64(sol_open);
-  return 0; //success :))
+  return 0; //success !!
 }
 
 EXTERN_DLL_EXPORT int BooleanOpPt64(uint8_t cliptype,
@@ -176,17 +171,14 @@ EXTERN_DLL_EXPORT int BooleanOpPt64(uint8_t cliptype,
   CPolyTree64*& solution, CPaths64& solution_open,
   bool preserve_collinear = true, bool reverse_solution = false)
 {
-  if (cliptype > static_cast<uint8_t>(ClipType::Xor))
-    return -4;
-  if (fillrule > static_cast<uint8_t>(FillRule::Negative))
-    return -3;
-  Paths64 sub, sub_open, clp;
+  if (cliptype > static_cast<uint8_t>(ClipType::Xor)) return -4;
+  if (fillrule > static_cast<uint8_t>(FillRule::Negative)) return -3;
+  Paths64 sub, sub_open, clp, sol_open;
   sub = ConvertCPaths64(subjects);
   sub_open = ConvertCPaths64(subjects_open);
   clp = ConvertCPaths64(clips);
 
   PolyTree64 pt;
-  Paths64 sol_open;
   Clipper64 clipper;
   clipper.PreserveCollinear = preserve_collinear;
   clipper.ReverseSolution = reverse_solution;
@@ -198,7 +190,7 @@ EXTERN_DLL_EXPORT int BooleanOpPt64(uint8_t cliptype,
 
   solution = CreateCPolyTree64(pt);
   solution_open = CreateCPaths64(sol_open);
-  return 0; //success :))
+  return 0; //success !!
 }
 
 EXTERN_DLL_EXPORT int BooleanOpD(uint8_t cliptype,
@@ -208,10 +200,8 @@ EXTERN_DLL_EXPORT int BooleanOpD(uint8_t cliptype,
   bool preserve_collinear = true, bool reverse_solution = false)
 {
   if (precision < -8 || precision > 8) return -5;
-  if (cliptype > static_cast<uint8_t>(ClipType::Xor))
-    return -4;
-  if (fillrule > static_cast<uint8_t>(FillRule::Negative))
-    return -3;
+  if (cliptype > static_cast<uint8_t>(ClipType::Xor)) return -4;
+  if (fillrule > static_cast<uint8_t>(FillRule::Negative)) return -3;
   const double scale = std::pow(10, precision);
 
   Paths64 sub, sub_open, clp, sol, sol_open;
@@ -222,17 +212,14 @@ EXTERN_DLL_EXPORT int BooleanOpD(uint8_t cliptype,
   Clipper64 clipper;
   clipper.PreserveCollinear = preserve_collinear;
   clipper.ReverseSolution = reverse_solution;
-  if (sub.size() > 0)
-    clipper.AddSubject(sub);
+  if (sub.size() > 0) clipper.AddSubject(sub);
   if (sub_open.size() > 0)
     clipper.AddOpenSubject(sub_open);
-  if (clp.size() > 0)
-    clipper.AddClip(clp);
+  if (clp.size() > 0) clipper.AddClip(clp);
   if (!clipper.Execute(ClipType(cliptype),
     FillRule(fillrule), sol, sol_open)) return -1;
 
-  if (sol.size() > 0)
-    solution = CreateCPathsD(sol, 1 / scale);
+  if (sol.size() > 0) solution = CreateCPathsD(sol, 1 / scale);
   if (sol_open.size() > 0)
     solution_open = CreateCPathsD(sol_open, 1 / scale);
   return 0;
@@ -245,27 +232,23 @@ EXTERN_DLL_EXPORT int BooleanOpPtD(uint8_t cliptype,
   bool preserve_collinear = true, bool reverse_solution = false)
 {
   if (precision < -8 || precision > 8) return -5;
-  if (cliptype > static_cast<uint8_t>(ClipType::Xor))
-    return -4;
-  if (fillrule > static_cast<uint8_t>(FillRule::Negative))
-    return -3;
+  if (cliptype > static_cast<uint8_t>(ClipType::Xor)) return -4;
+  if (fillrule > static_cast<uint8_t>(FillRule::Negative)) return -3;
+  
   const double scale = std::pow(10, precision);
-
-  PolyTree64 sol;
   Paths64 sub, sub_open, clp, sol_open;
   sub       = ConvertCPathsD(subjects, scale);
   sub_open  = ConvertCPathsD(subjects_open, scale);
   clp       = ConvertCPathsD(clips, scale);
 
+  PolyTree64 sol;
   Clipper64 clipper;
   clipper.PreserveCollinear = preserve_collinear;
   clipper.ReverseSolution = reverse_solution;
-  if (sub.size() > 0)
-    clipper.AddSubject(sub);
+  if (sub.size() > 0) clipper.AddSubject(sub);
   if (sub_open.size() > 0)
     clipper.AddOpenSubject(sub_open);
-  if (clp.size() > 0)
-    clipper.AddClip(clp);
+  if (clp.size() > 0) clipper.AddClip(clp);
   if (!clipper.Execute(ClipType(cliptype),
     FillRule(fillrule), sol, sol_open)) return -1;
 
@@ -314,9 +297,9 @@ EXTERN_DLL_EXPORT CPaths64 RectClip64(const Rect64 rect,
   for (const Path64& p : pp)
   {
     Rect64 pathRec = Bounds(p);
-    if (!rect.Intersects(pathRec)) 
-      continue;    
-    else if (rect.Contains(pathRec))
+    if (!rect.Intersects(pathRec)) continue;    
+    
+    if (rect.Contains(pathRec))
       result.push_back(p);
     else
     {
@@ -342,9 +325,9 @@ EXTERN_DLL_EXPORT CPathsD RectClipD(const RectD rect,
   for (const Path64& p : pp)
   {
     Rect64 pathRec = Bounds(p);
-    if (!r.Intersects(pathRec))
-      continue;
-    else if (r.Contains(pathRec))
+    if (!r.Intersects(pathRec)) continue;
+    
+    if (r.Contains(pathRec))
       result.push_back(p);
     else
     {
@@ -367,9 +350,9 @@ EXTERN_DLL_EXPORT CPaths64 RectClipLines64(const Rect64 rect,
   for (const Path64& p : pp)
   {
     Rect64 pathRec = Bounds(p);
-    if (!rect.Intersects(pathRec))
-      continue;
-    else if (rect.Contains(pathRec))
+    if (!rect.Intersects(pathRec)) continue;
+    
+    if (rect.Contains(pathRec))
       result.push_back(p);
     else
     {
@@ -396,9 +379,9 @@ EXTERN_DLL_EXPORT CPathsD RectClipLinesD(const RectD rect,
   for (const Path64& p : pp)
   {
     Rect64 pathRec = Bounds(p);
-    if (!r.Intersects(pathRec))
-      continue;
-    else if (r.Contains(pathRec))
+    if (!r.Intersects(pathRec)) continue;
+    
+    if (r.Contains(pathRec))
       result.push_back(p);
     else
     {
@@ -458,6 +441,7 @@ inline Path64 ConvertCPath64(const CPath64& p)
 inline CPaths64 CreateCPaths64(const Paths64& pp)
 {
   size_t cnt = pp.size(), cnt2 = cnt;
+
   // don't allocate space for empty paths
   for (size_t i = 0; i < cnt; ++i)
     if (!pp[i].size()) --cnt2;
