@@ -1,6 +1,6 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  29 October 2022                                                 *
+* Date      :  30 October 2022                                                 *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  This is the main polygon clipping module                        *
@@ -316,7 +316,7 @@ namespace Clipper2Lib {
 			return childs_.size();
 		}
 
-		const Path64 Polygon() const { return polygon_; };
+		const Path64& Polygon() const { return polygon_; };
 
 		double Area() const
 		{
@@ -396,7 +396,7 @@ namespace Clipper2Lib {
 			return childs_.size();
 		}
 
-		const PathD Polygon() const { return polygon_; };
+		const PathD& Polygon() const { return polygon_; };
 
 		double Area() const
 		{
@@ -481,7 +481,7 @@ namespace Clipper2Lib {
 		{
 			CheckPrecision(precision);
 			// to optimize scaling / descaling precision
-			// set the scale to a power of double's radix (~always 2)
+			// set the scale to a power of double's radix (2) (#25)
 			scale_ = std::pow(std::numeric_limits<double>::radix,
 				std::ilogb(std::pow(10, precision)) + 1);
 			invScale_ = 1 / scale_;

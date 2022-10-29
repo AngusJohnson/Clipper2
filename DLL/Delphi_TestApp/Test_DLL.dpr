@@ -129,13 +129,13 @@ function BooleanOpPtD(cliptype: UInt8; fillrule: UInt8;
   reverse_solution: boolean = false): integer; cdecl;
   external CLIPPER2_DLL name 'BooleanOpPtD';
 function InflatePaths64(const paths: CPaths64;
-  delta: double; jt, et: UInt8; miter_limit: double = 2.0;
+  delta: double; jointype, endtype: UInt8; miter_limit: double = 2.0;
   arc_tolerance: double = 0.0;
   reverse_solution: Boolean = false): CPaths64; cdecl;
   external CLIPPER2_DLL name 'InflatePaths64';
 function InflatePathsD(const paths: CPathsD;
-  delta: double; jt, et: UInt8; miter_limit: double = 2.0;
-  arc_tolerance: double = 0.0;
+  delta: double; jointype, endtype: UInt8; precision: integer = 2;
+  miter_limit: double = 2.0; arc_tolerance: double = 0.0;
   reverse_solution: Boolean = false): CPathsD; cdecl;
   external CLIPPER2_DLL name 'InflatePathsD';
 
@@ -914,53 +914,6 @@ begin
     DisposeExportedCPaths64(csolo_extern);
 end;
 
-procedure abc(edgeCnt: integer);
-var
-  sub, clp: TPaths64;
-  csub_local: CPaths64;
-  csolo_extern: CPaths64;
-  rec: TRect64;
-  svg: TSvgWriter;
-begin
-    // setup
-    WriteLn(#10'Testing RectClipLines64:');
-    SetLength(sub, 1);
-
-    sub[0] := MakeRandomPath(540, 400, 25);
-    csub_local := TPaths64ToCPaths64(sub);
-
-    rec.Left := 100;
-    rec.Top := 100;
-    rec.Right := 540 - 100;
-    rec.Bottom := 400 -100;
-
-    // do the DLL operation
-    csolo_extern := RectClipLines64(rec, csub_local);
-
-    // optionally display result on the console
-    //WriteCPaths64(csol_extern);
-
-    // finally, display and clean up
-
-    SetLength(clp, 1);
-    clp[0] := RectToPath64(rec);
-
-    svg := TSvgWriter.Create(frNonZero);
-    try
-      AddOpenSubject(svg, sub);
-      AddClip(svg, clp); //rectangle
-      AddOpenSolution(svg, CPaths64ToPaths64(csolo_extern));
-      SaveSvg(svg, 'RectClipLines.svg', 540, 400);
-      ShowSvgImage('RectClipLines.svg');
-    finally
-      svg.Free;
-    end;
-
-    DisposeLocalCPaths64(csub_local);
-    DisposeExportedCPaths64(csolo_extern);
-end;
-
-
 procedure Test_Performance(lowThousand, hiThousand: integer);
 var
   i: integer;
@@ -1035,17 +988,16 @@ var
   s: string;
 begin
   Randomize;
-//  Test_Version();
-//  Test_BooleanOp64(50);
-//  Test_BooleanOpD(75);
-//  Test_BooleanOpPtD(20);
-//  Test_InflatePaths64(-10);
-//  Test_RectClip64(25);
-//  Test_RectClipLines64(25);
-  abc(100);
+  Test_Version();
+  Test_BooleanOp64(50);
+  Test_BooleanOpD(75);
+  Test_BooleanOpPtD(20);
+  Test_InflatePaths64(-10);
+  Test_RectClip64(25);
+  Test_RectClipLines64(25);
   //Test_Performance(1, 5); // 1000 t0 5000
   //Test_MegaStress(10000);
 
-//  WriteLn(#10'Press Enter to quit.');
-//  ReadLn(s);
+  WriteLn(#10'Press Enter to quit.');
+  ReadLn(s);
 end.
