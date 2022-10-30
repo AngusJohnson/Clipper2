@@ -32,6 +32,7 @@ set(CLIPPER2_SRC
 )
 
 set(PCFILE "${CMAKE_CURRENT_BINARY_DIR}/Clipper2.pc")
+set(PCFILEZ "${CMAKE_CURRENT_BINARY_DIR}/Clipper2Z.pc")
 
 # 2d version of Clipper2
 add_library(Clipper2 ${CLIPPER2_INC} ${CLIPPER2_SRC})
@@ -193,8 +194,10 @@ endif()
 endif()
 
 CONFIGURE_FILE(Clipper2.pc.cmakein "${PCFILE}" @ONLY)
+set(PCFILE_LIB_SUFFIX "Z")
+CONFIGURE_FILE(Clipper2.pc.cmakein "${PCFILEZ}" @ONLY)
 
 install(TARGETS Clipper2 Clipper2Z
         PUBLIC_HEADER DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/clipper2
 )
-install(FILES ${PCFILE} DESTINATION ${CMAKE_INSTALL_LIBDIR}/pkgconfig)
+install(FILES ${PCFILE} ${PCFILEZ} DESTINATION ${CMAKE_INSTALL_LIBDIR}/pkgconfig)
