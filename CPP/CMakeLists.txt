@@ -10,6 +10,7 @@ set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 option(CLIPPER2_UTILS "Build utilities" ON)
 option(CLIPPER2_EXAMPLES "Build examples" ON)
 option(CLIPPER2_TESTS "Build tests" ON)
+option(USE_EXTERNAL_GTEST "Use system-wide installed GoogleTest" OFF)
 option(BUILD_SHARED_LIBS "Build shared libs" OFF)
 
 include(GNUInstallDirs)
@@ -138,11 +139,14 @@ if(CLIPPER2_TESTS)
     set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
   endif()
   set(BUILD_GMOCK OFF)
+if(USE_EXTERNAL_GTEST)
+  find_package(GTest REQUIRED)
+else()
   include(GoogleTest)
 
   add_subdirectory("${PROJECT_SOURCE_DIR}/Tests/googletest/")
   set_target_properties(gtest gtest_main PROPERTIES FOLDER GTest)
-
+endif()
   set(ClipperTests_SRC
     Tests/TestLines.cpp
     Tests/TestOffsetOrientation.cpp
