@@ -16,8 +16,8 @@
 // Path64 and PathD are converted into arrays of x,y coordinates.
 // However in these arrays the first x,y coordinate pair is a
 // counter with 'x' containing the number of following coordinate
-// pairs. ('y' must always be 0.)
-//__________________________________
+// pairs. ('y' should be 0, with one exception explained below.)
+// __________________________________
 // |counter|coord1|coord2|...|coordN|
 // |N ,0   |x1, y1|x2, y2|...|xN, yN|
 // __________________________________
@@ -25,19 +25,15 @@
 // CPaths64 (int64_t**) & CPathsD (double_t**):
 // These are arrays of pointers to CPath64 and CPathD where
 // the first pointer is to a 'counter path'. This 'counter
-// path' has a single x,y coord pair where 'y' contains
-// the number of paths that follow (and with 'x' always 0).
+// path' has a single x,y coord pair with 'y' (not 'x')
+// containing the number of paths that follow. ('x' = 0).
 // _______________________________
 // |counter|path1|path2|...|pathN|
 // |addr0  |addr1|addr2|...|addrN| (*addr0[0]=0; *addr0[1]=N)
 // _______________________________
 //
 // The structures of CPolytree64 and CPolytreeD are defined
-// below and they don't need to be repeated or explained here.
-//
-// Finally, the pointer structures created and exported through
-// these functions can't safely be destroyed externally, so
-// a number of 'dispose functions are also exported.
+// below and these structures don't need to be explained here.
 
 #ifndef CLIPPER2_EXPORT_H
 #define CLIPPER2_EXPORT_H
@@ -104,7 +100,7 @@ inline Rect<T> CRectToRect(const CRect<T>& rect)
 #define EXTERN_DLL_EXPORT extern "C" __declspec(dllexport)
 
 //////////////////////////////////////////////////////
-// EXPORTED PATH DEFINITIONS
+// EXPORTED FUNCTION DEFINITIONS
 //////////////////////////////////////////////////////
 
 EXTERN_DLL_EXPORT const char* Version();
@@ -113,11 +109,11 @@ EXTERN_DLL_EXPORT const char* Version();
 // and CPolyTree structures which are pointers to heap allocated
 // memory. Eventually this memory will need to be released with one
 // of the following 'DisposeExported' functions.  (This may be the
-// only safe way to release this memory since the executabe
+// only safe way to release this memory since the executable
 // accessing these exported functions may use a memory manager that
-// allocates and releases heap memory in a different way. CPath
-// structures that are constructed by the executable should not use
-// these 'DisposeExported' functions.)
+// allocates and releases heap memory in a different way. Also,
+// CPath structures that have been constructed by the executable
+// should not be destroyed using these 'DisposeExported' functions.)
 EXTERN_DLL_EXPORT void DisposeExportedCPath64(CPath64 p);
 EXTERN_DLL_EXPORT void DisposeExportedCPaths64(CPaths64& pp);
 EXTERN_DLL_EXPORT void DisposeExportedCPathD(CPathD p);
