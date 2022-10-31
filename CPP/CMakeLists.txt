@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.10)
-project(Clipper2 VERSION 1.0.4 LANGUAGES C CXX)
+project(Clipper2 VERSION 1.0.6 LANGUAGES C CXX)
 
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 set(CMAKE_CXX_STANDARD 17)
@@ -10,6 +10,7 @@ set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 option(CLIPPER2_UTILS "Build utilities" ON)
 option(CLIPPER2_EXAMPLES "Build examples" ON)
 option(CLIPPER2_TESTS "Build tests" ON)
+option(USE_EXTERNAL_GTEST "Use system-wide installed GoogleTest" OFF)
 option(BUILD_SHARED_LIBS "Build shared libs" OFF)
 
 include(GNUInstallDirs)
@@ -31,6 +32,7 @@ set(CLIPPER2_SRC
 )
 
 set(PCFILE "${CMAKE_CURRENT_BINARY_DIR}/Clipper2.pc")
+set(PCFILEZ "${CMAKE_CURRENT_BINARY_DIR}/Clipper2Z.pc")
 
 # 2d version of Clipper2
 add_library(Clipper2 ${CLIPPER2_INC} ${CLIPPER2_SRC})
@@ -138,11 +140,14 @@ if(CLIPPER2_TESTS)
     set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
   endif()
   set(BUILD_GMOCK OFF)
+if(USE_EXTERNAL_GTEST)
+  find_package(GTest REQUIRED)
+else()
   include(GoogleTest)
 
   add_subdirectory("${PROJECT_SOURCE_DIR}/Tests/googletest/")
   set_target_properties(gtest gtest_main PROPERTIES FOLDER GTest)
-
+endif()
   set(ClipperTests_SRC
     Tests/TestLines.cpp
     Tests/TestOffsetOrientation.cpp
@@ -189,8 +194,10 @@ if(CLIPPER2_TESTS)
 endif()
 
 CONFIGURE_FILE(Clipper2.pc.cmakein "${PCFILE}" @ONLY)
+set(PCFILE_LIB_SUFFIX "Z")
+CONFIGURE_FILE(Clipper2.pc.cmakein "${PCFILEZ}" @ONLY)
 
 install(TARGETS Clipper2 Clipper2Z
         PUBLIC_HEADER DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/clipper2
 )
-install(FILES ${PCFILE} DESTINATION ${CMAKE_INSTALL_LIBDIR}/pkgconfig)
+install(FILES ${PCFILE} ${PCFILEZ} DESTINATION ${CMAKE_INSTALL_LIBDIR}/pkgconfig)
