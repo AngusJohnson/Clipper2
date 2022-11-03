@@ -2,7 +2,7 @@ unit Clipper.Engine;
 
 (*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  15 October 2022                                                 *
+* Date      :  3 November 2022                                                 *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  This is the main polygon clipping module                        *
@@ -224,7 +224,8 @@ type
     procedure CompleteSplit(op1, op2: POutPt; OutRec: POutRec);
     procedure SafeDisposeOutPts(var op: POutPt);
     procedure CleanCollinear(outRec: POutRec);
-    procedure FixSelfIntersects(var op: POutPt);
+    procedure DoSplitOp(outrec: POutRec; splitOp: POutPt);
+    procedure FixSelfIntersects(outrec: POutRec);
   protected
     FUsingPolytree : Boolean;
     procedure AddPath(const path: TPath64;
@@ -333,7 +334,7 @@ type
     procedure AddOpenSubject(const pathsD: TPathsD); overload;
     procedure AddClip(const pathD: TPathD); overload;
     procedure AddClip(const pathsD: TPathsD); overload;
-    constructor Create(roundingDecimalPrecision: integer = 2);
+    constructor Create(precision: integer = 2);
       reintroduce; overload;
     function Execute(clipType: TClipType; fillRule: TFillRule;
       out closedSolutions: TPathsD): Boolean; overload;
@@ -364,9 +365,6 @@ type
   public
     property  Scale: double read FScale;
   end;
-
-resourcestring
-  rsClipper_PrecisonErr = 'The decimal rounding value is invalid';
 
 implementation
 
@@ -432,21 +430,28 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-function AreReallyClose(const pt1, pt2: TPoint64): Boolean;
+function PtsReallyClose(const pt1, pt2: TPoint64): Boolean;
   {$IFDEF INLINING} inline; {$ENDIF}
 begin
   Result := (abs(pt1.X - pt2.X) < 2) and (abs(pt1.Y - pt2.Y) < 2);
 end;
 //------------------------------------------------------------------------------
 
+function IsVerySmallTriangle(op: POutPt): Boolean;
+  {$IFDEF INLINING} inline; {$ENDIF}
+begin
+  //also treat inconsequential polygons as invalid
+  Result := (op.next.next = op.prev) and
+    (PtsReallyClose(op.prev.pt, op.next.pt) or
+    PtsReallyClose(op.pt, op.next.pt) or
+    PtsReallyClose(op.pt, op.prev.pt));
+end;
+//------------------------------------------------------------------------------
+
 function IsValidClosedPath(op: POutPt): Boolean; {$IFDEF INLINING} inline; {$ENDIF}
 begin
-  result := assigned(op) and
-    (op.next <> op) and (op.next <> op.prev) and not
-			//also treat inconsequential polygons as invalid
-      ((op.next.next = op.prev) and
-        (AreReallyClose(op.pt, op.next.pt) or
-        AreReallyClose(op.pt, op.prev.pt)));
+  result := assigned(op) and (op.next <> op) and
+    (op.next <> op.prev) and not IsVerySmallTriangle(op);
 end;
 //------------------------------------------------------------------------------
 
@@ -840,6 +845,12 @@ var
 begin
   cnt := PointCount(op);
   if (cnt < 3) and (not isOpen or (Cnt < 2)) then
+  begin
+    Result := false;
+    Exit;
+  end;
+
+  if (cnt = 3) and IsVerySmallTriangle(op) then
   begin
     Result := false;
     Exit;
@@ -1904,84 +1915,102 @@ begin
     op2 := op2.next;
     if op2 = startOp then Break;
   end;
-  FixSelfIntersects(outRec.pts);
+  FixSelfIntersects(outRec);
 end;
 //------------------------------------------------------------------------------
 
-procedure TClipperBase.FixSelfIntersects(var op: POutPt);
+procedure TClipperBase.DoSplitOp(outrec: POutRec; splitOp: POutPt);
+var
+  newOp, newOp2, prevOp, nextNextOp: POutPt;
+  ip: TPoint64;
+  area1, area2, absArea1, absArea2: double;
+  newOutRec: POutRec;
+begin
+  // splitOp.prev -> splitOp &&
+  // splitOp.next -> splitOp.next.next are intersecting
+  prevOp := splitOp.prev;
+  nextNextOp := splitOp.next.next;
+  outrec.pts := prevOp;
+  ip := Point64(Clipper.Core.GetIntersectPointD(
+    prevOp.pt, splitOp.pt, splitOp.next.pt, nextNextOp.pt));
+{$IFDEF USINGZ}
+  if Assigned(fZCallback) then
+    fZCallback(prevOp.Pt, splitOp.Pt, splitOp.Next.Pt, nextNextOp.Pt, ip);
+{$ENDIF}
+  area1 := Area(outrec.pts);
+  absArea1 := abs(area1);
 
-  function DoSplitOp(splitOp: POutPt): POutPt;
-  var
-    newOp, newOp2, prevOp, nextNextOp: POutPt;
-    ip: TPoint64;
-    area1, area2: double;
-    newOutRec: POutRec;
+  if absArea1 < 2 then
   begin
-    prevOp := splitOp.prev;
-    nextNextOp := splitOp.next.next;
-    Result := prevOp;
-    ip := Point64(Clipper.Core.GetIntersectPointD(
-      prevOp.pt, splitOp.pt, splitOp.next.pt, nextNextOp.pt));
-  {$IFDEF USINGZ}
-    if Assigned(fZCallback) then
-      fZCallback(prevOp.Pt, splitOp.Pt, splitOp.Next.Pt, nextNextOp.Pt, ip);
-  {$ENDIF}
-    area1 := Area(op);
-    area2 := AreaTriangle(ip, splitOp.pt, splitOp.next.pt);
-
-    if PointsEqual(ip, prevOp.pt) or
-      PointsEqual(ip, nextNextOp.pt) then
-    begin
-      nextNextOp.prev := prevOp;
-      prevOp.next := nextNextOp;
-    end else
-    begin
-      new(newOp2);
-      newOp2.pt := ip;
-      newOp2.joiner := nil;
-      newOp2.outrec := prevOp.outrec;
-      newOp2.prev := prevOp;
-      newOp2.next := nextNextOp;
-      nextNextOp.prev := newOp2;
-      prevOp.next := newOp2;
-    end;
-
-    SafeDeleteOutPtJoiners(splitOp.next);
-    SafeDeleteOutPtJoiners(splitOp);
-
-    if (Abs(area2) >= 1) and
-      (((Abs(area2) > (Abs(area1))) or
-      ((area2 > 0) = (area1 > 0)))) then
-    begin
-      new(newOutRec);
-      FillChar(newOutRec^, SizeOf(TOutRec), 0);
-      newOutRec.idx := FOutRecList.Add(newOutRec);
-      newOutRec.owner := prevOp.outrec.owner;
-      newOutRec.isOpen := false;
-      newOutRec.polypath := nil;
-      newOutRec.splits := nil;
-      splitOp.outrec := newOutRec;
-      splitOp.next.outrec := newOutRec;
-      new(newOp);
-      newOp.pt := ip;
-      newOp.joiner := nil;
-      newOp.outrec := newOutRec;
-      newOp.prev := splitOp.next;
-      newOp.next := splitOp;
-      splitOp.prev := newOp;
-      splitOp.next.next := newOp;
-      newOutRec.pts := newOp;
-    end else
-    begin
-      Dispose(splitOp.next);
-      Dispose(splitOp);
-    end;
+    SafeDisposeOutPts(splitOp);
+    Exit;
   end;
 
+  // nb: area1 is the path's area *before* splitting, whereas area2 is
+  // the area of the triangle containing splitOp & splitOp.next.
+  // So the only way for these areas to have the same sign is if
+  // the split triangle is larger than the path containing prevOp or
+  // if there's more than one self=intersection.
+  area2 := AreaTriangle(ip, splitOp.pt, splitOp.next.pt);
+  absArea2 := abs(area2);
+
+  // de-link splitOp and splitOp.next from the path
+  // while inserting the intersection point
+  if PointsEqual(ip, prevOp.pt) or
+    PointsEqual(ip, nextNextOp.pt) then
+  begin
+    nextNextOp.prev := prevOp;
+    prevOp.next := nextNextOp;
+  end else
+  begin
+    new(newOp2);
+    newOp2.pt := ip;
+    newOp2.joiner := nil;
+    newOp2.outrec := outrec;
+    newOp2.prev := prevOp;
+    newOp2.next := nextNextOp;
+    nextNextOp.prev := newOp2;
+    prevOp.next := newOp2;
+  end;
+
+  SafeDeleteOutPtJoiners(splitOp.next);
+  SafeDeleteOutPtJoiners(splitOp);
+
+  if (absArea2 > 1) and
+    ((absArea2 > absArea1) or
+    ((area2 > 0) = (area1 > 0))) then
+  begin
+    new(newOutRec);
+    FillChar(newOutRec^, SizeOf(TOutRec), 0);
+    newOutRec.idx := FOutRecList.Add(newOutRec);
+    newOutRec.owner := outrec.owner;
+    newOutRec.isOpen := false;
+    newOutRec.polypath := nil;
+    newOutRec.splits := nil;
+    splitOp.outrec := newOutRec;
+    splitOp.next.outrec := newOutRec;
+    new(newOp);
+    newOp.pt := ip;
+    newOp.joiner := nil;
+    newOp.outrec := newOutRec;
+    newOp.prev := splitOp.next;
+    newOp.next := splitOp;
+    splitOp.prev := newOp;
+    splitOp.next.next := newOp;
+    newOutRec.pts := newOp;
+  end else
+  begin
+    Dispose(splitOp.next);
+    Dispose(splitOp);
+  end;
+end;
+//------------------------------------------------------------------------------
+
+procedure TClipperBase.FixSelfIntersects(outrec: POutRec);
 var
   op2: POutPt;
 begin
-  op2 := op;
+  op2 := outrec.pts;
   while true do
   begin
     // triangles can't self-intersect
@@ -1990,14 +2019,13 @@ begin
     else if SegmentsIntersect(op2.prev.pt, op2.pt,
       op2.next.pt, op2.next.next.pt) then
     begin
-      if (op2 = op) or (op2.next = op) then
-        op := op2.prev;
-      op2 := DoSplitOp(op2);
-      op := op2;
+      DoSplitOp(outrec, op2);
+      if not assigned(outrec.pts) then Break;
+      op2 := outrec.pts;
       Continue;
     end else
       op2 := op2.next;
-    if (op2 = op) then Break;
+    if (op2 = outrec.pts) then Break;
   end;
 end;
 //------------------------------------------------------------------------------
@@ -4285,13 +4313,11 @@ end;
 // TClipperD methods
 //------------------------------------------------------------------------------
 
-constructor TClipperD.Create(roundingDecimalPrecision: integer);
+constructor TClipperD.Create(precision: integer);
 begin
   inherited Create;
-  if (roundingDecimalPrecision < -8) or
-    (roundingDecimalPrecision > 8) then
-      Raise EClipperLibException(rsClipper_PrecisonErr);
-  FScale := Math.Power(10, roundingDecimalPrecision);
+  CheckPrecisionRange(precision);
+  FScale := Math.Power(10, precision);
   FInvScale := 1/FScale;
 end;
 //------------------------------------------------------------------------------

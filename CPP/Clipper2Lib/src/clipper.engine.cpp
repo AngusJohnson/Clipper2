@@ -1,6 +1,6 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  28 October 2022                                                 *
+* Date      :  3 November 2022                                                 *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  This is the main polygon clipping module                        *
@@ -523,19 +523,23 @@ namespace Clipper2Lib {
 	}
 
 
-	inline bool AreReallyClose(const Point64& pt1, const Point64& pt2)
+	inline bool PtsReallyClose(const Point64& pt1, const Point64& pt2)
 	{
-	  return (std::llabs(pt1.x - pt2.x) < 2) && (std::llabs(pt1.y - pt2.y) < 2);
+		return (std::llabs(pt1.x - pt2.x) < 2) && (std::llabs(pt1.y - pt2.y) < 2);
 	}
 
+	inline bool IsVerySmallTriangle(const OutPt& op)
+	{
+		return op.next->next == op.prev &&
+			(PtsReallyClose(op.prev->pt, op.next->pt) ||
+				PtsReallyClose(op.pt, op.next->pt) ||
+				PtsReallyClose(op.pt, op.prev->pt));
+	}
 
 	inline bool IsValidClosedPath(const OutPt* op)
 	{
-		return (op && op->next != op && op->next != op->prev &&
-			//also treat inconsequential polygons as invalid
-			!(op->next->next == op->prev &&
-			(AreReallyClose(op->pt, op->next->pt) ||
-			AreReallyClose(op->pt, op->prev->pt))));
+		return op && (op->next != op) && (op->next != op->prev) &&
+			!IsVerySmallTriangle(*op);
 	}
 
 	inline bool OutrecIsAscending(const Active* hotEdge)
@@ -1494,11 +1498,13 @@ namespace Clipper2Lib {
 		FixSelfIntersects(outrec);
 	}
 
-	OutPt* ClipperBase::DoSplitOp(OutPt* outRecOp, OutPt* splitOp)
+	void ClipperBase::DoSplitOp(OutRec* outrec, OutPt* splitOp)
 	{
-		OutPt* prevOp = splitOp->prev; 
+		// splitOp.prev -> splitOp && 
+		// splitOp.next -> splitOp.next.next are intersecting
+		OutPt* prevOp = splitOp->prev;
 		OutPt* nextNextOp = splitOp->next->next;
-		OutPt* result = prevOp;
+		outrec->pts = prevOp;
 		PointD ipD;
 		GetIntersectPoint(prevOp->pt,
 			splitOp->pt, splitOp->next->pt, nextNextOp->pt, ipD);
@@ -1507,9 +1513,25 @@ namespace Clipper2Lib {
 		if (zCallback_)
 			zCallback_(prevOp->pt, splitOp->pt, splitOp->next->pt, nextNextOp->pt, ip);
 #endif
-		double area1 = Area(outRecOp);
-		double area2 = AreaTriangle(ip, splitOp->pt, splitOp->next->pt);
+		double area1 = Area(outrec->pts);
+		double absArea1 = std::fabs(area1);
+		if (absArea1 < 2)
+		{
+			SafeDisposeOutPts(outrec->pts);
+			// outrec.pts == nil; :)
+			return;
+		}
 
+		// nb: area1 is the path's area *before* splitting, whereas area2 is
+		// the area of the triangle containing splitOp & splitOp.next.
+		// So the only way for these areas to have the same sign is if
+		// the split triangle is larger than the path containing prevOp or
+		// if there's more than one self=intersection.
+		double area2 = AreaTriangle(ip, splitOp->pt, splitOp->next->pt);
+		double absArea2 = std::fabs(area2);
+
+		// de-link splitOp and splitOp.next from the path
+		// while inserting the intersection point
 		if (ip == prevOp->pt || ip == nextNextOp->pt)
 		{
 			nextNextOp->prev = prevOp;
@@ -1527,9 +1549,8 @@ namespace Clipper2Lib {
 		SafeDeleteOutPtJoiners(splitOp->next);
 		SafeDeleteOutPtJoiners(splitOp);
 
-		double absArea2 = std::abs(area2);
-		if ((absArea2 >= 1) &&
-			((absArea2 > std::abs(area1) || ((area2 > 0) == (area1 > 0)))))
+		if (absArea2 >= 1 && 
+			(absArea2 > absArea1 || (area2 > 0) == (area1 > 0)))
 		{
 			OutRec* newOutRec = new OutRec();
 			newOutRec->idx = outrec_list_.size();
@@ -1551,9 +1572,7 @@ namespace Clipper2Lib {
 			delete splitOp->next;
 			delete splitOp;
 		}
-		return result;
 	}
-
 
 	void ClipperBase::FixSelfIntersects(OutRec* outrec)
 	{
@@ -1567,8 +1586,9 @@ namespace Clipper2Lib {
 			{
 				if (op2 == outrec->pts || op2->next == outrec->pts)
 					outrec->pts = outrec->pts->prev;
-				op2 = DoSplitOp(outrec->pts, op2);
-				outrec->pts = op2;
+				DoSplitOp(outrec, op2);
+				if (!outrec->pts) break;
+				op2 = outrec->pts;
 				continue;
 			}
 			else
@@ -3271,7 +3291,9 @@ namespace Clipper2Lib {
 
 	bool BuildPath64(OutPt* op, bool reverse, bool isOpen, Path64& path)
 	{
-		if (op->next == op || (!isOpen && op->next == op->prev)) return false;
+		if (op->next == op || (!isOpen && op->next == op->prev)) 
+			return false;
+
 		path.resize(0);
 		Point64 lastPt;
 		OutPt* op2;
@@ -3300,7 +3322,9 @@ namespace Clipper2Lib {
 			else
 				op2 = op2->next;
 		}
-		return true;
+
+		if (path.size() == 3 && IsVerySmallTriangle(*op2)) return false;
+		else return true;
 	}
 
 	bool ClipperBase::DeepCheckOwner(OutRec* outrec, OutRec* owner)
@@ -3458,6 +3482,7 @@ namespace Clipper2Lib {
 			else
 				op2 = op2->next;
 		}
+		if (path.size() == 3 && IsVerySmallTriangle(*op2)) return false;
 		return true;
 	}
 

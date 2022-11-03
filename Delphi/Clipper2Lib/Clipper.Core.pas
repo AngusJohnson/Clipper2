@@ -2,7 +2,7 @@ unit Clipper.Core;
 
 (*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  15 October 2022                                                 *
+* Date      :  2 November 2022                                                 *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  Core Clipper Library module                                     *
 *              Contains structures and functions used throughout the library   *
@@ -279,6 +279,8 @@ procedure GetSinCos(angle: double; out sinA, cosA: double);
 function Ellipse(const rec: TRect64; steps: integer = 0): TPath64; overload;
 function Ellipse(const rec: TRectD; steps: integer = 0): TPathD; overload;
 
+procedure CheckPrecisionRange(var precision: integer);
+
 const
   MaxInt64    = 9223372036854775807;
   invalid64   = MaxInt64;
@@ -293,6 +295,9 @@ const
   Tolerance   : Double = 1.0E-12;
 
 implementation
+
+resourcestring
+  rsClipper_PrecisonErr = 'The decimal rounding value is invalid';
 
 //------------------------------------------------------------------------------
 // TRect64 methods ...
@@ -426,6 +431,13 @@ end;
 
 //------------------------------------------------------------------------------
 // Miscellaneous Functions ...
+//------------------------------------------------------------------------------
+
+procedure CheckPrecisionRange(var precision: integer);
+begin
+  if (precision < -8) or (precision > 8) then
+      Raise EClipperLibException(rsClipper_PrecisonErr);
+end;
 //------------------------------------------------------------------------------
 
 procedure RaiseError(const msg: string); {$IFDEF INLINING} inline; {$ENDIF}

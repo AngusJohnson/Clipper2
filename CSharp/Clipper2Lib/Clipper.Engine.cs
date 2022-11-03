@@ -1,6 +1,6 @@
 ﻿/*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  15 October 2022                                                 *
+* Date      :  3 November 2022                                                 *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  This is the main polygon clipping module                        *
@@ -2422,20 +2422,25 @@ namespace Clipper2Lib
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static bool AreReallyClose(Point64 pt1, Point64 pt2)
+    private static bool PtsReallyClose(Point64 pt1, Point64 pt2)
     {
       return (Math.Abs(pt1.X - pt2.X) < 2) && (Math.Abs(pt1.Y - pt2.Y) < 2);
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static bool IsVerySmallTriangle(OutPt op)
+	  {
+		  return op.next!.next == op.prev &&
+			(PtsReallyClose(op.prev.pt, op.next.pt) ||
+				PtsReallyClose(op.pt, op.next.pt) ||
+				PtsReallyClose(op.pt, op.prev.pt));
+	  }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static bool IsValidClosedPath(OutPt? op)
     {
-      return (op != null && 
-        op.next != op && op.next != op.prev &&
-        // also treat inconsequential polygons as invalid
-        !(op.next!.next == op.prev &&
-        (AreReallyClose(op.pt, op.next.pt) ||
-        AreReallyClose(op.pt, op.prev.pt))));
+      return (op != null && op.next != op &&
+        (op.next != op.prev || !IsVerySmallTriangle(op)));
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -3240,7 +3245,7 @@ namespace Clipper2Lib
     private void CleanCollinear(OutRec? outrec)
     {
       outrec = GetRealOutRec(outrec);
-      if (outrec == null || outrec.isOpen || 
+        if (outrec == null || outrec.isOpen || 
         outrec.frontEdge != null || !ValidateClosedPathEx(ref outrec.pts)) 
           return;
 
@@ -3268,21 +3273,47 @@ namespace Clipper2Lib
         op2 = op2.next;
         if (op2 == startOp) break;
       }
-      FixSelfIntersects(ref outrec.pts!);
+      FixSelfIntersects(outrec);
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private OutPt DoSplitOp(ref OutPt outRecOp, OutPt splitOp)
+    private void DoSplitOp(OutRec outrec, OutPt splitOp)
     {
-      OutPt prevOp = splitOp.prev, nextNextOp = splitOp.next!.next!;
+      // splitOp.prev -> splitOp &&
+      // splitOp.next -> splitOp.next.next are intersecting
+      OutPt prevOp = splitOp.prev;
+      OutPt nextNextOp = splitOp.next!.next!;
+      outrec.pts = prevOp;
       OutPt result = prevOp;
+
       InternalClipper.GetIntersectPoint(
           prevOp.pt, splitOp.pt, splitOp.next.pt, nextNextOp.pt, out PointD ipD);
       Point64 ip = new Point64(ipD);
 
-      double area1 = Area(outRecOp);
-      double area2 = AreaTriangle(ip, splitOp.pt, splitOp.next.pt);
+#if USINGZ
+      if (_zCallback != null)
+        _zCallback(prevOp.pt, splitOp.pt, splitOp.next.pt, nextNextOp.pt, ref ip);
+#endif
 
+      double area1 = Area(prevOp);
+      double absArea1 = Math.Abs(area1);
+      
+      if (absArea1 < 2)
+      {
+        SafeDisposeOutPts(ref splitOp);
+        return;
+      }
+
+      // nb: area1 is the path's area *before* splitting, whereas area2 is
+      // the area of the triangle containing splitOp & splitOp.next.
+      // So the only way for these areas to have the same sign is if
+      // the split triangle is larger than the path containing prevOp or
+      // if there's more than one self=intersection.
+      double area2 = AreaTriangle(ip, splitOp.pt, splitOp.next.pt);
+      double absArea2 = Math.Abs(area2);
+
+      // de-link splitOp and splitOp.next from the path
+      // while inserting the intersection point
       if (ip == prevOp.pt || ip == nextNextOp.pt)
       {
         nextNextOp.prev = prevOp;
@@ -3298,12 +3329,12 @@ namespace Clipper2Lib
       SafeDeleteOutPtJoiners(splitOp.next);
       SafeDeleteOutPtJoiners(splitOp);
 
-      if ((Math.Abs(area2) >= 1) &&
-          ((Math.Abs(area2) > Math.Abs(area1)) ||
+      if (absArea2 > 1 &&
+          (absArea2 > absArea1 ||
            ((area2 > 0) == (area1 > 0))))
       {
-        OutRec newOutRec = new OutRec()
-        { idx = _outrecList.Count };
+        OutRec newOutRec = new OutRec();
+        newOutRec.idx = _outrecList.Count;
         _outrecList.Add(newOutRec);
         newOutRec.owner = prevOp.outrec.owner;
         newOutRec.polypath = null;
@@ -3315,14 +3346,13 @@ namespace Clipper2Lib
         splitOp.prev = newOp;
         splitOp.next.next = newOp;
       }
-      return result;
+      //else { splitOp = null; splitOp.next = null; }
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private void FixSelfIntersects(ref OutPt op)
+    private void FixSelfIntersects(OutRec outrec)
     {
-      if (!IsValidClosedPath(op)) return;
-      OutPt op2 = op;
+      OutPt op2 = outrec.pts!;
       for (; ; )
       {
         // triangles can't self-intersect
@@ -3330,15 +3360,14 @@ namespace Clipper2Lib
         if (InternalClipper.SegmentsIntersect(op2.prev.pt,
                 op2.pt, op2.next.pt, op2.next.next!.pt))
         {
-          if (op2 == op || op2.next == op) op = op2.prev;
-          op2 = DoSplitOp(ref op, op2);
-          op = op2;
+          DoSplitOp(outrec, op2);
+          if (outrec.pts == null) return;
+          op2 = outrec.pts;
           continue;
         }
-
-        op2 = op2.next;
-
-        if (op2 == op) break;
+        else
+          op2 = op2.next;
+        if (op2 == outrec.pts) break;
       }
     }
 
@@ -3374,7 +3403,9 @@ namespace Clipper2Lib
         else
           op2 = op2.next!;
       }
-      return true;
+
+      if (path.Count == 3 && IsVerySmallTriangle(op2)) return false;
+      else return true;
     }
 
 

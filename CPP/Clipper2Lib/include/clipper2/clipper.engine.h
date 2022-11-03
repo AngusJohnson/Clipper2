@@ -1,6 +1,6 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  30 October 2022                                                 *
+* Date      :  3 November 2022                                                 *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  This is the main polygon clipping module                        *
@@ -210,7 +210,7 @@ namespace Clipper2Lib {
 		bool ValidateClosedPathEx(OutPt*& outrec);
 		void CleanCollinear(OutRec* outrec);
 		void FixSelfIntersects(OutRec* outrec);
-		OutPt* DoSplitOp(OutPt* outRecOp, OutPt* splitOp);
+		void DoSplitOp(OutRec* outRec, OutPt* splitOp);
 		Joiner* GetHorzTrialParent(const OutPt* op);
 		bool OutPtInTrialHorzList(OutPt* op);
 		void SafeDisposeOutPts(OutPt*& op);

@@ -9,7 +9,7 @@
 
 // The exported functions below refer to simple structures that
 // can be understood across multiple languages. Consequently
-// Path64, PathD, Polytree64 etc are converted from classes
+// Path64, PathD, Polytree64 etc are converted from C++ classes
 // (std::vector<> etc) into the following data structures:
 //
 // CPath64 (int64_t*) & CPathD (double_t*):
@@ -58,7 +58,7 @@ typedef struct CPolyPath64 {
   uint32_t      is_hole;
   uint32_t      child_count;
   CPolyPath64*  childs;
-} 
+}
 CPolyTree64;
 
 typedef struct CPolyPathD {
@@ -66,7 +66,7 @@ typedef struct CPolyPathD {
   uint32_t      is_hole;
   uint32_t      child_count;
   CPolyPathD*   childs;
-} 
+}
 CPolyTreeD;
 
 template <typename T>

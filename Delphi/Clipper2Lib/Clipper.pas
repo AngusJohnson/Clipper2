@@ -2,7 +2,7 @@ unit Clipper;
 
 (*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  21 October 2022                                                 *
+* Date      :  2 November 2022                                                 *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  This module provides a simple interface to the Clipper Library  *
@@ -342,8 +342,7 @@ var
   pp: TPaths64;
   scale, invScale: double;
 begin
-  if (precision < -8) or (precision > 8) then
-    raise Exception.Create(rsClipper_PrecisonErr);
+  CheckPrecisionRange(precision);
   scale := Power(10, precision);
   invScale := 1/scale;
   pp := ScalePaths(paths, scale, scale);
@@ -415,8 +414,7 @@ var
 begin
   Result := nil;
   if not rect.Intersects(GetBounds(path)) then Exit;
-  if (precision < -8) or (precision > 8) then
-    Raise EClipperLibException(rsClipper_PrecisonErr);
+  CheckPrecisionRange(precision);
   scale := Math.Power(10, precision);
   rec := Rect64(ScaleRect(rect, scale));
   tmpPath := ScalePath(path, scale);
@@ -434,8 +432,7 @@ var
   rec: TRect64;
   pathRec: TRectD;
 begin
-  if (precision < -8) or (precision > 8) then
-    Raise EClipperLibException(rsClipper_PrecisonErr);
+  CheckPrecisionRange(precision);
   scale := Math.Power(10, precision);
   rec := Rect64(ScaleRect(rect, scale));
 
@@ -523,8 +520,7 @@ var
 begin
   Result := nil;
   if not rect.Intersects(GetBounds(path)) then Exit;
-  if (precision < -8) or (precision > 8) then
-    Raise EClipperLibException(rsClipper_PrecisonErr);
+  CheckPrecisionRange(precision);
   scale := Math.Power(10, precision);
   rec := Rect64(ScaleRect(rect, scale));
   tmpPath := ScalePath(path, scale);
@@ -545,8 +541,7 @@ var
 begin
   Result := nil;
   if rect.IsEmpty then Exit;
-  if (precision < -8) or (precision > 8) then
-    Raise EClipperLibException(rsClipper_PrecisonErr);
+  CheckPrecisionRange(precision);
   scale := Math.Power(10, precision);
   rec := Rect64(ScaleRect(rect, scale));
 
