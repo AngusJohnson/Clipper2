@@ -1,4 +1,4 @@
-unit Clipper.SVG;
+ unit Clipper.SVG;
 
 (*******************************************************************************
 * Author    :  Angus Johnson                                                   *
@@ -81,7 +81,7 @@ type
     PenWidth  : double;
   end;
 
-  TSimpleClipperSvgWriter = class
+  TSvgWriter = class
   private
     fFillRule   : TFillRule;
     fCoordStyle : TCoordStyle;
@@ -124,6 +124,15 @@ type
     procedure ClearText;
     procedure ClearAll;
   end;
+
+  procedure AddSubject(svg: TSvgWriter; const paths: TPaths64);
+  procedure AddOpenSubject(svg: TSvgWriter; const paths: TPaths64);
+  procedure AddClip(svg: TSvgWriter; const paths: TPaths64);
+  procedure AddSolution(svg: TSvgWriter; const paths: TPaths64);
+  procedure AddOpenSolution(svg: TSvgWriter; const paths: TPaths64);
+  procedure SaveSvg(svg: TSvgWriter; const filename: string;
+    width: integer = 0; height: integer = 0; margin: integer = 0);
+
 
 implementation
 
@@ -170,7 +179,7 @@ begin
   Self.Bold       := aBold;
 end;
 
-constructor TSimpleClipperSvgWriter.Create(fillRule: TFillRule;
+constructor TSvgWriter.Create(fillRule: TFillRule;
   const coordFontName: string = 'Verdana';
   coordFontSize: integer = 9;
   coordFontColor: Cardinal = black);
@@ -184,7 +193,7 @@ begin
   fTextInfos := TList.Create;
 end;
 
-destructor TSimpleClipperSvgWriter.Destroy;
+destructor TSvgWriter.Destroy;
 begin
   ClearAll;
   fPolyInfos.Free;
@@ -193,7 +202,7 @@ begin
   inherited;
 end;
 
-procedure TSimpleClipperSvgWriter.AddPaths(const paths: TPaths64;
+procedure TSvgWriter.AddPaths(const paths: TPaths64;
   isOpen: Boolean; brushColor, penColor: Cardinal;
   penWidth: double; showCoords: Boolean = false);
 var
@@ -210,7 +219,7 @@ begin
   fPolyInfos.Add(pi);
 end;
 
-procedure TSimpleClipperSvgWriter.AddPaths(const paths: TPathsD; isOpen: Boolean;
+procedure TSvgWriter.AddPaths(const paths: TPathsD; isOpen: Boolean;
   brushColor, penColor: Cardinal;
   penWidth: double; showCoords: Boolean = false);
 var
@@ -226,7 +235,7 @@ begin
   fPolyInfos.Add(pi);
 end;
 
-procedure TSimpleClipperSvgWriter.AddDashedPath(const paths: TPathsD;
+procedure TSvgWriter.AddDashedPath(const paths: TPathsD;
   penColor: Cardinal; penWidth: double; const dashes: TArrayOfInteger);
 var
   pi: PPolyInfo;
@@ -242,7 +251,7 @@ begin
   fPolyInfos.Add(pi);
 end;
 
-procedure TSimpleClipperSvgWriter.AddArrow(const center: TPointD;
+procedure TSvgWriter.AddArrow(const center: TPointD;
   radius: double; angleRad: double; brushColor, penColor: Cardinal;
   penWidth: double);
 var
@@ -261,7 +270,7 @@ begin
   AddPaths(pp, false, brushColor, penColor, penWidth);
 end;
 
-procedure TSimpleClipperSvgWriter.AddCircle(const center: TPoint64;
+procedure TSvgWriter.AddCircle(const center: TPoint64;
   radius: double; brushColor, penColor: Cardinal; penWidth: double);
 var
   ci: PCircleInfo;
@@ -275,7 +284,7 @@ begin
   fCircleInfos.Add(ci);
 end;
 
-procedure TSimpleClipperSvgWriter.AddCircle(const center: TPointD;
+procedure TSvgWriter.AddCircle(const center: TPointD;
   radius: double; brushColor, penColor: Cardinal; penWidth: double);
 var
   ci: PCircleInfo;
@@ -289,7 +298,7 @@ begin
   fCircleInfos.Add(ci);
 end;
 
-procedure TSimpleClipperSvgWriter.AddText(text: string; x,y: integer;
+procedure TSvgWriter.AddText(text: string; x,y: integer;
   fontSize: integer; fontClr: Cardinal; bold: Boolean);
 var
   ti: PTextInfo;
@@ -304,7 +313,7 @@ begin
   fTextInfos.Add(ti);
 end;
 
-function TSimpleClipperSvgWriter.GetBounds: TRectD;
+function TSvgWriter.GetBounds: TRectD;
 var
   i: integer;
   bounds: TRectD;
@@ -321,7 +330,7 @@ begin
     end;
 end;
 
-procedure TSimpleClipperSvgWriter.ClearPaths;
+procedure TSvgWriter.ClearPaths;
 var
   i: integer;
 begin
@@ -334,7 +343,7 @@ begin
   fCircleInfos.Clear;
 end;
 
-procedure TSimpleClipperSvgWriter.ClearText;
+procedure TSvgWriter.ClearText;
 var
   i: integer;
 begin
@@ -343,13 +352,13 @@ begin
   fTextInfos.Clear;
 end;
 
-procedure TSimpleClipperSvgWriter.ClearAll;
+procedure TSvgWriter.ClearAll;
 begin
   ClearText;
   ClearPaths;
 end;
 
-function TSimpleClipperSvgWriter.SaveToFile(const filename: string;
+function TSvgWriter.SaveToFile(const filename: string;
   maxWidth: integer = 0; maxHeight: integer = 0; margin: integer = 20): Boolean;
 var
   i,j,k: integer;
@@ -482,6 +491,38 @@ begin
   finally
     sl.free;
   end;
+end;
+
+
+procedure AddSubject(svg: TSvgWriter; const paths: TPaths64);
+begin
+  svg.AddPaths(paths, false, $200099FF, $800066FF, 1.0);
+end;
+
+procedure AddOpenSubject(svg: TSvgWriter; const paths: TPaths64);
+begin
+  svg.AddPaths(paths, true, $0, $800066FF, 2.2);
+end;
+
+procedure AddClip(svg: TSvgWriter; const paths: TPaths64);
+begin
+  svg.AddPaths(paths, false, $10FF9900, $80FF6600, 1.0);
+end;
+
+procedure AddSolution(svg: TSvgWriter; const paths: TPaths64);
+begin
+  svg.AddPaths(paths, false, $8066FF66, $FF006600, 1.5);
+end;
+
+procedure AddOpenSolution(svg: TSvgWriter; const paths: TPaths64);
+begin
+  svg.AddPaths(paths, false, $8066FF66, $FF006600, 1.5);
+end;
+
+procedure SaveSvg(svg: TSvgWriter; const filename: string;
+  width: integer = 0; height: integer = 0; margin: integer = 0);
+begin
+  svg.SaveToFile(filename, width, height, margin);
 end;
 
 end.

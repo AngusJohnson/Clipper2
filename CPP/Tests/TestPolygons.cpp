@@ -74,12 +74,12 @@ TEST(Clipper2Tests, TestMultiplePolygons)
     }    
     else if (IsInList(test_number, { 37, 43, 87, 102, 111, 118, 183 }))
     {
-      EXPECT_LE(count_diff, 1);
+      EXPECT_LE(count_diff, 2);
     }
     else if (test_number >= 120)
     {
       if (stored_count > 0)
-        EXPECT_LE((double)count_diff / stored_count, 0.025);
+        EXPECT_LE((double)count_diff / stored_count, 0.05);
     }
     else if (stored_count > 0)
     {

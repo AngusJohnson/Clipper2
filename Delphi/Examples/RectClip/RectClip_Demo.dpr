@@ -39,7 +39,7 @@ const
     sol := RectClip(rec, sub);
 
     //display
-    with TSimpleClipperSvgWriter.Create(fillrule) do
+    with TSvgWriter.Create(fillrule) do
     try
       AddPaths(sub, false, $100066FF, $400066FF, 1);
       AddPaths(clp, false, $10FFAA00, $FFFF0000, 1);
@@ -66,7 +66,7 @@ const
     sol := RectClip(rec, sub);
 
     //display
-    with TSimpleClipperSvgWriter.Create(fillrule) do
+    with TSvgWriter.Create(fillrule) do
     try
       AddPaths(sub, false, $100066FF, $400066FF, 1);
       AddPaths(clp, false, $10FFAA00, $FFFF0000, 1);
@@ -95,7 +95,7 @@ const
     sol := RectClipLines(rec, sub);
 
     //display
-    with TSimpleClipperSvgWriter.Create(fillrule) do
+    with TSvgWriter.Create(fillrule) do
     try
       AddPaths(sub, true, $0, $AA0066FF, 1);
       //AddPaths(sub, false, $100066FF, $400066FF, 1);

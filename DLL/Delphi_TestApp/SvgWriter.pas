@@ -11,7 +11,7 @@
 
 interface
 
-{$I ..\Clipper2Lib\Clipper.inc}
+{$I ..\..\Delphi\Clipper2Lib\Clipper.inc}
 
 uses
   Classes,
