@@ -1,18 +1,6 @@
 #include <gtest/gtest.h>
 #include "clipper2/clipper.h"
 #include "ClipFileLoad.h"
-#include <fstream> 
-
-//#define log_tests
-#ifdef log_tests
-void Log(std::ofstream& os, int testnum, int count, int count_diff,
-  int area, int area_diff, double apd)
-{
-  os << "test: " << testnum << ", count: " << count << " (" <<
-    count_diff << "), area: " << area << " (" << area_diff <<
-    ") " << apd << std::endl;
-}
-#endif
 
 inline Clipper2Lib::PathD MakeRandomPath(int width, int height, unsigned vertCnt)
 {
@@ -39,12 +27,6 @@ TEST(Clipper2Tests, TestMultiplePolygons)
 
   ASSERT_TRUE(ifs);
   ASSERT_TRUE(ifs.good());
-
-#ifdef log_tests
-  std::ofstream log("../polygon.log");
-  log << std::setprecision(4);
-#endif
-
 
   int test_number = 1;
   while (true)
@@ -85,10 +67,6 @@ TEST(Clipper2Tests, TestMultiplePolygons)
     const auto solution_polytree_paths = PolyTreeToPaths64(solution_polytree);
     const int64_t measured_count_pt = static_cast<int64_t>(solution_polytree_paths.size());
 
-#ifdef log_tests
-    bool log_this_test = false;
-#endif
-
     // check polygon counts
     if (test_number == 27)
     {
@@ -101,13 +79,7 @@ TEST(Clipper2Tests, TestMultiplePolygons)
     else if (test_number >= 120)
     {
       if (stored_count > 0)
-      {
-#ifdef log_tests
-        if ((double)count_diff / stored_count > 0.025)
-          log_this_test = true;
-#endif
         EXPECT_LE((double)count_diff / stored_count, 0.025);
-      }
     }
     else if (stored_count > 0)
     {
@@ -121,22 +93,10 @@ TEST(Clipper2Tests, TestMultiplePolygons)
       EXPECT_LE(area_diff, 8);
     }
     else if (stored_area > 0 && area_diff > 100)
-    {
-#ifdef log_tests
-      if ((double)area_diff / stored_area > 0.005)
-        log_this_test = true;
-#endif
       EXPECT_LE((double)area_diff/stored_area, 0.005);
-    }
 
     EXPECT_EQ(measured_area, measured_area_pt);
     EXPECT_EQ(measured_count, measured_count_pt);
-
-#ifdef log_tests
-    if (log_this_test)
-      Log(log, test_number, measured_count, count_diff,
-        measured_area, area_diff, area_diff_ratio);
-#endif
 
     ++test_number;
   }
