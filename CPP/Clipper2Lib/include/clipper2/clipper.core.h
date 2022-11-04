@@ -16,7 +16,7 @@
 #include <string>
 #include <iostream>
 #include <algorithm>
-#include <limits>
+#include <climits>
 
 //#define NO_EXCEPTIONS
 
