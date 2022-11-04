@@ -542,9 +542,10 @@ function GetIntersectPoint(e1, e2: PActive): TPoint64;
 var
   b1, b2, m: Double;
 begin
-  if (e1.dx = e2.dx) then
+  m := (e1.dx - e2.dx);
+  if Abs(m) < 1.0e-5 then
   begin
-    Result := e1.top;
+    Result := GetClosestLineEnd(e1.bot, e1.top, e2.bot, e2.top);
     Exit;
   end
   else if e1.dx = 0 then
@@ -572,14 +573,11 @@ begin
   begin
     with e1^ do b1 := bot.X - bot.Y * dx;
     with e2^ do b2 := bot.X - bot.Y * dx;
-    m := (b2-b1)/(e1.dx - e2.dx);
-    //Result.Y := Round(m); //Round(m);
+    m := (b2 - b1) / m;
     Result.Y := DblToInt64(m); //Round(m);
     if Abs(e1.dx) < Abs(e2.dx) then
       Result.X := DblToInt64(e1.dx * m + b1) else
       Result.X := DblToInt64(e2.dx * m + b2);
-//      Result.X := Round(e1.dx * m + b1) else
-//      Result.X := Round(e2.dx * m + b2);
   end;
 end;
 //------------------------------------------------------------------------------

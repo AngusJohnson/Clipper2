@@ -404,10 +404,33 @@ namespace Clipper2Lib
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static Point64 GetEndE1ClosestToEndE2(Active e1, Active e2) 
+    {
+      double[] d = new double[4];
+      d[0] = DistanceSqr(e1.bot, e2.bot);
+      if (d[0] == 0) return e1.bot;
+      d[1] = DistanceSqr(e1.top, e2.top);
+      if (d[1] == 0) return e1.top;
+      d[2] = DistanceSqr(e1.bot, e2.top);
+      if (d[2] == 0) return e1.bot;
+      d[3] = DistanceSqr(e1.top, e2.bot);
+      if (d[3] == 0) return e1.top;
+      int idx = 0;
+      for (int i = 1; i < 4; i++)
+        if (d[i] < d[idx]) idx = i;
+      switch (idx) 
+      {
+      case 1: case 3: return e1.top;
+      default: return e1.bot;
+      }
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static Point64 GetIntersectPoint(Active ae1, Active ae2)
     {
-      double b1, b2;
-      if (InternalClipper.IsAlmostZero(ae1.dx - ae2.dx)) return ae1.top;
+      double b1, b2, q = (ae1.dx - ae2.dx);
+      if (Math.Abs(q) < 1.0e-5)
+        return GetEndE1ClosestToEndE2(ae1, ae2);
 
       if (InternalClipper.IsAlmostZero(ae1.dx))
       {
@@ -424,10 +447,8 @@ namespace Clipper2Lib
       }
       b1 = ae1.bot.X - ae1.bot.Y * ae1.dx;
       b2 = ae2.bot.X - ae2.bot.Y * ae2.dx;
-      double q = (b2 - b1) / (ae1.dx - ae2.dx);
+      q = (b2 - b1) / q;
       return (Math.Abs(ae1.dx) < Math.Abs(ae2.dx))
-        //? new Point64((long) Math.Round(ae1.dx * q + b1), (long) Math.Round(q))
-        //: new Point64((long) Math.Round(ae2.dx * q + b2), (long) Math.Round(q));
         ? new Point64((long)(ae1.dx * q + b1), (long)(q))
         : new Point64((long)(ae2.dx * q + b2), (long)(q));
     }

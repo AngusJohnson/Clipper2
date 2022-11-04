@@ -1,6 +1,6 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  3 November 2022                                                 *
+* Date      :  4 November 2022                                                 *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  This is the main polygon clipping module                        *
@@ -188,11 +188,34 @@ namespace Clipper2Lib {
 		return e1.local_min->polytype == e2.local_min->polytype;
 	}
 
+	inline Point64 GetEndE1ClosestToEndE2(
+		const Active& e1, const Active& e2) 
+	{		
+		double d[] = {
+			DistanceSqr(e1.bot, e2.bot),
+			DistanceSqr(e1.top, e2.top),
+			DistanceSqr(e1.top, e2.bot),
+			DistanceSqr(e1.bot, e2.top)
+		};
+		if (d[0] == 0) return e1.bot;
+		int idx = 0;
+		for (int i = 1; i < 4; ++i)
+		{
+			if (d[i] < d[idx]) idx = i;
+			if (d[i] == 0) break;
+		}
+		switch (idx) 
+		{
+		case 1: case 2: return e1.top;
+		default: return e1.bot;
+		}
+	}
 
 	Point64 GetIntersectPoint(const Active& e1, const Active& e2)
 	{
-		double b1, b2;
-		if (e1.dx == e2.dx) return e1.top;
+		double b1, b2, q = (e1.dx - e2.dx);
+		if (std::abs(q) < 1e-5)			// 1e-5 is a rough empirical limit 
+			return GetEndE1ClosestToEndE2(e1, e2); // ie almost parallel
 
 		if (e1.dx == 0)
 		{
@@ -212,15 +235,15 @@ namespace Clipper2Lib {
 		{
 			b1 = e1.bot.x - e1.bot.y * e1.dx;
 			b2 = e2.bot.x - e2.bot.y * e2.dx;
-			double q = (b2 - b1) / (e1.dx - e2.dx);
+			
+			q = (b2 - b1) / q;
 			return (abs(e1.dx) < abs(e2.dx)) ?
-				Point64(static_cast<int64_t>((e1.dx * q + b1)),
+				Point64(static_cast<int64_t>(e1.dx * q + b1),
 					static_cast<int64_t>((q))) :
-				Point64(static_cast<int64_t>((e2.dx * q + b2)),
+				Point64(static_cast<int64_t>(e2.dx * q + b2),
 					static_cast<int64_t>((q)));
 		}
 	}
-
 
 	bool GetIntersectPoint(const Point64& ln1a, const Point64& ln1b,
 		const Point64& ln2a, const Point64& ln2b, PointD& ip)

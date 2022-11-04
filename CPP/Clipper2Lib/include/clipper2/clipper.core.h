@@ -1,6 +1,6 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  3 November 2022                                                 *
+* Date      :  4 November 2022                                                 *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  Core Clipper Library structures and functions                   *
@@ -29,7 +29,8 @@ namespace Clipper2Lib
 #endif
 
 	static double const PI = 3.141592653589793238;
-
+	static int64_t const MAX_COORD = LLONG_MAX / 2;
+	
 	//By far the most widely used filling rules for polygons are EvenOdd
 	//and NonZero, sometimes called Alternate and Winding respectively.
 	//https://en.wikipedia.org/wiki/Nonzero-rule

@@ -268,6 +268,9 @@ function GetIntersectPoint64(const ln1a, ln1b, ln2a, ln2b: TPoint64): TPoint64;
 function GetIntersectPointD(const ln1a, ln1b, ln2a, ln2b: TPoint64): TPointD; overload;
 function GetIntersectPointD(const ln1a, ln1b, ln2a, ln2b: TPointD): TPointD; overload;
 
+function GetClosestLineEnd(const ln1a, ln1b, ln2a, ln2b: TPoint64): TPoint64; overload;
+function GetClosestLineEnd(const ln1a, ln1b, ln2a, ln2b: TPointD): TPointD; overload;
+
 function PointInPolygon(const pt: TPoint64; const polygon: TPath64): TPointInPolygonResult;
 
 function RamerDouglasPeucker(const path: TPath64; epsilon: double): TPath64; overload;
@@ -1622,6 +1625,29 @@ begin
 end;
 //------------------------------------------------------------------------------
 
+function GetClosestLineEnd(const ln1a, ln1b, ln2a, ln2b: TPoint64): TPoint64;
+var
+  i, idx: integer;
+  d: array[0..3] of double;
+begin
+  d[0] := DistanceSqr(ln1a, ln2a);
+  if (d[0] = 0) then begin Result := ln1a; Exit; end;
+  d[1] := DistanceSqr(ln1b, ln2b);
+  if (d[1] = 0) then begin Result := ln1b; Exit; end;
+  d[2] := DistanceSqr(ln1a, ln2b);
+  if (d[2] = 0) then begin Result := ln1a; Exit; end;
+  d[3] := DistanceSqr(ln1b, ln2a);
+  if (d[3] = 0) then begin Result := ln1b; Exit; end;
+  idx := 0;
+  for i := 1 to 3 do
+    if (d[i] < d[idx]) then idx := i;
+  case idx of
+    1,2: Result := ln1b;
+    else Result := ln1a;
+  end;
+end;
+//------------------------------------------------------------------------------
+
 function GetIntersectPoint64(const ln1a, ln1b, ln2a, ln2b: TPoint64): TPoint64;
 var
   x, m1,b1,m2,b2: double;
@@ -1647,15 +1673,14 @@ begin
     b1 := ln1A.Y - m1 * ln1A.X;
     m2 := (ln2B.Y - ln2A.Y)/(ln2B.X - ln2A.X);
     b2 := ln2A.Y - m2 * ln2A.X;
-    if Abs(m1 - m2) > 1.0E-15 then
+    if Abs(m1 - m2) < 1.0E-5 then
+    begin
+      Result := GetClosestLineEnd(ln1a, ln1b, ln2a, ln2b);
+    end else
     begin
       x := (b2 - b1)/(m1 - m2);
       Result.X := Round(x);
       Result.Y := Round(m1 * x + b1);
-    end else
-    begin
-      Result.X := Round((ln1a.X + ln1b.X) * 0.5);
-      Result.Y := Round((ln1a.Y + ln1b.Y) * 0.5);
     end;
   end;
 end;
@@ -1686,15 +1711,37 @@ begin
     b1 := ln1A.Y - m1 * ln1A.X;
     m2 := (ln2B.Y - ln2A.Y)/(ln2B.X - ln2A.X);
     b2 := ln2A.Y - m2 * ln2A.X;
-    if Abs(m1 - m2) > 1.0E-15 then
+    if Abs(m1 - m2) < 1.0E-5 then
+    begin
+      Result := PointD(GetClosestLineEnd(ln1a, ln1b, ln2a, ln2b));
+    end else
     begin
       Result.X := (b2 - b1)/(m1 - m2);
       Result.Y := m1 * Result.X + b1;
-    end else
-    begin
-      Result.X := (ln1a.X + ln1b.X) * 0.5;
-      Result.Y := (ln1a.Y + ln1b.Y) * 0.5;
     end;
+  end;
+end;
+//------------------------------------------------------------------------------
+
+function GetClosestLineEnd(const ln1a, ln1b, ln2a, ln2b: TPointD): TPointD;
+var
+  i, idx: integer;
+  d: array[0..3] of double;
+begin
+  d[0] := DistanceSqr(ln1a, ln2a);
+  if (d[0] = 0) then begin Result := ln1a; Exit; end;
+  d[1] := DistanceSqr(ln1b, ln2b);
+  if (d[1] = 0) then begin Result := ln1b; Exit; end;
+  d[2] := DistanceSqr(ln1a, ln2b);
+  if (d[2] = 0) then begin Result := ln1a; Exit; end;
+  d[3] := DistanceSqr(ln1b, ln2a);
+  if (d[3] = 0) then begin Result := ln1b; Exit; end;
+  idx := 0;
+  for i := 1 to 3 do
+    if (d[i] < d[idx]) then idx := i;
+  case idx of
+    1,2: Result := ln1b;
+    else Result := ln1a;
   end;
 end;
 //------------------------------------------------------------------------------
@@ -1724,14 +1771,13 @@ begin
     b1 := ln1A.Y - m1 * ln1A.X;
     m2 := (ln2B.Y - ln2A.Y)/(ln2B.X - ln2A.X);
     b2 := ln2A.Y - m2 * ln2A.X;
-    if Abs(m1 - m2) > 1.0E-15 then
+    if Abs(m1 - m2) < 1.0E-5 then
+    begin
+      Result := GetClosestLineEnd(ln1a, ln1b, ln2a, ln2b);
+    end else
     begin
       Result.X := (b2 - b1)/(m1 - m2);
       Result.Y := m1 * Result.X + b1;
-    end else
-    begin
-      Result.X := (ln1a.X + ln1b.X) * 0.5;
-      Result.Y := (ln1a.Y + ln1b.Y) * 0.5;
     end;
   end;
 end;
