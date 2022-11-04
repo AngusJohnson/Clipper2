@@ -79,7 +79,7 @@ TEST(Clipper2Tests, TestMultiplePolygons)
     else if (test_number >= 120)
     {
       if (stored_count > 0)
-        EXPECT_LE((double)count_diff / stored_count, 0.035);
+        EXPECT_LE((double)count_diff / stored_count, 0.05);
     }
     else if (stored_count > 0)
     {
