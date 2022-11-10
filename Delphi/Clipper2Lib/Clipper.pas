@@ -2,7 +2,7 @@ unit Clipper;
 
 (*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  2 November 2022                                                 *
+* Date      :  9 November 2022                                                 *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  This module provides a simple interface to the Clipper Library  *
@@ -36,6 +36,8 @@ type
   TPolyTreeD  = Clipper.Engine.TPolyTreeD;
   TJoinType   = Clipper.Offset.TJoinType;
   TEndType    = Clipper.Offset.TEndType;
+
+  TArrayOfInt64 = array of Int64;
 const
   frEvenOdd   = Clipper.Core.frEvenOdd;
   frNonZero   = Clipper.Core.frNonZero;
@@ -117,8 +119,8 @@ function MinkowskiSum(const pattern, path: TPath64;
 function PolyTreeToPaths64(PolyTree: TPolyTree64): TPaths64;
 function PolyTreeToPathsD(PolyTree: TPolyTreeD): TPathsD;
 
-function MakePath(const ints: TArrayOfInteger): TPath64; overload;
-function MakePath(const dbls: TArrayOfDouble): TPathD; overload;
+function MakePath(const ints: TArrayOfInt64): TPath64; overload;
+function MakePathD(const dbls: TArrayOfDouble): TPathD; overload;
 
 function TrimCollinear(const p: TPath64;
   isOpenPath: Boolean = false): TPath64; overload;
@@ -136,7 +138,7 @@ uses
 //------------------------------------------------------------------------------
 //------------------------------------------------------------------------------
 
-function MakePath(const ints: TArrayOfInteger): TPath64;
+function MakePath(const ints: TArrayOfInt64): TPath64;
 var
   i, len: integer;
 begin
@@ -150,7 +152,7 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-function MakePath(const dbls: TArrayOfDouble): TPathD; overload;
+function MakePathD(const dbls: TArrayOfDouble): TPathD; overload;
 var
   i, len: integer;
 begin

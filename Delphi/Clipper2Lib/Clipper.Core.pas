@@ -2,7 +2,7 @@ unit Clipper.Core;
 
 (*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  2 November 2022                                                 *
+* Date      :  9 November 2022                                                 *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  Core Clipper Library module                                     *
 *              Contains structures and functions used throughout the library   *
@@ -14,7 +14,7 @@ unit Clipper.Core;
 interface
 
 uses
-  SysUtils, Math;
+  SysUtils, Classes, Math;
 
 type
   PPoint64  = ^TPoint64;
@@ -99,6 +99,23 @@ type
     property IsEmpty: Boolean read GetIsEmpty;
     property MidPoint: TPointD read GetMidPoint;
   end;
+
+  TListEx = class
+  protected
+    fList       : TList;
+    fCount      : integer;
+  public
+    constructor Create(blockSize: integer = 8); virtual;
+    destructor Destroy; override;
+    procedure Clear; virtual;
+    function UnsafeGet(idx: integer): Pointer;
+    procedure UnsafeSwap(idx1, idx2: integer);
+    procedure UnsafeSet(idx: integer; val: Pointer);
+    function ListPtr: PPointer;
+    procedure Sort(Compare: TListSortCompare);
+    property Count: integer read fCount;
+  end;
+
 
   TClipType = (ctNone, ctIntersection, ctUnion, ctDifference, ctXor);
 
@@ -264,13 +281,12 @@ procedure AppendPaths(var paths: TPaths64; const extra: TPaths64); overload;
 procedure AppendPaths(var paths: TPathsD; const extra: TPathsD); overload;
 
 function ArrayOfPathsToPaths(const ap: TArrayOfPaths): TPaths64;
-function GetIntersectPoint64(const ln1a, ln1b, ln2a, ln2b: TPoint64): TPoint64;
-function GetIntersectPointD(const ln1a, ln1b, ln2a, ln2b: TPoint64): TPointD; overload;
-function GetIntersectPointD(const ln1a, ln1b, ln2a, ln2b: TPointD): TPointD; overload;
-
-function GetClosestLineEnd(const ln1a, ln1b, ln2a, ln2b: TPoint64): TPoint64; overload;
-function GetClosestLineEnd(const ln1a, ln1b, ln2a, ln2b: TPointD): TPointD; overload;
-
+function GetIntersectPoint64(const ln1a, ln1b, ln2a, ln2b: TPoint64;
+  out ip: TPoint64): Boolean;
+function GetIntersectPointD(const ln1a, ln1b, ln2a, ln2b: TPoint64;
+  out ip: TPointD): Boolean; overload;
+function GetIntersectPointD(const ln1a, ln1b, ln2a, ln2b: TPointD;
+  out ip: TPointD): Boolean; overload;
 function PointInPolygon(const pt: TPoint64; const polygon: TPath64): TPointInPolygonResult;
 
 function RamerDouglasPeucker(const path: TPath64; epsilon: double): TPath64; overload;
@@ -430,6 +446,66 @@ begin
   Result[1] := PointD(Right, Top);
   Result[2] := PointD(Right, Bottom);
   Result[3] := PointD(Left, Bottom);
+end;
+
+//------------------------------------------------------------------------------
+// TListEx class
+//------------------------------------------------------------------------------
+
+constructor TListEx.Create(blockSize: integer = 8);
+begin
+  fList := TList.Create;
+end;
+//------------------------------------------------------------------------------
+
+destructor TListEx.Destroy;
+begin
+  Clear;
+  fList.Free;
+  inherited;
+end;
+//------------------------------------------------------------------------------
+
+procedure TListEx.Clear;
+begin
+  fCount := 0;
+  fList.Clear;
+end;
+//------------------------------------------------------------------------------
+
+procedure TListEx.Sort(Compare: TListSortCompare);
+begin
+  FList.Sort(Compare);
+end;
+//------------------------------------------------------------------------------
+
+function TListEx.UnsafeGet(idx: integer): Pointer;
+begin
+  Result := fList.List[idx];
+end;
+//------------------------------------------------------------------------------
+
+procedure TListEx.UnsafeSet(idx: integer; val: Pointer);
+begin
+  fList.List[idx] := val;
+end;
+//------------------------------------------------------------------------------
+
+procedure TListEx.UnsafeSwap(idx1, idx2: integer);
+var
+  p: Pointer;
+begin
+  p := UnsafeGet(idx1);
+  fList.List[idx1] := fList.List[idx2];
+  fList.List[idx2] := p;
+end;
+//------------------------------------------------------------------------------
+
+function TListEx.ListPtr: PPointer;
+begin
+  if fCount = 0 then
+    Result := nil else
+    Result := @fList.List[0];
 end;
 
 //------------------------------------------------------------------------------
@@ -1625,48 +1701,30 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-function GetClosestLineEnd(const ln1a, ln1b, ln2a, ln2b: TPoint64): TPoint64;
-var
-  i, idx: integer;
-  d: array[0..3] of double;
-begin
-  d[0] := DistanceSqr(ln1a, ln2a);
-  if (d[0] = 0) then begin Result := ln1a; Exit; end;
-  d[1] := DistanceSqr(ln1b, ln2b);
-  if (d[1] = 0) then begin Result := ln1b; Exit; end;
-  d[2] := DistanceSqr(ln1a, ln2b);
-  if (d[2] = 0) then begin Result := ln1a; Exit; end;
-  d[3] := DistanceSqr(ln1b, ln2a);
-  if (d[3] = 0) then begin Result := ln1b; Exit; end;
-  idx := 0;
-  for i := 1 to 3 do
-    if (d[i] < d[idx]) then idx := i;
-  case idx of
-    1,2: Result := ln1b;
-    else Result := ln1a;
-  end;
-end;
-//------------------------------------------------------------------------------
-
-function GetIntersectPoint64(const ln1a, ln1b, ln2a, ln2b: TPoint64): TPoint64;
+function GetIntersectPoint64(const ln1a, ln1b, ln2a, ln2b: TPoint64;
+  out ip: TPoint64): Boolean;
 var
   x, m1,b1,m2,b2: double;
 begin
   // see http://astronomy.swin.edu.au/~pbourke/geometry/lineline2d/
   if (ln1B.X = ln1A.X) then
   begin
-    if (ln2B.X = ln2A.X) then exit; // parallel lines
+    if (ln2B.X = ln2A.X) then
+    begin
+      result := false;
+      exit; // parallel lines
+    end;
     m2 := (ln2B.Y - ln2A.Y)/(ln2B.X - ln2A.X);
     b2 := ln2A.Y - m2 * ln2A.X;
-    Result.X := ln1A.X;
-    Result.Y := Round(m2*ln1A.X + b2);
+    ip.X := ln1A.X;
+    ip.Y := Round(m2*ln1A.X + b2);
   end
   else if (ln2B.X = ln2A.X) then
   begin
     m1 := (ln1B.Y - ln1A.Y)/(ln1B.X - ln1A.X);
     b1 := ln1A.Y - m1 * ln1A.X;
-    Result.X := ln2A.X;
-    Result.Y := Round(m1*ln2A.X + b1);
+    ip.X := ln2A.X;
+    ip.Y := Round(m1*ln2A.X + b1);
   end else
   begin
     m1 := (ln1B.Y - ln1A.Y)/(ln1B.X - ln1A.X);
@@ -1675,36 +1733,41 @@ begin
     b2 := ln2A.Y - m2 * ln2A.X;
     if Abs(m1 - m2) < 1.0E-5 then
     begin
-      Result := GetClosestLineEnd(ln1a, ln1b, ln2a, ln2b);
-    end else
-    begin
-      x := (b2 - b1)/(m1 - m2);
-      Result.X := Round(x);
-      Result.Y := Round(m1 * x + b1);
+      Result := false;
+      Exit;
     end;
+    x := (b2 - b1)/(m1 - m2);
+    ip.X := Round(x);
+    ip.Y := Round(m1 * x + b1);
   end;
+  Result := true;
 end;
 //------------------------------------------------------------------------------
 
-function GetIntersectPointD(const ln1a, ln1b, ln2a, ln2b: TPoint64): TPointD;
+function GetIntersectPointD(const ln1a, ln1b, ln2a, ln2b: TPoint64;
+  out ip: TPointD): Boolean;
 var
   m1,b1,m2,b2: double;
 begin
   // see http://astronomy.swin.edu.au/~pbourke/geometry/lineline2d/
   if (ln1B.X = ln1A.X) then
   begin
-    if (ln2B.X = ln2A.X) then exit; // parallel lines
+    if (ln2B.X = ln2A.X) then
+    begin
+      result := false;
+      exit; // parallel lines
+    end;
     m2 := (ln2B.Y - ln2A.Y)/(ln2B.X - ln2A.X);
     b2 := ln2A.Y - m2 * ln2A.X;
-    Result.X := ln1A.X;
-    Result.Y := m2*ln1A.X + b2;
+    ip.X := ln1A.X;
+    ip.Y := m2*ln1A.X + b2;
   end
   else if (ln2B.X = ln2A.X) then
   begin
     m1 := (ln1B.Y - ln1A.Y)/(ln1B.X - ln1A.X);
     b1 := ln1A.Y - m1 * ln1A.X;
-    Result.X := ln2A.X;
-    Result.Y := m1*ln2A.X + b1;
+    ip.X := ln2A.X;
+    ip.Y := m1*ln2A.X + b1;
   end else
   begin
     m1 := (ln1B.Y - ln1A.Y)/(ln1B.X - ln1A.X);
@@ -1713,58 +1776,40 @@ begin
     b2 := ln2A.Y - m2 * ln2A.X;
     if Abs(m1 - m2) < 1.0E-5 then
     begin
-      Result := PointD(GetClosestLineEnd(ln1a, ln1b, ln2a, ln2b));
-    end else
-    begin
-      Result.X := (b2 - b1)/(m1 - m2);
-      Result.Y := m1 * Result.X + b1;
+      Result := false;
+      Exit;
     end;
+    ip.X := (b2 - b1)/(m1 - m2);
+    ip.Y := m1 * ip.X + b1;
   end;
+  Result := true;
 end;
 //------------------------------------------------------------------------------
 
-function GetClosestLineEnd(const ln1a, ln1b, ln2a, ln2b: TPointD): TPointD;
-var
-  i, idx: integer;
-  d: array[0..3] of double;
-begin
-  d[0] := DistanceSqr(ln1a, ln2a);
-  if (d[0] = 0) then begin Result := ln1a; Exit; end;
-  d[1] := DistanceSqr(ln1b, ln2b);
-  if (d[1] = 0) then begin Result := ln1b; Exit; end;
-  d[2] := DistanceSqr(ln1a, ln2b);
-  if (d[2] = 0) then begin Result := ln1a; Exit; end;
-  d[3] := DistanceSqr(ln1b, ln2a);
-  if (d[3] = 0) then begin Result := ln1b; Exit; end;
-  idx := 0;
-  for i := 1 to 3 do
-    if (d[i] < d[idx]) then idx := i;
-  case idx of
-    1,2: Result := ln1b;
-    else Result := ln1a;
-  end;
-end;
-//------------------------------------------------------------------------------
-
-function GetIntersectPointD(const ln1a, ln1b, ln2a, ln2b: TPointD): TPointD; overload;
+function GetIntersectPointD(const ln1a, ln1b, ln2a, ln2b: TPointD;
+  out ip: TPointD): Boolean;
 var
   m1,b1,m2,b2: double;
 begin
   // see http://astronomy.swin.edu.au/~pbourke/geometry/lineline2d/
   if (ln1B.X = ln1A.X) then
   begin
-    if (ln2B.X = ln2A.X) then exit; // parallel lines
+    if (ln2B.X = ln2A.X) then
+    begin
+      result := false;
+      exit; // parallel lines
+    end;
     m2 := (ln2B.Y - ln2A.Y)/(ln2B.X - ln2A.X);
     b2 := ln2A.Y - m2 * ln2A.X;
-    Result.X := ln1A.X;
-    Result.Y := m2*ln1A.X + b2;
+    ip.X := ln1A.X;
+    ip.Y := m2*ln1A.X + b2;
   end
   else if (ln2B.X = ln2A.X) then
   begin
     m1 := (ln1B.Y - ln1A.Y)/(ln1B.X - ln1A.X);
     b1 := ln1A.Y - m1 * ln1A.X;
-    Result.X := ln2A.X;
-    Result.Y := m1*ln2A.X + b1;
+    ip.X := ln2A.X;
+    ip.Y := m1*ln2A.X + b1;
   end else
   begin
     m1 := (ln1B.Y - ln1A.Y)/(ln1B.X - ln1A.X);
@@ -1773,13 +1818,13 @@ begin
     b2 := ln2A.Y - m2 * ln2A.X;
     if Abs(m1 - m2) < 1.0E-5 then
     begin
-      Result := GetClosestLineEnd(ln1a, ln1b, ln2a, ln2b);
-    end else
-    begin
-      Result.X := (b2 - b1)/(m1 - m2);
-      Result.Y := m1 * Result.X + b1;
+      Result := false;
+      Exit;
     end;
+    ip.X := (b2 - b1)/(m1 - m2);
+    ip.Y := m1 * ip.X + b1;
   end;
+  Result := true;
 end;
 //------------------------------------------------------------------------------
 

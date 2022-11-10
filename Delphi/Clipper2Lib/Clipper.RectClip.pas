@@ -2,7 +2,7 @@ unit Clipper.RectClip;
 
 (*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  21 October 2022                                                 *
+* Date      :  9 November 2022                                                 *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  FAST rectangular clipping                                       *
@@ -103,63 +103,63 @@ begin
   case loc of
     locLeft:
       if SegmentsIntersect(p, p2, rectPath[0], rectPath[3], true) then
-        ip := GetIntersectPoint64(p, p2, rectPath[0], rectPath[3])
+        GetIntersectPoint64(p, p2, rectPath[0], rectPath[3], ip)
       else if (p.Y < rectPath[0].Y) and
         SegmentsIntersect(p, p2, rectPath[0], rectPath[1], true) then
       begin
-        ip := GetIntersectPoint64(p, p2, rectPath[0], rectPath[1]);
+        GetIntersectPoint64(p, p2, rectPath[0], rectPath[1], ip);
         loc := locTop;
       end
       else if SegmentsIntersect(p, p2, rectPath[2], rectPath[3], true) then
       begin
-        ip := GetIntersectPoint64(p, p2, rectPath[2], rectPath[3]);
+        GetIntersectPoint64(p, p2, rectPath[2], rectPath[3], ip);
         loc := locBottom;
       end
       else Exit;
     locRight:
       if SegmentsIntersect(p, p2, rectPath[1], rectPath[2], true) then
-        ip := GetIntersectPoint64(p, p2, rectPath[1], rectPath[2])
+        GetIntersectPoint64(p, p2, rectPath[1], rectPath[2], ip)
       else if (p.Y < rectPath[0].Y) and
         SegmentsIntersect(p, p2, rectPath[0], rectPath[1], true) then
       begin
-        ip := GetIntersectPoint64(p, p2, rectPath[0], rectPath[1]);
+        GetIntersectPoint64(p, p2, rectPath[0], rectPath[1], ip);
         loc := locTop;
       end
       else if SegmentsIntersect(p, p2, rectPath[2], rectPath[3], true) then
       begin
-        ip := GetIntersectPoint64(p, p2, rectPath[2], rectPath[3]);
+        GetIntersectPoint64(p, p2, rectPath[2], rectPath[3], ip);
         loc := locBottom;
       end
       else Exit;
     locTop:
       if SegmentsIntersect(p, p2, rectPath[0], rectPath[1], true) then
-        ip := GetIntersectPoint64(p, p2, rectPath[0], rectPath[1])
+        GetIntersectPoint64(p, p2, rectPath[0], rectPath[1], ip)
       else if (p.X < rectPath[0].X) and
         SegmentsIntersect(p, p2, rectPath[0], rectPath[3], true) then
       begin
-        ip := GetIntersectPoint64(p, p2, rectPath[0], rectPath[3]);
+        GetIntersectPoint64(p, p2, rectPath[0], rectPath[3], ip);
         loc := locLeft;
       end
       else if (p.X > rectPath[1].X) and
         SegmentsIntersect(p, p2, rectPath[1], rectPath[2], true) then
       begin
-        ip := GetIntersectPoint64(p, p2, rectPath[1], rectPath[2]);
+        GetIntersectPoint64(p, p2, rectPath[1], rectPath[2], ip);
         loc := locRight;
       end
       else Exit;
     locBottom:
       if SegmentsIntersect(p, p2, rectPath[2], rectPath[3], true) then
-        ip := GetIntersectPoint64(p, p2, rectPath[2], rectPath[3])
+        GetIntersectPoint64(p, p2, rectPath[2], rectPath[3], ip)
       else if (p.X < rectPath[3].X) and
         SegmentsIntersect(p, p2, rectPath[0], rectPath[3], true) then
       begin
-        ip := GetIntersectPoint64(p, p2, rectPath[0], rectPath[3]);
+        GetIntersectPoint64(p, p2, rectPath[0], rectPath[3], ip);
         loc := locLeft;
       end
       else if (p.X > rectPath[2].X) and
         SegmentsIntersect(p, p2, rectPath[1], rectPath[2], true) then
       begin
-        ip := GetIntersectPoint64(p, p2, rectPath[1], rectPath[2]);
+        GetIntersectPoint64(p, p2, rectPath[1], rectPath[2], ip);
         loc := locRight;
       end
       else Exit;
@@ -168,21 +168,21 @@ begin
     begin
       if SegmentsIntersect(p, p2, rectPath[0], rectPath[3], true) then
       begin
-        ip := GetIntersectPoint64(p, p2, rectPath[0], rectPath[3]);
+        GetIntersectPoint64(p, p2, rectPath[0], rectPath[3], ip);
         loc := locLeft;
       end else if SegmentsIntersect(p, p2, rectPath[0], rectPath[1], true) then
       begin
-        ip := GetIntersectPoint64(p, p2, rectPath[0], rectPath[1]);
+        GetIntersectPoint64(p, p2, rectPath[0], rectPath[1], ip);
         loc := locTop;
       end
       else if SegmentsIntersect(p, p2, rectPath[1], rectPath[2], true) then
       begin
-        ip := GetIntersectPoint64(p, p2, rectPath[1], rectPath[2]);
+        GetIntersectPoint64(p, p2, rectPath[1], rectPath[2], ip);
         loc := locRight;
       end
       else if SegmentsIntersect(p, p2, rectPath[2], rectPath[3], true) then
       begin
-        ip := GetIntersectPoint64(p, p2, rectPath[2], rectPath[3]);
+        GetIntersectPoint64(p, p2, rectPath[2], rectPath[3], ip);
         loc := locBottom;
       end
       else Exit;

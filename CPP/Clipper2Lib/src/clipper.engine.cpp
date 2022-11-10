@@ -1,6 +1,6 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  4 November 2022                                                 *
+* Date      :  10 November 2022                                                *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  This is the main polygon clipping module                        *
@@ -188,61 +188,118 @@ namespace Clipper2Lib {
 		return e1.local_min->polytype == e2.local_min->polytype;
 	}
 
-	inline Point64 GetEndE1ClosestToEndE2(
-		const Active& e1, const Active& e2) 
-	{		
-		double d[] = {
-			DistanceSqr(e1.bot, e2.bot),
-			DistanceSqr(e1.top, e2.top),
-			DistanceSqr(e1.top, e2.bot),
-			DistanceSqr(e1.bot, e2.top)
-		};
-		if (d[0] == 0) return e1.bot;
-		int idx = 0;
-		for (int i = 1; i < 4; ++i)
+//#define CHECK_OVERFLOW  //define only when debugging
+
+#ifdef CHECK_OVERFLOW
+
+	static const char* overflow_error = "overflow error.";
+
+	inline void CheckAdd(double val1, double val2)
+	{
+		if (val2 < 0)
 		{
-			if (d[i] < d[idx]) idx = i;
-			if (d[i] == 0) break;
+			if (val1 > LLONG_MAX - val2) throw overflow_error;
 		}
-		switch (idx) 
-		{
-		case 1: case 2: return e1.top;
-		default: return e1.bot;
-		}
+		else if (val1 < LLONG_MIN - val2) throw overflow_error;
 	}
 
-	Point64 GetIntersectPoint(const Active& e1, const Active& e2)
+	inline void CheckAdd(int64_t val1, double val2) 
 	{
+		CheckAdd(static_cast<double>(val1), val2);
+	}
+
+	inline void CheckMul(double val1, double val2)
+	{
+		if (val1 == 0 || val2 == 0) return;
+		const double v1 = std::fabs(val1);
+		const double v2 = std::fabs(val2);
+		if (v1 > LLONG_MAX / v2) throw overflow_error;
+		if (v1 < LLONG_MIN / v2) throw overflow_error;
+	}
+
+	inline void CheckMul(int64_t val1, double val2)
+	{
+		CheckMul(static_cast<double>(val1), val2);
+	}
+#endif
+
+	bool GetIntersectPoint(const Active& e1, const Active& e2, Point64& ip)
+	{
+		// precondition: neither edge is horizontal
+		//assert(!IsHorizontal(e1) && !IsHorizontal(e2));
+
 		double b1, b2, q = (e1.dx - e2.dx);
-		if (std::abs(q) < 1e-5)			// 1e-5 is a rough empirical limit 
-			return GetEndE1ClosestToEndE2(e1, e2); // ie almost parallel
+		if (std::fabs(q) < 1e-5) return false; // parallel
 
 		if (e1.dx == 0)
 		{
-			if (IsHorizontal(e2)) return Point64(e1.bot.x, e2.bot.y);
-			b2 = e2.bot.y - (e2.bot.x / e2.dx);
-			return Point64(e1.bot.x,
-				static_cast<int64_t>(std::round(e1.bot.x / e2.dx + b2)));
+			if (e2.dx == 0) return false; // parallel
+			b2 = e2.bot.y * e2.dx - e2.bot.x;
+			ip.x = e1.bot.x;
+#ifdef CHECK_OVERFLOW
+			CheckAdd(e1.bot.x, b2);
+			CheckMul(e1.bot.x + b2, 1 / e2.dx);
+#endif
+			ip.y = static_cast<int64_t>(std::round((e1.bot.x + b2) / e2.dx));
 		}
 		else if (e2.dx == 0)
 		{
-			if (IsHorizontal(e1)) return Point64(e2.bot.x, e1.bot.y);
-			b1 = e1.bot.y - (e1.bot.x / e1.dx);
-			return Point64(e2.bot.x,
-				static_cast<int64_t>(std::round(e2.bot.x / e1.dx + b1)));
+			b1 = e1.bot.y * e1.dx - e1.bot.x;
+			ip.x = e2.bot.x;
+#ifdef CHECK_OVERFLOW
+			CheckAdd(e2.bot.x, b1);
+			CheckMul(e2.bot.x + b1, 1/e1.dx);
+#endif
+			ip.y = static_cast<int64_t>(std::round((e2.bot.x + b1) / e1.dx));
+		}
+		else if (std::fabs(e1.dx) > 1e5)
+		{
+			ip.y = (e1.bot.y + e1.top.y) / 2;
+			b2 = e2.top.y * e2.dx - e2.top.x;
+#ifdef CHECK_OVERFLOW
+			CheckMul(ip.y, e2.dx);
+			CheckAdd(ip.y * e2.dx, -b2);
+#endif
+			ip.x = static_cast<int64_t>(ip.y * e2.dx - b2);
+		}
+		else if (std::fabs(e2.dx) > 1e5)
+		{
+			ip.y = (e2.bot.y + e2.top.y) / 2;
+			b1 = e1.top.y * e1.dx - e1.top.x;
+#ifdef CHECK_OVERFLOW
+			CheckMul(ip.y, e1.dx);
+			CheckAdd(ip.y * e1.dx, -b1);
+#endif
+			ip.x = static_cast<int64_t>(ip.y * e1.dx - b1);
 		}
 		else
 		{
 			b1 = e1.bot.x - e1.bot.y * e1.dx;
-			b2 = e2.bot.x - e2.bot.y * e2.dx;
-			
+			b2 = e2.bot.x - e2.bot.y * e2.dx;			
+#ifdef CHECK_OVERFLOW
+			CheckMul(b2 - b1, 1/q);
+#endif
 			q = (b2 - b1) / q;
-			return (abs(e1.dx) < abs(e2.dx)) ?
-				Point64(static_cast<int64_t>(e1.dx * q + b1),
-					static_cast<int64_t>((q))) :
-				Point64(static_cast<int64_t>(e2.dx * q + b2),
-					static_cast<int64_t>((q)));
+			if (abs(e1.dx) < abs(e2.dx))
+			{
+#ifdef CHECK_OVERFLOW
+				CheckMul(e1.dx, q);
+				CheckAdd(e1.dx * q, b1);
+#endif
+				ip.x = static_cast<int64_t>(e1.dx * q + b1);
+				ip.y = static_cast<int64_t>((q));
+			}
+			else
+			{
+#ifdef CHECK_OVERFLOW
+				CheckMul(e2.dx, q);
+				CheckAdd(e2.dx * q, b2);
+#endif
+				ip.x = static_cast<int64_t>(e2.dx * q + b2);
+				ip.y = static_cast<int64_t>((q));
+			}
 		}
+		return true;
 	}
 
 	bool GetIntersectPoint(const Point64& ln1a, const Point64& ln1b,
@@ -2105,7 +2162,9 @@ namespace Clipper2Lib {
 
 	void ClipperBase::AddNewIntersectNode(Active& e1, Active& e2, int64_t top_y)
 	{
-		Point64 pt = GetIntersectPoint(e1, e2);
+		Point64 pt; 
+		if (!GetIntersectPoint(e1, e2, pt))
+			pt = Point64(e1.curr_x, top_y); //parallel edges
 
 		//rounding errors can occasionally place the calculated intersection
 		//point either below or above the scanbeam, so check and correct ...

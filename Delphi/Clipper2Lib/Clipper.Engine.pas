@@ -2,7 +2,7 @@ unit Clipper.Engine;
 
 (*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  3 November 2022                                                 *
+* Date      :  10 November 2022                                                *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  This is the main polygon clipping module                        *
@@ -39,6 +39,7 @@ type
     flags : TVertexFlags;
   end;
 
+  PPLocalMinima = ^PLocalMinima;
   PLocalMinima = ^TLocalMinima;
   TLocalMinima = record
     vertex    : PVertex;
@@ -46,7 +47,14 @@ type
     isOpen    : Boolean;
   end;
 
+  TLocMinList = class(TListEx)
+  public
+    function Add: PLocalMinima;
+    procedure Clear; override;
+  end;
+
   // forward declarations
+  PPOutRec = ^POutRec;
   POutRec = ^TOutRec;
   PJoiner = ^TJoiner;
   PActive = ^TActive;
@@ -79,6 +87,13 @@ type
     path     : TPath64;
     isOpen   : Boolean;
   end;
+
+  TOutRecList = class(TListEx)
+  public
+    function Add: POutRec;
+    procedure Clear; override;
+  end;
+
 
   // Joiner: structure used in merging "touching" solution polygons
   TJoiner = record
@@ -125,6 +140,7 @@ type
   // IntersectNode: a structure representing 2 intersecting edges.
   // Intersections must be sorted so they are processed from the largest
   // Y coordinates to the smallest while keeping edges adjacent.
+  PPIntersectNode = ^PIntersectNode;
   PIntersectNode = ^TIntersectNode;
   TIntersectNode = record
     active1 : PActive;
@@ -148,7 +164,7 @@ type
   {$ENDIF}
 
 
-  // ClipperBase: abstract base of Clipper class
+  // ClipperBase: abstract base
   TClipperBase = class
   {$IFDEF STRICT}strict{$ENDIF} private
     FBotY               : Int64;
@@ -158,14 +174,14 @@ type
     FFillRule           : TFillRule;
     FPreserveCollinear  : Boolean;
     FIntersectList      : TList;
-    FOutRecList         : TList;
-    FLocMinList         : TList;
+    FOutRecList         : TOutRecList;
+    FLocMinList         : TLocMinList;
     FVertexArrayList    : TList;
     FJoinerList         : TList;
     // FActives: see AEL above
     FActives            : PActive;
     // FSel: see SEL above.
-    //      BUT also used to store horz. edges for later processing
+    // BUT also used to store horz. edges for later processing
     FSel                : PActive;
     FHorzTrials         : PJoiner;
     FHasOpenPaths       : Boolean;
@@ -380,6 +396,77 @@ resourcestring
 const
   DefaultClipperDScale = 100;
 
+
+//------------------------------------------------------------------------------
+// TLocMinList class
+//------------------------------------------------------------------------------
+
+function TLocMinList.Add: PLocalMinima;
+begin
+  fList.Add(new(PLocalMinima));
+  Result := UnsafeGet(fCount);
+  inc(fCount);
+end;
+//------------------------------------------------------------------------------
+
+procedure TLocMinList.Clear;
+var
+  i: integer;
+  pplm: PPLocalMinima;
+begin
+  if fCount = 0 then Exit;
+  pplm := PPLocalMinima(ListPtr);
+  for i := 0 to fCount -1 do
+  begin
+    Dispose(pplm^);
+    inc(pplm);
+  end;
+  inherited;
+end;
+
+//------------------------------------------------------------------------------
+// TOutRecList class
+//------------------------------------------------------------------------------
+
+function TOutRecList.Add: POutRec;
+begin
+  fList.Add(new(POutRec));
+  Result := UnsafeGet(fCount);
+  FillChar(Result^, SizeOf(TOutRec), 0);
+  Result.idx := fCount;
+  inc(fCount);
+end;
+//------------------------------------------------------------------------------
+
+procedure TOutRecList.Clear;
+var
+  i: integer;
+  ppor: PPOutRec;
+  por: POutRec;
+  op, tmpPp: POutPt;
+begin
+  if fCount = 0 then Exit;
+  ppor := PPOutRec(ListPtr);
+  for i := 0 to fCount -1 do
+  begin
+    por := ppor^;
+    inc(ppor);
+    if Assigned(por.pts) then
+    begin
+      op := por.pts;
+      op.prev.next := nil;
+      while Assigned(op) do
+      begin
+        tmpPp := op;
+        op := op.next;
+        Dispose(tmpPp);
+      end;
+    end;
+    Dispose(por);
+  end;
+  inherited;
+end;
+
 //------------------------------------------------------------------------------
 // Miscellaneous Functions ...
 //------------------------------------------------------------------------------
@@ -522,7 +609,7 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-function DblToInt64(val: double): Int64; {$IFDEF INLINE} inline; {$ENDIF}
+function __Trunc(val: double): Int64; {$IFDEF INLINE} inline; {$ENDIF}
 var
   exp: integer;
   i64: UInt64 absolute val;
@@ -532,53 +619,67 @@ begin
   if i64 = 0 then Exit;
   exp := Integer(Cardinal(i64 shr 52) and $7FF) - 1023;
   //nb: when exp == 1024 then val == INF or NAN.
-  if exp < 0 then Exit;
-  Result := ((i64 and $1FFFFFFFFFFFFF) shr (52 - exp)) or (UInt64(1) shl exp);
+  if exp < 0 then
+    Exit
+  else if exp > 52 then
+    Result := ((i64 and $1FFFFFFFFFFFFF) shl (exp - 52)) or (UInt64(1) shl exp)
+  else
+    Result := ((i64 and $1FFFFFFFFFFFFF) shr (52 - exp)) or (UInt64(1) shl exp);
   if val < 0 then Result := -Result;
 end;
 //------------------------------------------------------------------------------
 
-function GetIntersectPoint(e1, e2: PActive): TPoint64;
+function GetIntersectPoint(e1, e2: PActive; out ip: TPoint64): Boolean;
 var
   b1, b2, m: Double;
 begin
+  // precondition: neither edge is horizontal
   m := (e1.dx - e2.dx);
   if Abs(m) < 1.0e-5 then
   begin
-    Result := GetClosestLineEnd(e1.bot, e1.top, e2.bot, e2.top);
+    Result := false;
     Exit;
-  end
-  else if e1.dx = 0 then
+  end;
+
+  if e1.dx = 0 then
   begin
-    Result.X := e1.bot.X;
-    if IsHorizontal(e2) then
-      Result.Y := e2.bot.Y
-    else
+    if e2.dx = 0 then
     begin
-      with e2^ do b2 := bot.Y - (bot.X/dx);
-      Result.Y := round(Result.X/e2.dx + b2);
+      Result := false; //parallel
+      Exit;
     end;
+    ip.X := e1.bot.X;
+    b2 := e2.bot.Y * e2.dx - e2.bot.X;
+    ip.Y := round((ip.X + b2)/e2.dx);
   end
   else if e2.dx = 0 then
   begin
-    Result.X := e2.bot.X;
-    if IsHorizontal(e1) then
-      Result.Y := e1.bot.Y
-    else
-    begin
-      with e1^ do b1 := bot.Y - (bot.X/dx);
-      Result.Y := round(Result.X/e1.dx + b1);
-    end;
+    ip.X := e2.bot.X;
+    b1 := e1.bot.Y * e1.dx - e1.bot.X;
+    ip.Y := round((ip.X + b1)/e1.dx);
+  end
+  else if Abs(e1.dx) > 1.0e5 then
+  begin
+    ip.Y := (e1.bot.Y + e1.top.Y) div 2;
+    b2 := e2.top.y * e2.dx - e2.top.x;
+    ip.X := Round(ip.Y * e2.dx  - b2);
+  end
+  else if Abs(e2.dx) > 1.0e5 then
+  begin
+    ip.Y := (e2.bot.Y + e2.top.Y) div 2;
+    b1 := e1.top.y * e1.dx - e1.top.x;
+    ip.X := Round(ip.Y * e1.dx  - b1);
   end else
   begin
     with e1^ do b1 := bot.X - bot.Y * dx;
     with e2^ do b2 := bot.X - bot.Y * dx;
     m := (b2 - b1) / m;
-    Result.Y := DblToInt64(m); //Round(m);
+    ip.Y := __Trunc(m);
     if Abs(e1.dx) < Abs(e2.dx) then
-      Result.X := DblToInt64(e1.dx * m + b1) else
-      Result.X := DblToInt64(e2.dx * m + b2);
+      ip.X := __Trunc(e1.dx * m + b1) else
+      ip.X := __Trunc(e2.dx * m + b2);
   end;
+  Result := true;
 end;
 //------------------------------------------------------------------------------
 
@@ -709,7 +810,7 @@ end;
 
 procedure AddPathsToVertexList(const paths: TPaths64;
   polyType: TPathType; isOpen: Boolean;
-  vertexList, LocMinList: TList);
+  vertexList: TList; LocMinList: TLocMinList);
 var
   i, j, len, totalVerts: integer;
   p: PPoint64;
@@ -722,11 +823,10 @@ var
   begin
     if vfLocMin in vert.flags then Exit;  // ie already added
     Include(vert.flags, vfLocMin);
-    new(lm);
+    lm := LocMinList.Add;
     lm.vertex := vert;
     lm.polytype := polyType;
     lm.isOpen := isOpen;
-    LocMinList.Add(lm);                  // nb: sorted in Reset()
   end;
   //---------------------------------------------------------
 
@@ -1152,8 +1252,8 @@ end;
 
 constructor TClipperBase.Create;
 begin
-  FLocMinList       := TList.Create;
-  FOutRecList       := TList.Create;
+  FLocMinList       := TLocMinList.Create(4);
+  FOutRecList       := TOutRecList.Create(4);
   FJoinerList       := TList.Create;
   FIntersectList    := TList.Create;
   FVertexArrayList  := TList.Create;
@@ -1213,7 +1313,7 @@ begin
   end;
 
   for i := FLocMinList.Count -1 downto 0 do
-    InsertScanLine(PLocalMinima(UnsafeGet(FLocMinList, i)).vertex.pt.Y);
+    InsertScanLine(PLocalMinima(FLocMinList.UnsafeGet(i)).vertex.pt.Y);
   FCurrentLocMinIdx := 0;
   FActives := nil;
   FSel := nil;
@@ -1307,7 +1407,7 @@ function TClipperBase.PopLocalMinima(Y: Int64;
 begin
   Result := false;
   if FCurrentLocMinIdx = FLocMinList.Count then Exit;
-  localMinima := PLocalMinima(UnsafeGet(FLocMinList, FCurrentLocMinIdx));
+  localMinima := PLocalMinima(FLocMinList.UnsafeGet(FCurrentLocMinIdx));
   if (localMinima.vertex.pt.Y = Y) then
   begin
     inc(FCurrentLocMinIdx);
@@ -1332,7 +1432,6 @@ end;
 procedure TClipperBase.DisposeOutRecsAndJoiners;
 var
   i: Integer;
-  outrec: POutRec;
 begin
   // just in case joiners haven't already been disposed
   for i := 0 to FJoinerList.Count -1 do
@@ -1340,13 +1439,6 @@ begin
       Dispose(PJoiner(UnsafeGet(FJoinerList, i)));
   FJoinerList.Clear;
   FHorzTrials := nil;
-
-  for i := 0 to FOutRecList.Count -1 do
-  begin
-    outrec := UnsafeGet(FOutRecList, i);
-    if Assigned(outrec.pts) then DisposeOutPts(outrec.pts);
-    Dispose(outrec);
-  end;
   FOutRecList.Clear;
 end;
 //------------------------------------------------------------------------------
@@ -1355,8 +1447,6 @@ procedure TClipperBase.DisposeVerticesAndLocalMinima;
 var
   i: Integer;
 begin
-  for i := 0 to FLocMinList.Count -1 do
-    Dispose(PLocalMinima(UnsafeGet(FLocMinList, i)));
   FLocMinList.Clear;
   for i := 0 to FVertexArrayList.Count -1 do
     FreeMem(UnsafeGet(FVertexArrayList, i));
@@ -1804,11 +1894,7 @@ var
   newOr: POutRec;
   prevHotEdge: PActive;
 begin
-  new(newOr);
-  newOr.idx := FOutRecList.Add(newOr);
-  newOr.pts := nil;
-  newOr.splits := nil;
-  newOr.polypath := nil;
+  newOr := FOutRecList.Add;
   e1.outrec := newOr;
   e2.outrec := newOr;
 
@@ -1929,8 +2015,8 @@ begin
   prevOp := splitOp.prev;
   nextNextOp := splitOp.next.next;
   outrec.pts := prevOp;
-  ip := Point64(Clipper.Core.GetIntersectPointD(
-    prevOp.pt, splitOp.pt, splitOp.next.pt, nextNextOp.pt));
+  Clipper.Core.GetIntersectPoint64(
+    prevOp.pt, splitOp.pt, splitOp.next.pt, nextNextOp.pt, ip);
 {$IFDEF USINGZ}
   if Assigned(fZCallback) then
     fZCallback(prevOp.Pt, splitOp.Pt, splitOp.Next.Pt, nextNextOp.Pt, ip);
@@ -1978,13 +2064,10 @@ begin
     ((absArea2 > absArea1) or
     ((area2 > 0) = (area1 > 0))) then
   begin
-    new(newOutRec);
-    FillChar(newOutRec^, SizeOf(TOutRec), 0);
-    newOutRec.idx := FOutRecList.Add(newOutRec);
+    newOutRec := FOutRecList.Add;
     newOutRec.owner := outrec.owner;
     newOutRec.isOpen := false;
-    newOutRec.polypath := nil;
-    newOutRec.splits := nil;
+
     splitOp.outrec := newOutRec;
     splitOp.next.outrec := newOutRec;
     new(newOp);
@@ -2324,11 +2407,7 @@ begin
   end
   else
   begin
-    new(newOr);
-    FillChar(newOr^, SizeOf(TOutRec), 0);
-    newOr.idx := FOutRecList.Add(newOr);
-    newOr.polypath := nil;
-    newOr.splits := nil;
+    newOr := FOutRecList.Add;
 
     if (FUsingPolytree) then
     begin
@@ -2677,13 +2756,9 @@ function TClipperBase.StartOpenPath(e: PActive; const pt: TPoint64): POutPt;
 var
   newOr: POutRec;
 begin
-  new(newOr);
-  newOr.idx := FOutRecList.Add(newOr);
-  newOr.owner := nil;
+  newOr := FOutRecList.Add;
   newOr.isOpen := true;
-  newOr.pts := nil;
-  newOr.splits := nil;
-  newOr.polypath := nil;
+
   if e.windDx > 0 then
   begin
     newOr.frontE := e;
@@ -3086,7 +3161,8 @@ var
   pt: TPoint64;
   node: PIntersectNode;
 begin
-  pt := GetIntersectPoint(e1, e2);
+  if not GetIntersectPoint(e1, e2, pt) then
+    pt := Point64(e1.currX, topY);
   // Rounding errors can occasionally place the calculated intersection
   // point either below or above the scanbeam, so check and correct ...
   if (pt.Y > FBotY) then
@@ -3237,7 +3313,7 @@ procedure TClipperBase.ProcessIntersectList;
 var
   i: Integer;
   nodeQ: PIntersectNode;
-  nodeI, nodeJ: ^PIntersectNode;
+  nodeI, nodeJ: PPIntersectNode;
   op1, op2: POutpt;
 begin
   // The list of required intersections now needs to be processed in a
@@ -3896,6 +3972,7 @@ end;
 function TClipperBase.BuildPaths(out closedPaths, openPaths: TPaths64): Boolean;
 var
   i, cntClosed, cntOpen: Integer;
+  ppor: PPOutRec;
   outRec: POutRec;
 begin
   try
@@ -3903,23 +3980,29 @@ begin
     SetLength(closedPaths, FOutRecList.Count);
     if FHasOpenPaths then
       SetLength(openPaths, FOutRecList.Count);
-    for i := 0 to FOutRecList.Count -1 do
-    begin
-      outRec := UnsafeGet(FOutRecList, i);
-      if not assigned(outRec.pts) then Continue;
 
-      if outRec.isOpen then
+    if FOutRecList.Count > 0 then
+    begin
+      ppor := PPOutRec(FOutRecList.ListPtr);
+      for i := 0 to FOutRecList.Count -1 do
       begin
-        if BuildPath(outRec.pts, FReverseSolution,
-          true, openPaths[cntOpen]) then
-            inc(cntOpen);
-      end else
-      begin
-        // closed paths should always return a Positive orientation
-        // except when ReverseSolution == true
-        if BuildPath(outRec.pts, FReverseSolution,
-          false, closedPaths[cntClosed]) then
-            inc(cntClosed);
+        outRec := ppor^;
+        inc(ppor);
+
+        if not assigned(outRec.pts) then Continue;
+        if outRec.isOpen then
+        begin
+          if BuildPath(outRec.pts, FReverseSolution,
+            true, openPaths[cntOpen]) then
+              inc(cntOpen);
+        end else
+        begin
+          // closed paths should always return a Positive orientation
+          // except when ReverseSolution == true
+          if BuildPath(outRec.pts, FReverseSolution,
+            false, closedPaths[cntClosed]) then
+              inc(cntClosed);
+        end;
       end;
     end;
     SetLength(closedPaths, cntClosed);
@@ -4042,6 +4125,7 @@ var
   outRec      : POutRec;
   openPath    : TPath64;
   ownerPP     : TPolyPathBase;
+  ppor        : PPOutRec;
 begin
   try
     polytree.Clear;
@@ -4049,54 +4133,59 @@ begin
       setLength(openPaths, FOutRecList.Count);
     cntOpen := 0;
 
-    for i := 0 to FOutRecList.Count -1 do
+    if FOutRecList.Count > 0 then
     begin
-      outRec := UnsafeGet(FOutRecList, i);
-      if not assigned(outRec.pts) then Continue;
-
-      if outRec.isOpen then
+      ppor := PPOutRec(FOutRecList.ListPtr);
+      for i := 0 to FOutRecList.Count -1 do
       begin
-        if BuildPath(outRec.pts,
-          FReverseSolution, true, openPath) then
+        outRec := ppor^;
+        inc(ppor);
+        if not assigned(outRec.pts) then Continue;
+
+        if outRec.isOpen then
         begin
-          openPaths[cntOpen] := openPath;
-          inc(cntOpen);
+          if BuildPath(outRec.pts,
+            FReverseSolution, true, openPath) then
+          begin
+            openPaths[cntOpen] := openPath;
+            inc(cntOpen);
+          end;
+          Continue;
         end;
-        Continue;
-      end;
 
-      if not BuildPath(outRec.pts, FReverseSolution, false, outRec.path) then
-        Continue;
-      if outrec.bounds.IsEmpty then
-        outrec.bounds := Clipper.Engine.GetBounds(outrec.path);
-      outrec.owner := GetRealOutRec(outrec.owner);
-      if assigned(outRec.owner) then
-        DeepCheckOwner(outRec, outRec.owner);
-
-			// swap the order when a child preceeds its owner
-			// (because owners must preceed children in polytrees)
-      if assigned(outRec.owner) and
-        (outRec.owner.idx > outRec.idx) then
-      begin
-        j := outRec.owner.idx;
-        outRec.idx := j;
-        FOutRecList[i] := UnsafeGet(FOutRecList, j);
-        FOutRecList[j] := outRec;
-        outRec := UnsafeGet(FOutRecList, i);
-        outRec.idx := i;
-        outRec.owner := GetRealOutRec(outRec.owner);
-        BuildPath(outRec.pts, FReverseSolution, false, outRec.path);
-        if (outRec.bounds.IsEmpty) then
-          outRec.bounds := Clipper.Engine.GetBounds(outRec.path);
-        if Assigned(outRec.owner) then
+        if not BuildPath(outRec.pts, FReverseSolution, false, outRec.path) then
+          Continue;
+        if outrec.bounds.IsEmpty then
+          outrec.bounds := Clipper.Engine.GetBounds(outrec.path);
+        outrec.owner := GetRealOutRec(outrec.owner);
+        if assigned(outRec.owner) then
           DeepCheckOwner(outRec, outRec.owner);
+
+        // swap the order when a child preceeds its owner
+        // (because owners must preceed children in polytrees)
+        if assigned(outRec.owner) and
+          (outRec.owner.idx > outRec.idx) then
+        begin
+          j := outRec.owner.idx;
+          FOutRecList.UnsafeSwap(i,j);
+          POutrec(FOutRecList.UnsafeGet(j)).idx := j;
+          outRec := POutrec(FOutRecList.UnsafeGet(i));
+          outRec.idx := i;
+
+          outRec.owner := GetRealOutRec(outRec.owner);
+          BuildPath(outRec.pts, FReverseSolution, false, outRec.path);
+          if (outRec.bounds.IsEmpty) then
+            outRec.bounds := Clipper.Engine.GetBounds(outRec.path);
+          if Assigned(outRec.owner) then
+            DeepCheckOwner(outRec, outRec.owner);
+        end;
+
+        if assigned(outRec.owner) and assigned(outRec.owner.polypath) then
+          ownerPP := outRec.owner.polypath else
+          ownerPP := polytree;
+
+        outRec.polypath := ownerPP.AddChild(outRec.path);
       end;
-
-      if assigned(outRec.owner) and assigned(outRec.owner.polypath) then
-        ownerPP := outRec.owner.polypath else
-        ownerPP := polytree;
-
-      outRec.polypath := ownerPP.AddChild(outRec.path);
     end;
     setLength(openPaths, cntOpen);
   except

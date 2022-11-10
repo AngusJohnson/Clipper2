@@ -1,6 +1,6 @@
 ﻿/*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  3 November 2022                                                 *
+* Date      :  10 November 2022                                                *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  This is the main polygon clipping module                        *
@@ -404,53 +404,56 @@ namespace Clipper2Lib
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static Point64 GetEndE1ClosestToEndE2(Active e1, Active e2) 
+    private static bool GetIntersectPoint(Active ae1, Active ae2, out Point64 ip)
     {
-      double[] d = new double[4];
-      d[0] = DistanceSqr(e1.bot, e2.bot);
-      if (d[0] == 0) return e1.bot;
-      d[1] = DistanceSqr(e1.top, e2.top);
-      if (d[1] == 0) return e1.top;
-      d[2] = DistanceSqr(e1.bot, e2.top);
-      if (d[2] == 0) return e1.bot;
-      d[3] = DistanceSqr(e1.top, e2.bot);
-      if (d[3] == 0) return e1.top;
-      int idx = 0;
-      for (int i = 1; i < 4; i++)
-        if (d[i] < d[idx]) idx = i;
-      switch (idx) 
-      {
-      case 1: case 3: return e1.top;
-      default: return e1.bot;
-      }
-    }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static Point64 GetIntersectPoint(Active ae1, Active ae2)
-    {
+      // precondition: neither edge is horizontal
       double b1, b2, q = (ae1.dx - ae2.dx);
+
       if (Math.Abs(q) < 1.0e-5)
-        return GetEndE1ClosestToEndE2(ae1, ae2);
+      {
+        ip = new Point64();
+        return false;
+      }
 
       if (InternalClipper.IsAlmostZero(ae1.dx))
       {
-        if (IsHorizontal(ae2)) return new Point64(ae1.bot.X, ae2.bot.Y);
-        b2 = ae2.bot.Y - (ae2.bot.X / ae2.dx);
-        return new Point64(ae1.bot.X, (long) Math.Round(ae1.bot.X / ae2.dx + b2));
+        if (InternalClipper.IsAlmostZero(ae2.dx))
+        {
+          ip = new Point64();
+          return false;
+        }
+        b2 = ae2.bot.Y * ae2.dx - ae2.bot.X;
+        ip = new Point64(ae1.bot.X,
+          (long) Math.Round((ae1.bot.X + b2) / ae2.dx));
       }
-
-      if (InternalClipper.IsAlmostZero(ae2.dx))
+      else if (InternalClipper.IsAlmostZero(ae2.dx))
       {
-        if (IsHorizontal(ae1)) return new Point64(ae2.bot.X, ae1.bot.Y);
-        b1 = ae1.bot.Y - (ae1.bot.X / ae1.dx);
-        return new Point64(ae2.bot.X, (long) Math.Round(ae2.bot.X / ae1.dx + b1));
+        b1 = ae1.bot.Y * ae1.dx - ae1.bot.X;
+        ip = new Point64(ae2.bot.X, 
+          (long) Math.Round((ae2.bot.X + b1) / ae1.dx));
       }
-      b1 = ae1.bot.X - ae1.bot.Y * ae1.dx;
-      b2 = ae2.bot.X - ae2.bot.Y * ae2.dx;
-      q = (b2 - b1) / q;
-      return (Math.Abs(ae1.dx) < Math.Abs(ae2.dx))
-        ? new Point64((long)(ae1.dx * q + b1), (long)(q))
-        : new Point64((long)(ae2.dx * q + b2), (long)(q));
+      else if (Math.Abs(ae1.dx) > 1.0e5)
+      {
+        long y = (ae1.bot.Y + ae1.top.Y) / 2;
+        b2 = ae2.top.Y - ae2.top.X / ae2.dx;
+        ip = new Point64((long) ((y - b2) * ae2.dx), y);
+      }
+      else if (Math.Abs(ae2.dx) > 1.0e5)
+      {
+        long y = (ae2.bot.Y + ae2.top.Y) / 2;
+        b1 = ae1.top.Y - ae1.top.X / ae1.dx;
+        ip = new Point64((long) ((y - b1) * ae1.dx), y);
+      }
+      else
+      {
+        b1 = ae1.bot.X - ae1.bot.Y * ae1.dx;
+        b2 = ae2.bot.X - ae2.bot.Y * ae2.dx;
+        q = (b2 - b1) / q;
+        ip = (Math.Abs(ae1.dx) < Math.Abs(ae2.dx))
+          ? new Point64((long) (ae1.dx * q + b1), (long) (q))
+          : new Point64((long) (ae2.dx * q + b2), (long) (q));
+      }
+      return true;
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -1905,7 +1908,8 @@ namespace Clipper2Lib
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private void AddNewIntersectNode(Active ae1, Active ae2, long topY)
     {
-      Point64 pt = GetIntersectPoint(ae1, ae2);
+      if (!GetIntersectPoint(ae1, ae2, out Point64 pt))
+        pt = new Point64(ae1.curX, topY);
 
       // rounding errors can occasionally place the calculated intersection
       // point either below or above the scanbeam, so check and correct ...
