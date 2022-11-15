@@ -18,6 +18,12 @@
 #include <algorithm>
 #include <limits>
 
+//
+#ifndef Z_TYPE
+#define Z_TYPE int64_t
+#define Z_DEFAULT_VALUE 0
+#endif
+
 namespace Clipper2Lib 
 {
 
@@ -35,10 +41,10 @@ struct Point {
 	T x;
 	T y;
 #ifdef USINGZ
-	int64_t z;
+	Z_TYPE z;
 
 	template <typename T2>
-	inline void Init(const T2 x_ = 0, const T2 y_ = 0, const int64_t z_ = 0)
+	inline void Init(const T2 x_ = 0, const T2 y_ = 0, const Z_TYPE& z_ = Z_DEFAULT_VALUE)
 	{
 		if constexpr (std::numeric_limits<T>::is_integer &&
 			!std::numeric_limits<T2>::is_integer)
@@ -55,10 +61,10 @@ struct Point {
 		}
 	}
 
-	explicit Point() : x(0), y(0), z(0) {};
+	explicit Point() : x(0), y(0), z(Z_DEFAULT_VALUE) {};
 
 	template <typename T2>
-	Point(const T2 x_, const T2 y_, const int64_t z_ = 0)
+	Point(const T2 x_, const T2 y_, const Z_TYPE& z_ = Z_DEFAULT_VALUE)
 	{
 		Init(x_, y_);
 		z = z_;

@@ -2063,6 +2063,7 @@ namespace Clipper2Lib {
 	void ClipperBase::AddNewIntersectNode(Active& e1, Active& e2, int64_t top_y)
 	{
 		Point64 pt = GetIntersectPoint(e1, e2);
+		SetZ(e1, e2, pt);
 
 		//rounding errors can occasionally place the calculated intersection
 		//point either below or above the scanbeam, so check and correct ...
@@ -2306,7 +2307,7 @@ namespace Clipper2Lib {
 			ResetHorzDirection(horz, max_pair, horz_left, horz_right);
 
 		if (IsHotEdge(horz))
-			AddOutPt(horz, Point64(horz.curr_x, y));
+			AddOutPt(horz, Point64(horz.curr_x, y, horz.bot.z));
 
 		OutPt* op;
 		while (true) // loop through consec. horizontal edges

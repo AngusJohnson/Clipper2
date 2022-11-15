@@ -80,12 +80,12 @@ inline bool IsClosedPath(EndType et)
 
 inline Point64 GetPerpendic(const Point64& pt, const PointD& norm, double delta)
 {
-	return Point64(pt.x + norm.x * delta, pt.y + norm.y * delta);
+	return Point64(pt.x + norm.x * delta, pt.y + norm.y * delta, pt.z);
 }
 
 inline PointD GetPerpendicD(const Point64& pt, const PointD& norm, double delta)
 {
-	return PointD(pt.x + norm.x * delta, pt.y + norm.y * delta);
+	return PointD(pt.x + norm.x * delta, pt.y + norm.y * delta, pt.z);
 }
 
 //------------------------------------------------------------------------------
@@ -131,12 +131,12 @@ void ClipperOffset::BuildNormals(const Path64& path)
 
 inline PointD TranslatePoint(const PointD& pt, double dx, double dy)
 {
-	return PointD(pt.x + dx, pt.y + dy);
+	return PointD(pt.x + dx, pt.y + dy, pt.z);
 }
 
 inline PointD ReflectPoint(const PointD& pt, const PointD& pivot)
 {
-	return PointD(pivot.x + (pivot.x - pt.x), pivot.y + (pivot.y - pt.y));
+	return PointD(pivot.x + (pivot.x - pt.x), pivot.y + (pivot.y - pt.y), pt.z);
 }
 
 PointD IntersectPoint(const PointD& pt1a, const PointD& pt1b,
@@ -190,6 +190,7 @@ void ClipperOffset::DoSquare(Group& group, const Path64& path, size_t j, size_t 
 	{
 		PointD pt4 = PointD(pt3.x + vec.x * group_delta_, pt3.y + vec.y * group_delta_);
 		PointD pt = IntersectPoint(pt1, pt2, pt3, pt4);
+		pt.z = path[j].z;
 		//get the second intersect point through reflecion
 		group.path_.push_back(Point64(ReflectPoint(pt, ptQ)));
 		group.path_.push_back(Point64(pt));
@@ -198,6 +199,7 @@ void ClipperOffset::DoSquare(Group& group, const Path64& path, size_t j, size_t 
 	{
 		PointD pt4 = GetPerpendicD(path[j], norms[k], group_delta_);
 		PointD pt = IntersectPoint(pt1, pt2, pt3, pt4);
+		pt.z = path[j].z;
 		group.path_.push_back(Point64(pt));
 		//get the second intersect point through reflecion
 		group.path_.push_back(Point64(ReflectPoint(pt, ptQ)));
@@ -209,7 +211,8 @@ void ClipperOffset::DoMiter(Group& group, const Path64& path, size_t j, size_t k
 	double q = group_delta_ / (cos_a + 1);
 	group.path_.push_back(Point64(
 		path[j].x + (norms[k].x + norms[j].x) * q,
-		path[j].y + (norms[k].y + norms[j].y) * q));
+		path[j].y + (norms[k].y + norms[j].y) * q,
+		path[j].z));
 }
 
 void ClipperOffset::DoRound(Group& group, const Path64& path, size_t j, size_t k, double angle)
@@ -223,12 +226,12 @@ void ClipperOffset::DoRound(Group& group, const Path64& path, size_t j, size_t k
 	PointD pt2 = PointD(norms[k].x * group_delta_, norms[k].y * group_delta_);
 	if (j == k) pt2.Negate();
 
-	group.path_.push_back(Point64(pt.x + pt2.x, pt.y + pt2.y));
+	group.path_.push_back(Point64(pt.x + pt2.x, pt.y + pt2.y, pt.z));
 	for (int i = 0; i < steps; i++)
 	{
 		pt2 = PointD(pt2.x * step_cos - step_sin * pt2.y,
 			pt2.x * step_sin + pt2.y * step_cos);
-		group.path_.push_back(Point64(pt.x + pt2.x, pt.y + pt2.y));
+		group.path_.push_back(Point64(pt.x + pt2.x, pt.y + pt2.y, pt.z));
 	}
 	group.path_.push_back(GetPerpendic(path[j], norms[j], group_delta_));
 }
@@ -254,10 +257,12 @@ void ClipperOffset::OffsetPoint(Group& group, Path64& path, size_t j, size_t& k)
 	{
 		Point64 p1 = Point64(
 			path[j].x + norms[k].x * group_delta_,
-			path[j].y + norms[k].y * group_delta_);
+			path[j].y + norms[k].y * group_delta_,
+			path[j].z);
 		Point64 p2 = Point64(
 			path[j].x + norms[j].x * group_delta_,
-			path[j].y + norms[j].y * group_delta_);
+			path[j].y + norms[j].y * group_delta_,
+			path[j].z);
 		group.path_.push_back(p1);
 		if (p1 != p2)
 		{
@@ -312,7 +317,8 @@ void ClipperOffset::OffsetOpenPath(Group& group, Path64& path, EndType end_type)
 	case EndType::Butt:
 		group.path_.push_back(Point64(
 			path[0].x - norms[0].x * group_delta_,
-			path[0].y - norms[0].y * group_delta_));
+			path[0].y - norms[0].y * group_delta_, 
+			path[0].z));
 		group.path_.push_back(GetPerpendic(path[0], norms[0], group_delta_));
 		break;
 	case EndType::Round:
@@ -340,7 +346,8 @@ void ClipperOffset::OffsetOpenPath(Group& group, Path64& path, EndType end_type)
 	case EndType::Butt:
 		group.path_.push_back(Point64(
 			path[highI].x - norms[highI].x * group_delta_,
-			path[highI].y - norms[highI].y * group_delta_));
+			path[highI].y - norms[highI].y * group_delta_,
+			path[highI].z));
 		group.path_.push_back(GetPerpendic(path[highI], norms[highI], group_delta_));
 		break;
 	case EndType::Round:
@@ -426,7 +433,8 @@ void ClipperOffset::DoGroupOffset(Group& group, double delta)
 	{
 		//clean up self-intersections ...
 		Clipper64 c;
-		c.PreserveCollinear = false;
+		c.SetZCallback(zCallback_);
+		c.PreserveCollinear = preserve_collinear_;
 		//the solution should retain the orientation of the input
 		c.ReverseSolution = reverse_solution_ != group.is_reversed_;
 		c.AddSubject(group.paths_out_);
@@ -469,7 +477,8 @@ Paths64 ClipperOffset::Execute(double delta)
 	{
 		//clean up self-intersections ...
 		Clipper64 c;
-		c.PreserveCollinear = false;
+		c.SetZCallback(zCallback_);
+		c.PreserveCollinear = preserve_collinear_;
 		//the solution should retain the orientation of the input
 		c.ReverseSolution = reverse_solution_ != groups_[0].is_reversed_;
 

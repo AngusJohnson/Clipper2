@@ -53,6 +53,10 @@ private:
 	bool preserve_collinear_ = false;
 	bool reverse_solution_ = false;
 
+#ifdef USINGZ
+	ZCallback64 zCallback_ = nullptr;
+#endif
+
 	void DoSquare(Group& group, const Path64& path, size_t j, size_t k);
 	void DoMiter(Group& group, const Path64& path, size_t j, size_t k, double cos_a);
 	void DoRound(Group& group, const Path64& path, size_t j, size_t k, double angle);
@@ -101,6 +105,10 @@ public:
 	
 	bool ReverseSolution() const { return reverse_solution_; }
 	void ReverseSolution(bool reverse_solution) {reverse_solution_ = reverse_solution;}
+
+#ifdef USINGZ
+	void SetZCallback(ZCallback64 cb) { zCallback_ = cb; }
+#endif
 };
 
 }
