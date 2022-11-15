@@ -49,9 +49,10 @@ TEST(Clipper2Tests, TestMultiplePolygons)
 
     const int64_t measured_area = static_cast<int64_t>(Area(solution));
     const int64_t measured_count = static_cast<int64_t>(solution.size() + solution_open.size());    
-    const int64_t count_diff = std::abs(measured_count - stored_count);
-    const int64_t area_diff = std::abs(measured_area - stored_area);
-
+    const int64_t count_diff = stored_count <= 0 ? 0 : std::abs(measured_count - stored_count);
+    const int64_t area_diff = stored_area <= 0 ? 0 : std::abs(measured_area - stored_area);
+    double area_diff_ratio = (area_diff == 0) ? 0 : std::fabs((double)(area_diff) / measured_area);
+    
     // check the polytree variant too
     Clipper2Lib::PolyTree64 solution_polytree;
     Clipper2Lib::Paths64 solution_polytree_open;
@@ -66,36 +67,25 @@ TEST(Clipper2Tests, TestMultiplePolygons)
     const auto solution_polytree_paths = PolyTreeToPaths64(solution_polytree);
     const int64_t measured_count_pt = static_cast<int64_t>(solution_polytree_paths.size());
 
-    if (test_number == 23)
-    {
-      EXPECT_LE(count_diff, 4);
-    }
+    // check polygon counts
+    if (stored_count <= 0) 
+      ; // skip count
     else if (test_number == 27)
-    {
       EXPECT_LE(count_diff, 2);
-    }
-    else if (IsInList(test_number, 
-      { 18, 32, 42, 43, 45, 87, 102, 103, 111, 118, 183 }))
-    {
+    else if (IsInList(test_number, { 37, 43, 87, 102, 111, 118, 183 }))
       EXPECT_LE(count_diff, 1);
-    }
     else if (test_number >= 120)
-    {
-      if (stored_count > 0)
-        EXPECT_LE(count_diff/ stored_count, 0.02);
-    }
-    else if (stored_count > 0) 
+      EXPECT_LE((double)count_diff / stored_count, 0.05);
+    else 
       EXPECT_EQ(count_diff, 0);
 
-    if (IsInList(test_number,
-      { 22, 23, 24 }))
-    {
+    // check polygon areas
+    if (stored_area <= 0)
+      ; // skip area
+    else if (IsInList(test_number, { 22, 23, 24 }))
       EXPECT_LE(area_diff, 8);
-    }
-    else if (stored_area > 0 && area_diff > 100)
-    {
-      EXPECT_LE(area_diff/stored_area, 0.02);
-    }
+    else if (area_diff > 100)
+      EXPECT_LE((double)area_diff/stored_area, 0.01);
 
     EXPECT_EQ(measured_area, measured_area_pt);
     EXPECT_EQ(measured_count, measured_count_pt);
@@ -103,7 +93,6 @@ TEST(Clipper2Tests, TestMultiplePolygons)
     ++test_number;
   }
   EXPECT_GE(test_number, 188);
-
 
   Clipper2Lib::PathsD subjd, clipd, solutiond;
   Clipper2Lib::FillRule frd = Clipper2Lib::FillRule::NonZero;

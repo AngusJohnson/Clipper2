@@ -29,26 +29,26 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
     <ConfigurationType>DynamicLibrary</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
-    <PlatformToolset>v143</PlatformToolset>
+    <PlatformToolset>v142</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
     <ConfigurationType>DynamicLibrary</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
-    <PlatformToolset>v143</PlatformToolset>
+    <PlatformToolset>v142</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
     <ConfigurationType>DynamicLibrary</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
-    <PlatformToolset>v143</PlatformToolset>
+    <PlatformToolset>v142</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
     <ConfigurationType>DynamicLibrary</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
-    <PlatformToolset>v143</PlatformToolset>
+    <PlatformToolset>v142</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
@@ -71,20 +71,20 @@
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <TargetName>Clipper2</TargetName>
-    <IncludePath>C:\Users\awj19\Documents\Dev\Clipper2\cpp\Clipper2Lib\include;$(IncludePath)</IncludePath>
+    <TargetName>Clipper2_64</TargetName>
+    <IncludePath>..\..\CPP\Clipper2Lib\include;$(IncludePath)</IncludePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
-    <TargetName>Clipper2</TargetName>
-    <IncludePath>C:\Users\awj19\Documents\Dev\Clipper2\cpp\Clipper2Lib\include;$(IncludePath)</IncludePath>
+    <TargetName>Clipper2_32</TargetName>
+    <IncludePath>..\..\CPP\Clipper2Lib\include;$(IncludePath)</IncludePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
-    <TargetName>Clipper2</TargetName>
-    <IncludePath>C:\Users\awj19\Documents\Dev\Clipper2\cpp\Clipper2Lib\include;$(IncludePath)</IncludePath>
+    <TargetName>Clipper2_32</TargetName>
+    <IncludePath>..\..\CPP\Clipper2Lib\include;$(IncludePath)</IncludePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-    <TargetName>Clipper2</TargetName>
-    <IncludePath>C:\Users\awj19\Documents\Dev\Clipper2\cpp\Clipper2Lib\include;$(IncludePath)</IncludePath>
+    <TargetName>Clipper2_64</TargetName>
+    <IncludePath>..\..\CPP\Clipper2Lib\include;$(IncludePath)</IncludePath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
@@ -163,19 +163,19 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClInclude Include="..\..\cpp\Clipper2Lib\include\clipper2\clipper.core.h" />
-    <ClInclude Include="..\..\cpp\Clipper2Lib\include\clipper2\clipper.engine.h" />
-    <ClInclude Include="..\..\cpp\Clipper2Lib\include\clipper2\clipper.export.h" />
-    <ClInclude Include="..\..\cpp\Clipper2Lib\include\clipper2\clipper.h" />
-    <ClInclude Include="..\..\cpp\Clipper2Lib\include\clipper2\clipper.offset.h" />
-    <ClInclude Include="..\..\cpp\Clipper2Lib\include\clipper2\clipper.rectclip.h" />
+    <ClInclude Include="..\..\CPP\Clipper2Lib\include\clipper2\clipper.core.h" />
+    <ClInclude Include="..\..\CPP\Clipper2Lib\include\clipper2\clipper.engine.h" />
+    <ClInclude Include="..\..\CPP\Clipper2Lib\include\clipper2\clipper.export.h" />
+    <ClInclude Include="..\..\CPP\Clipper2Lib\include\clipper2\clipper.h" />
+    <ClInclude Include="..\..\CPP\Clipper2Lib\include\clipper2\clipper.offset.h" />
+    <ClInclude Include="..\..\CPP\Clipper2Lib\include\clipper2\clipper.rectclip.h" />
     <ClInclude Include="framework.h" />
     <ClInclude Include="pch.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\..\cpp\Clipper2Lib\src\clipper.engine.cpp" />
-    <ClCompile Include="..\..\cpp\Clipper2Lib\src\clipper.offset.cpp" />
-    <ClCompile Include="..\..\cpp\Clipper2Lib\src\clipper.rectclip.cpp" />
+    <ClCompile Include="..\..\CPP\Clipper2Lib\src\clipper.engine.cpp" />
+    <ClCompile Include="..\..\CPP\Clipper2Lib\src\clipper.offset.cpp" />
+    <ClCompile Include="..\..\CPP\Clipper2Lib\src\clipper.rectclip.cpp" />
     <ClCompile Include="dllmain.cpp" />
     <ClCompile Include="pch.cpp" />
   </ItemGroup>

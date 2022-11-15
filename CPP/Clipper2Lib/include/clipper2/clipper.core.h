@@ -1,6 +1,6 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  26 October 2022                                                 *
+* Date      :  9 November 2022                                                 *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  Core Clipper Library structures and functions                   *
@@ -16,7 +16,9 @@
 #include <string>
 #include <iostream>
 #include <algorithm>
-#include <limits>
+#include <climits>
+
+//#define NO_EXCEPTIONS
 
 //
 #ifndef Z_TYPE
@@ -27,8 +29,14 @@
 namespace Clipper2Lib 
 {
 
-	static double const PI = 3.141592653589793238;
+#ifndef NO_EXCEPTIONS
+	static const char* precision_error =
+		"Precision exceeds the permitted range";
+#endif
 
+	static double const PI = 3.141592653589793238;
+	static int64_t const MAX_COORD = LLONG_MAX / 2;
+	
 	//By far the most widely used filling rules for polygons are EvenOdd
 	//and NonZero, sometimes called Alternate and Winding respectively.
 	//https://en.wikipedia.org/wiki/Nonzero-rule
@@ -448,6 +456,7 @@ inline Rect<T1> ScaleRect(const Rect<T2>& rect, double scale)
 
 // clipper2Exception ---------------------------------------------------------
 
+#ifndef NO_EXCEPTIONS
 class Clipper2Exception : public std::exception {
 public:
 	explicit Clipper2Exception(const char *description) :
@@ -457,8 +466,19 @@ public:
 private:
 	std::string m_descr;
 };
+#endif
 
 // Miscellaneous ------------------------------------------------------------
+
+inline void CheckPrecision(int& precision)
+{
+	if (precision >= -8 && precision <= 8) return;
+#ifdef NO_EXCEPTIONS
+	precision = precision > 8 ? 8 : -8;
+#else
+	throw Clipper2Exception(precision_error);
+#endif
+}
 
 template <typename T>
 inline double CrossProduct(const Point<T>& pt1, const Point<T>& pt2, const Point<T>& pt3) {

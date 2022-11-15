@@ -1,6 +1,6 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  26 October 2022                                                 *
+* Date      :  10 November 2022                                                *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  This is the main polygon clipping module                        *
@@ -188,39 +188,119 @@ namespace Clipper2Lib {
 		return e1.local_min->polytype == e2.local_min->polytype;
 	}
 
+//#define CHECK_OVERFLOW  //define only when debugging
 
-	Point64 GetIntersectPoint(const Active& e1, const Active& e2)
+#ifdef CHECK_OVERFLOW
+
+	static const char* overflow_error = "overflow error.";
+
+	inline void CheckAdd(double val1, double val2)
 	{
-		double b1, b2;
-		if (e1.dx == e2.dx) return e1.top;
+		if (val2 < 0)
+		{
+			if (val1 > LLONG_MAX - val2) throw overflow_error;
+		}
+		else if (val1 < LLONG_MIN - val2) throw overflow_error;
+	}
+
+	inline void CheckAdd(int64_t val1, double val2) 
+	{
+		CheckAdd(static_cast<double>(val1), val2);
+	}
+
+	inline void CheckMul(double val1, double val2)
+	{
+		if (val1 == 0 || val2 == 0) return;
+		const double v1 = std::fabs(val1);
+		const double v2 = std::fabs(val2);
+		if (v1 > LLONG_MAX / v2) throw overflow_error;
+		if (v1 < LLONG_MIN / v2) throw overflow_error;
+	}
+
+	inline void CheckMul(int64_t val1, double val2)
+	{
+		CheckMul(static_cast<double>(val1), val2);
+	}
+#endif
+
+	bool GetIntersectPoint(const Active& e1, const Active& e2, Point64& ip)
+	{
+		// precondition: neither edge is horizontal
+		//assert(!IsHorizontal(e1) && !IsHorizontal(e2));
+
+		double b1, b2, q = (e1.dx - e2.dx);
+		if (std::fabs(q) < 1e-5) return false; // parallel
 
 		if (e1.dx == 0)
 		{
-			if (IsHorizontal(e2)) return Point64(e1.bot.x, e2.bot.y);
-			b2 = e2.bot.y - (e2.bot.x / e2.dx);
-			return Point64(e1.bot.x,
-				static_cast<int64_t>(std::round(e1.bot.x / e2.dx + b2)));
+			if (e2.dx == 0) return false; // parallel
+			b2 = e2.bot.y * e2.dx - e2.bot.x;
+			ip.x = e1.bot.x;
+#ifdef CHECK_OVERFLOW
+			CheckAdd(e1.bot.x, b2);
+			CheckMul(e1.bot.x + b2, 1 / e2.dx);
+#endif
+			ip.y = static_cast<int64_t>(std::round((e1.bot.x + b2) / e2.dx));
 		}
 		else if (e2.dx == 0)
 		{
-			if (IsHorizontal(e1)) return Point64(e2.bot.x, e1.bot.y);
-			b1 = e1.bot.y - (e1.bot.x / e1.dx);
-			return Point64(e2.bot.x,
-				static_cast<int64_t>(std::round(e2.bot.x / e1.dx + b1)));
+			b1 = e1.bot.y * e1.dx - e1.bot.x;
+			ip.x = e2.bot.x;
+#ifdef CHECK_OVERFLOW
+			CheckAdd(e2.bot.x, b1);
+			CheckMul(e2.bot.x + b1, 1/e1.dx);
+#endif
+			ip.y = static_cast<int64_t>(std::round((e2.bot.x + b1) / e1.dx));
+		}
+		else if (std::fabs(e1.dx) > 1e5)
+		{
+			ip.y = (e1.bot.y + e1.top.y) / 2;
+			b2 = e2.top.y * e2.dx - e2.top.x;
+#ifdef CHECK_OVERFLOW
+			CheckMul(ip.y, e2.dx);
+			CheckAdd(ip.y * e2.dx, -b2);
+#endif
+			ip.x = static_cast<int64_t>(ip.y * e2.dx - b2);
+		}
+		else if (std::fabs(e2.dx) > 1e5)
+		{
+			ip.y = (e2.bot.y + e2.top.y) / 2;
+			b1 = e1.top.y * e1.dx - e1.top.x;
+#ifdef CHECK_OVERFLOW
+			CheckMul(ip.y, e1.dx);
+			CheckAdd(ip.y * e1.dx, -b1);
+#endif
+			ip.x = static_cast<int64_t>(ip.y * e1.dx - b1);
 		}
 		else
 		{
 			b1 = e1.bot.x - e1.bot.y * e1.dx;
-			b2 = e2.bot.x - e2.bot.y * e2.dx;
-			double q = (b2 - b1) / (e1.dx - e2.dx);
-			return (abs(e1.dx) < abs(e2.dx)) ?
-				Point64(static_cast<int64_t>((e1.dx * q + b1)),
-					static_cast<int64_t>((q))) :
-				Point64(static_cast<int64_t>((e2.dx * q + b2)),
-					static_cast<int64_t>((q)));
+			b2 = e2.bot.x - e2.bot.y * e2.dx;			
+#ifdef CHECK_OVERFLOW
+			CheckMul(b2 - b1, 1/q);
+#endif
+			q = (b2 - b1) / q;
+			if (abs(e1.dx) < abs(e2.dx))
+			{
+#ifdef CHECK_OVERFLOW
+				CheckMul(e1.dx, q);
+				CheckAdd(e1.dx * q, b1);
+#endif
+				ip.x = static_cast<int64_t>(e1.dx * q + b1);
+				ip.y = static_cast<int64_t>((q));
+			}
+			else
+			{
+#ifdef CHECK_OVERFLOW
+				CheckMul(e2.dx, q);
+				CheckAdd(e2.dx * q, b2);
+#endif
+				ip.x = static_cast<int64_t>(e2.dx * q + b2);
+				ip.y = static_cast<int64_t>((q));
+			}
 		}
+		return true;
 	}
-
 
 	bool GetIntersectPoint(const Point64& ln1a, const Point64& ln1b,
 		const Point64& ln2a, const Point64& ln2b, PointD& ip)
@@ -523,19 +603,23 @@ namespace Clipper2Lib {
 	}
 
 
-	inline bool AreReallyClose(const Point64& pt1, const Point64& pt2)
+	inline bool PtsReallyClose(const Point64& pt1, const Point64& pt2)
 	{
-	  return (std::llabs(pt1.x - pt2.x) < 2) && (std::llabs(pt1.y - pt2.y) < 2);
+		return (std::llabs(pt1.x - pt2.x) < 2) && (std::llabs(pt1.y - pt2.y) < 2);
 	}
 
+	inline bool IsVerySmallTriangle(const OutPt& op)
+	{
+		return op.next->next == op.prev &&
+			(PtsReallyClose(op.prev->pt, op.next->pt) ||
+				PtsReallyClose(op.pt, op.next->pt) ||
+				PtsReallyClose(op.pt, op.prev->pt));
+	}
 
 	inline bool IsValidClosedPath(const OutPt* op)
 	{
-		return (op && op->next != op && op->next != op->prev &&
-			//also treat inconsequential polygons as invalid
-			!(op->next->next == op->prev &&
-			(AreReallyClose(op->pt, op->next->pt) ||
-			AreReallyClose(op->pt, op->prev->pt))));
+		return op && (op->next != op) && (op->next != op->prev) &&
+			!IsVerySmallTriangle(*op);
 	}
 
 	inline bool OutrecIsAscending(const Active* hotEdge)
@@ -1494,11 +1578,13 @@ namespace Clipper2Lib {
 		FixSelfIntersects(outrec);
 	}
 
-	OutPt* ClipperBase::DoSplitOp(OutPt* outRecOp, OutPt* splitOp)
+	void ClipperBase::DoSplitOp(OutRec* outrec, OutPt* splitOp)
 	{
-		OutPt* prevOp = splitOp->prev; 
+		// splitOp.prev -> splitOp && 
+		// splitOp.next -> splitOp.next.next are intersecting
+		OutPt* prevOp = splitOp->prev;
 		OutPt* nextNextOp = splitOp->next->next;
-		OutPt* result = prevOp;
+		outrec->pts = prevOp;
 		PointD ipD;
 		GetIntersectPoint(prevOp->pt,
 			splitOp->pt, splitOp->next->pt, nextNextOp->pt, ipD);
@@ -1507,9 +1593,25 @@ namespace Clipper2Lib {
 		if (zCallback_)
 			zCallback_(prevOp->pt, splitOp->pt, splitOp->next->pt, nextNextOp->pt, ip);
 #endif
-		double area1 = Area(outRecOp);
-		double area2 = AreaTriangle(ip, splitOp->pt, splitOp->next->pt);
+		double area1 = Area(outrec->pts);
+		double absArea1 = std::fabs(area1);
+		if (absArea1 < 2)
+		{
+			SafeDisposeOutPts(outrec->pts);
+			// outrec.pts == nil; :)
+			return;
+		}
 
+		// nb: area1 is the path's area *before* splitting, whereas area2 is
+		// the area of the triangle containing splitOp & splitOp.next.
+		// So the only way for these areas to have the same sign is if
+		// the split triangle is larger than the path containing prevOp or
+		// if there's more than one self=intersection.
+		double area2 = AreaTriangle(ip, splitOp->pt, splitOp->next->pt);
+		double absArea2 = std::fabs(area2);
+
+		// de-link splitOp and splitOp.next from the path
+		// while inserting the intersection point
 		if (ip == prevOp->pt || ip == nextNextOp->pt)
 		{
 			nextNextOp->prev = prevOp;
@@ -1527,9 +1629,8 @@ namespace Clipper2Lib {
 		SafeDeleteOutPtJoiners(splitOp->next);
 		SafeDeleteOutPtJoiners(splitOp);
 
-		double absArea2 = std::abs(area2);
-		if ((absArea2 >= 1) &&
-			((absArea2 > std::abs(area1) || ((area2 > 0) == (area1 > 0)))))
+		if (absArea2 >= 1 && 
+			(absArea2 > absArea1 || (area2 > 0) == (area1 > 0)))
 		{
 			OutRec* newOutRec = new OutRec();
 			newOutRec->idx = outrec_list_.size();
@@ -1551,9 +1652,7 @@ namespace Clipper2Lib {
 			delete splitOp->next;
 			delete splitOp;
 		}
-		return result;
 	}
-
 
 	void ClipperBase::FixSelfIntersects(OutRec* outrec)
 	{
@@ -1567,8 +1666,9 @@ namespace Clipper2Lib {
 			{
 				if (op2 == outrec->pts || op2->next == outrec->pts)
 					outrec->pts = outrec->pts->prev;
-				op2 = DoSplitOp(outrec->pts, op2);
-				outrec->pts = op2;
+				DoSplitOp(outrec, op2);
+				if (!outrec->pts) break;
+				op2 = outrec->pts;
 				continue;
 			}
 			else
@@ -2064,6 +2164,10 @@ namespace Clipper2Lib {
 	{
 		Point64 pt = GetIntersectPoint(e1, e2);
 		SetZ(e1, e2, pt);
+		Point64 pt; 
+		if (!GetIntersectPoint(e1, e2, pt))
+			pt = Point64(e1.curr_x, top_y); //parallel edges
+    SetZ(e1, e2, pt);  
 
 		//rounding errors can occasionally place the calculated intersection
 		//point either below or above the scanbeam, so check and correct ...
@@ -3272,7 +3376,9 @@ namespace Clipper2Lib {
 
 	bool BuildPath64(OutPt* op, bool reverse, bool isOpen, Path64& path)
 	{
-		if (op->next == op || (!isOpen && op->next == op->prev)) return false;
+		if (op->next == op || (!isOpen && op->next == op->prev)) 
+			return false;
+
 		path.resize(0);
 		Point64 lastPt;
 		OutPt* op2;
@@ -3301,7 +3407,9 @@ namespace Clipper2Lib {
 			else
 				op2 = op2->next;
 		}
-		return true;
+
+		if (path.size() == 3 && IsVerySmallTriangle(*op2)) return false;
+		else return true;
 	}
 
 	bool ClipperBase::DeepCheckOwner(OutRec* outrec, OutRec* owner)
@@ -3459,6 +3567,7 @@ namespace Clipper2Lib {
 			else
 				op2 = op2->next;
 		}
+		if (path.size() == 3 && IsVerySmallTriangle(*op2)) return false;
 		return true;
 	}
 

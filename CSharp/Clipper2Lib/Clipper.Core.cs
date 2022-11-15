@@ -1,6 +1,6 @@
 ﻿/*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  15 October 2022                                                 *
+* Date      :  3 November 2022                                                 *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  Core structures and functions for the Clipper Library           *
@@ -503,6 +503,15 @@ namespace Clipper2Lib
   {
     internal const double floatingPointTolerance = 1E-12;
     internal const double defaultMinimumEdgeLength = 0.1;
+
+    private static readonly string
+      precision_range_error = "Error: Precision is out of range.";
+
+    internal static void CheckPrecision(int precision)
+    {
+      if (precision < -8 || precision > 8)
+        throw new Exception(precision_range_error);
+    }
 
     internal static bool IsAlmostZero(double value)
     {

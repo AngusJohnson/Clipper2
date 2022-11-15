@@ -26,9 +26,10 @@ const
   fillRule      = frNonZero;
 begin
   Randomize;
+
+  //make 2 random self-intersecting paths
   setLength(subj, 1);
   setLength(clip, 1);
-  //make 2 random self-intersecting paths
   subj[0] := MakeRandomPath(displayWidth, displayHeight, edgeCount);
   clip[0] := MakeRandomPath(displayWidth, displayHeight, edgeCount);
 
@@ -36,12 +37,12 @@ begin
   //solution := Union(subj, clip, fillRule);
   //solution := Difference(subj, clip, fillRule);
 
-  with TSimpleClipperSvgWriter.Create(fillRule) do
+  with TSvgWriter.Create(fillRule) do
   try
-    AddPaths(subj, false, $1000BBFF, $800099FF, 0.8);
-    AddPaths(clip, false, $12F99F00, $80FF9900, 0.8);
-    AddPaths(solution, false, $2000FF00, $FF006600, 0.8);
-    SaveToFile('Sample1.svg');
+    AddPaths(subj, false, $2000BBFF, $800033FF, 0.8);
+    AddPaths(clip, false, $12F99F00, $80FF3300, 0.8);
+    AddPaths( solution, false, $2000FF00, $FF006600, 1.2, false);
+    SaveToFile('Sample1.svg', 800,600, 40);
   finally
     free;
   end;

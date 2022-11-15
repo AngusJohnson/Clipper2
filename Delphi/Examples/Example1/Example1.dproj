@@ -73,7 +73,6 @@
         <BT_BuildType>Debug</BT_BuildType>
         <VerInfo_Keys>CompanyName=;FileDescription=$(MSBuildProjectName);FileVersion=1.0.0.0;InternalName=;LegalCopyright=;LegalTrademarks=;OriginalFilename=;ProductName=$(MSBuildProjectName);ProductVersion=1.0.0.0;Comments=;ProgramID=com.embarcadero.$(MSBuildProjectName)</VerInfo_Keys>
         <VerInfo_Locale>1033</VerInfo_Locale>
-        <DCC_UnitSearchPath>C:\Users\awj19\Documents\Dev\Clipper2\Delphi\Clipper2Lib;C:\Users\awj19\Documents\Dev\Clipper2\Delphi\Utils;$(DCC_UnitSearchPath)</DCC_UnitSearchPath>
         <Manifest_File>(None)</Manifest_File>
     </PropertyGroup>
     <PropertyGroup Condition="'$(Cfg_1)'!=''">
@@ -97,6 +96,10 @@
             <MainSource>MainSource</MainSource>
         </DelphiCompile>
         <DCCReference Include="..\..\Clipper2Lib\Clipper.pas"/>
+        <DCCReference Include="..\..\Clipper2Lib\Clipper.Core.pas"/>
+        <DCCReference Include="..\..\Clipper2Lib\Clipper.Offset.pas"/>
+        <DCCReference Include="..\..\Clipper2Lib\Clipper.Engine.pas"/>
+        <DCCReference Include="..\..\Clipper2Lib\Clipper.Minkowski.pas"/>
         <DCCReference Include="..\..\Utils\Clipper.SVG.pas"/>
         <DCCReference Include="..\..\Utils\ClipMisc.pas"/>
         <BuildConfiguration Include="Debug">

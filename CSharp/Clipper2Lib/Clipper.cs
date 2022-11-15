@@ -1,6 +1,6 @@
 ﻿/*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  21 October 2022                                                 *
+* Date      :  3 November 2022                                                 *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  This module contains simple functions that will likely cover    *
@@ -25,9 +25,6 @@ namespace Clipper2Lib
 
   public static class Clipper
   {
-    private static readonly string 
-      precision_range_error = "Error: Precision is out of range.";
-
     private static Rect64 maxInvalidRect64 = new Rect64(
       long.MaxValue, long.MaxValue, long.MinValue, long.MinValue);
 
@@ -131,8 +128,7 @@ namespace Clipper2Lib
     public static PathsD InflatePaths(PathsD paths, double delta, JoinType joinType,
       EndType endType, double miterLimit = 2.0, int precision = 2)
     {
-      if (precision < -8 || precision > 8)
-        throw new Exception(precision_range_error);
+      InternalClipper.CheckPrecision(precision);
       double scale = Math.Pow(10, precision);
       Paths64 tmp = ScalePaths64(paths, scale);
       ClipperOffset co = new ClipperOffset(miterLimit);
@@ -172,8 +168,7 @@ namespace Clipper2Lib
 
     public static PathD RectClip(RectD rect, PathD path, int precision = 2)
     {
-      if (precision < -8 || precision > 8)
-        throw new Exception(precision_range_error);
+      InternalClipper.CheckPrecision(precision);
       if (rect.IsEmpty() || path.Count == 0) return new PathD();
       double scale = Math.Pow(10, precision);
       Rect64 r = ScaleRect(rect, scale);
@@ -185,8 +180,7 @@ namespace Clipper2Lib
 
     public static PathsD RectClip(RectD rect, PathsD paths, int precision = 2)
     {
-      if (precision < -8 || precision > 8)
-        throw new Exception(precision_range_error);
+      InternalClipper.CheckPrecision(precision);
       if (rect.IsEmpty() || paths.Count == 0) return new PathsD();
       double scale = Math.Pow(10, precision);
       Rect64 r = ScaleRect(rect, scale);
@@ -239,8 +233,7 @@ namespace Clipper2Lib
 
     public static PathsD RectClipLines(RectD rect, PathD path, int precision = 2)
     {
-      if (precision < -8 || precision > 8)
-        throw new Exception(precision_range_error);
+      InternalClipper.CheckPrecision(precision);
       if (rect.IsEmpty() || path.Count == 0) return new PathsD();
       double scale = Math.Pow(10, precision);
       Rect64 r = ScaleRect(rect, scale);
@@ -251,8 +244,7 @@ namespace Clipper2Lib
     }
     public static PathsD RectClipLines(RectD rect, PathsD paths, int precision = 2)
     {
-      if (precision < -8 || precision > 8)
-        throw new Exception(precision_range_error);
+      InternalClipper.CheckPrecision(precision);
       PathsD result = new PathsD(paths.Count);
       if (rect.IsEmpty() || paths.Count == 0) return result;
       double scale = Math.Pow(10, precision);
@@ -911,8 +903,7 @@ namespace Clipper2Lib
 
     public static PathD TrimCollinear(PathD path, int precision, bool isOpen = false)
     {
-      if (precision < -8 || precision > 8)
-        throw new Exception(precision_range_error);
+      InternalClipper.CheckPrecision(precision);
       double scale = Math.Pow(10, precision);
       Path64 p = ScalePath64(path, scale);
       p = TrimCollinear(p, isOpen);
