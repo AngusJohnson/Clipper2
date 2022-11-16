@@ -25,6 +25,7 @@
     {$DEFINE STRICT}
     {$IF COMPILERVERSION >= 23}           //Delphi XE2+
       {$DEFINE XPLAT_GENERICS}
+      {$DEFINE ROUNDINGMODE}   
       {$IF COMPILERVERSION >= 24}         //Delphi XE3+
         {$LEGACYIFEND ON}
       {$IFEND}

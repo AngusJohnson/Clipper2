@@ -2,7 +2,7 @@ unit Clipper.Engine;
 
 (*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  10 November 2022                                                *
+* Date      :  16 November 2022                                                *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  This is the main polygon clipping module                        *
@@ -609,77 +609,9 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-function __Trunc(val: double): Int64; {$IFDEF INLINE} inline; {$ENDIF}
-var
-  exp: integer;
-  i64: UInt64 absolute val;
-begin
-  //https://en.wikipedia.org/wiki/Double-precision_floating-point_format
-  Result := 0;
-  if i64 = 0 then Exit;
-  exp := Integer(Cardinal(i64 shr 52) and $7FF) - 1023;
-  //nb: when exp == 1024 then val == INF or NAN.
-  if exp < 0 then
-    Exit
-  else if exp > 52 then
-    Result := ((i64 and $1FFFFFFFFFFFFF) shl (exp - 52)) or (UInt64(1) shl exp)
-  else
-    Result := ((i64 and $1FFFFFFFFFFFFF) shr (52 - exp)) or (UInt64(1) shl exp);
-  if val < 0 then Result := -Result;
-end;
-//------------------------------------------------------------------------------
-
 function GetIntersectPoint(e1, e2: PActive; out ip: TPoint64): Boolean;
-var
-  b1, b2, m: Double;
 begin
-  // precondition: neither edge is horizontal
-  m := (e1.dx - e2.dx);
-  if Abs(m) < 1.0e-5 then
-  begin
-    Result := false;
-    Exit;
-  end;
-
-  if e1.dx = 0 then
-  begin
-    if e2.dx = 0 then
-    begin
-      Result := false; //parallel
-      Exit;
-    end;
-    ip.X := e1.bot.X;
-    b2 := e2.bot.Y * e2.dx - e2.bot.X;
-    ip.Y := round((ip.X + b2)/e2.dx);
-  end
-  else if e2.dx = 0 then
-  begin
-    ip.X := e2.bot.X;
-    b1 := e1.bot.Y * e1.dx - e1.bot.X;
-    ip.Y := round((ip.X + b1)/e1.dx);
-  end
-  else if Abs(e1.dx) > 1.0e5 then
-  begin
-    ip.Y := (e1.bot.Y + e1.top.Y) div 2;
-    b2 := e2.top.y * e2.dx - e2.top.x;
-    ip.X := Round(ip.Y * e2.dx  - b2);
-  end
-  else if Abs(e2.dx) > 1.0e5 then
-  begin
-    ip.Y := (e2.bot.Y + e2.top.Y) div 2;
-    b1 := e1.top.y * e1.dx - e1.top.x;
-    ip.X := Round(ip.Y * e1.dx  - b1);
-  end else
-  begin
-    with e1^ do b1 := bot.X - bot.Y * dx;
-    with e2^ do b2 := bot.X - bot.Y * dx;
-    m := (b2 - b1) / m;
-    ip.Y := __Trunc(m);
-    if Abs(e1.dx) < Abs(e2.dx) then
-      ip.X := __Trunc(e1.dx * m + b1) else
-      ip.X := __Trunc(e2.dx * m + b2);
-  end;
-  Result := true;
+  Result := GetIntersectPoint64(e1.bot, e1.top, e2.bot, e2.top, ip);
 end;
 //------------------------------------------------------------------------------
 
@@ -2135,7 +2067,8 @@ begin
     outRec := e1.outrec;
     outRec.pts := Result;
     UncoupleOutRec(e1);
-    if not IsOpen(e1) then CleanCollinear(outRec);
+    if not IsOpen(e1) then
+      CleanCollinear(outRec);
     Result := outRec.pts;
     outRec.owner := GetRealOutRec(outRec.owner);
     if FUsingPolytree and Assigned(outRec.owner) and
@@ -2230,22 +2163,30 @@ begin
   toFront := IsFront(e);
   opFront := outrec.pts;
   opBack := opFront.next;
-  if toFront and PointsEqual(pt, opFront.pt) then
-    result := opFront
-  else if not toFront and PointsEqual(pt, opBack.pt) then
-    result := opBack
-  else
+
+  if toFront then
   begin
-    new(Result);
-    Result.pt := pt;
-    Result.joiner := nil;
-    Result.outrec := outrec;
-    opBack.prev := Result;
-    Result.prev := opFront;
-    Result.next := opBack;
-    opFront.next := Result;
-    if toFront then outrec.pts := Result;
+    if PointsEqual(pt, opFront.pt) then
+    begin
+      result := opFront;
+      Exit;
+    end;
+  end
+  else if PointsEqual(pt, opBack.pt) then
+  begin
+    result := opBack;
+    Exit;
   end;
+
+  new(Result);
+  Result.pt := pt;
+  Result.joiner := nil;
+  Result.outrec := outrec;
+  opBack.prev := Result;
+  Result.prev := opFront;
+  Result.next := opBack;
+  opFront.next := Result;
+  if toFront then outrec.pts := Result;
 end;
 //------------------------------------------------------------------------------
 
@@ -3177,15 +3118,14 @@ begin
   else if pt.Y < topY then
   begin
     // TopY = top of scanbeam
-    pt.Y := topY;
-    if e1.top.Y = topY then
-      pt.X := e1.top.X
-    else if e2.top.Y = topY then
-      pt.X := e2.top.X
-    else if (abs(e1.dx) < abs(e2.dx)) then
-      pt.X := e1.currX
+    if (e1.top.Y = topY) then
+      pt := GetClosestPointOnSegment(pt, e1.bot, e1.top)
+    else if (e2.top.Y = topY) then
+      pt := GetClosestPointOnSegment(pt, e2.bot, e2.top)
+    else if (e2.top.Y > e1.top.Y) then
+      pt := Point64(TopX(e2, topY), topY)
     else
-      pt.X := e2.currX;
+      pt := Point64(TopX(e1, topY), topY);
   end;
 
   new(node);
@@ -3695,7 +3635,7 @@ begin
 
   // nb: TrimHorz above hence not using Bot.X here
   if IsHotEdge(horzEdge) then
-    AddOutPt(horzEdge, Point64(horzEdge.currX, Y));
+    AddOutPt(horzEdge, Point64(horzEdge.currX, Y)); //todo - update Z
 
   while true do // loop through consec. horizontal edges
   begin
@@ -4297,7 +4237,7 @@ function TClipper64.Execute(clipType: TClipType; fillRule: TFillRule;
   var solutionTree: TPolyTree64; out openSolutions: TPaths64): Boolean;
 begin
   if not assigned(solutionTree) then
-    Raise EClipperLibException(rsClipper_PolyTreeErr);
+    Raise EClipper2LibException(rsClipper_PolyTreeErr);
   solutionTree.Clear;
   FUsingPolytree := true;
   openSolutions := nil;
@@ -4542,7 +4482,7 @@ var
   open_Paths: TPaths64;
 begin
   if not assigned(solutionsTree) then
-    Raise EClipperLibException(rsClipper_PolyTreeErr);
+    Raise EClipper2LibException(rsClipper_PolyTreeErr);
 {$IFDEF USINGZ}
     CheckCallback;
 {$ENDIF}
