@@ -18,8 +18,6 @@
 
 namespace Clipper2Lib {
 
-  static const double FloatingPointTolerance = 1.0e-12;
-
   static const Rect64 invalid_rect = Rect64(
     std::numeric_limits<int64_t>::max(),
     std::numeric_limits<int64_t>::max(),
