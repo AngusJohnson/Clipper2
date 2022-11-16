@@ -50,7 +50,7 @@ namespace Clipper2Lib.UnitTests
           Assert.IsTrue(countDiff <= 2);
         }
         else if (IsInList(testNum,
-          new int[] {18, 32, 37, 42, 43, 45, 87, 102, 103, 111, 118, 183 }))
+          new int[] {18, 22, 32, 37, 42, 43, 45, 87, 102, 103, 111, 118, 183 }))
         {
           Assert.IsTrue(countDiff <= 1);
         }

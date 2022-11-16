@@ -133,7 +133,7 @@ function IsPositive(const path: TPath64): Boolean; overload;
 function IsPositive(const path: TPathD): Boolean; overload;
   {$IFDEF INLINING} inline; {$ENDIF}
 
-function __Round(val: double): Int64; {$IFDEF INLINE} inline; {$ENDIF}
+function __Trunc(val: double): Int64; {$IFDEF INLINE} inline; {$ENDIF}
 
 function CrossProduct(const pt1, pt2, pt3: TPoint64): double; overload;
   {$IFDEF INLINING} inline; {$ENDIF}
@@ -282,7 +282,8 @@ procedure AppendPaths(var paths: TPaths64; const extra: TPaths64); overload;
 procedure AppendPaths(var paths: TPathsD; const extra: TPathsD); overload;
 
 function ArrayOfPathsToPaths(const ap: TArrayOfPaths): TPaths64;
-function GetIntersectPoint64(const ln1a, ln1b, ln2a, ln2b: TPoint64;
+
+function GetIntersectPoint(const ln1a, ln1b, ln2a, ln2b: TPoint64;
   out ip: TPoint64): Boolean;
 
 function PointInPolygon(const pt: TPoint64; const polygon: TPath64): TPointInPolygonResult;
@@ -1687,8 +1688,9 @@ function SegmentsIntersect(const s1a, s1b, s2a, s2b: TPoint64;
 var
   res1, res2, res3, res4: double;
 begin
-  if inclusive then //result can include segments that only touch
+  if inclusive then
   begin
+    //result can include segments that only touch
     Result := false;
     res1 := CrossProduct(s1a, s2a, s2b);
     res2 := CrossProduct(s1b, s2a, s2b);
@@ -1699,12 +1701,14 @@ begin
     Result := (res1 <> 0) or (res2 <> 0) or
       (res3 <> 0) or (res4 <> 0); // ensures not collinear
   end else
+  begin
     result := (CrossProduct(s1a, s2a, s2b) * CrossProduct(s1b, s2a, s2b) < 0) and
       (CrossProduct(s2a, s1a, s1b) * CrossProduct(s2b, s1a, s1b) < 0);
+  end;
 end;
 //------------------------------------------------------------------------------
 
-function __Round(val: double): Int64; {$IFDEF INLINE} inline; {$ENDIF}
+function __Trunc(val: double): Int64; {$IFDEF INLINE} inline; {$ENDIF}
 var
   exp: integer;
   i64: UInt64 absolute val;
@@ -1723,7 +1727,8 @@ begin
   end else
   begin
     Result := ((i64 and $1FFFFFFFFFFFFF) shr (52 - exp)) or (UInt64(1) shl exp);
-    if (i64 and (shl51 shl (- exp)) <> 0) then inc(Result);
+    //the following line will round
+    //if (i64 and (shl51 shr (exp)) <> 0) then inc(Result);
   end;
   if val < 0 then Result := -Result;
 end;
@@ -1733,13 +1738,12 @@ function CheckCastInt64(val: double): Int64; {$IFDEF INLINE} inline; {$ENDIF}
 begin
   if (val >= MaxCoord) or (val <= MinCoord) then
     Raise EClipper2LibException.Create('overflow error.');
-  Result := __Round(val);
-  //Result := Round(val);
+  Result := Trunc(val);
+  //Result := __Trunc(val);
 end;
 //------------------------------------------------------------------------------
 
-
-function GetIntersectPoint64(const ln1a, ln1b, ln2a, ln2b: TPoint64;
+function GetIntersectPoint(const ln1a, ln1b, ln2a, ln2b: TPoint64;
   out ip: TPoint64): Boolean;
 var
   dx1,dy1, dx2, dy2, q1, q2, cross_prod: double;

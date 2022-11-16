@@ -556,6 +556,32 @@ namespace Clipper2Lib
     return Area<T>(poly) >= 0;
   }
 
+  static const double max_coord = static_cast<double>(MAX_COORD);
+  static const double min_coord = static_cast<double>(MIN_COORD);
+
+  inline int64_t CheckCastInt64(double val)
+  {
+    if ((val >= max_coord) || (val <= min_coord)) return INVALID;
+    else return static_cast<int64_t>(val);
+    //return static_cast<int64_t>(std::nearbyint(val));
+  }
+
+  inline bool GetIntersectPoint(const Point64& ln1a, const Point64& ln1b,
+    const Point64& ln2a, const Point64& ln2b, Point64& ip)
+  {
+    double dy1 = static_cast<double>(ln1b.y - ln1a.y);
+    double dx1 = static_cast<double>(ln1b.x - ln1a.x);
+    double dy2 = static_cast<double>(ln2b.y - ln2a.y);
+    double dx2 = static_cast<double>(ln2b.x - ln2a.x);
+    double cross_prod = dy1 * dx2 - dy2 * dx1;
+    if (cross_prod == 0.0) return false;
+    double q1 = dy1 * ln1a.x - dx1 * ln1a.y;
+    double q2 = dy2 * ln2a.x - dx2 * ln2a.y;
+    ip.x = CheckCastInt64((dx2 * q1 - dx1 * q2) / cross_prod);
+    ip.y = CheckCastInt64((dy2 * q1 - dy1 * q2) / cross_prod);
+    return (ip.x != INVALID && ip.y != INVALID);
+  }
+
   inline bool SegmentsIntersect(const Point64& seg1a, const Point64& seg1b,
     const Point64& seg2a, const Point64& seg2b, bool inclusive = false)
   {
@@ -570,14 +596,10 @@ namespace Clipper2Lib
       return (res1 || res2 || res3 || res4); // ensures not collinear
     }
     else {
-      double dx1 = static_cast<double>(seg1a.x - seg1b.x);
-      double dy1 = static_cast<double>(seg1a.y - seg1b.y);
-      double dx2 = static_cast<double>(seg2a.x - seg2b.x);
-      double dy2 = static_cast<double>(seg2a.y - seg2b.y);
-      return (((dy1 * (seg2a.x - seg1a.x) - dx1 * (seg2a.y - seg1a.y)) *
-        (dy1 * (seg2b.x - seg1a.x) - dx1 * (seg2b.y - seg1a.y)) < 0) &&
-        ((dy2 * (seg1a.x - seg2a.x) - dx2 * (seg1a.y - seg2a.y)) *
-          (dy2 * (seg1b.x - seg2a.x) - dx2 * (seg1b.y - seg2a.y)) < 0));
+      return (CrossProduct(seg1a, seg2a, seg2b) *
+        CrossProduct(seg1b, seg2a, seg2b) < 0) &&
+        (CrossProduct(seg2a, seg1a, seg1b) *
+          CrossProduct(seg2b, seg1a, seg1b) < 0);
     }
   }
 

@@ -1,6 +1,6 @@
 ﻿/*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  21 October 2022                                                 *
+* Date      :  16 November 2022                                                *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  FAST rectangular clipping                                       *
@@ -131,102 +131,102 @@ namespace Clipper2Lib
       switch (loc)
       {
         case Location.left:
-          if (InternalClipper.SegmentsIntersect(p, p2, rectPath[0], rectPath[3], true))
+          if (InternalClipper.SegsIntersect(p, p2, rectPath[0], rectPath[3], true))
           {
-            InternalClipper.GetIntersectPoint64(p, p2, rectPath[0], rectPath[3], out ip);
+            InternalClipper.GetIntersectPt(p, p2, rectPath[0], rectPath[3], out ip);
           }
           else if (p.Y < rectPath[0].Y &&
-            InternalClipper.SegmentsIntersect(p, p2, rectPath[0], rectPath[1], true))
+            InternalClipper.SegsIntersect(p, p2, rectPath[0], rectPath[1], true))
           {
-            InternalClipper.GetIntersectPoint64(p, p2, rectPath[0], rectPath[1], out ip);
+            InternalClipper.GetIntersectPt(p, p2, rectPath[0], rectPath[1], out ip);
             loc = Location.top;
           }
-          else if (InternalClipper.SegmentsIntersect(p, p2, rectPath[2], rectPath[3], true))
+          else if (InternalClipper.SegsIntersect(p, p2, rectPath[2], rectPath[3], true))
           {
-            InternalClipper.GetIntersectPoint64(p, p2, rectPath[2], rectPath[3], out ip);
+            InternalClipper.GetIntersectPt(p, p2, rectPath[2], rectPath[3], out ip);
             loc = Location.bottom;
           }
           else return false;
           break;
 
         case Location.right:
-          if (InternalClipper.SegmentsIntersect(p, p2, rectPath[1], rectPath[2], true))
+          if (InternalClipper.SegsIntersect(p, p2, rectPath[1], rectPath[2], true))
           {
-            InternalClipper.GetIntersectPoint64(p, p2, rectPath[1], rectPath[2], out ip);
+            InternalClipper.GetIntersectPt(p, p2, rectPath[1], rectPath[2], out ip);
           }
           else if (p.Y < rectPath[0].Y &&
-            InternalClipper.SegmentsIntersect(p, p2, rectPath[0], rectPath[1], true))
+            InternalClipper.SegsIntersect(p, p2, rectPath[0], rectPath[1], true))
           {
-            InternalClipper.GetIntersectPoint64(p, p2, rectPath[0], rectPath[1], out ip);
+            InternalClipper.GetIntersectPt(p, p2, rectPath[0], rectPath[1], out ip);
             loc = Location.top;
           }
-          else if (InternalClipper.SegmentsIntersect(p, p2, rectPath[2], rectPath[3], true))
+          else if (InternalClipper.SegsIntersect(p, p2, rectPath[2], rectPath[3], true))
           {
-            InternalClipper.GetIntersectPoint64(p, p2, rectPath[2], rectPath[3], out ip);
+            InternalClipper.GetIntersectPt(p, p2, rectPath[2], rectPath[3], out ip);
             loc = Location.bottom;
           }
           else return false;
           break;
 
         case Location.top:
-          if (InternalClipper.SegmentsIntersect(p, p2, rectPath[0], rectPath[1], true))
+          if (InternalClipper.SegsIntersect(p, p2, rectPath[0], rectPath[1], true))
           {
-            InternalClipper.GetIntersectPoint64(p, p2, rectPath[0], rectPath[1], out ip);
+            InternalClipper.GetIntersectPt(p, p2, rectPath[0], rectPath[1], out ip);
           }
           else if (p.X < rectPath[0].X &&
-            InternalClipper.SegmentsIntersect(p, p2, rectPath[0], rectPath[3], true))
+            InternalClipper.SegsIntersect(p, p2, rectPath[0], rectPath[3], true))
           {
-            InternalClipper.GetIntersectPoint64(p, p2, rectPath[0], rectPath[3], out ip);
+            InternalClipper.GetIntersectPt(p, p2, rectPath[0], rectPath[3], out ip);
             loc = Location.left;
           }
           else if (p.X > rectPath[1].X &&
-            InternalClipper.SegmentsIntersect(p, p2, rectPath[1], rectPath[2], true))
+            InternalClipper.SegsIntersect(p, p2, rectPath[1], rectPath[2], true))
           {
-            InternalClipper.GetIntersectPoint64(p, p2, rectPath[1], rectPath[2], out ip);
+            InternalClipper.GetIntersectPt(p, p2, rectPath[1], rectPath[2], out ip);
             loc = Location.right;
           }
           else return false;
           break;
 
         case Location.bottom:
-          if (InternalClipper.SegmentsIntersect(p, p2, rectPath[2], rectPath[3], true))
+          if (InternalClipper.SegsIntersect(p, p2, rectPath[2], rectPath[3], true))
           {
-            InternalClipper.GetIntersectPoint64(p, p2, rectPath[2], rectPath[3], out ip);
+            InternalClipper.GetIntersectPt(p, p2, rectPath[2], rectPath[3], out ip);
           }
           else if (p.X < rectPath[3].X &&
-            InternalClipper.SegmentsIntersect(p, p2, rectPath[0], rectPath[3], true))
+            InternalClipper.SegsIntersect(p, p2, rectPath[0], rectPath[3], true))
           {
-            InternalClipper.GetIntersectPoint64(p, p2, rectPath[0], rectPath[3], out ip);
+            InternalClipper.GetIntersectPt(p, p2, rectPath[0], rectPath[3], out ip);
             loc = Location.left;
           }
           else if (p.X > rectPath[2].X &&
-            InternalClipper.SegmentsIntersect(p, p2, rectPath[1], rectPath[2], true))
+            InternalClipper.SegsIntersect(p, p2, rectPath[1], rectPath[2], true))
           {
-            InternalClipper.GetIntersectPoint64(p, p2, rectPath[1], rectPath[2], out ip);
+            InternalClipper.GetIntersectPt(p, p2, rectPath[1], rectPath[2], out ip);
             loc = Location.right;
           }
           else return false;
           break;
 
         case Location.inside:
-          if (InternalClipper.SegmentsIntersect(p, p2, rectPath[0], rectPath[3], true))
+          if (InternalClipper.SegsIntersect(p, p2, rectPath[0], rectPath[3], true))
           {
-            InternalClipper.GetIntersectPoint64(p, p2, rectPath[0], rectPath[3], out ip);
+            InternalClipper.GetIntersectPt(p, p2, rectPath[0], rectPath[3], out ip);
             loc = Location.left;
           }
-          else if (InternalClipper.SegmentsIntersect(p, p2, rectPath[0], rectPath[1], true))
+          else if (InternalClipper.SegsIntersect(p, p2, rectPath[0], rectPath[1], true))
           {
-            InternalClipper.GetIntersectPoint64(p, p2, rectPath[0], rectPath[1], out ip);
+            InternalClipper.GetIntersectPt(p, p2, rectPath[0], rectPath[1], out ip);
             loc = Location.top;
           }
-          else if (InternalClipper.SegmentsIntersect(p, p2, rectPath[1], rectPath[2], true))
+          else if (InternalClipper.SegsIntersect(p, p2, rectPath[1], rectPath[2], true))
           {
-            InternalClipper.GetIntersectPoint64(p, p2, rectPath[1], rectPath[2], out ip);
+            InternalClipper.GetIntersectPt(p, p2, rectPath[1], rectPath[2], out ip);
             loc = Location.right;
           }
-          else if (InternalClipper.SegmentsIntersect(p, p2, rectPath[2], rectPath[3], true))
+          else if (InternalClipper.SegsIntersect(p, p2, rectPath[2], rectPath[3], true))
           {
-            InternalClipper.GetIntersectPoint64(p, p2, rectPath[2], rectPath[3], out ip);
+            InternalClipper.GetIntersectPt(p, p2, rectPath[2], rectPath[3], out ip);
             loc = Location.bottom;
           }
           else return false;

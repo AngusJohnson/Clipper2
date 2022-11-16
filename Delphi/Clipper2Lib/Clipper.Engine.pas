@@ -609,12 +609,6 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-function GetIntersectPoint(e1, e2: PActive; out ip: TPoint64): Boolean;
-begin
-  Result := GetIntersectPoint64(e1.bot, e1.top, e2.bot, e2.top, ip);
-end;
-//------------------------------------------------------------------------------
-
 procedure SetDx(e: PActive);  {$IFDEF INLINING} inline; {$ENDIF}
 begin
   e.dx := GetDx(e.bot, e.top);
@@ -1947,7 +1941,7 @@ begin
   prevOp := splitOp.prev;
   nextNextOp := splitOp.next.next;
   outrec.pts := prevOp;
-  Clipper.Core.GetIntersectPoint64(
+  GetIntersectPoint(
     prevOp.pt, splitOp.pt, splitOp.next.pt, nextNextOp.pt, ip);
 {$IFDEF USINGZ}
   if Assigned(fZCallback) then
@@ -3099,39 +3093,39 @@ end;
 
 procedure TClipperBase.AddNewIntersectNode(e1, e2: PActive; topY: Int64);
 var
-  pt: TPoint64;
+  ip: TPoint64;
   node: PIntersectNode;
 begin
-  if not GetIntersectPoint(e1, e2, pt) then
-    pt := Point64(e1.currX, topY);
+  if not GetIntersectPoint(e1.bot, e1.top, e2.bot, e2.top, ip) then
+    ip := Point64(e1.currX, topY);
   // Rounding errors can occasionally place the calculated intersection
   // point either below or above the scanbeam, so check and correct ...
-  if (pt.Y > FBotY) then
+  if (ip.Y > FBotY) then
   begin
     // E.Curr.Y is still at the bottom of scanbeam here
-    pt.Y := FBotY;
+    ip.Y := FBotY;
     // use the more vertical of the 2 edges to derive pt.X ...
     if (abs(e1.dx) < abs(e2.dx)) then
-      pt.X := TopX(e1, FBotY) else
-      pt.X := TopX(e2, FBotY);
+      ip.X := TopX(e1, FBotY) else
+      ip.X := TopX(e2, FBotY);
   end
-  else if pt.Y < topY then
+  else if ip.Y < topY then
   begin
     // TopY = top of scanbeam
     if (e1.top.Y = topY) then
-      pt := GetClosestPointOnSegment(pt, e1.bot, e1.top)
+      ip := GetClosestPointOnSegment(ip, e1.bot, e1.top)
     else if (e2.top.Y = topY) then
-      pt := GetClosestPointOnSegment(pt, e2.bot, e2.top)
+      ip := GetClosestPointOnSegment(ip, e2.bot, e2.top)
     else if (e2.top.Y > e1.top.Y) then
-      pt := Point64(TopX(e2, topY), topY)
+      ip := Point64(TopX(e2, topY), topY)
     else
-      pt := Point64(TopX(e1, topY), topY);
+      ip := Point64(TopX(e1, topY), topY);
   end;
 
   new(node);
   node.active1 := e1;
   node.active2 := e2;
-  node.pt := pt;
+  node.pt := ip;
   FIntersectList.Add(node);
 end;
 //------------------------------------------------------------------------------

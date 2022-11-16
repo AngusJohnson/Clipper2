@@ -1,6 +1,6 @@
 ﻿/*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  3 November 2022                                                 *
+* Date      :  16 November 2022                                                *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  Core structures and functions for the Clipper Library           *
@@ -501,6 +501,12 @@ namespace Clipper2Lib
 
   public static class InternalClipper
   {
+    internal const long MaxInt64 = 9223372036854775807;
+    internal const long MaxCoord = MaxInt64 / 4;
+    internal const double max_coord = MaxCoord;
+    internal const double min_coord = -MaxCoord;
+    internal const long Invalid64 = MaxInt64;
+
     internal const double floatingPointTolerance = 1E-12;
     internal const double defaultMinimumEdgeLength = 0.1;
 
@@ -546,89 +552,58 @@ namespace Clipper2Lib
       return (vec1.x * vec2.x + vec1.y * vec2.y);
     }
 
-    internal static bool GetIntersectPoint64(Point64 ln1a,
-      Point64 ln1b, Point64 ln2a, Point64 ln2b, out Point64 ip)
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    internal static long CheckCastInt64(double val)
     {
-      ip = new Point64();
-      double m1, b1, m2, b2;
-      if (ln1b.X == ln1a.X)
-      {
-        if (ln2b.X == ln2a.X) return false;
-        m2 = (double) (ln2b.Y - ln2a.Y) / (ln2b.X - ln2a.X);
-        b2 = ln2a.Y - m2 * ln2a.X;
-        ip.X = ln1a.X;
-        ip.Y = (long) Math.Round(m2 * ln1a.X + b2);
-      }
-      else if (ln2b.X == ln2a.X)
-      {
-        m1 = (double) (ln1b.Y - ln1a.Y) / (ln1b.X - ln1a.X);
-        b1 = ln1a.Y - m1 * ln1a.X;
-        ip.X = ln2a.X;
-        ip.Y = (long) Math.Round(m1 * ln2a.X + b1);
-      }
-      else
-      {
-        m1 = (double) (ln1b.Y - ln1a.Y) / (ln1b.X - ln1a.X);
-        b1 = ln1a.Y - m1 * ln1a.X;
-        m2 = (double) (ln2b.Y - ln2a.Y) / (ln2b.X - ln2a.X);
-        b2 = ln2a.Y - m2 * ln2a.X;
-        if (Math.Abs(m1 - m2) > floatingPointTolerance)
-        {
-          double x = (b2 - b1) / (m1 - m2);
-          ip.X = (long) Math.Round(x);
-          ip.Y = (long) Math.Round(m1 * x + b1);
-        }
-        else
-        {
-          ip.X = (long) Math.Round((double)(ln1a.X + ln1b.X) * 0.5);
-          ip.Y = (long) Math.Round((double)(ln1a.Y + ln1b.Y) * 0.5);
-        }
-      }
-      return true;
+      if ((val >= max_coord) || (val <= min_coord)) return Invalid64;
+      return (long)Math.Round(val);
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    internal static bool GetIntersectPt(Point64 ln1a,
+      Point64 ln1b, Point64 ln2a, Point64 ln2b, out Point64 ip)
+    {
+      double dy1 = (ln1b.Y - ln1a.Y);
+      double dx1 = (ln1b.X - ln1a.X);
+      double dy2 = (ln2b.Y - ln2a.Y);
+      double dx2 = (ln2b.X - ln2a.X);
+      double q1 = dy1 * ln1a.X - dx1 * ln1a.Y;
+      double q2 = dy2 * ln2a.X - dx2 * ln2a.Y;
+      double cross_prod = dy1 * dx2 - dy2 * dx1;
+      if (cross_prod == 0.0)
+      {
+        ip = new Point64();
+        return false;
+      }
+      ip = new Point64(
+        CheckCastInt64((dx2 * q1 - dx1 * q2) / cross_prod),
+        CheckCastInt64((dy2 * q1 - dy1 * q2) / cross_prod));
+      return (ip.X != Invalid64 && ip.Y != Invalid64);
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static bool GetIntersectPoint(Point64 ln1a,
       Point64 ln1b, Point64 ln2a, Point64 ln2b, out PointD ip)
     {
-      ip = new PointD();
-      double m1, b1, m2, b2;
-      if (ln1b.X == ln1a.X)
+      double dy1 = (ln1b.Y - ln1a.Y);
+      double dx1 = (ln1b.X - ln1a.X);
+      double dy2 = (ln2b.Y - ln2a.Y);
+      double dx2 = (ln2b.X - ln2a.X);
+      double q1 = dy1 * ln1a.X - dx1 * ln1a.Y;
+      double q2 = dy2 * ln2a.X - dx2 * ln2a.Y;
+      double cross_prod = dy1 * dx2 - dy2 * dx1;
+      if (cross_prod == 0.0)
       {
-        if (ln2b.X == ln2a.X) return false;
-        m2 = (double) (ln2b.Y - ln2a.Y) / (ln2b.X - ln2a.X);
-        b2 = ln2a.Y - m2 * ln2a.X;
-        ip.x = ln1a.X;
-        ip.y = m2 * ln1a.X + b2;
+        ip = new PointD();
+        return false;
       }
-      else if (ln2b.X == ln2a.X)
-      {
-        m1 = (double) (ln1b.Y - ln1a.Y) / (ln1b.X - ln1a.X);
-        b1 = ln1a.Y - m1 * ln1a.X;
-        ip.x = ln2a.X;
-        ip.y = m1 * ln2a.X + b1;
-      }
-      else
-      {
-        m1 = (double) (ln1b.Y - ln1a.Y) / (ln1b.X - ln1a.X);
-        b1 = ln1a.Y - m1 * ln1a.X;
-        m2 = (double) (ln2b.Y - ln2a.Y) / (ln2b.X - ln2a.X);
-        b2 = ln2a.Y - m2 * ln2a.X;
-        if (Math.Abs(m1 - m2) > floatingPointTolerance)
-        {
-          ip.x = (b2 - b1) / (m1 - m2);
-          ip.y = m1 * ip.x + b1;
-        }
-        else
-        {
-          ip.x = (ln1a.X + ln1b.X) * 0.5;
-          ip.y = (ln1a.Y + ln1b.Y) * 0.5;
-        }
-      }
-
+      ip = new PointD(
+        (dx2 * q1 - dx1 * q2) / cross_prod,
+        (dy2 * q1 - dy1 * q2) / cross_prod);
       return true;
     }
 
-    internal static bool SegmentsIntersect(Point64 seg1a, 
+    internal static bool SegsIntersect(Point64 seg1a, 
       Point64 seg1b, Point64 seg2a, Point64 seg2b, bool inclusive = false)
     {
       if (inclusive)
@@ -640,24 +615,30 @@ namespace Clipper2Lib
         double res4 = CrossProduct(seg2b, seg1a, seg1b);
         if (res3 * res4 > 0) return false;
         // ensure NOT collinear
-        return (res1 != 0 || res2 != 0 || res3 != 0|| res4 != 0); 
+        return (res1 != 0 || res2 != 0 || res3 != 0 || res4 != 0);
       }
       else
       {
-        double dx1 = seg1a.X - seg1b.X;
-        double dy1 = seg1a.Y - seg1b.Y;
-        double dx2 = seg2a.X - seg2b.X;
-        double dy2 = seg2a.Y - seg2b.Y;
-        return (((dy1 * (seg2a.X - seg1a.X) -
-          dx1 * (seg2a.Y - seg1a.Y)) * (dy1 * (seg2b.X - seg1a.X) -
-          dx1 * (seg2b.Y - seg1a.Y)) < 0) &&
-          ((dy2 * (seg1a.X - seg2a.X) -
-          dx2 * (seg1a.Y - seg2a.Y)) * (dy2 * (seg1b.X - seg2a.X) -
-          dx2 * (seg1b.Y - seg2a.Y)) < 0));
+        return (CrossProduct(seg1a, seg2a, seg2b) * 
+          CrossProduct(seg1b, seg2a, seg2b) < 0) &&
+          (CrossProduct(seg2a, seg1a, seg1b) * 
+          CrossProduct(seg2b, seg1a, seg1b) < 0);
       }
     }
+    public static Point64 GetClosestPtOnSegment(Point64 offPt,
+    Point64 seg1, Point64 seg2)
+  {
+    if (seg1.X == seg2.X && seg1.Y == seg2.Y) return seg1;
+    double dx = (seg2.X - seg1.X);
+    double dy = (seg2.Y - seg1.Y);
+    double q = ((offPt.X - seg1.X) * dx +
+      (offPt.Y - seg1.Y) * dy) / ((dx*dx) + (dy*dy));
+    if (q < 0) q = 0; else if (q > 1) q = 1;
+    return new Point64(
+      seg1.X + Math.Round(q * dx), seg1.Y + Math.Round(q* dy));
+  }
 
-    public static PointInPolygonResult PointInPolygon(Point64 pt, List<Point64> polygon)
+  public static PointInPolygonResult PointInPolygon(Point64 pt, List<Point64> polygon)
     {
       int len = polygon.Count, i = len - 1;
 

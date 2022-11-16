@@ -186,37 +186,6 @@ namespace Clipper2Lib {
     return e1.local_min->polytype == e2.local_min->polytype;
   }
 
-  static const double max_coord = static_cast<double>(MAX_COORD);
-  static const double min_coord = static_cast<double>(MIN_COORD);
-
-  inline int64_t CheckCastInt64(double val)
-  {
-    if ((val >= max_coord) || (val <= min_coord)) return INVALID;
-    else return static_cast<int64_t>(val);
-    //return static_cast<int64_t>(std::nearbyint(val));
-  }
-
-  inline bool GetIntersectPoint(const Point64& ln1a, const Point64& ln1b,
-    const Point64& ln2a, const Point64& ln2b, Point64& ip)
-  {
-    double dy1 = static_cast<double>(ln1b.y - ln1a.y);
-    double dx1 = static_cast<double>(ln1b.x - ln1a.x);
-    double dy2 = static_cast<double>(ln2b.y - ln2a.y);
-    double dx2 = static_cast<double>(ln2b.x - ln2a.x);
-    double q1 = dy1 * ln1a.x - dx1 * ln1a.y;
-    double q2 = dy2 * ln2a.x - dx2 * ln2a.y;
-    double cross_prod = dy1 * dx2 - dy2 * dx1;
-    if (cross_prod == 0.0) return false;
-    ip.x = CheckCastInt64((dx2 * q1 - dx1 * q2) / cross_prod);
-    ip.y = CheckCastInt64((dy2 * q1 - dy1 * q2) / cross_prod);
-    return (ip.x != INVALID && ip.y != INVALID);
-  }
-
-  bool GetIntersectPoint(const Active& e1, const Active& e2, Point64& ip)
-  {
-    return GetIntersectPoint(e1.bot, e1.top, e2.bot, e2.top, ip);
-  }
-
   inline void SetDx(Active& e)
   {
     e.dx = GetDx(e.bot, e.top);
@@ -2031,35 +2000,35 @@ namespace Clipper2Lib {
 
   void ClipperBase::AddNewIntersectNode(Active& e1, Active& e2, int64_t top_y)
   {
-    Point64 pt;
-    if (!GetIntersectPoint(e1, e2, pt))
-      pt = Point64(e1.curr_x, top_y); //parallel edges
+    Point64 ip;
+    if (!GetIntersectPoint(e1.bot, e1.top, e2.bot, e2.top, ip))
+      ip = Point64(e1.curr_x, top_y); //parallel edges
 
     //rounding errors can occasionally place the calculated intersection
     //point either below or above the scanbeam, so check and correct ...
-    if (pt.y > bot_y_)
+    if (ip.y > bot_y_)
     {
       //e.curr.y is still the bottom of scanbeam
-      pt.y = bot_y_;
+      ip.y = bot_y_;
       //use the more vertical of the 2 edges to derive pt.x ...
       if (abs(e1.dx) < abs(e2.dx))
-        pt.x = TopX(e1, bot_y_);
+        ip.x = TopX(e1, bot_y_);
       else
-        pt.x = TopX(e2, bot_y_);
+        ip.x = TopX(e2, bot_y_);
     }
-    else if (pt.y < top_y)
+    else if (ip.y < top_y)
     {
       //top_y is at the top of the scanbeam
       if (e1.top.y == top_y)
-        pt = GetClosestPointOnSegment(pt, e1.bot, e1.top);
+        ip = GetClosestPointOnSegment(ip, e1.bot, e1.top);
       else if (e2.top.y == top_y)
-        pt = GetClosestPointOnSegment(pt, e2.bot, e2.top);
+        ip = GetClosestPointOnSegment(ip, e2.bot, e2.top);
       else if (e2.top.y > e1.top.y)
-        pt = Point64(TopX(e2, top_y), top_y);
+        ip = Point64(TopX(e2, top_y), top_y);
       else
-        pt = Point64(TopX(e1, top_y), top_y);
+        ip = Point64(TopX(e1, top_y), top_y);
     }
-    intersect_nodes_.push_back(IntersectNode(&e1, &e2, pt));
+    intersect_nodes_.push_back(IntersectNode(&e1, &e2, ip));
   }
 
   bool ClipperBase::BuildIntersectList(const int64_t top_y)
