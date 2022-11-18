@@ -1,6 +1,6 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  16 November 2022                                                *
+* Date      :  18 November 2022                                                *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  This is the main polygon clipping module                        *
@@ -2006,27 +2006,28 @@ namespace Clipper2Lib {
 
     //rounding errors can occasionally place the calculated intersection
     //point either below or above the scanbeam, so check and correct ...
-    if (ip.y > bot_y_)
+    if (ip.y > bot_y_ || ip.y < top_y)
     {
-      //e.curr.y is still the bottom of scanbeam
-      ip.y = bot_y_;
-      //use the more vertical of the 2 edges to derive pt.x ...
-      if (abs(e1.dx) < abs(e2.dx))
-        ip.x = TopX(e1, bot_y_);
-      else
-        ip.x = TopX(e2, bot_y_);
-    }
-    else if (ip.y < top_y)
-    {
-      //top_y is at the top of the scanbeam
-      if (e1.top.y == top_y)
+      double abs_dx1 = std::fabs(e1.dx);
+      double abs_dx2 = std::fabs(e2.dx);
+      if (abs_dx1 > 100 && abs_dx2 > 100)
+      {
+        if (abs_dx1 > abs_dx2)
+          ip = GetClosestPointOnSegment(ip, e1.bot, e1.top);
+        else
+          ip = GetClosestPointOnSegment(ip, e2.bot, e2.top);
+      }
+      else if (abs_dx1 > 100)
         ip = GetClosestPointOnSegment(ip, e1.bot, e1.top);
-      else if (e2.top.y == top_y)
+      else if (abs_dx2 > 100)
         ip = GetClosestPointOnSegment(ip, e2.bot, e2.top);
-      else if (e2.top.y > e1.top.y)
-        ip = Point64(TopX(e2, top_y), top_y);
-      else
-        ip = Point64(TopX(e1, top_y), top_y);
+      else 
+      {
+        if (ip.y < top_y) ip.y = top_y;
+        else ip.y = bot_y_;
+        if (abs_dx1 < abs_dx2) ip.x = TopX(e1, ip.y);
+        else ip.x = TopX(e2, ip.y);
+      }
     }
     intersect_nodes_.push_back(IntersectNode(&e1, &e2, ip));
   }

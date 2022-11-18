@@ -3091,37 +3091,45 @@ begin
 end;
 //------------------------------------------------------------------------------
 
+procedure Nullop;
+begin
+end;
+//------------------------------------------------------------------------------
+
 procedure TClipperBase.AddNewIntersectNode(e1, e2: PActive; topY: Int64);
 var
   ip: TPoint64;
+  absDx1, absDx2: double;
   node: PIntersectNode;
 begin
   if not GetIntersectPoint(e1.bot, e1.top, e2.bot, e2.top, ip) then
     ip := Point64(e1.currX, topY);
   // Rounding errors can occasionally place the calculated intersection
   // point either below or above the scanbeam, so check and correct ...
-  if (ip.Y > FBotY) then
+  if (ip.Y > FBotY) or (ip.Y < topY) then
   begin
-    // E.Curr.Y is still at the bottom of scanbeam here
-    ip.Y := FBotY;
-    // use the more vertical of the 2 edges to derive pt.X ...
-    if (abs(e1.dx) < abs(e2.dx)) then
-      ip.X := TopX(e1, FBotY) else
-      ip.X := TopX(e2, FBotY);
-  end
-  else if ip.Y < topY then
-  begin
-    // TopY = top of scanbeam
-    if (e1.top.Y = topY) then
+    absDx1 := Abs(e1.dx);
+    absDx2 := Abs(e2.dx);
+    if (absDx1 > 100) and (absDx2 > 100) then
+    begin
+      if (absDx1 > absDx2) then
+        ip := GetClosestPointOnSegment(ip, e1.bot, e1.top) else
+        ip := GetClosestPointOnSegment(ip, e2.bot, e2.top);
+    end
+    else if (absDx1 > 100) then
       ip := GetClosestPointOnSegment(ip, e1.bot, e1.top)
-    else if (e2.top.Y = topY) then
+    else if (absDx2 > 100) then
       ip := GetClosestPointOnSegment(ip, e2.bot, e2.top)
-    else if (e2.top.Y > e1.top.Y) then
-      ip := Point64(TopX(e2, topY), topY)
     else
-      ip := Point64(TopX(e1, topY), topY);
+    begin
+      if (ip.Y < topY) then
+        ip.Y := topY else
+        ip.Y := fBotY;
+      if (absDx1 < absDx2)  then
+        ip.X := TopX(e1, topY) else
+        ip.X := TopX(e2, topY);
+    end;
   end;
-
   new(node);
   node.active1 := e1;
   node.active2 := e2;

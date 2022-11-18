@@ -1,6 +1,6 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  16 November 2022                                                *
+* Date      :  18 November 2022                                                *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  Core Clipper Library structures and functions                   *
@@ -85,7 +85,7 @@ namespace Clipper2Lib
 
     friend std::ostream& operator<<(std::ostream& os, const Point& point)
     {
-      os << point.x << "," << point.y << "," << point.z;
+      os << point.x << " " << point.y << " " << point.z;
       return os;
     }
 
@@ -122,7 +122,7 @@ namespace Clipper2Lib
 
     friend std::ostream& operator<<(std::ostream& os, const Point& point)
     {
-      os << point.x << ", " << point.y;
+      os << point.x << " " << point.y;
       return os;
     }
 #endif
@@ -192,28 +192,40 @@ namespace Clipper2Lib
   }
 
   template <typename T1, typename T2>
-  inline Path<T1> ScalePath(const Path<T2>& path, double scale)
+  inline Path<T1> ScalePath(const Path<T2>& path, double scale_x, double scale_y)
   {
     Path<T1> result;
     result.reserve(path.size());
 #ifdef USINGZ
     for (const Point<T2>& pt : path)
-      result.push_back(Point<T1>(pt.x * scale, pt.y * scale, pt.z));
+      result.push_back(Point<T1>(pt.x * scale_x, pt.y * scale_y, pt.z));
 #else
     for (const Point<T2>& pt : path)
-      result.push_back(Point<T1>(pt.x * scale, pt.y * scale));
+      result.push_back(Point<T1>(pt.x * scale_x, pt.y * scale_y));
 #endif
+    return result;
+  }
+
+  template <typename T1, typename T2>
+  inline Path<T1> ScalePath(const Path<T2>& path, double scale)
+  {
+    return ScalePath<T1, T2>(path, scale, scale);
+  }
+
+  template <typename T1, typename T2>
+  inline Paths<T1> ScalePaths(const Paths<T2>& paths, double scale_x, double scale_y)
+  {
+    Paths<T1> result;
+    result.reserve(paths.size());
+    for (const Path<T2>& path : paths)
+      result.push_back(ScalePath<T1, T2>(path, scale_x, scale_y));
     return result;
   }
 
   template <typename T1, typename T2>
   inline Paths<T1> ScalePaths(const Paths<T2>& paths, double scale)
   {
-    Paths<T1> result;
-    result.reserve(paths.size());
-    for (const Path<T2>& path : paths)
-      result.push_back(ScalePath<T1, T2>(path, scale));
-    return result;
+    return ScalePaths<T1, T2>(paths, scale, scale);
   }
 
   template <typename T1, typename T2>

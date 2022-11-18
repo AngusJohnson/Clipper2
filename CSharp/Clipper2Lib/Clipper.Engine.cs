@@ -1,6 +1,6 @@
 ﻿/*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  16 November 2022                                                *
+* Date      :  18 November 2022                                                *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  This is the main polygon clipping module                        *
@@ -1859,30 +1859,29 @@ namespace Clipper2Lib
         ae1.bot, ae1.top, ae2.bot, ae2.top, out Point64 ip))
           ip = new Point64(ae1.curX, topY);
 
-      // rounding errors can occasionally place the calculated intersection
-      // point either below or above the scanbeam, so check and correct ...
-      if (ip.Y > _currentBotY)
+      if (ip.Y > _currentBotY || ip.Y < topY)
       {
-        // ae.curr.y is still the bottom of scanbeam
-        // use the more vertical of the 2 edges to derive pt.x ...
-        if (Math.Abs(ae1.dx) < Math.Abs(ae2.dx))
-          ip = new Point64(TopX(ae1, _currentBotY), _currentBotY);
-        else
-          ip = new Point64(TopX(ae2, _currentBotY), _currentBotY);
-      }
-      else if (ip.Y < topY)
-      {
-        // TopY = top of scanbeam
-        if (ae1.top.Y == topY)
+        double absDx1 = Math.Abs(ae1.dx);
+        double absDx2 = Math.Abs(ae2.dx);
+        if (absDx1 > 100 && absDx2 > 100)
+        {
+          if (absDx1 > absDx2)
+            ip = InternalClipper.GetClosestPtOnSegment(ip, ae1.bot, ae1.top);
+          else
+            ip = InternalClipper.GetClosestPtOnSegment(ip, ae2.bot, ae2.top);
+        }
+        else if (absDx1 > 100)
           ip = InternalClipper.GetClosestPtOnSegment(ip, ae1.bot, ae1.top);
-        else if (ae2.top.Y == topY)
+        else if (absDx2 > 100)
           ip = InternalClipper.GetClosestPtOnSegment(ip, ae2.bot, ae2.top);
-        else if (ae2.top.Y > ae1.top.Y)
-          ip = new Point64(TopX(ae2, topY), topY);
-        else
-          ip = new Point64(TopX(ae1, topY), topY);
+        else 
+        {
+          if (ip.Y < topY) ip.Y = topY; 
+          else ip.Y = _currentBotY;
+          if (absDx1 < absDx2) ip.X = TopX(ae1, ip.Y); 
+          else ip.X = TopX(ae2, topY);
+        }
       }
-
       IntersectNode node = new IntersectNode(ip, ae1, ae2);
       _intersectList.Add(node);
     }
