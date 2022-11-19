@@ -440,27 +440,55 @@ namespace Clipper2Lib
   public class Path64 : List<Point64> 
   {
     private Path64() : base() { }
-    public Path64(int capacity = 0) : base(capacity) { }
+
+    public Path64(int capacity = 0) : base(capacity)
+    {
+      for (int i = 0; i < capacity; i++)
+      {
+        Add(new Point64());
+      }
+    }
     public Path64(IEnumerable<Point64> path) : base(path) { }
   }
   public class Paths64 : List<Path64>
   {
     private Paths64() : base() { }
-    public Paths64(int capacity = 0) : base(capacity) { }
+
+    public Paths64(int capacity = 0) : base(capacity)
+    {
+      for (int i = 0; i < capacity; i++)
+      {
+        Add(new Path64());
+      }
+    }
     public Paths64(IEnumerable<Path64> paths) : base(paths) { }
   }
 
   public class PathD : List<PointD>
   {
     private PathD() : base() { }
-    public PathD(int capacity = 0) : base(capacity) { }
+
+    public PathD(int capacity = 0) : base(capacity)
+    {
+      for (int i = 0; i < capacity; i++)
+      {
+        Add(new PointD());
+      }
+    }
     public PathD(IEnumerable<PointD> path) : base(path) { }
   }
 
   public class PathsD : List<PathD>
   {
     private PathsD() : base() { }
-    public PathsD(int capacity = 0) : base(capacity) { }
+
+    public PathsD(int capacity = 0) : base(capacity)
+    {
+      for (int i = 0; i < capacity; i++)
+      {
+        Add(new PathD());
+      }
+    }
     public PathsD(IEnumerable<PathD> paths) : base(paths) { }
   }
 
