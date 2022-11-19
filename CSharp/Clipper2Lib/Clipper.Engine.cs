@@ -1,6 +1,6 @@
 ﻿/*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  18 November 2022                                                *
+* Date      :  19 November 2022                                                *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  This is the main polygon clipping module                        *
@@ -245,6 +245,7 @@ namespace Clipper2Lib
     public delegate void ZCallback64(Point64 bot1, Point64 top1,
         Point64 bot2, Point64 top2, ref Point64 intersectPt);
 
+    public long DefaultZ { get; set; }
     protected ZCallback64? _zCallback;
 #endif
     public ClipperBase()
@@ -280,6 +281,8 @@ namespace Clipper2Lib
           intersectPt = new Point64(intersectPt.X, intersectPt.Y, e2.bot.Z);
         else if (XYCoordsEqual(intersectPt, e2.top))
           intersectPt = new Point64(intersectPt.X, intersectPt.Y, e2.top.Z);
+        else
+          intersectPt = new Point64(intersectPt.X, intersectPt.Y, DefaultZ);
         _zCallback(e1.bot, e1.top, e2.bot, e2.top, ref intersectPt);
       }
       else
@@ -292,6 +295,8 @@ namespace Clipper2Lib
           intersectPt = new Point64(intersectPt.X, intersectPt.Y, e1.bot.Z);
         else if (XYCoordsEqual(intersectPt, e1.top))
           intersectPt = new Point64(intersectPt.X, intersectPt.Y, e1.top.Z);
+        else
+          intersectPt = new Point64(intersectPt.X, intersectPt.Y, DefaultZ);
         _zCallback(e2.bot, e2.top, e1.bot, e1.top, ref intersectPt);
       }
     }

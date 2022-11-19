@@ -1,6 +1,6 @@
 ﻿/*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  16 November 2022                                                *
+* Date      :  19 November 2022                                                *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  Core structures and functions for the Clipper Library           *
@@ -602,7 +602,6 @@ namespace Clipper2Lib
         (dy2 * q1 - dy1 * q2) / cross_prod);
       return true;
     }
-
     internal static bool SegsIntersect(Point64 seg1a, 
       Point64 seg1b, Point64 seg2a, Point64 seg2b, bool inclusive = false)
     {
@@ -627,18 +626,18 @@ namespace Clipper2Lib
     }
     public static Point64 GetClosestPtOnSegment(Point64 offPt,
     Point64 seg1, Point64 seg2)
-  {
-    if (seg1.X == seg2.X && seg1.Y == seg2.Y) return seg1;
-    double dx = (seg2.X - seg1.X);
-    double dy = (seg2.Y - seg1.Y);
-    double q = ((offPt.X - seg1.X) * dx +
-      (offPt.Y - seg1.Y) * dy) / ((dx*dx) + (dy*dy));
-    if (q < 0) q = 0; else if (q > 1) q = 1;
-    return new Point64(
-      seg1.X + Math.Round(q * dx), seg1.Y + Math.Round(q* dy));
-  }
+    {
+      if (seg1.X == seg2.X && seg1.Y == seg2.Y) return seg1;
+      double dx = (seg2.X - seg1.X);
+      double dy = (seg2.Y - seg1.Y);
+      double q = ((offPt.X - seg1.X) * dx +
+        (offPt.Y - seg1.Y) * dy) / ((dx*dx) + (dy*dy));
+      if (q < 0) q = 0; else if (q > 1) q = 1;
+      return new Point64(
+        seg1.X + Math.Round(q * dx), seg1.Y + Math.Round(q* dy));
+    }
 
-  public static PointInPolygonResult PointInPolygon(Point64 pt, List<Point64> polygon)
+    public static PointInPolygonResult PointInPolygon(Point64 pt, Path64 polygon)
     {
       int len = polygon.Count, i = len - 1;
 
