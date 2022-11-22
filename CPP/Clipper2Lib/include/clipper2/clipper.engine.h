@@ -1,6 +1,6 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  4 November 2022                                                 *
+* Date      :  19 November 2022                                                *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  This is the main polygon clipping module                        *
@@ -240,6 +240,9 @@ namespace Clipper2Lib {
 		bool PreserveCollinear = true;
 		bool ReverseSolution = false;
 		void Clear();
+#ifdef USINGZ
+		int64_t DefaultZ = 0;
+#endif
 	};
 
 	// PolyPath / PolyTree --------------------------------------------------------

@@ -2,7 +2,7 @@ unit Clipper.Engine;
 
 (*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  16 November 2022                                                *
+* Date      :  19 November 2022                                                *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  This is the main polygon clipping module                        *
@@ -189,6 +189,7 @@ type
     FSucceeded          : Boolean;
     FReverseSolution    : Boolean;
   {$IFDEF USINGZ}
+    fDefaultZ           : Int64;
     fZCallback          : TZCallback64;
   {$ENDIF}
     procedure Reset;
@@ -257,6 +258,7 @@ type
   {$IFDEF USINGZ}
     procedure SetZ( e1, e2: PActive; var intersectPt: TPoint64);
     property  ZCallback : TZCallback64 read fZCallback write fZCallback;
+    property  DefaultZ : Int64 READ fDefaultZ write fDefaultZ;
   {$ENDIF}
     property  Succeeded : Boolean read FSucceeded;
   public
@@ -1265,14 +1267,16 @@ begin
     if (XYCoordsEqual(intersectPt, e1.bot)) then intersectPt.Z := e1.bot.Z
     else if (XYCoordsEqual(intersectPt, e1.top)) then intersectPt.Z := e1.top.Z
     else if (XYCoordsEqual(intersectPt, e2.bot)) then intersectPt.Z := e2.bot.Z
-    else if (XYCoordsEqual(intersectPt, e2.top)) then intersectPt.Z := e2.top.Z;
+    else if (XYCoordsEqual(intersectPt, e2.top)) then intersectPt.Z := e2.top.Z
+    else intersectPt.Z := fDefaultZ;
     fZCallback(e1.bot, e1.top, e2.bot, e2.top, intersectPt);
   end else
   begin
     if (XYCoordsEqual(intersectPt, e2.bot)) then intersectPt.Z := e2.bot.Z
     else if (XYCoordsEqual(intersectPt, e2.top)) then intersectPt.Z := e2.top.Z
     else if (XYCoordsEqual(intersectPt, e1.bot)) then intersectPt.Z := e1.bot.Z
-    else if (XYCoordsEqual(intersectPt, e1.top)) then intersectPt.Z := e1.top.Z;
+    else if (XYCoordsEqual(intersectPt, e1.top)) then intersectPt.Z := e1.top.Z
+    else intersectPt.Z := fDefaultZ;
     fZCallback(e2.bot, e2.top, e1.bot, e1.top, intersectPt);
   end;
 end;
@@ -3637,7 +3641,11 @@ begin
 
   // nb: TrimHorz above hence not using Bot.X here
   if IsHotEdge(horzEdge) then
-    AddOutPt(horzEdge, Point64(horzEdge.currX, Y)); //todo - update Z
+  {$IFDEF USINGZ}
+    AddOutPt(horzEdge, Point64(horzEdge.currX, Y, horzEdge.bot.Z));
+  {$ELSE}
+    AddOutPt(horzEdge, Point64(horzEdge.currX, Y));
+  {$ENDIF}
 
   while true do // loop through consec. horizontal edges
   begin

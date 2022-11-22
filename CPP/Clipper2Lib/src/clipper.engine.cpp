@@ -1,6 +1,6 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  18 November 2022                                                *
+* Date      :  19 November 2022                                                *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  This is the main polygon clipping module                        *
@@ -583,6 +583,7 @@ namespace Clipper2Lib {
       else if (ip == e1.top) ip.z = e1.top.z;
       else if (ip == e2.bot) ip.z = e2.bot.z;
       else if (ip == e2.top) ip.z = e2.top.z;
+      else ip.z = DefaultZ;
       zCallback_(e1.bot, e1.top, e2.bot, e2.top, ip);
     }
     else
@@ -591,6 +592,7 @@ namespace Clipper2Lib {
       else if (ip == e2.top) ip.z = e2.top.z;
       else if (ip == e1.bot) ip.z = e1.bot.z;
       else if (ip == e1.top) ip.z = e1.top.z;
+      else ip.z = DefaultZ;
       zCallback_(e2.bot, e2.top, e1.bot, e1.top, ip);
     }
   }
@@ -2244,7 +2246,11 @@ namespace Clipper2Lib {
       ResetHorzDirection(horz, max_pair, horz_left, horz_right);
 
     if (IsHotEdge(horz))
+#ifdef USINGZ
+      AddOutPt(horz, Point64(horz.curr_x, y, horz.bot.z));
+#else
       AddOutPt(horz, Point64(horz.curr_x, y));
+#endif
 
     OutPt* op;
     while (true) // loop through consec. horizontal edges

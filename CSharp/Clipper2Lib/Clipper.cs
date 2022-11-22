@@ -1,6 +1,6 @@
 ﻿/*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  3 November 2022                                                 *
+* Date      :  19 November 2022                                                *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  This module contains simple functions that will likely cover    *
@@ -910,9 +910,19 @@ namespace Clipper2Lib
       return ScalePathD(p, 1 / scale);
     }
 
-    public static PointInPolygonResult PointInPolygon(Point64 pt, List<Point64> polygon)
+    public static PointInPolygonResult PointInPolygon(Point64 pt, Path64 polygon)
     {
       return InternalClipper.PointInPolygon(pt, polygon);
+    }
+
+    public static PointInPolygonResult PointInPolygon(PointD pt, 
+      PathD polygon, int precision = 2)
+    {
+      InternalClipper.CheckPrecision(precision);
+      double scale = Math.Pow(10, precision);
+      Point64 p = new Point64(pt, scale);
+      Path64 path = ScalePath64(polygon, scale);
+      return InternalClipper.PointInPolygon(p, path);
     }
 
     public static Path64 Ellipse(Point64 center,
