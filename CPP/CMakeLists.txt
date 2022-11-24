@@ -50,7 +50,7 @@ target_include_directories(Clipper2Z
   PUBLIC Clipper2Lib/include
 )
 
-if (WIN32)
+if (MSVC)
   target_compile_options(Clipper2 PRIVATE /W4 /WX)
   target_compile_options(Clipper2Z PRIVATE /W4 /WX)
 else()
