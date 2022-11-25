@@ -1,6 +1,6 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  18 November 2022                                                *
+* Date      :  21 November 2022                                                *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  Core Clipper Library structures and functions                   *
@@ -575,22 +575,23 @@ namespace Clipper2Lib
   {
     if ((val >= max_coord) || (val <= min_coord)) return INVALID;
     else return static_cast<int64_t>(val);
-    //return static_cast<int64_t>(std::nearbyint(val));
   }
 
   inline bool GetIntersectPoint(const Point64& ln1a, const Point64& ln1b,
     const Point64& ln2a, const Point64& ln2b, Point64& ip)
-  {
-    double dy1 = static_cast<double>(ln1b.y - ln1a.y);
+  {  
+    // https://en.wikipedia.org/wiki/Line%E2%80%93line_intersection
+
     double dx1 = static_cast<double>(ln1b.x - ln1a.x);
-    double dy2 = static_cast<double>(ln2b.y - ln2a.y);
+    double dy1 = static_cast<double>(ln1b.y - ln1a.y);
     double dx2 = static_cast<double>(ln2b.x - ln2a.x);
-    double cross_prod = dy1 * dx2 - dy2 * dx1;
-    if (cross_prod == 0.0) return false;
-    double q1 = dy1 * ln1a.x - dx1 * ln1a.y;
-    double q2 = dy2 * ln2a.x - dx2 * ln2a.y;
-    ip.x = CheckCastInt64((dx2 * q1 - dx1 * q2) / cross_prod);
-    ip.y = CheckCastInt64((dy2 * q1 - dy1 * q2) / cross_prod);
+    double dy2 = static_cast<double>(ln2b.y - ln2a.y);
+    double det = dy1 * dx2 - dy2 * dx1;
+    if (det == 0.0) return 0;
+    double qx = dx1 * ln1a.y - dy1 * ln1a.x;
+    double qy = dx2 * ln2a.y - dy2 * ln2a.x;
+    ip.x = CheckCastInt64((dx1 * qy - dx2 * qx) / det);
+    ip.y = CheckCastInt64((dy1 * qy - dy2 * qx) / det);
     return (ip.x != INVALID && ip.y != INVALID);
   }
 

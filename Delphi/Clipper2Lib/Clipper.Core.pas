@@ -1746,22 +1746,23 @@ end;
 function GetIntersectPoint(const ln1a, ln1b, ln2a, ln2b: TPoint64;
   out ip: TPoint64): Boolean;
 var
-  dx1,dy1, dx2, dy2, q1, q2, cross_prod: double;
+  dx1,dy1, dx2,dy2, qx,qy, cp: double;
 begin
+  // https://en.wikipedia.org/wiki/Line%E2%80%93line_intersection
   dy1 := (ln1b.y - ln1a.y);
   dx1 := (ln1b.x - ln1a.x);
   dy2 := (ln2b.y - ln2a.y);
   dx2 := (ln2b.x - ln2a.x);
-  q1 := dy1 * ln1a.x - dx1 * ln1a.y;
-  q2 := dy2 * ln2a.x - dx2 * ln2a.y;
-  cross_prod := dy1 * dx2 - dy2 * dx1;
-  if (cross_prod = 0.0) then
+  cp  := dy1 * dx2 - dy2 * dx1;
+  if (cp = 0.0) then
   begin
     Result := false;
     Exit;
   end;
-  ip.x := CheckCastInt64((dx2 * q1 - dx1 * q2) / cross_prod);
-  ip.y := CheckCastInt64((dy2 * q1 - dy1 * q2) / cross_prod);
+  qx := dx1 * ln1a.y - dy1 * ln1a.x;
+  qy := dx2 * ln2a.y - dy2 * ln2a.x;
+  ip.X := CheckCastInt64((dx1 * qy - dx2 * qx) / cp);
+  ip.Y := CheckCastInt64((dy1 * qy - dy2 * qx) / cp);
   Result := (ip.x <> invalid64) and (ip.y <> invalid64);
 end;
 //------------------------------------------------------------------------------
