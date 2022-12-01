@@ -17,6 +17,7 @@ constexpr auto CLIPPER2_VERSION = "1.0.6";
 #include <stdexcept>
 #include <vector>
 #include <functional>
+#include <memory>
 #include "clipper.core.h"
 
 namespace Clipper2Lib {
@@ -291,26 +292,25 @@ namespace Clipper2Lib {
 
 	class PolyPath64 : public PolyPath {
 	private:
-		std::vector<PolyPath64*> childs_;
+		std::vector<std::unique_ptr<PolyPath64>> childs_;
 		Path64 polygon_;
-		typedef typename std::vector<PolyPath64*>::const_iterator pp64_itor;
+		typedef typename std::vector<std::unique_ptr<PolyPath64>>::const_iterator pp64_itor;
 	public:
 		PolyPath64(PolyPath64* parent = nullptr) : PolyPath(parent) {}
-		PolyPath64* operator [] (size_t index) { return static_cast<PolyPath64*>(childs_[index]); }
+		PolyPath64* operator [] (size_t index) { return childs_[index].get(); }
 		pp64_itor begin() const { return childs_.cbegin(); }
 		pp64_itor end() const { return childs_.cend(); }
 
 		PolyPath64* AddChild(const Path64& path) override
 		{
-			PolyPath64* result = new PolyPath64(this);
-			childs_.push_back(result);
+			auto p = std::make_unique<PolyPath64>(this);
+			auto* result = childs_.emplace_back(std::move(p)).get();
 			result->polygon_ = path;
 			return result;
 		}
 
 		void Clear() override
 		{
-			for (const PolyPath64* child : childs_) delete child;
 			childs_.resize(0);
 		}
 
@@ -324,7 +324,7 @@ namespace Clipper2Lib {
 		double Area() const
 		{
 			double result = Clipper2Lib::Area<int64_t>(polygon_);
-			for (const PolyPath64* child : childs_)
+			for (const auto& child : childs_)
 				result += child->Area();
 			return result;
 		}
@@ -353,7 +353,7 @@ namespace Clipper2Lib {
 				if (highI > 0) outstream << polypath.Polygon()[i];
 				outstream << std::endl;
 			}
-			for (auto child : polypath)
+			for (auto& child : polypath)
 				outstream << *child;
 			return outstream;
 		}
@@ -362,10 +362,10 @@ namespace Clipper2Lib {
 
 	class PolyPathD : public PolyPath {
 	private:
-		std::vector<PolyPathD*> childs_;
+		std::vector<std::unique_ptr<PolyPathD>> childs_;
 		double inv_scale_;
 		PathD polygon_;
-		typedef typename std::vector<PolyPathD*>::const_iterator ppD_itor;
+		typedef typename std::vector<std::unique_ptr<PolyPathD>>::const_iterator ppD_itor;
 	public:
 		PolyPathD(PolyPathD* parent = nullptr) : PolyPath(parent) 
 		{
@@ -373,7 +373,7 @@ namespace Clipper2Lib {
 		}
 		PolyPathD* operator [] (size_t index) 
 		{ 
-			return static_cast<PolyPathD*>(childs_[index]); 
+			return childs_[index].get();
 		}
 		ppD_itor begin() const { return childs_.cbegin(); }
 		ppD_itor end() const { return childs_.cend(); }
@@ -382,15 +382,14 @@ namespace Clipper2Lib {
 		double InvScale() { return inv_scale_; }
 		PolyPathD* AddChild(const Path64& path) override
 		{
-			PolyPathD* result = new PolyPathD(this);
-			childs_.push_back(result);
+			auto p = std::make_unique<PolyPathD>(this);
+			PolyPathD* result = childs_.emplace_back(std::move(p)).get();
 			result->polygon_ = ScalePath<double, int64_t>(path, inv_scale_);
 			return result;
 		}
 
 		void Clear() override
 		{
-			for (const PolyPathD* child : childs_) delete child;
 			childs_.resize(0);
 		}
 
@@ -404,7 +403,7 @@ namespace Clipper2Lib {
 		double Area() const
 		{
 			double result = Clipper2Lib::Area<double>(polygon_);
-			for (const PolyPathD* child : childs_)
+			for (const auto& child : childs_)
 				result += child->Area();
 			return result;
 		}
