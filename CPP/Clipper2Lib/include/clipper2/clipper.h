@@ -405,22 +405,21 @@ namespace Clipper2Lib {
     inline void PolyPathToPaths64(const PolyPath64& polypath, Paths64& paths)
     {
       paths.push_back(polypath.Polygon());
-      for (const PolyPath* child : polypath)
-        PolyPathToPaths64(*(PolyPath64*)(child), paths);
+      for (const auto& child : polypath)
+        PolyPathToPaths64(*child, paths);
     }
 
     inline void PolyPathToPathsD(const PolyPathD& polypath, PathsD& paths)
     {
       paths.push_back(polypath.Polygon());
-      for (const PolyPath* child : polypath)
-        PolyPathToPathsD(*(PolyPathD*)(child), paths);
+      for (const auto& child : polypath)
+        PolyPathToPathsD(*child, paths);
     }
 
     inline bool PolyPath64ContainsChildren(const PolyPath64& pp)
     {
-      for (auto ch : pp)
+      for (const auto& child : pp)
       {
-        PolyPath64* child = (PolyPath64*)ch;
         for (const Point64& pt : child->Polygon())
           if (PointInPolygon(pt, pp.Polygon()) == PointInPolygonResult::IsOutside)
             return false;
@@ -523,24 +522,24 @@ namespace Clipper2Lib {
   inline Paths64 PolyTreeToPaths64(const PolyTree64& polytree)
   {
     Paths64 result;
-    for (auto child : polytree)
-      details::PolyPathToPaths64(*(PolyPath64*)(child), result);
+    for (const auto& child : polytree)
+      details::PolyPathToPaths64(*child, result);
     return result;
   }
 
   inline PathsD PolyTreeToPathsD(const PolyTreeD& polytree)
   {
     PathsD result;
-    for (auto child : polytree)
-      details::PolyPathToPathsD(*(PolyPathD*)(child), result);
+    for (const auto& child : polytree)
+      details::PolyPathToPathsD(*child, result);
     return result;
   }
 
   inline bool CheckPolytreeFullyContainsChildren(const PolyTree64& polytree)
   {
-    for (auto child : polytree)
+    for (const auto& child : polytree)
       if (child->Count() > 0 && 
-        !details::PolyPath64ContainsChildren(*(PolyPath64*)(child)))
+        !details::PolyPath64ContainsChildren(*child))
           return false;
     return true;
   }
