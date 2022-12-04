@@ -3392,14 +3392,22 @@ namespace Clipper2Lib {
       lastPt = op->pt;
       op2 = op->next;
     }
-    path.push_back(PointD(lastPt.x * inv_scale, lastPt.y * inv_scale));
+    path.push_back(PointD(lastPt.x * inv_scale, lastPt.y * inv_scale
+#ifdef USINGZ
+              , lastPt.z
+#endif
+    ));
 
     while (op2 != op)
     {
       if (op2->pt != lastPt)
       {
         lastPt = op2->pt;
-        path.push_back(PointD(lastPt.x * inv_scale, lastPt.y * inv_scale));
+        path.push_back(PointD(lastPt.x * inv_scale, lastPt.y * inv_scale
+#ifdef USINGZ
+              , lastPt.z
+#endif
+        ));
       }
       if (reverse)
         op2 = op2->prev;
