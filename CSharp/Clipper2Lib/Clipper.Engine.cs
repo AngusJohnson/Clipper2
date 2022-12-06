@@ -2257,13 +2257,12 @@ namespace Clipper2Lib
 
         if (NextVertex(horz).pt.Y != horz.top.Y) break;
 
-
         // there must be a following (consecutive) horizontal
         if (IsHotEdge(horz))
           AddOutPt(horz, horz.top);
         UpdateEdgeIntoAEL(horz);
 
-        if (PreserveCollinear && HorzIsSpike(horz))
+        if (PreserveCollinear && !horzIsOpen && HorzIsSpike(horz))
           TrimHorz(horz, true);
 
         isLeftToRight = ResetHorzDirection(horz, maxPair, out leftX, out rightX);
