@@ -2459,7 +2459,6 @@ namespace Clipper2Lib {
     }
     OutRec* currHorzOutrec = horz.outrec;
 
-    OutPt* op;
     while (true) // loop through consec. horizontal edges
     {
       if (horzIsOpen && IsMaxima(horz) && !IsOpenEnd(horz))
@@ -2584,7 +2583,7 @@ namespace Clipper2Lib {
     }
 
     if (IsHotEdge(horz))
-      op = AddOutPt(horz, horz.top);
+      AddOutPt(horz, horz.top);
 
     if ((horzIsOpen && !IsOpenEnd(horz)) ||
       (!horzIsOpen && vertex_max != horz.vertex_top))
