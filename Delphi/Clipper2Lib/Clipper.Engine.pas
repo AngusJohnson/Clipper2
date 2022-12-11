@@ -2,7 +2,7 @@ unit Clipper.Engine;
 
 (*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  19 November 2022                                                *
+* Date      :  8 December 2022                                                 *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  This is the main polygon clipping module                        *
@@ -56,7 +56,6 @@ type
   // forward declarations
   PPOutRec = ^POutRec;
   POutRec = ^TOutRec;
-  PJoiner = ^TJoiner;
   PActive = ^TActive;
   TPolyPathBase = class;
   TPolyTree64   = class;
@@ -69,10 +68,12 @@ type
     next     : POutPt;
     prev     : POutPt;
     outrec   : POutRec;
-    joiner   : PJoiner;
   end;
 
-  TOutRecArray = array of POutRec;
+  TOutRecArray  = array of POutRec;
+  THorzFlag     = (hfUnprocessed, hfProcessed, hfError);
+  THorzPosition = (hpBottom, hpMiddle, hpTop);
+
 
   // OutRec: path data structure for clipping solutions
   TOutRec = record
@@ -86,6 +87,7 @@ type
     bounds   : TRect64;
     path     : TPath64;
     isOpen   : Boolean;
+    horzFlag : THorzFlag; // see MergeHorzSegs()
   end;
 
   TOutRecList = class(TListEx)
@@ -94,15 +96,19 @@ type
     procedure Clear; override;
   end;
 
+  PHorzSegment = ^THorzSegment;
+  THorzSegment = record
+    outrec      : POutRec;
+    leftOp      : POutPt;
+    rightOp     : POutPt;
+    leftToRight : Boolean;
+    position    : THorzPosition;
+  end;
 
-  // Joiner: structure used in merging "touching" solution polygons
-  TJoiner = record
-    idx   : integer;
-    op1   : POutPt;
-    op2   : POutPt;
-    next1 : PJoiner;
-    next2 : PJoiner;
-    nextH : PJoiner;
+  THorzSegList = class(TListEx)
+  public
+    procedure Clear; override;
+    procedure Add(outrec: POutRec);
   end;
 
   ///////////////////////////////////////////////////////////////////
@@ -110,31 +116,34 @@ type
   // displays, which is the orientation used in Clipper's development.
   ///////////////////////////////////////////////////////////////////
 
+  TJoinWith = (jwNone, jwLeft, jwRight);
+
   // Active: represents an edge in the Active Edge Table (Vatti's AET)
   TActive = record
-    bot      : TPoint64;
-    top      : TPoint64;
-    currX    : Int64;
-    dx       : Double;        // inverse of edge slope (zero = vertical)
-    windDx   : Integer;       // wind direction (ascending: +1; descending: -1)
-    windCnt  : Integer;       // current wind count
-    windCnt2 : Integer;       // current wind count of the opposite TPolyType
-    outrec   : POutRec;
+    bot         : TPoint64;
+    top         : TPoint64;
+    currX       : Int64;     // x relative to *top* of current scanbeam
+    dx          : Double;    // inverse of edge slope (zero = vertical)
+    windDx      : Integer;   // wind direction (ascending: +1; descending: -1)
+    windCnt     : Integer;   // current wind count
+    windCnt2    : Integer;   // current wind count of the opposite TPolyType
+    outrec      : POutRec;
     // AEL: 'active edge list' (Vatti's AET - active edge table)
     //     a linked list of all edges (from left to right) that are present
     //     (or 'active') within the current scanbeam (a horizontal 'beam' that
     //     sweeps from bottom to top over the paths in the clipping operation).
-    prevInAEL: PActive;
-    nextInAEL: PActive;
+    prevInAEL   : PActive;
+    nextInAEL   : PActive;
     // SEL: 'sorted edge list' (Vatti's ST - sorted table)
     //     linked list used when sorting edges into their new positions at the
     //     top of scanbeams, but also (re)used to process horizontals.
-    prevInSEL: PActive;
-    nextInSEL: PActive;
-    jump     : PActive;       // fast merge sorting (see BuildIntersectList())
-    vertTop  : PVertex;
-    locMin   : PLocalMinima;  // the bottom of an edge 'bound' (also Vatti)
-    isLeftB  : Boolean;
+    prevInSEL   : PActive;
+    nextInSEL   : PActive;
+    jump        : PActive;   // fast merge sorting (see BuildIntersectList())
+    vertTop     : PVertex;
+    locMin      : PLocalMinima;  // the bottom of a 'bound' (also Vatti)
+    isLeftB     : Boolean;
+    joinedWith  : TJoinWith;
   end;
 
   // IntersectNode: a structure representing 2 intersecting edges.
@@ -176,14 +185,13 @@ type
     FIntersectList      : TList;
     FOutRecList         : TOutRecList;
     FLocMinList         : TLocMinList;
+    FHorzSegList        : THorzSegList;
     FVertexArrayList    : TList;
-    FJoinerList         : TList;
     // FActives: see AEL above
     FActives            : PActive;
     // FSel: see SEL above.
     // BUT also used to store horz. edges for later processing
     FSel                : PActive;
-    FHorzTrials         : PJoiner;
     FHasOpenPaths       : Boolean;
     FLocMinListSorted   : Boolean;
     FSucceeded          : Boolean;
@@ -198,7 +206,6 @@ type
     function  PopLocalMinima(Y: Int64;
       out localMinima: PLocalMinima): Boolean;
     procedure DisposeScanLineList;
-    procedure DisposeOutRecsAndJoiners;
     procedure DisposeVerticesAndLocalMinima;
     function  IsContributingClosed(e: PActive): Boolean;
     function  IsContributingOpen(e: PActive): Boolean;
@@ -214,6 +221,7 @@ type
     procedure DeleteEdges(var e: PActive);
     procedure DeleteFromAEL(e: PActive);
     procedure AdjustCurrXAndCopyToSEL(topY: Int64);
+    procedure MergeHorzSegs(currY: Int64);
     procedure DoIntersections(const topY: Int64);
     procedure DisposeIntersectNodes;
     procedure AddNewIntersectNode(e1, e2: PActive; topY: Int64);
@@ -221,6 +229,11 @@ type
     procedure ProcessIntersectList;
     procedure SwapPositionsInAEL(e1, e2: PActive);
     function  AddOutPt(e: PActive; const pt: TPoint64): POutPt;
+    procedure Split(e: PActive; const currPt: TPoint64);
+    procedure CheckJoinLeft(e: PActive; const currPt: TPoint64);
+      {$IFDEF INLINING} inline; {$ENDIF}
+    procedure CheckJoinRight(e: PActive; const currPt: TPoint64);
+      {$IFDEF INLINING} inline; {$ENDIF}
     function  AddLocalMinPoly(e1, e2: PActive;
       const pt: TPoint64; IsNew: Boolean = false): POutPt;
     function  AddLocalMaxPoly(e1, e2: PActive; const pt: TPoint64): POutPt;
@@ -228,17 +241,7 @@ type
     function  DoMaxima(e: PActive): PActive;
     procedure DoHorizontal(horzEdge: PActive);
     procedure DoTopOfScanbeam(Y: Int64);
-    procedure UpdateOutrecOwner(outRec: POutRec);
-    procedure AddTrialHorzJoin(op: POutPt);
-    procedure DeleteTrialHorzJoin(op: POutPt);
-    procedure ConvertHorzTrialsToJoins;
-    procedure AddJoin(op1, op2: POutPt);
-    procedure SafeDeleteOutPtJoiners(op: POutPt);
-    procedure DeleteJoin(joiner: PJoiner);
-    procedure ProcessJoinList;
-    function  ProcessJoin(joiner: PJoiner): POutRec;
     function  ValidateClosedPathEx(var op: POutPt): Boolean;
-    procedure CompleteSplit(op1, op2: POutPt; OutRec: POutRec);
     procedure SafeDisposeOutPts(var op: POutPt);
     procedure CleanCollinear(outRec: POutRec);
     procedure DoSplitOp(outrec: POutRec; splitOp: POutPt);
@@ -249,7 +252,7 @@ type
       pathType: TPathType; isOpen: Boolean);
     procedure AddPaths(const paths: TPaths64;
       pathType: TPathType; isOpen: Boolean);
-    procedure ClearSolution; // unlike Clear, CleanUp preserves added paths
+    function ClearSolutionOnly: Boolean;
     procedure ExecuteInternal(clipType: TClipType;
       fillRule: TFillRule; usingPolytree: Boolean);
     function DeepCheckOwner(outrec, owner: POutRec): Boolean;
@@ -398,31 +401,23 @@ resourcestring
 const
   DefaultClipperDScale = 100;
 
-
 //------------------------------------------------------------------------------
 // TLocMinList class
 //------------------------------------------------------------------------------
 
 function TLocMinList.Add: PLocalMinima;
 begin
-  fList.Add(new(PLocalMinima));
-  Result := UnsafeGet(fCount);
-  inc(fCount);
+  new(Result);
+  inherited Add(Result);
 end;
 //------------------------------------------------------------------------------
 
 procedure TLocMinList.Clear;
 var
   i: integer;
-  pplm: PPLocalMinima;
 begin
-  if fCount = 0 then Exit;
-  pplm := PPLocalMinima(ListPtr);
-  for i := 0 to fCount -1 do
-  begin
-    Dispose(pplm^);
-    inc(pplm);
-  end;
+  for i := 0 to Count -1 do
+    Dispose(PLocalMinima(UnsafeGet(i)));
   inherited;
 end;
 
@@ -432,27 +427,21 @@ end;
 
 function TOutRecList.Add: POutRec;
 begin
-  fList.Add(new(POutRec));
-  Result := UnsafeGet(fCount);
+  new(Result);
   FillChar(Result^, SizeOf(TOutRec), 0);
-  Result.idx := fCount;
-  inc(fCount);
+  Result.idx := inherited Add(Result);
 end;
 //------------------------------------------------------------------------------
 
 procedure TOutRecList.Clear;
 var
   i: integer;
-  ppor: PPOutRec;
   por: POutRec;
   op, tmpPp: POutPt;
 begin
-  if fCount = 0 then Exit;
-  ppor := PPOutRec(ListPtr);
-  for i := 0 to fCount -1 do
+  for i := 0 to Count -1 do
   begin
-    por := ppor^;
-    inc(ppor);
+    por := UnsafeGet(i);
     if Assigned(por.pts) then
     begin
       op := por.pts;
@@ -467,6 +456,36 @@ begin
     Dispose(por);
   end;
   inherited;
+end;
+
+//------------------------------------------------------------------------------
+// THorzSegList
+//------------------------------------------------------------------------------
+
+procedure THorzSegList.Clear;
+var
+  i: integer;
+  hs: PHorzSegment;
+begin
+  for i := 0 to Count -1 do
+  begin
+    hs := UnsafeGet(i);
+    if not Assigned(hs) then Exit;
+    hs.outrec.horzFlag := hfUnprocessed;
+    Dispose(hs);
+  end;
+  inherited;
+end;
+//------------------------------------------------------------------------------
+
+procedure THorzSegList.Add(outrec: POutRec);
+var
+  hs: PHorzSegment;
+begin
+  if outrec.isOpen then Exit;
+  new(hs);
+  hs.outrec := outrec;
+  inherited Add(hs);
 end;
 
 //------------------------------------------------------------------------------
@@ -510,6 +529,15 @@ end;
 function IsFront(e: PActive): Boolean; {$IFDEF INLINING} inline; {$ENDIF}
 begin
   Result := (e = e.outrec.frontE);
+end;
+//------------------------------------------------------------------------------
+
+function GetRealOutRec(outRec: POutRec): POutRec;
+ {$IFDEF INLINING} inline; {$ENDIF}
+begin
+  Result := outRec;
+  while Assigned(Result) and not Assigned(Result.pts) do
+    Result := Result.owner;
 end;
 //------------------------------------------------------------------------------
 
@@ -586,6 +614,12 @@ end;
 function IsHeadingLeftHorz(e: PActive): Boolean; {$IFDEF INLINING} inline; {$ENDIF}
 begin
   Result := (e.dx = Infinity);
+end;
+//------------------------------------------------------------------------------
+
+function IsJoined(e: PActive): Boolean; {$IFDEF INLINING} inline; {$ENDIF}
+begin
+  Result := e.joinedWith <> jwNone;
 end;
 //------------------------------------------------------------------------------
 
@@ -714,15 +748,6 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-function GetRealOutRec(outRec: POutRec): POutRec;
- {$IFDEF INLINING} inline; {$ENDIF}
-begin
-  Result := outRec;
-  while Assigned(Result) and not Assigned(Result.pts) do
-    Result := Result.owner;
-end;
-//------------------------------------------------------------------------------
-
 procedure UncoupleOutRec(e: PActive);
 var
   outRec: POutRec;
@@ -771,7 +796,7 @@ begin
   for i := 0 to High(paths) do
   begin
     len := Length(paths[i]);
-    if len = 0 then Continue;
+    if (len < 3) and (not isOpen or (len < 2)) then Continue;
     p := @paths[i][0];
     va0 := v; vaCurr := v;
     vaCurr.pt := p^;
@@ -957,6 +982,19 @@ begin
 end;
 //------------------------------------------------------------------------------
 
+function HorzSegListSort(item1, item2: Pointer): Integer;
+var
+  q: Int64;
+  h1: PHorzSegment absolute item1;
+  h2: PHorzSegment absolute item2;
+begin
+  q := h2.leftOp.pt.X - h1.leftOp.pt.X;
+  if q > 0 then Result := -1
+  else if q < 0 then Result := 1
+  else Result := 0;
+end;
+//------------------------------------------------------------------------------
+
 procedure SetSides(outRec: POutRec; startEdge, endEdge: PActive);
   {$IFDEF INLINING} inline; {$ENDIF}
 begin
@@ -1075,98 +1113,11 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-function TestJoinWithPrev1(e: PActive): Boolean;
-begin
-  // this is marginally quicker than TestJoinWithPrev2
-  // but can only be used when e.PrevInAEL.currX is accurate
-  Result := IsHotEdge(e) and not IsOpen(e) and
-    Assigned(e.prevInAEL) and (e.prevInAEL.currX = e.currX) and
-    IsHotEdge(e.prevInAEL) and not IsOpen(e.prevInAEL) and
-    (CrossProduct(e.prevInAEL.top, e.bot, e.top) = 0);
-end;
-//------------------------------------------------------------------------------
-
-function TestJoinWithPrev2(e: PActive; const currPt: TPoint64): Boolean;
-begin
-  Result := IsHotEdge(e) and not IsOpen(e) and
-    Assigned(e.prevInAEL) and not IsOpen(e.prevInAEL) and
-    IsHotEdge(e.prevInAEL) and
-    (Abs(TopX(e.prevInAEL, currPt.Y) - currPt.X) < 2) and
-    (e.prevInAEL.top.Y < currPt.Y) and
-    (CrossProduct(e.prevInAEL.top, currPt, e.top) = 0);
-end;
-//------------------------------------------------------------------------------
-
-function TestJoinWithNext1(e: PActive): Boolean;
-begin
-  // this is marginally quicker than TestJoinWithNext2
-  // but can only be used when e.NextInAEL.currX is accurate
-  Result := IsHotEdge(e) and Assigned(e.nextInAEL) and
-    IsHotEdge(e.nextInAEL) and not IsOpen(e) and
-    not IsOpen(e.nextInAEL) and
-    (e.nextInAEL.currX = e.currX) and
-    (CrossProduct(e.nextInAEL.top, e.bot, e.top) = 0);
-end;
-//------------------------------------------------------------------------------
-
-function TestJoinWithNext2(e: PActive; const currPt: TPoint64): Boolean;
-begin
-  Result := IsHotEdge(e) and Assigned(e.nextInAEL) and
-    IsHotEdge(e.nextInAEL) and not IsOpen(e) and
-    not IsOpen(e.nextInAEL) and
-    (Abs(TopX(e.nextInAEL, currPt.Y) - currPt.X) < 2) and                   // safer
-    (e.nextInAEL.top.Y < currPt.Y) and
-    (CrossProduct(e.nextInAEL.top, currPt, e.top) = 0);
-end;
-//------------------------------------------------------------------------------
-
-function GetHorzTrialParent(op: POutPt): PJoiner;
-  {$IFDEF INLINING} inline; {$ENDIF}
-begin
-  Result := op.joiner;
-  while Assigned(Result) do
-    if Result.op1 = op then
-    begin
-      if Assigned(Result.next1) and
-        (Result.next1.idx < 0) then Exit
-      else Result := Result.next1;
-    end else
-    begin
-      if Assigned(Result.next2) and
-        (Result.next2.idx < 0) then Exit
-      else Result := Result.next1;
-    end;
-end;
-//------------------------------------------------------------------------------
-
-function MakeDummyJoiner(horz: POutPt; nextJoiner: PJoiner): PJoiner;
-  {$IFDEF INLINING} inline; {$ENDIF}
-begin
-  new(Result);
-  Result.idx := -1;
-  Result.op1 := horz;
-  Result.op2 := nil;
-  Result.next1 := horz.joiner;
-  horz.joiner := Result;
-  Result.next2 := nil;
-  Result.nextH := nextJoiner;
-end;
-//------------------------------------------------------------------------------
-
-function OutPtInTrialHorzList(op: POutPt): Boolean;
-  {$IFDEF INLINING} inline; {$ENDIF}
-begin
-  Result := Assigned(op.joiner) and
-    ((op.joiner.idx < 0) or Assigned(GetHorzTrialParent(op)));
-end;
-//------------------------------------------------------------------------------
-
 function InsertOp(const pt: TPoint64; insertAfter: POutPt): POutPt;
   {$IFDEF INLINING} inline; {$ENDIF}
 begin
   new(Result);
   Result.pt := pt;
-  Result.joiner := nil;
   Result.outrec := insertAfter.outrec;
   Result.next := insertAfter.next;
   insertAfter.next.prev := Result;
@@ -1182,9 +1133,9 @@ constructor TClipperBase.Create;
 begin
   FLocMinList       := TLocMinList.Create(4);
   FOutRecList       := TOutRecList.Create(4);
-  FJoinerList       := TList.Create;
   FIntersectList    := TList.Create;
   FVertexArrayList  := TList.Create;
+  FHorzSegList      := THorzSegList.Create;
   FPreserveCollinear  := true;
   FReverseSolution    := false;
 end;
@@ -1195,14 +1146,14 @@ begin
   Clear;
   FLocMinList.Free;
   FOutRecList.Free;
-  FJoinerList.Free;
   FIntersectList.Free;
+  FHorzSegList.Free;
   FVertexArrayList.Free;
   inherited;
 end;
 //------------------------------------------------------------------------------
 
-procedure TClipperBase.ClearSolution;
+function TClipperBase.ClearSolutionOnly: Boolean;
 var
   dummy: Int64;
 begin
@@ -1211,18 +1162,19 @@ begin
     DeleteEdges(FActives);
     while assigned(FScanLine) do PopScanLine(dummy);
     DisposeIntersectNodes;
-
     DisposeScanLineList;
-    DisposeOutRecsAndJoiners;
-    FHorzTrials := nil;
+    FOutRecList.Clear;
+    FHorzSegList.Clear;
+    Result := true;
   except
+    Result := false;
   end;
 end;
 //------------------------------------------------------------------------------
 
 procedure TClipperBase.Clear;
 begin
-  ClearSolution;
+  ClearSolutionOnly;
   DisposeVerticesAndLocalMinima;
   FCurrentLocMinIdx := 0;
   FLocMinListSorted := false;
@@ -1356,20 +1308,6 @@ begin
     Dispose(FScanLine);
     FScanLine := sl;
   end;
-end;
-//------------------------------------------------------------------------------
-
-procedure TClipperBase.DisposeOutRecsAndJoiners;
-var
-  i: Integer;
-begin
-  // just in case joiners haven't already been disposed
-  for i := 0 to FJoinerList.Count -1 do
-    if Assigned(UnsafeGet(FJoinerList, i)) then
-      Dispose(PJoiner(UnsafeGet(FJoinerList, i)));
-  FJoinerList.Clear;
-  FHorzTrials := nil;
-  FOutRecList.Clear;
 end;
 //------------------------------------------------------------------------------
 
@@ -1586,7 +1524,7 @@ var
   newcomerIsLeft: Boolean;
   d: double;
 begin
-  if newcomer.currX <> resident.currX then
+  if (newcomer.currX <> resident.currX) then
   begin
     Result := newcomer.currX > resident.currX;
     Exit;
@@ -1657,6 +1595,9 @@ begin
     e2 := FActives;
     while Assigned(e2.nextInAEL) and IsValidAelOrder(e2.nextInAEL, e) do
       e2 := e2.nextInAEL;
+    //don't split joined edges
+    if e2.joinedWith = jwRight then e2 := e2.nextInAEL;
+
     e.nextInAEL := e2.nextInAEL;
     if Assigned(e2.nextInAEL) then e2.nextInAEL.prevInAEL := e;
     e.prevInAEL := e2;
@@ -1677,7 +1618,6 @@ end;
 procedure TClipperBase.InsertLocalMinimaIntoAEL(const botY: Int64);
 var
   leftB, rightB: PActive;
-  op: POutPt;
   locMin: PLocalMinima;
   contributing: Boolean;
 begin
@@ -1695,6 +1635,7 @@ begin
       FillChar(leftB^, sizeof(TActive), 0);
       leftB.locMin := locMin;
       leftB.outrec := nil;
+      leftB.joinedWith := jwNone;
       leftB.bot := locMin.vertex.pt;
       leftB.windDx := -1;
       leftB.vertTop := locMin.vertex.prev;
@@ -1712,6 +1653,7 @@ begin
       FillChar(rightB^, sizeof(TActive), 0);
       rightB.locMin := locMin;
       rightB.outrec := nil;
+      rightB.joinedWith := jwNone;
       rightB.bot := locMin.vertex.pt;
       rightB.windDx := 1;
       rightB.vertTop := locMin.vertex.next;
@@ -1754,6 +1696,7 @@ begin
       contributing := IsContributingClosed(leftB);
     end;
 
+
     if assigned(rightB) then
     begin
       rightB.windCnt := leftB.windCnt;
@@ -1763,13 +1706,7 @@ begin
       if contributing then
       begin
         AddLocalMinPoly(leftB, rightB, leftB.bot, true);
-
-        if not IsHorizontal(leftB) and
-          TestJoinWithPrev1(leftB) then
-        begin
-          op := AddOutPt(leftB.prevInAEL, leftB.bot);
-          AddJoin(op, leftB.outrec.pts);
-        end;
+        CheckJoinLeft(leftB, leftB.bot);
       end;
 
       while Assigned(rightB.nextInAEL) and
@@ -1779,12 +1716,7 @@ begin
         SwapPositionsInAEL(rightB, rightB.nextInAEL);
       end;
 
-      if not IsHorizontal(rightB) and
-        TestJoinWithNext1(rightB) then
-      begin
-        op := AddOutPt(rightB.nextInAEL, rightB.bot);
-        AddJoin(rightB.outrec.pts, op);
-      end;
+      CheckJoinRight(rightB, rightB.bot);
 
       if IsHorizontal(rightB) then
         PushHorz(rightB) else
@@ -1865,7 +1797,6 @@ begin
   new(Result);
   newOr.pts := Result;
   Result.pt := pt;
-  Result.joiner := nil;
   Result.outrec := newOr;
   Result.prev := Result;
   Result.next := Result;
@@ -1885,7 +1816,6 @@ begin
   op.prev.next := nil;
   while Assigned(op) do
   begin
-    SafeDeleteOutPtJoiners(op);
     tmpOp := op;
     op := op.next;
     Dispose(tmpOp);
@@ -1900,8 +1830,6 @@ var
 begin
   outRec := GetRealOutRec(outRec);
   if not Assigned(outRec) or
-    outRec.isOpen or
-    Assigned(outRec.frontE) or
     not ValidateClosedPathEx(outRec.pts) then
       Exit;
 
@@ -1909,7 +1837,6 @@ begin
   op2 := startOp;
   while true do
   begin
-    if Assigned(op2.joiner) then Exit;
     if (CrossProduct(op2.prev.pt, op2.pt, op2.next.pt) = 0) and
       (PointsEqual(op2.pt,op2.prev.pt) or
       PointsEqual(op2.pt,op2.next.pt) or
@@ -1979,16 +1906,12 @@ begin
   begin
     new(newOp2);
     newOp2.pt := ip;
-    newOp2.joiner := nil;
     newOp2.outrec := outrec;
     newOp2.prev := prevOp;
     newOp2.next := nextNextOp;
     nextNextOp.prev := newOp2;
     prevOp.next := newOp2;
   end;
-
-  SafeDeleteOutPtJoiners(splitOp.next);
-  SafeDeleteOutPtJoiners(splitOp);
 
   if (absArea2 > 1) and
     ((absArea2 > absArea1) or
@@ -2002,7 +1925,6 @@ begin
     splitOp.next.outrec := newOutRec;
     new(newOp);
     newOp.pt := ip;
-    newOp.joiner := nil;
     newOp.outrec := newOutRec;
     newOp.prev := splitOp.next;
     newOp.next := splitOp;
@@ -2045,6 +1967,10 @@ function TClipperBase.AddLocalMaxPoly(e1, e2: PActive; const pt: TPoint64): POut
 var
   outRec: POutRec;
 begin
+
+  if IsJoined(e1) then Split(e1, pt); // todo - ?? remove these
+  if IsJoined(e2) then Split(e2, pt);
+
   if (IsFront(e1) = IsFront(e2)) then
   begin
     if IsOpenEnd(e1) then
@@ -2065,17 +1991,13 @@ begin
     outRec := e1.outrec;
     outRec.pts := Result;
     UncoupleOutRec(e1);
-    if not IsOpen(e1) then
-      CleanCollinear(outRec);
-    Result := outRec.pts;
-    outRec.owner := GetRealOutRec(outRec.owner);
-    if FUsingPolytree and Assigned(outRec.owner) and
+    if Assigned(outRec.owner) and
       not Assigned(outRec.owner.frontE) then
         outRec.owner := GetRealOutRec(outRec.owner.owner);
   end
-  // and to preserve the winding orientation of Outrec ...
   else if IsOpen(e1) then
   begin
+    // preserve the winding orientation of Outrec
     if e1.windDx < 0 then
       JoinOutrecPaths(e1, e2) else
       JoinOutrecPaths(e2, e1);
@@ -2084,6 +2006,9 @@ begin
     JoinOutrecPaths(e1, e2)
   else
     JoinOutrecPaths(e2, e1);
+
+  if not assigned(Result.outrec.pts) then
+    Result.outrec := Result.outrec.owner;
 end;
 //------------------------------------------------------------------------------
 
@@ -2149,6 +2074,87 @@ begin
 end;
 //------------------------------------------------------------------------------
 
+// GetSplitPair: anticipates a temporary separation of joined edges
+function GetSplitPair(e: PActive): PActive;
+  {$IFDEF INLINING} inline; {$ENDIF}
+begin
+  if e.joinedWith = jwLeft then
+  begin
+    Result := e.prevInAEL;
+    while Assigned(Result) and (Result.joinedWith = jwNone) do
+      Result := Result.prevInAEL;
+  end else
+  begin
+    Result := e.nextInAEL;
+    while Assigned(Result) and (Result.joinedWith = jwNone) do
+      Result := Result.nextInAEL;
+  end;
+end;
+//------------------------------------------------------------------------------
+
+procedure TClipperBase.Split(e: PActive; const currPt: TPoint64);
+var
+  e2: PActive;
+begin
+  e2 := GetSplitPair(e);
+  if not assigned(e2) then
+    raise EClipper2LibException(rsClipper_ClippingErr);
+  e2.joinedWith := jwNone;
+  if e.joinedWith = jwRight then
+  begin
+    e.joinedWith := jwNone;
+    AddLocalMinPoly(e, e2, currPt, true);
+  end else
+  begin
+    e.joinedWith := jwNone;
+    AddLocalMinPoly(e2, e, currPt, true);
+  end;
+end;
+//------------------------------------------------------------------------------
+
+procedure TClipperBase.CheckJoinLeft(e: PActive; const currPt: TPoint64);
+begin
+  if IsOpen(e) or not IsHotEdge(e) or
+    not Assigned(e.prevInAEL) or IsOpen(e.prevInAEL) or
+    not IsHotEdge(e.prevInAEL) or (e.currX <> e.prevInAEL.currX) or
+    (currPt.Y <= e.top.Y) or (currPt.Y <= e.prevInAEL.top.Y) or
+    (e.joinedWith <> jwNone) or
+    (currPt.Y < e.top.Y +2) or (currPt.Y < e.prevInAEL.top.Y +2) or
+    (CrossProduct(e.top, currPt, e.prevInAEL.top) <> 0) then Exit;
+
+  if (e.outrec.idx = e.prevInAEL.outrec.idx) then
+    AddLocalMaxPoly(e.prevInAEL, e, currPt)
+  else if e.outrec.idx < e.prevInAEL.outrec.idx then
+    JoinOutrecPaths(e, e.prevInAEL)
+  else
+    JoinOutrecPaths(e.prevInAEL, e);
+  e.prevInAEL.joinedWith := jwRight;
+  e.joinedWith := jwLeft;
+end;
+//------------------------------------------------------------------------------
+
+procedure TClipperBase.CheckJoinRight(e: PActive; const currPt: TPoint64);
+begin
+  if IsOpen(e) or not IsHotEdge(e) or
+    not Assigned(e.nextInAEL) or IsOpen(e.nextInAEL) or
+    not IsHotEdge(e.nextInAEL) or (e.currX <> e.nextInAEL.currX) or
+    (currPt.Y <= e.top.Y) or (currPt.Y <= e.nextInAEL.top.Y) or
+    (e.joinedWith <> jwNone) or
+    (currPt.Y < e.top.Y +2) or (currPt.Y < e.nextInAEL.top.Y +2) or
+    (CrossProduct(e.top, currPt, e.nextInAEL.top) <> 0) then Exit;
+
+  if e.outrec.idx = e.nextInAEL.outrec.idx then
+    AddLocalMaxPoly(e, e.nextInAEL, currPt)
+  else if e.outrec.idx < e.nextInAEL.outrec.idx then
+    JoinOutrecPaths(e, e.nextInAEL)
+  else
+    JoinOutrecPaths(e.nextInAEL, e);
+
+  e.joinedWith := jwRight;
+  e.nextInAEL.joinedWith := jwLeft;
+end;
+//------------------------------------------------------------------------------
+
 function TClipperBase.AddOutPt(e: PActive; const pt: TPoint64): POutPt;
 var
   opFront, opBack: POutPt;
@@ -2178,200 +2184,13 @@ begin
 
   new(Result);
   Result.pt := pt;
-  Result.joiner := nil;
   Result.outrec := outrec;
   opBack.prev := Result;
   Result.prev := opFront;
   Result.next := opBack;
   opFront.next := Result;
   if toFront then outrec.pts := Result;
-end;
-//------------------------------------------------------------------------------
 
-procedure TClipperBase.AddJoin(op1, op2: POutPt);
-var
-  joiner: PJoiner;
-begin
-  if (op1.outrec = op2.outrec) and ((op1 = op2) or
-  // unless op1.next or op1.prev crosses the start-end divide
-  // don't waste time trying to join adjacent vertices
-  ((op1.next = op2) and (op1 <> op1.outrec.pts)) or
-  ((op2.next = op1) and (op2 <> op1.outrec.pts))) then Exit;
-
-  new(joiner);
-  joiner.idx := FJoinerList.Add(joiner);
-  joiner.op1 := op1;
-  joiner.op2 := op2;
-  joiner.nextH := nil;
-  joiner.next1 := op1.joiner;
-  joiner.next2 := op2.joiner;
-  op1.joiner := joiner;
-  op2.joiner := joiner;
-end;
-//------------------------------------------------------------------------------
-
-function FindJoinParent(joiner: PJoiner; op: POutPt): PJoiner;
-  {$IFDEF INLINING} inline; {$ENDIF}
-begin
-  Result := op.joiner;
-  while true do
-  begin
-    if (op = Result.op1) then
-    begin
-      if Result.next1 = joiner then Exit
-      else Result := Result.next1;
-    end else
-    begin
-      if Result.next2 = joiner then Exit
-      else Result := Result.next2;
-    end;
-  end;
-end;
-//------------------------------------------------------------------------------
-
-procedure TClipperBase.DeleteJoin(joiner: PJoiner);
-var
-  op1, op2: POutPt;
-  parentJnr: PJoiner;
-begin
-  // This method deletes a single join, and it doesn't check for or
-  // delete trial horz. joins. For that, use the following method.
-
-  op1 := joiner.op1;
-  op2 := joiner.op2;
-
-  // both op1 and op2 can be associated with multiple joiners which
-  // are chained together so we need to break and rejoin that chain
-
-  if op1.joiner <> joiner then
-  begin
-    parentJnr := FindJoinParent(joiner, op1);
-    if parentJnr.op1 = op1 then
-      parentJnr.next1 := joiner.next1 else
-      parentJnr.next2 := joiner.next1;
-  end else
-    op1.joiner := Joiner.next1;
-
-  if op2.joiner <> joiner then
-  begin
-    parentJnr := FindJoinParent(joiner, op2);
-    if parentJnr.op1 = op2 then
-      parentJnr.next1 := joiner.next2 else
-      parentJnr.next2 := joiner.next2;
-  end else
-    op2.joiner := joiner.next2;
-
-  FJoinerList[joiner.idx] := nil;
-  Dispose(joiner);
-end;
-//------------------------------------------------------------------------------
-
-procedure TClipperBase.SafeDeleteOutPtJoiners(op: POutPt);
-var
-  joiner: PJoiner;
-begin
-  if not Assigned(op.joiner) then Exit;
-  joiner := op.joiner;
-  while Assigned(joiner) do
-  begin
-    if joiner.idx < 0 then
-      DeleteTrialHorzJoin(op)
-    else if Assigned(FHorzTrials) then
-    begin
-      if OutPtInTrialHorzList(joiner.op1) then
-        DeleteTrialHorzJoin(joiner.op1);
-      if OutPtInTrialHorzList(joiner.op2) then
-        DeleteTrialHorzJoin(joiner.op2);
-      DeleteJoin(joiner);
-    end else
-      DeleteJoin(joiner);
-
-    joiner := op.joiner;
-  end;
-end;
-//------------------------------------------------------------------------------
-
-procedure TClipperBase.ProcessJoinList;
-var
-  i: integer;
-  joiner: PJoiner;
-  outRec: POutRec;
-begin
-  for i := 0 to FJoinerList.Count -1 do
-  begin
-    if Assigned(UnsafeGet(FJoinerList, i)) then
-    begin
-      joiner := UnsafeGet(FJoinerList, i);
-      outrec := ProcessJoin(joiner);
-      CleanCollinear(outRec);
-    end;
-  end;
-  FJoinerList.Clear;
-end;
-//------------------------------------------------------------------------------
-
-procedure TClipperBase.UpdateOutrecOwner(outRec: POutRec);
-var
-  opCurr  : POutPt;
-begin
-  opCurr := outRec.pts;
-  repeat
-    opCurr.outrec := outRec;
-    opCurr := opCurr.next;
-  until opCurr = outRec.pts;
-end;
-//------------------------------------------------------------------------------
-
-procedure TClipperBase.CompleteSplit(op1, op2: POutPt; OutRec: POutRec);
-var
-  i: integer;
-  area1, area2: double;
-  signsChange: Boolean;
-  newOr: POutRec;
-begin
-  area1 := Area(op1);
-  area2 := Area(op2);
-  signsChange := (area1 > 0) = (area2 < 0);
-
-  // delete trivial splits (with zero or almost zero areas)
-  if (area1 = 0) or (signsChange and (Abs(area1) < 2)) then
-  begin
-    SafeDisposeOutPts(op1);
-    OutRec.pts := op2;
-  end
-  else if (area2 = 0) or (signsChange and (Abs(area2) < 2)) then
-  begin
-    SafeDisposeOutPts(op2);
-    OutRec.pts := op1;
-  end
-  else
-  begin
-    newOr := FOutRecList.Add;
-
-    if (FUsingPolytree) then
-    begin
-      i := Length(OutRec.splits);
-      SetLength(OutRec.splits, i +1);
-      OutRec.splits[i] := newOr;
-    end;
-
-    if Abs(area1) >= Abs(area2) then
-    begin
-      OutRec.pts := op1;
-      newOr.pts := op2;
-    end else
-    begin
-      OutRec.pts := op2;
-      newOr.pts := op1;
-    end;
-
-    if (area1 > 0) = (area2 > 0) then
-      newOr.owner := OutRec.owner else
-      newOr.owner := OutRec;
-
-    UpdateOutrecOwner(newOr);
-    CleanCollinear(newOr);
-  end;
 end;
 //------------------------------------------------------------------------------
 
@@ -2442,255 +2261,6 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-function CheckDisposeAdjacent(var op: POutPt; guard: POutPt;
-  outRec: POutRec): Boolean;
-begin
-  Result := false;
-  while (op.prev <> op) do
-  begin
-    if PointsEqual(op.pt, op.prev.pt) and
-      (op <> guard) and Assigned(op.prev.joiner) and
-      not Assigned(op.joiner) then
-    begin
-      if op = outRec.pts then outRec.pts := op.prev;
-      op := DisposeOutPt(op);
-      op := op.prev;
-    end else
-      break;
-  end;
-  while (op.next <> op) do
-  begin
-    if PointsEqual(op.pt, op.next.pt) and
-      (op <> guard) and Assigned(op.next.joiner) and
-      not Assigned(op.joiner) then
-    begin
-      if op = outRec.pts then outRec.pts := op.prev;
-      op := DisposeOutPt(op);
-      op := op.prev;
-    end else
-      break;
-  end;
-end;
-//------------------------------------------------------------------------------
-
-function TClipperBase.ProcessJoin(joiner: PJoiner): POutRec;
-var
-  op1, op2: POutPt;
-  opA, opB: POutPt;
-  or1, or2: POutRec;
-begin
-  op1 := joiner.op1;
-  op2 := joiner.op2;
-
-  or1 := GetRealOutRec(op1.outrec);
-  or2 := GetRealOutRec(op2.outrec);
-  op1.outrec := or1;
-  op2.outrec := or2;
-  DeleteJoin(joiner);
-
-  Result := or1;
-  if not Assigned(or2.pts) then
-    Exit
-  else if not IsValidClosedPath(op2) then
-  begin
-    SafeDisposeOutPts(op2);
-    Exit;
-  end
-  else if not Assigned(or1.pts) or
-    not IsValidClosedPath(op1) then
-  begin
-    SafeDisposeOutPts(op1);
-    Result := or2; // ie tidy or2 in calling function;
-    Exit;
-  end
-  else if (or1 = or2) and ((op1 = op2) or
-    (op1.next = op2) or (op1.prev = op2)) then
-  begin
-    Exit;
-  end;
-
-  CheckDisposeAdjacent(op1, op2, or1);
-  CheckDisposeAdjacent(op2, op1, or2);
-  if (op1.next = op2) or (op2.next = op1) then Exit;
-
-  while True do
-  begin
-    if not IsValidPath(op1) or not IsValidPath(op2) or
-      ((or1 = or2) and ((op1.prev = op2) or (op1.next = op2))) then Exit;
-
-    if PointsEqual(op1.prev.pt, op2.next.pt) or
-    ((CrossProduct(op1.prev.pt, op1.pt, op2.next.pt) = 0) and
-      CollinearSegsOverlap(op1.prev.pt, op1.pt, op2.pt, op2.next.pt)) then
-    begin
-      if or1 = or2 then
-      begin
-        // SPLIT REQUIRED
-        // make sure op1.prev and op2.next match positions
-        // by inserting an extra vertex if needed
-        if not PointsEqual(op1.prev.pt, op2.next.pt) then
-        begin
-          if PointEqualOrBetween(op1.prev.pt, op2.pt, op2.next.pt) then
-            op2.next := InsertOp(op1.prev.pt, op2) else
-            op1.prev := InsertOp(op2.next.pt, op1.prev);
-        end;
-        // current              to     new
-        // op1.p[opA] >>> op1   ...    opA \   / op1
-        // op2.n[opB] <<< op2   ...    opB /   \ op2
-        opA := op1.prev;
-        opB := op2.next;
-        opA.next := opB;
-        opB.prev := opA;
-        op1.prev := op2;
-        op2.next := op1;
-        CompleteSplit(op1, opA, or1);
-      end else
-      begin
-        // JOIN, NOT SPLIT
-        opA := op1.prev;
-        opB := op2.next;
-        opA.next := opB;
-        opB.prev := opA;
-        op1.prev := op2;
-        op2.next := op1;
-
-        if (or1.idx < or2.idx) then
-        begin
-          or1.pts := op1;
-          or2.pts := nil;
-          if Assigned(or1.owner) and
-            (not Assigned(or2.owner) or
-							(or2.owner.idx < or1.owner.idx)) then
-								or1.owner := or2.owner;
-          or2.owner := or1
-        end else
-        begin
-          or2.pts := op1;
-          or1.pts := nil;
-          if Assigned(or2.owner) and
-            (not Assigned(or1.owner) or
-							(or1.owner.idx < or2.owner.idx)) then
-								or2.owner := or1.owner;
-          or1.owner := or2;
-        end;
-      end;
-      Break;
-    end
-    else if PointsEqual(op1.next.pt, op2.prev.pt) or
-      ((CrossProduct(op1.next.pt, op2.pt, op2.prev.pt) = 0) and
-       CollinearSegsOverlap(op1.next.pt, op1.pt, op2.pt, op2.prev.pt)) then
-    begin
-      if or1 = or2 then
-      begin
-        // SPLIT REQUIRED
-        // make sure op2.prev and op1.next match positions
-        // by inserting an extra vertex if needed
-        if not PointsEqual(op1.next.pt, op2.prev.pt) then
-        begin
-          if PointEqualOrBetween(op2.prev.pt, op1.pt, op1.next.pt) then
-            op1.next := InsertOp(op2.prev.pt, op1) else
-            op2.prev := InsertOp(op1.next.pt, op2.prev);
-        end;
-        // current              to     new
-        // op2.p[opA] >>> op2   ...    opA \   / op2
-        // op1.n[opB] <<< op1   ...    opB /   \ op1
-        opA := op2.prev;
-        opB := op1.next;
-        opA.next := opB;
-        opB.prev := opA;
-        op2.prev := op1;
-        op1.next := op2;
-        CompleteSplit(op1, opA, or1);
-      end else
-      begin
-        // JOIN, NOT SPLIT
-        opA := op1.next;
-        opB := op2.prev;
-        opA.prev := opB;
-        opB.next := opA;
-        op1.next := op2;
-        op2.prev := op1;
-
-//        SafeDeleteOutPtJoiners(op2);
-//        DisposeOutPt(op2);
-
-        if or1.idx < or2.idx then
-        begin
-          or1.pts := op1;
-          or2.pts := nil;
-          if Assigned(or1.owner) and
-            (not Assigned(or2.owner) or
-							(or2.owner.idx < or1.owner.idx)) then
-								or1.owner := or2.owner;
-          or2.owner := or1;
-        end else
-        begin
-          Result := or2;
-          or2.pts := op1;
-          or1.pts := nil;
-          if Assigned(or2.owner) and
-            (not Assigned(or1.owner) or
-							(or1.owner.idx < or2.owner.idx)) then
-								or2.owner := or1.owner;
-          or1.owner := or2;
-        end;
-      end;
-      Break;
-    end
-    else if PointBetween(op1.next.pt, op2.pt, op2.prev.pt) and
-      (DistanceFromLineSqrd(op1.next.pt, op2.pt, op2.prev.pt) < 2.01) then
-    begin
-      InsertOp(op1.next.pt, op2.prev);
-      Continue;
-    end
-    else if PointBetween(op2.next.pt, op1.pt, op1.prev.pt) and
-      (DistanceFromLineSqrd(op2.next.pt, op1.pt, op1.prev.pt) < 2.01) then
-    begin
-      InsertOp(op2.next.pt, op1.prev);
-      Continue;
-    end
-    else if PointBetween(op1.prev.pt, op2.pt, op2.next.pt) and
-      (DistanceFromLineSqrd(op1.prev.pt, op2.pt, op2.next.pt) < 2.01) then
-    begin
-      InsertOp(op1.prev.pt, op2);
-      Continue;
-    end
-    else if PointBetween(op2.prev.pt, op1.pt, op1.next.pt) and
-      (DistanceFromLineSqrd(op2.prev.pt, op1.pt, op1.next.pt) < 2.01) then
-    begin
-      InsertOp(op2.prev.pt, op1);
-      Continue;
-    end;
-
-    // something odd needs tidying up
-    if CheckDisposeAdjacent(op1, op2, or1) then Continue
-    else if CheckDisposeAdjacent(op2, op1, or1) then Continue
-    else if not PointsEqual(op1.prev.pt, op2.next.pt) and
-      (DistanceSqr(op1.prev.pt, op2.next.pt) < 2.01) then
-    begin
-      op1.prev.pt := op2.next.pt;
-      Continue;
-    end
-    else if not PointsEqual(op1.next.pt, op2.prev.pt) and
-      (DistanceSqr(op1.next.pt, op2.prev.pt) < 2.01) then
-    begin
-      op2.prev.pt := op1.next.pt;
-      Continue;
-    end else
-    begin
-      // OK, there doesn't seem to be a way to join afterall
-      // so just tidy up the polygons
-      or1.pts := op1;
-      if or2 <> or1 then
-      begin
-        or2.pts := op2;
-        CleanCollinear(or2);
-      end;
-      Break;
-    end;
-  end; // end while
-end;
-//------------------------------------------------------------------------------
-
 function TClipperBase.StartOpenPath(e: PActive; const pt: TPoint64): POutPt;
 var
   newOr: POutRec;
@@ -2712,7 +2282,6 @@ begin
   new(Result);
   newOr.pts := Result;
   Result.pt := pt;
-  Result.joiner := nil;
   Result.prev := Result;
   Result.next := Result;
   Result.outrec := newOr;
@@ -2720,22 +2289,20 @@ end;
 //------------------------------------------------------------------------------
 
 procedure TClipperBase.UpdateEdgeIntoAEL(var e: PActive);
-var
-  op1, op2: POutPt;
 begin
   e.bot := e.top;
   e.vertTop := NextVertex(e);
   e.top := e.vertTop.pt;
   e.currX := e.bot.X;
   SetDx(e);
+
+  if IsJoined(e) then Split(e, e.bot);
+
   if IsHorizontal(e) then Exit;
   InsertScanLine(e.top.Y);
-  if TestJoinWithPrev1(e) then
-  begin
-    op1 := AddOutPt(e.prevInAEL, e.bot);
-    op2 := AddOutPt(e, e.bot);
-    AddJoin(op1, op2);
-  end;
+
+  CheckJoinLeft(e, e.bot);
+  CheckJoinRight(e, e.bot);
 end;
 //------------------------------------------------------------------------------
 
@@ -2778,6 +2345,7 @@ begin
     if IsOpen(e1) and IsOpen(e2) then Exit;
     // the following line avoids duplicating quite a bit of code
     if IsOpen(e2) then SwapActives(e1, e2);
+    if IsJoined(e2) then Split(e2, pt); // needed for safety
 
     case FClipType of
       ctUnion: if not IsHotEdge(e2) then Exit;
@@ -2827,6 +2395,9 @@ begin
   end;
 
   // MANAGING CLOSED PATHS FROM HERE ON
+
+  if IsJoined(e1) then Split(e1, pt);
+  if IsJoined(e2) then Split(e2, pt);
 
   // FIRST, UPDATE WINDING COUNTS
   if IsSamePolyType(e1, e2) then
@@ -2896,23 +2467,23 @@ begin
       // it's sensible to split polygons that ony touch at
       // a common vertex (not at common edges).
       Result := AddLocalMaxPoly(e1, e2, pt);
-      op2 := AddLocalMinPoly(e1, e2, pt);
       {$IFDEF USINGZ}
+      op2 := AddLocalMinPoly(e1, e2, pt);
       if Assigned(Result) then SetZ(e1, e2, Result.pt);
       SetZ(e1, e2, op2.pt);
+      {$ELSE}
+      AddLocalMinPoly(e1, e2, pt);
       {$ENDIF}
-      if Assigned(Result) and PointsEqual(Result.pt, op2.pt) and
-        not IsHorizontal(e1) and not IsHorizontal(e2) and
-        (CrossProduct(e1.bot, Result.pt, e2.bot) = 0) then
-          AddJoin(Result, op2);
     end else
     begin
       // can't treat as maxima & minima
       Result := AddOutPt(e1, pt);
-      op2 := AddOutPt(e2, pt);
       {$IFDEF USINGZ}
+      op2 := AddOutPt(e2, pt);
       SetZ(e1, e2, Result.pt);
       SetZ(e1, e2, op2.pt);
+      {$ELSE}
+      AddOutPt(e2, pt);
       {$ENDIF}
       SwapOutRecs(e1, e2);
     end;
@@ -3042,7 +2613,10 @@ begin
     e.prevInSEL := e.prevInAEL;
     e.nextInSEL := e.nextInAEL;
     e.jump := e.nextInSEL;
-    e.currX := TopX(e, topY);
+    if (e.joinedWith = jwLeft) then
+      e.currX := e.prevInAEL.currX // this also avoids complications
+    else
+      e.currX := TopX(e, topY);
     e := e.nextInAEL;
   end;
 end;
@@ -3063,14 +2637,334 @@ begin
   begin
     InsertLocalMinimaIntoAEL(Y);
     while PopHorz(e) do DoHorizontal(e);
-    ConvertHorzTrialsToJoins;
+    if FHorzSegList.Count > 0 then
+    begin
+      if FHorzSegList.Count > 1 then
+        MergeHorzSegs(Y);
+      FHorzSegList.Clear;
+    end;
     FBotY := Y;                       // FBotY == bottom of current scanbeam
     if not PopScanLine(Y) then Break; // Y     == top of current scanbeam
     DoIntersections(Y);
     DoTopOfScanbeam(Y);
     while PopHorz(e) do DoHorizontal(e);
   end;
-  if FSucceeded then ProcessJoinList;
+end;
+//------------------------------------------------------------------------------
+
+procedure FixOutRecPts(outrec: POutrec); overload;
+var
+  op: POutPt;
+begin
+  op := outrec.pts;
+  repeat
+    op.outrec := outrec;
+    op := op.next;
+  until op = outrec.pts;
+end;
+//------------------------------------------------------------------------------
+
+procedure FixOutRecPts(op: POutPt; outrec: POutrec); overload;
+var
+  op2: POutPt;
+begin
+  op2 := op;
+  repeat
+    op2.outrec := outrec;
+    op2 := op2.next;
+  until op2 = op;
+end;
+//------------------------------------------------------------------------------
+
+function CheckHorzPrev(thisOp, refOp: POutPt): Boolean;
+  {$IFDEF INLINING} inline; {$ENDIF}
+var
+  op: POutPt;
+begin
+  Result := false;
+  op := thisOp;
+  repeat
+     if op = refOp then Exit;
+     op := op.prev;
+     if op.pt.Y <> thisOp.pt.Y then break;
+  until op = thisOp;
+  Result := true;
+end;
+//------------------------------------------------------------------------------
+
+function CheckHorzNext(thisOp, refOp: POutPt): Boolean;
+  {$IFDEF INLINING} inline; {$ENDIF}
+var
+  op: POutPt;
+begin
+  Result := false;
+  op := thisOp;
+  repeat
+     if op = refOp then Exit;
+     op := op.next;
+     if op.pt.Y <> thisOp.pt.Y then break;
+  until op = thisOp;
+  Result := true;
+end;
+//------------------------------------------------------------------------------
+
+function UpdateHorzSegment(hs: PHorzSegment; currY: Int64): THorzFlag;
+  {$IFDEF INLINING} inline; {$ENDIF}
+var
+  op, op2: POutPt;
+  outrec: POutrec;
+  ltor: Boolean;
+begin
+  hs.outrec := GetRealOutRec(hs.outrec);
+  outrec := hs.outrec;
+
+  Result := hfError;
+  if (outrec.horzFlag <> hfUnprocessed) then Exit;
+  outrec.horzFlag := Result;
+
+  op := outrec.pts;
+  op2 := op.next;
+  if op.pt.Y <> currY then op := op2
+  else if op2.pt.Y <> currY then op2 := op;
+
+  while (op.prev <> op2) and (op.prev.pt.Y = op.pt.Y) do
+      op := op.prev;
+  while (op2.next <> op) and (op2.next.pt.Y = op2.pt.Y) do
+    op2 := op2.next;
+
+  // get horz position - whether bottom, middle or top of path
+  if (op2.next = op) then
+  begin
+    // make sure not both bottom and top - ie ignore
+    if not Assigned(outrec.frontE) then Exit;
+    hs.position := hpBottom
+  end else if not Assigned(outrec.frontE) then
+    hs.position := hpTop
+  else
+    hs.position := hpMiddle;
+
+  // assign hs.leftOp and hs.rightOp
+  if hs.position = hpBottom then
+  begin
+    ltor := (outrec.pts.pt.X > outrec.pts.next.pt.X);
+    if ltor then
+    begin
+      hs.leftOp := outrec.pts.next;
+      hs.rightOp := outrec.pts;
+    end else
+    begin
+      hs.leftOp := outrec.pts;
+      hs.rightOp := outrec.pts.next;
+    end;
+  end else
+  begin
+    if op.pt.X = op2.pt.X then Exit;
+    ltor := op.pt.X < op2.pt.X;
+    if ltor then
+    begin
+      hs.leftOp := op;
+      hs.rightOp := op2;
+
+      // if safe, remove ops **between** left and right
+      if hs.position = hpTop then
+      begin
+        while hs.leftOp.next <> hs.rightOp do
+          DisposeOutPt(hs.leftOp.next);
+        outrec.pts := hs.leftOp;
+      end;
+    end else
+    begin
+      hs.leftOp := op2;
+      hs.rightOp := op;
+
+      // if safe, remove ops **between** left and right
+      if hs.position = hpTop then
+      begin
+        while hs.rightOp.next <> hs.leftOp do
+          DisposeOutPt(hs.rightOp.next);
+        outrec.pts := hs.leftOp;
+      end;
+    end;
+
+  end;
+
+  hs.leftToRight := ltor;
+  Result := hfProcessed;
+  outrec.horzFlag := Result;
+end;
+//------------------------------------------------------------------------------
+
+procedure TClipperBase.MergeHorzSegs(currY: Int64);
+var
+  i,j : integer;
+  hs1, hs2: PHorzSegment;
+  left1, right1, left2, right2: POutPt;
+  or1, or2: POutrec;
+  e: PActive;
+begin
+  j := 0;
+  // allow only **one** horizontal segment per outrec
+  for i := 0 to FHorzSegList.Count -1 do
+  begin
+    hs1 := FHorzSegList.UnsafeGet(i);
+    if UpdateHorzSegment(hs1, currY) = hfProcessed then
+    begin
+      FHorzSegList.UnsafeSet(j, hs1);
+      inc(j);
+    end else
+      Dispose(hs1);
+  end;
+  // resize and sort once redundant HorzSegments have been removed
+  FHorzSegList.Resize(j);
+  if j < 2 then Exit;
+  FHorzSegList.Sort(HorzSegListSort);
+
+  // for each HorzSegment, find others that overlap and merge
+  for i := 0 to FHorzSegList.Count -2 do
+  begin
+    hs1 := FHorzSegList.UnsafeGet(i);
+    or1 := hs1.outrec;
+    if or1.horzFlag = hfError then Continue;
+
+    for j := i +1 to FHorzSegList.Count -1 do
+    begin
+      hs2 := FHorzSegList.UnsafeGet(j);
+      or2 := hs2.outrec;
+
+      if (or2.horzFlag = hfError) or // should never happen
+        (hs2.leftToRight = hs1.leftToRight) then
+          Continue;
+
+      // if this horz segment doesn't partially overlap
+      // 1 then neither will any subsequent edges
+      if (hs2.leftOp.pt.X >= hs1.rightOp.pt.X) then Break;
+
+      if hs1.leftToRight then
+      begin
+        right1 := hs1.rightOp;
+        right2 := hs2.rightOp;
+
+        while (right1.prev <> or1.pts) and
+          (right1.prev.pt.X >= right2.pt.X) do
+            right1 := right1.prev;
+        while (right2 <> or2.pts) and
+          (right2.next.pt.X >= right1.pt.X) do
+            right2 := right2.next;
+
+        left1 := right1.prev;
+        left2 := right2.next;
+
+        //make sure left-right does not include the path loop
+        if ((hs1.position = hpMiddle) and (left1 = or1.pts)) or
+          ((hs2.position = hpMiddle) and (right2 = or2.pts)) then
+            break;
+
+      end else
+      begin
+        right1 := hs1.rightOp;
+        right2 := hs2.rightOp;
+        while (right1 <> or1.pts) and
+          (right1.next.pt.X >= right2.pt.X) do
+          right1 := right1.next;
+        while (right2.prev <> or2.pts) and
+          (right2.prev.pt.X >= right1.pt.X) do
+            right2 := right2.prev;
+        left1 := right1.next;
+        left2 := right2.prev;
+
+        //make sure left-right does not include the path loop
+        if ((hs1.position = hpMiddle) and (right1 = or1.pts)) or
+          ((hs2.position = hpMiddle) and (left2 = or2.pts)) then
+            break;
+      end;
+
+      if hs1.position = hpTop then
+      begin
+        // when joining make sure that
+        // the lower idx is always the owner
+        if or1.idx < or2.idx then
+        begin
+          FixOutRecPts(or2.pts, or1);
+          or1.pts := or2.pts;
+          or2.pts := nil;
+          or2.owner := or1;
+          or1.frontE := or2.frontE;
+          if Assigned(or1.frontE) then
+            or1.frontE.outrec := or1;
+          or1.backE := or2.backE;
+          if Assigned(or1.backE) then
+            or1.backE.outrec := or1;
+          hs2.outrec := or1;
+        end else
+        begin
+          FixOutRecPts(or1.pts, or2);
+          or1.pts := nil;
+          or1.owner := or2;
+        end;
+      end
+      else if hs2.position = hpTop then
+      begin
+        // when joining make sure that
+        // the lower idx is always the owner
+        if or2.idx < or1.idx then
+        begin
+          FixOutRecPts(or1.pts, or2);
+          or2.pts := or1.pts;
+          or1.pts := nil;
+          or1.owner := or2;
+          or2.frontE := or1.frontE;
+          if Assigned(or2.frontE) then
+            or2.frontE.outrec := or2;
+          or2.backE := or1.backE;
+          if Assigned(or2.backE) then
+            or2.backE.outrec := or2;
+        end else
+        begin
+          FixOutRecPts(or2.pts, or1);
+          or2.pts := nil;
+          or2.owner := or1;
+          hs2.outrec := or1;
+        end;
+      end;
+
+      if hs1.leftToRight then
+      begin
+        left1.next := left2;
+        left2.prev := left1;
+        right2.next := right1;
+        right1.prev := right2;
+      end else
+      begin
+        left1.prev := left2;
+        left2.next := left1;
+        right2.prev := right1;
+        right1.next := right2;
+      end;
+
+      if (hs1.position <> hpTop) and (hs2.position <> hpTop) then
+      begin
+        // no merging, just breaking and rejoining
+        right1 := or1.pts.next;
+        right2 := or2.pts.next;
+        or1.pts.next := right2;
+        right2.prev := or1.pts;
+        or2.pts.next := right1;
+        right1.prev := or2.pts;
+
+        e := or1.backE;
+        or1.backE := or2.backE;
+        or2.backE := e;
+        or1.backE.outrec := or1;
+        or2.backE.outrec := or2;
+
+        FixOutRecPts(or1);
+        FixOutRecPts(or2);
+      end;
+      hs2.outrec.horzFlag := hfUnprocessed;
+      UpdateHorzSegment(hs2, currY);
+      Break;
+    end;
+  end;
 end;
 //------------------------------------------------------------------------------
 
@@ -3092,11 +2986,6 @@ begin
   for i := 0 to FIntersectList.Count - 1 do
     Dispose(PIntersectNode(UnsafeGet(FIntersectList,i)));
   FIntersectList.Clear;
-end;
-//------------------------------------------------------------------------------
-
-procedure Nullop;
-begin
 end;
 //------------------------------------------------------------------------------
 
@@ -3164,7 +3053,7 @@ end;
 
 function TClipperBase.BuildIntersectList(const topY: Int64): Boolean;
 var
-  q, base,prevBase,left,right, lend, rend: PActive;
+  e, base,prevBase,left,right, lend, rend: PActive;
 begin
   result := false;
   if not Assigned(FActives) or not Assigned(FActives.nextInAEL) then Exit;
@@ -3192,23 +3081,23 @@ begin
         if right.currX < left.currX then
         begin
           // save edge intersections
-          q := right.prevInSEL;
+          e := right.prevInSEL;
           while true do
           begin
-            AddNewIntersectNode(q, right, topY);
-            if q = left then Break;
-            q := q.prevInSEL;
+            AddNewIntersectNode(e, right, topY);
+            if e = left then Break;
+            e := e.prevInSEL;
           end;
 
           // now move the out of place edge on the right
           // to its new ordered place on the left.
-          q := right;
-          right := ExtractFromSEL(q); // ie returns the new right
+          e := right;
+          right := ExtractFromSEL(e); // ie returns the new right
           lend := right;
-          Insert1Before2InSEL(q, left);
+          Insert1Before2InSEL(e, left);
           if left = base then
           begin
-            base := q;
+            base := e;
             base.jump := rend;
             if Assigned(prevBase) then
               prevBase.jump := base else
@@ -3260,7 +3149,6 @@ var
   i: Integer;
   nodeQ: PIntersectNode;
   nodeI, nodeJ: PPIntersectNode;
-  op1, op2: POutpt;
 begin
   // The list of required intersections now needs to be processed in a
   // specific order such that intersection points with the largest Y coords
@@ -3271,7 +3159,6 @@ begin
   // First we do a quicksort so that intersections will be processed
   // mostly from largest Y to smallest
   FIntersectList.Sort(IntersectListSort);
-
   nodeI := @FIntersectList.List[0];
   for i := 0 to FIntersectList.Count - 1 do
   begin
@@ -3295,21 +3182,10 @@ begin
     begin
       IntersectEdges(active1, active2, pt);
       SwapPositionsInAEL(active1, active2);
-
-      if TestJoinWithPrev2(active2, pt) then
-      begin
-        op1 := AddOutPt(active2.prevInAEL, pt);
-        op2 := AddOutPt(active2, pt);
-        if op1 <> op2 then
-          AddJoin(op1, op2);
-      end
-      else if TestJoinWithNext2(active1, pt) then
-      begin
-        op1 := AddOutPt(active1, pt);
-        op2 := AddOutPt(active1.nextInAEL, pt);
-        if op1 <> op2 then
-          AddJoin(op1, op2);
-      end;
+      active1.currX := pt.X;
+      active2.currX := pt.X;
+      CheckJoinLeft(active2, pt);
+      CheckJoinRight(active1, pt);
     end;
     inc(nodeI);
   end;
@@ -3389,179 +3265,6 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-procedure TClipperBase.AddTrialHorzJoin(op: POutPt);
-begin
-  // make sure 'op' isn't added more than once
-  if not (op.outrec.isOpen) and not OutPtInTrialHorzList(op) then
-    FHorzTrials := MakeDummyJoiner(op, FHorzTrials);
-end;
-//------------------------------------------------------------------------------
-
-function FindTrialJoinParent(var joiner: PJoiner; op: POutPt): PJoiner;
-begin
-  Result := joiner;
-  while Assigned(Result) do
-  begin
-    if (op = Result.op1) then
-    begin
-      if Assigned(Result.next1) and (Result.next1.idx < 0) then
-      begin
-        joiner := Result.next1;
-        Exit;
-      end;
-      Result := Result.next1;
-    end else
-    begin
-      if Assigned(Result.next2) and (Result.next2.idx < 0) then
-      begin
-        joiner := Result.next2;
-        Exit;
-      end;
-      Result := Result.next2;
-    end;
-  end;
-end;
-//------------------------------------------------------------------------------
-
-procedure TClipperBase.DeleteTrialHorzJoin(op: POutPt);
-var
-  joiner, parentOp, parentH: PJoiner;
-begin
-  if not Assigned(FHorzTrials) then Exit;
-  joiner := op.joiner;
-  parentOp := nil;
-  while Assigned(joiner) do
-  begin
-    if (joiner.idx < 0) then
-    begin
-      // first remove joiner from FHorzTrials list
-      if joiner = FHorzTrials then
-        FHorzTrials := joiner.nextH
-      else
-      begin
-        parentH := FHorzTrials;
-        while parentH.nextH <> joiner do
-          parentH := parentH.nextH;
-        parentH.nextH := joiner.nextH;
-      end;
-      // now remove joiner from op's joiner list
-      if not Assigned(parentOp) then
-      begin
-        // joiner must be first one in list
-        op.joiner := joiner.next1;
-        Dispose(joiner);
-        joiner := op.joiner;
-      end else
-      begin
-        // this trial joiner isn't op's first
-        // nb: trial joiners only have a single 'op'
-        if op = parentOp.op1 then
-          parentOp.next1 := joiner.next1 else
-          parentOp.next2 := joiner.next1; // never joiner.next2
-        Dispose(joiner);
-        joiner := parentOp;
-      end;
-      // loop in case there's more than one trial join
-    end else
-    begin
-      // not a trial join but just to be sure there isn't one
-      // a little deeper, look further along the linked list
-      parentOp := FindTrialJoinParent(joiner, op);
-      if not Assigned(parentOp) then Break;
-    end;
-  end;
-end;
-//------------------------------------------------------------------------------
-
-function GetHorzExtendedHorzSeg(var op, op2: POutPt): Boolean;
-var
-  outRec: POutRec;
-begin
-  outRec := GetRealOutRec(op.outrec);
-  op2 := op;
-  if Assigned(outRec.frontE) then
-  begin
-    while (op.prev <> outRec.pts) and
-      (op.prev.pt.Y = op.pt.Y) do op := op.prev;
-    while (op2 <> outRec.pts) and
-      (op2.next.pt.Y = op2.pt.Y) do op2 := op2.next;
-    Result := (op2 <> op);
-  end else
-  begin
-    while (op.prev <> op2) and
-      (op.prev.pt.Y = op.pt.Y) do op := op.prev;
-    while (op2.next <> op) and
-      (op2.next.pt.Y = op2.pt.Y) do op2 := op2.next;
-    Result := (op2 <> op) and (op2.next <> op);
-  end;
-end;
-//------------------------------------------------------------------------------
-
-procedure TClipperBase.ConvertHorzTrialsToJoins;
-var
-  op1a, op1b, op2a, op2b: POutPt;
-  joiner, joinerParent: PJoiner;
-  joined: Boolean;
-begin
-  while Assigned(FHorzTrials) do
-  begin
-    joiner := FHorzTrials;
-    FHorzTrials := FHorzTrials.nextH;
-    op1a := joiner.op1;
-    if op1a.joiner = joiner then
-    begin
-      op1a.joiner := joiner.next1;
-    end else
-    begin
-      joinerParent := FindJoinParent(joiner, op1a);
-      if joinerParent.op1 = op1a then
-        joinerParent.next1 := joiner.next1 else
-        joinerParent.next2 := joiner.next1;
-    end;
-    Dispose(joiner);
-
-    if not GetHorzExtendedHorzSeg(op1a, op1b) then
-    begin
-      CleanCollinear(op1a.outrec);
-      Continue;
-    end;
-
-    joined := false;
-    joiner := FHorzTrials;
-    while Assigned(joiner) do
-    begin
-      op2a := joiner.op1;
-      if GetHorzExtendedHorzSeg(op2a, op2b) and
-        HorzEdgesOverlap(op1a.pt.X, op1b.pt.X, op2a.pt.X, op2b.pt.X) then
-      begin
-        joined := true;
-        // overlap found so promote to a 'real' join
-        if PointsEqual(op1a.pt, op2b.pt) then
-          AddJoin(op1a, op2b)
-        else if PointsEqual(op1a.pt, op2a.pt) then
-          AddJoin(op1a, op2a)
-        else if PointsEqual(op1b.pt, op2a.pt) then
-          AddJoin(op1b, op2a)
-        else if PointsEqual(op1b.pt, op2b.pt) then
-          AddJoin(op1b, op2b)
-        else if ValueBetween(op1a.pt.X, op2a.pt.X, op2b.pt.X) then
-          AddJoin(op1a, InsertOp(op1a.pt, op2a))
-        else if ValueBetween(op1b.pt.X, op2a.pt.X, op2b.pt.X) then
-          AddJoin(op1b, InsertOp(op1b.pt, op2a))
-        else if ValueBetween(op2a.pt.X, op1a.pt.X, op1b.pt.X) then
-          AddJoin(op2a, InsertOp(op2a.pt, op1a))
-        else if ValueBetween(op2b.pt.X, op1a.pt.X, op1b.pt.X) then
-          AddJoin(op2b, InsertOp(op2b.pt, op1a));
-        Break;
-      end;
-      joiner := joiner.nextH;
-    end;
-    if not joined then
-      CleanCollinear(op1a.outrec);
-  end;
-end;
-//------------------------------------------------------------------------------
-
 procedure TClipperBase.DoHorizontal(horzEdge: PActive);
 var
   maxPair: PActive;
@@ -3600,7 +3303,7 @@ var
   Y: Int64;
   e: PActive;
   pt: TPoint64;
-  op, op2: POutPt;
+  currOr: POutRec;
   maxVertex: PVertex;
   isLeftToRight, horzIsOpen: Boolean;
 begin
@@ -3641,11 +3344,15 @@ begin
 
   // nb: TrimHorz above hence not using Bot.X here
   if IsHotEdge(horzEdge) then
+  begin
   {$IFDEF USINGZ}
     AddOutPt(horzEdge, Point64(horzEdge.currX, Y, horzEdge.bot.Z));
   {$ELSE}
     AddOutPt(horzEdge, Point64(horzEdge.currX, Y));
   {$ENDIF}
+    FHorzSegList.Add(horzEdge.outrec);
+  end;
+  currOr := horzEdge.outrec;
 
   while true do // loop through consec. horizontal edges
   begin
@@ -3666,6 +3373,9 @@ begin
     begin
       if (e = maxPair) then
       begin
+        if IsHotEdge(horzEdge) and IsJoined(e) then
+          Split(e, e.top);
+
         if IsHotEdge(horzEdge) then
         begin
           while horzEdge.vertTop <> e.vertTop do
@@ -3673,10 +3383,9 @@ begin
             AddOutPt(horzEdge, horzEdge.top);
             UpdateEdgeIntoAEL(horzEdge);
           end;
-          op := AddLocalMaxPoly(e, horzEdge, horzEdge.top);
-          if Assigned(op) and not IsOpen(horzEdge) and
-            PointsEqual(op.pt, horzEdge.top) then
-              AddTrialHorzJoin(op);
+          if isLeftToRight then
+            AddLocalMaxPoly(horzEdge, e, horzEdge.top) else
+            AddLocalMaxPoly(e, horzEdge, horzEdge.top);
         end;
         // remove horzEdge's maxPair from AEL
         DeleteFromAEL(e);
@@ -3716,43 +3425,25 @@ begin
 
       if (isLeftToRight) then
       begin
-        op := IntersectEdges(horzEdge, e, pt);
+        IntersectEdges(horzEdge, e, pt);
         //nb: Op.outrec will differ from horzEdge.outrec when IsOpen(e)
         SwapPositionsInAEL(horzEdge, e);
-
-        if IsHotEdge(horzEdge) and Assigned(op) and
-          not IsOpen(horzEdge) and PointsEqual(op.pt, pt) then
-            AddTrialHorzJoin(op);
-
-        if not IsHorizontal(e) and
-          TestJoinWithPrev1(e) then
-        begin
-          op := AddOutPt(e.prevInAEL, pt);
-          op2 := AddOutPt(e, pt);
-          AddJoin(op, op2);
-        end;
+        //??Join
         horzEdge.currX := e.currX;
         e := horzEdge.nextInAEL;
       end else
       begin
-        op := IntersectEdges(e, horzEdge, pt);
+        IntersectEdges(e, horzEdge, pt);
         //nb: Op.outrec will differ from horzEdge.outrec when IsOpen(e)
         SwapPositionsInAEL(e, horzEdge);
-
-        if IsHotEdge(horzEdge) and Assigned(op) and
-          not IsOpen(horzEdge) and
-          PointsEqual(op.pt, pt) then
-            AddTrialHorzJoin(op);
-
-        if not IsHorizontal(e) and
-          TestJoinWithNext1(e) then
-        begin
-          op := AddOutPt(e, pt);
-          op2 := AddOutPt(e.nextInAEL, pt);
-          AddJoin(op, op2);
-        end;
+        //??Join
         horzEdge.currX := e.currX;
         e := horzEdge.prevInAEL;
+      end;
+      if Assigned(horzEdge.outrec) and (horzEdge.outrec <> currOr) then
+      begin
+        currOr := horzEdge.outrec;
+        FHorzSegList.Add(currOr);
       end;
     end; // we've reached the end of this horizontal
 
@@ -3787,37 +3478,23 @@ begin
   end; // end while horizontal
 
   if IsHotEdge(horzEdge) then
-  begin
-    op := AddOutPt(horzEdge, horzEdge.top);
-    if not IsOpen(horzEdge) then
-      AddTrialHorzJoin(op);
-  end else
-    op := nil;
+    AddOutPt(horzEdge, horzEdge.top);
 
   if (horzIsOpen and not IsOpenEnd(horzEdge)) or
     (not horzIsOpen and (maxVertex <> horzEdge.vertTop)) then
   begin
     UpdateEdgeIntoAEL(horzEdge); // this is the end of an intermediate horiz.
     if IsOpen(horzEdge) then Exit;
-
-    if isLeftToRight and TestJoinWithNext1(horzEdge) then
-    begin
-      op2 := AddOutPt(horzEdge.nextInAEL, horzEdge.bot);
-      AddJoin(op, op2);
-    end
-    else if not isLeftToRight and TestJoinWithPrev1(horzEdge) then
-    begin
-      op2 := AddOutPt(horzEdge.prevInAEL, horzEdge.bot);
-      AddJoin(op2, op);
-    end;
-
-  end
-  else if IsHotEdge(horzEdge) then
-    AddLocalMaxPoly(horzEdge, maxPair, horzEdge.top)
-  else
+  end else
   begin
-    DeleteFromAEL(maxPair);
-    DeleteFromAEL(horzEdge);
+    if IsHotEdge(horzEdge) then
+      AddLocalMaxPoly(horzEdge, maxPair, horzEdge.top)
+    else
+    begin
+      if IsJoined(maxPair) then Split(maxPair, maxPair.top);
+      DeleteFromAEL(maxPair);
+      DeleteFromAEL(horzEdge);
+    end;
   end;
 end;
 //------------------------------------------------------------------------------
@@ -3884,6 +3561,9 @@ begin
     if not assigned(eMaxPair) then Exit; // EMaxPair is a horizontal ...
   end;
 
+  if IsJoined(e) then Split(e, e.top);
+  if IsJoined(eMaxPair) then Split(eMaxPair, eMaxPair.top);
+
   // only non-horizontal maxima here.
   // process any edges between maxima pair ...
   while (eNext <> eMaxPair) do
@@ -3906,7 +3586,7 @@ begin
       Result := FActives;
   end else
   begin
-    // here E.NextInAEL == ENext == EMaxPair ...
+    // e.NextInAEL == eMaxPair
     if IsHotEdge(e) then
       AddLocalMaxPoly(e, eMaxPair, e.top);
 
@@ -3922,7 +3602,6 @@ end;
 function TClipperBase.BuildPaths(out closedPaths, openPaths: TPaths64): Boolean;
 var
   i, cntClosed, cntOpen: Integer;
-  ppor: PPOutRec;
   outRec: POutRec;
 begin
   try
@@ -3931,15 +3610,14 @@ begin
     if FHasOpenPaths then
       SetLength(openPaths, FOutRecList.Count);
 
-    if FOutRecList.Count > 0 then
+    i := 0;
+    while i < FOutRecList.Count do
     begin
-      ppor := PPOutRec(FOutRecList.ListPtr);
-      for i := 0 to FOutRecList.Count -1 do
-      begin
-        outRec := ppor^;
-        inc(ppor);
+      outRec := FOutRecList.UnsafeGet(i);
+      inc(i);
 
-        if not assigned(outRec.pts) then Continue;
+      if assigned(outRec.pts) then
+      begin
         if outRec.isOpen then
         begin
           if BuildPath(outRec.pts, FReverseSolution,
@@ -3947,6 +3625,7 @@ begin
               inc(cntOpen);
         end else
         begin
+          CleanCollinear(outRec);
           // closed paths should always return a Positive orientation
           // except when ReverseSolution == true
           if BuildPath(outRec.pts, FReverseSolution,
@@ -4075,7 +3754,6 @@ var
   outRec      : POutRec;
   openPath    : TPath64;
   ownerPP     : TPolyPathBase;
-  ppor        : PPOutRec;
 begin
   try
     polytree.Clear;
@@ -4083,59 +3761,57 @@ begin
       setLength(openPaths, FOutRecList.Count);
     cntOpen := 0;
 
-    if FOutRecList.Count > 0 then
+    i := 0;
+    while i < FOutRecList.Count do
     begin
-      ppor := PPOutRec(FOutRecList.ListPtr);
-      for i := 0 to FOutRecList.Count -1 do
+      outRec := FOutRecList.UnsafeGet(i);
+      inc(i);
+      if not assigned(outRec.pts) then Continue;
+
+      if outRec.isOpen then
       begin
-        outRec := ppor^;
-        inc(ppor);
-        if not assigned(outRec.pts) then Continue;
-
-        if outRec.isOpen then
+        if BuildPath(outRec.pts,
+          FReverseSolution, true, openPath) then
         begin
-          if BuildPath(outRec.pts,
-            FReverseSolution, true, openPath) then
-          begin
-            openPaths[cntOpen] := openPath;
-            inc(cntOpen);
-          end;
-          Continue;
+          openPaths[cntOpen] := openPath;
+          inc(cntOpen);
         end;
-
-        if not BuildPath(outRec.pts, FReverseSolution, false, outRec.path) then
-          Continue;
-        if outrec.bounds.IsEmpty then
-          outrec.bounds := Clipper.Engine.GetBounds(outrec.path);
-        outrec.owner := GetRealOutRec(outrec.owner);
-        if assigned(outRec.owner) then
-          DeepCheckOwner(outRec, outRec.owner);
-
-        // swap the order when a child preceeds its owner
-        // (because owners must preceed children in polytrees)
-        if assigned(outRec.owner) and
-          (outRec.owner.idx > outRec.idx) then
-        begin
-          j := outRec.owner.idx;
-          FOutRecList.UnsafeSwap(i,j);
-          POutrec(FOutRecList.UnsafeGet(j)).idx := j;
-          outRec := POutrec(FOutRecList.UnsafeGet(i));
-          outRec.idx := i;
-
-          outRec.owner := GetRealOutRec(outRec.owner);
-          BuildPath(outRec.pts, FReverseSolution, false, outRec.path);
-          if (outRec.bounds.IsEmpty) then
-            outRec.bounds := Clipper.Engine.GetBounds(outRec.path);
-          if Assigned(outRec.owner) then
-            DeepCheckOwner(outRec, outRec.owner);
-        end;
-
-        if assigned(outRec.owner) and assigned(outRec.owner.polypath) then
-          ownerPP := outRec.owner.polypath else
-          ownerPP := polytree;
-
-        outRec.polypath := ownerPP.AddChild(outRec.path);
+        Continue;
       end;
+
+      CleanCollinear(outRec);
+      if not BuildPath(outRec.pts, FReverseSolution, false, outRec.path) then
+        Continue;
+      if outrec.bounds.IsEmpty then
+        outrec.bounds := Clipper.Engine.GetBounds(outrec.path);
+      outrec.owner := GetRealOutRec(outrec.owner);
+      if assigned(outRec.owner) then
+        DeepCheckOwner(outRec, outRec.owner);
+
+      // swap the order when a child preceeds its owner
+      // (because owners must preceed children in polytrees)
+      if assigned(outRec.owner) and
+        (outRec.owner.idx > outRec.idx) then
+      begin
+        j := outRec.owner.idx;
+        FOutRecList.Swap(i,j);
+        POutrec(FOutRecList.UnsafeGet(j)).idx := j;
+        outRec := POutrec(FOutRecList.UnsafeGet(i));
+        outRec.idx := i;
+
+        outRec.owner := GetRealOutRec(outRec.owner);
+        BuildPath(outRec.pts, FReverseSolution, false, outRec.path);
+        if (outRec.bounds.IsEmpty) then
+          outRec.bounds := Clipper.Engine.GetBounds(outRec.path);
+        if Assigned(outRec.owner) then
+          DeepCheckOwner(outRec, outRec.owner);
+      end;
+
+      if assigned(outRec.owner) and assigned(outRec.owner.polypath) then
+        ownerPP := outRec.owner.polypath else
+        ownerPP := polytree;
+
+      outRec.polypath := ownerPP.AddChild(outRec.path);
     end;
     setLength(openPaths, cntOpen);
   except
@@ -4219,7 +3895,7 @@ begin
     Result := false;
   end;
   finally
-    ClearSolution;
+    if not ClearSolutionOnly then Result := false;
   end;
 end;
 //------------------------------------------------------------------------------
@@ -4238,7 +3914,7 @@ begin
     Result := false;
   end;
   finally
-    ClearSolution;
+    if not ClearSolutionOnly then Result := false;
   end;
 end;
 //------------------------------------------------------------------------------
@@ -4259,7 +3935,7 @@ begin
     Result := false;
   end;
   finally
-    ClearSolution;
+    if not ClearSolutionOnly then Result := false;
   end;
 end;
 
@@ -4481,7 +4157,7 @@ begin
     Result := false;
   end;
   finally
-    ClearSolution;
+    if not ClearSolutionOnly then Result := false;
   end;
 end;
 //------------------------------------------------------------------------------
@@ -4509,7 +4185,7 @@ begin
     Result := false;
   end;
   finally
-    ClearSolution;
+    if not ClearSolutionOnly then Result := false;
   end;
 end;
 

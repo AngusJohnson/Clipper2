@@ -1,6 +1,6 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  19 November 2022                                                *
+* Date      :  11 December 2022                                                *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  This is the main polygon clipping module                        *
@@ -15,6 +15,15 @@
 #include <algorithm>
 #include "clipper2/clipper.engine.h"
 
+// https://github.com/AngusJohnson/Clipper2/discussions/334
+// #discussioncomment-4248602
+#if defined(_MSC_VER) && ( defined(_M_AMD64) || defined(_M_X64) )
+#include <xmmintrin.h>
+#include <emmintrin.h>
+#define fmin(a,b) _mm_cvtsd_f64(_mm_min_sd(_mm_set_sd(a),_mm_set_sd(b)))
+#define fmax(a,b) _mm_cvtsd_f64(_mm_max_sd(_mm_set_sd(a),_mm_set_sd(b)))
+#define nearbyint(a) _mm_cvtsd_si64(_mm_set_sd(a)) /* Note: expression type is (int64_t) */
+#endif
 
 namespace Clipper2Lib {
 
@@ -25,11 +34,11 @@ namespace Clipper2Lib {
     -std::numeric_limits<int64_t>::max()
   );
 
-  //Every closed path (or polygon) is made up of a series of vertices forming
-  //edges that alternate between going up (relative to the Y-axis) and going
-  //down. Edges consecutively going up or consecutively going down are called
-  //'bounds' (or sides if they're simple polygons). 'Local Minima' refer to
-  //vertices where descending bounds become ascending ones.
+  // Every closed path (or polygon) is made up of a series of vertices forming
+  // edges that alternate between going up (relative to the Y-axis) and going
+  // down. Edges consecutively going up or consecutively going down are called
+  // 'bounds' (ie sides if they're simple polygons). 'Local Minima' refer to
+  // vertices where descending bounds become ascending ones.
 
   struct Scanline {
     int64_t y = 0;
@@ -38,30 +47,11 @@ namespace Clipper2Lib {
     explicit Scanline(int64_t y_) : y(y_) {}
   };
 
-  struct  Joiner {
-    int      idx;
-    OutPt* op1;
-    OutPt* op2;
-    Joiner* next1;
-    Joiner* next2;
-    Joiner* nextH;
-
-    explicit Joiner(OutPt* op1_, OutPt* op2_, Joiner* nexth) :
-      op1(op1_), op2(op2_), nextH(nexth)
+  struct HorzSegSorter {
+    inline bool operator()(const HorzSegment& hs1, const HorzSegment& hs2)
     {
-      idx = -1;
-      next1 = op1->joiner;
-      op1->joiner = this;
-
-      if (op2)
-      {
-        next2 = op2->joiner;
-        op2->joiner = this;
-      }
-      else
-        next2 = nullptr;
+      return  hs2.leftOp->pt.x > hs1.leftOp->pt.x;
     }
-
   };
 
   struct LocMinSorter {
@@ -70,7 +60,7 @@ namespace Clipper2Lib {
       if (locMin2->vertex->pt.y != locMin1->vertex->pt.y)
         return locMin2->vertex->pt.y < locMin1->vertex->pt.y;
       else
-        return locMin2->vertex->pt.x < locMin1->vertex->pt.x;
+        return locMin2->vertex->pt.x > locMin1->vertex->pt.x;
     }
   };
 
@@ -145,7 +135,7 @@ namespace Clipper2Lib {
   {
     if ((currentY == ae.top.y) || (ae.top.x == ae.bot.x)) return ae.top.x;
     else if (currentY == ae.bot.y) return ae.bot.x;
-    else return ae.bot.x + static_cast<int64_t>(std::nearbyint(ae.dx * (currentY - ae.bot.y)));
+    else return ae.bot.x + static_cast<int64_t>(nearbyint(ae.dx * (currentY - ae.bot.y)));
     // nb: std::nearbyint (or std::round) substantially *improves* performance here
     // as it greatly improves the likelihood of edge adjacency in ProcessIntersectList().
   }
@@ -477,42 +467,9 @@ namespace Clipper2Lib {
     return (inode.edge1->next_in_ael == inode.edge2) || (inode.edge1->prev_in_ael == inode.edge2);
   }
 
-  inline bool TestJoinWithPrev1(const Active& e)
+  inline bool IsJoined(Active& e)
   {
-    //this is marginally quicker than TestJoinWithPrev2
-    //but can only be used when e.PrevInAEL.currX is accurate
-    return IsHotEdge(e) && !IsOpen(e) &&
-      e.prev_in_ael && e.prev_in_ael->curr_x == e.curr_x &&
-      IsHotEdge(*e.prev_in_ael) && !IsOpen(*e.prev_in_ael) &&
-      (CrossProduct(e.prev_in_ael->top, e.bot, e.top) == 0);
-  }
-
-  inline bool TestJoinWithPrev2(const Active& e, const Point64& curr_pt)
-  {
-    return IsHotEdge(e) && !IsOpen(e) &&
-      e.prev_in_ael && !IsOpen(*e.prev_in_ael) &&
-      IsHotEdge(*e.prev_in_ael) && (e.prev_in_ael->top.y < e.bot.y) &&
-      (std::llabs(TopX(*e.prev_in_ael, curr_pt.y) - curr_pt.x) < 2) &&
-      (CrossProduct(e.prev_in_ael->top, curr_pt, e.top) == 0);
-  }
-
-  inline bool TestJoinWithNext1(const Active& e)
-  {
-    //this is marginally quicker than TestJoinWithNext2
-    //but can only be used when e.NextInAEL.currX is accurate
-    return IsHotEdge(e) && !IsOpen(e) &&
-      e.next_in_ael && (e.next_in_ael->curr_x == e.curr_x) &&
-      IsHotEdge(*e.next_in_ael) && !IsOpen(*e.next_in_ael) &&
-      (CrossProduct(e.next_in_ael->top, e.bot, e.top) == 0);
-  }
-
-  inline bool TestJoinWithNext2(const Active& e, const Point64& curr_pt)
-  {
-    return IsHotEdge(e) && !IsOpen(e) &&
-      e.next_in_ael && !IsOpen(*e.next_in_ael) &&
-      IsHotEdge(*e.next_in_ael) && (e.next_in_ael->top.y < e.bot.y) &&
-      (std::llabs(TopX(*e.next_in_ael, curr_pt.y) - curr_pt.x) < 2) &&
-      (CrossProduct(e.next_in_ael->top, curr_pt, e.top) == 0);
+    return e.join_with != JoinWith::None;
   }
 
   //------------------------------------------------------------------------------
@@ -540,6 +497,7 @@ namespace Clipper2Lib {
     scanline_list_ = std::priority_queue<int64_t>();
     intersect_nodes_.clear();
     DisposeAllOutRecs();
+    horz_seg_list_.clear();
   }
 
 
@@ -970,7 +928,7 @@ namespace Clipper2Lib {
   bool IsValidAelOrder(const Active& resident, const Active& newcomer)
   {
     if (newcomer.curr_x != resident.curr_x)
-      return newcomer.curr_x > resident.curr_x;
+        return newcomer.curr_x > resident.curr_x;
 
     //get the turning direction  a1.top, a2.bot, a2.top
     double d = CrossProduct(resident.top, newcomer.bot, newcomer.top);
@@ -1028,6 +986,8 @@ namespace Clipper2Lib {
       e2 = actives_;
       while (e2->next_in_ael && IsValidAelOrder(*e2->next_in_ael, e))
         e2 = e2->next_in_ael;
+      if (e2->join_with == JoinWith::Right)
+        e2 = e2->next_in_ael;
       e.next_in_ael = e2->next_in_ael;
       if (e2->next_in_ael) e2->next_in_ael->prev_in_ael = &e;
       e.prev_in_ael = e2;
@@ -1063,12 +1023,9 @@ namespace Clipper2Lib {
         left_bound = new Active();
         left_bound->bot = local_minima->vertex->pt;
         left_bound->curr_x = left_bound->bot.x;
-        left_bound->wind_cnt = 0,
-          left_bound->wind_cnt2 = 0,
-          left_bound->wind_dx = -1,
-          left_bound->vertex_top = local_minima->vertex->prev;  // ie descending
+        left_bound->wind_dx = -1;
+        left_bound->vertex_top = local_minima->vertex->prev;  // ie descending
         left_bound->top = left_bound->vertex_top->pt;
-        left_bound->outrec = nullptr;
         left_bound->local_min = local_minima;
         SetDx(*left_bound);
       }
@@ -1082,12 +1039,9 @@ namespace Clipper2Lib {
         right_bound = new Active();
         right_bound->bot = local_minima->vertex->pt;
         right_bound->curr_x = right_bound->bot.x;
-        right_bound->wind_cnt = 0,
-          right_bound->wind_cnt2 = 0,
-          right_bound->wind_dx = 1,
-          right_bound->vertex_top = local_minima->vertex->next;  // ie ascending
+        right_bound->wind_dx = 1;
+        right_bound->vertex_top = local_minima->vertex->next;  // ie ascending
         right_bound->top = right_bound->vertex_top->pt;
-        right_bound->outrec = nullptr;
         right_bound->local_min = local_minima;
         SetDx(*right_bound);
       }
@@ -1137,11 +1091,7 @@ namespace Clipper2Lib {
         if (contributing)
         {
           AddLocalMinPoly(*left_bound, *right_bound, left_bound->bot, true);
-          if (!IsHorizontal(*left_bound) && TestJoinWithPrev1(*left_bound))
-          {
-            OutPt* op = AddOutPt(*left_bound->prev_in_ael, left_bound->bot);
-            AddJoin(op, left_bound->outrec->pts);
-          }
+          CheckJoinLeft(*left_bound, left_bound->bot);
         }
 
         while (right_bound->next_in_ael &&
@@ -1150,13 +1100,7 @@ namespace Clipper2Lib {
           IntersectEdges(*right_bound, *right_bound->next_in_ael, right_bound->bot);
           SwapPositionsInAEL(*right_bound, *right_bound->next_in_ael);
         }
-
-        if (!IsHorizontal(*right_bound) &&
-          TestJoinWithNext1(*right_bound))
-        {
-          OutPt* op = AddOutPt(*right_bound->next_in_ael, right_bound->bot);
-          AddJoin(right_bound->outrec->pts, op);
-        }
+        CheckJoinRight(*right_bound, right_bound->bot);
 
         if (IsHorizontal(*right_bound))
           PushHorz(*right_bound);
@@ -1249,6 +1193,9 @@ namespace Clipper2Lib {
 
   OutPt* ClipperBase::AddLocalMaxPoly(Active& e1, Active& e2, const Point64& pt)
   {
+    if (IsJoined(e1)) Split(e1, pt);
+    if (IsJoined(e2)) Split(e2, pt);
+    
     if (IsFront(e1) == IsFront(e2))
     {
       if (IsOpenEnd(e1))
@@ -1269,9 +1216,8 @@ namespace Clipper2Lib {
       outrec.pts = result;
 
       UncoupleOutRec(e1);
-      if (!IsOpen(e1)) CleanCollinear(&outrec);
       result = outrec.pts;
-      if (using_polytree_ && outrec.owner && !outrec.owner->front_edge)
+      if (outrec.owner && !outrec.owner->front_edge)
         outrec.owner = GetRealOutRec(outrec.owner->owner);
     }
     //and to preserve the winding orientation of outrec ...
@@ -1286,6 +1232,9 @@ namespace Clipper2Lib {
       JoinOutrecPaths(e1, e2);
     else
       JoinOutrecPaths(e2, e1);
+
+    if (result && !result->outrec->pts) 
+      result->outrec = result->outrec->owner;
 
     return result;
   }
@@ -1387,13 +1336,11 @@ namespace Clipper2Lib {
   {
     outrec = GetRealOutRec(outrec);
     if (!outrec || outrec->is_open ||
-      outrec->front_edge || !ValidateClosedPathEx(outrec->pts)) return;
+      !ValidateClosedPathEx(outrec->pts)) return;
 
     OutPt* startOp = outrec->pts, * op2 = startOp;
     for (; ; )
     {
-      if (op2->joiner) return;
-
       //NB if preserveCollinear == true, then only remove 180 deg. spikes
       if ((CrossProduct(op2->prev->pt, op2->pt, op2->next->pt) == 0) &&
         (op2->pt == op2->prev->pt ||
@@ -1465,9 +1412,6 @@ namespace Clipper2Lib {
       nextNextOp->prev = newOp2;
       prevOp->next = newOp2;
     }
-
-    SafeDeleteOutPtJoiners(splitOp->next);
-    SafeDeleteOutPtJoiners(splitOp);
 
     if (absArea2 >= 1 &&
       (absArea2 > absArea1 || (area2 > 0) == (area1 > 0)))
@@ -1542,7 +1486,6 @@ namespace Clipper2Lib {
     op->prev->next = nullptr;
     while (op)
     {
-      SafeDeleteOutPtJoiners(op);
       OutPt* tmp = op->next;
       delete op;
       op = tmp;
@@ -1638,16 +1581,15 @@ namespace Clipper2Lib {
     e->top = e->vertex_top->pt;
     e->curr_x = e->bot.x;
     SetDx(*e);
+
+    if (IsJoined(*e)) Split(*e, e->bot);
+
     if (IsHorizontal(*e)) return;
     InsertScanline(e->top.y);
-    if (TestJoinWithPrev1(*e))
-    {
-      OutPt* op1 = AddOutPt(*e->prev_in_ael, e->bot);
-      OutPt* op2 = AddOutPt(*e, e->bot);
-      AddJoin(op1, op2);
-    }
-  }
 
+    CheckJoinLeft(*e, e->bot);
+    CheckJoinRight(*e, e->bot);
+  }
 
   Active* FindEdgeWithMatchingLocMin(Active* e)
   {
@@ -1675,7 +1617,6 @@ namespace Clipper2Lib {
     if (has_open_paths_ && (IsOpen(e1) || IsOpen(e2)))
     {
       if (IsOpen(e1) && IsOpen(e2)) return nullptr;
-
       Active* edge_o, * edge_c;
       if (IsOpen(e1))
       {
@@ -1687,6 +1628,7 @@ namespace Clipper2Lib {
         edge_o = &e2;
         edge_c = &e1;
       }
+      if (IsJoined(*edge_c)) Split(*edge_c, pt); // needed for safety
 
       if (abs(edge_c->wind_cnt) != 1) return nullptr;
       switch (cliptype_)
@@ -1742,8 +1684,10 @@ namespace Clipper2Lib {
         return StartOpenPath(*edge_o, pt);
     }
 
-
     //MANAGING CLOSED PATHS FROM HERE ON
+
+    if (IsJoined(e1)) Split(e1, pt);
+    if (IsJoined(e2)) Split(e2, pt);
 
     //UPDATE WINDING COUNTS...
 
@@ -1831,15 +1775,13 @@ namespace Clipper2Lib {
         //a common vertex (not at common edges).
 
         resultOp = AddLocalMaxPoly(e1, e2, pt);
-        OutPt* op2 = AddLocalMinPoly(e1, e2, pt);
 #ifdef USINGZ
+        OutPt* op2 = AddLocalMinPoly(e1, e2, pt);
         if (zCallback_ && resultOp) SetZ(e1, e2, resultOp->pt);
         if (zCallback_) SetZ(e1, e2, op2->pt);
+#else
+        AddLocalMinPoly(e1, e2, pt);
 #endif
-        if (resultOp && resultOp->pt == op2->pt &&
-          !IsHorizontal(e1) && !IsHorizontal(e2) &&
-          (CrossProduct(e1.bot, resultOp->pt, e2.bot) == 0))
-          AddJoin(resultOp, op2);
       }
       else
       {
@@ -1960,11 +1902,13 @@ namespace Clipper2Lib {
       e->prev_in_sel = e->prev_in_ael;
       e->next_in_sel = e->next_in_ael;
       e->jump = e->next_in_sel;
-      e->curr_x = TopX(*e, top_y);
+      if (e->join_with == JoinWith::Left)
+        e->curr_x = e->prev_in_ael->curr_x; // also avoids complications      
+      else
+        e->curr_x = TopX(*e, top_y);
       e = e->next_in_ael;
     }
   }
-
 
   bool ClipperBase::ExecuteInternal(ClipType ct, FillRule fillrule, bool use_polytrees)
   {
@@ -1980,15 +1924,277 @@ namespace Clipper2Lib {
       InsertLocalMinimaIntoAEL(y);
       Active* e;
       while (PopHorz(e)) DoHorizontal(*e);
-      if (horz_joiners_) ConvertHorzTrialsToJoins();
+      if (horz_seg_list_.size() > 0)
+      {
+        if (horz_seg_list_.size() > 1)
+          MergeHorzSegments(y);
+        horz_seg_list_.clear();
+      }
       bot_y_ = y;  // bot_y_ == bottom of scanbeam
       if (!PopScanline(y)) break;  // y new top of scanbeam
       DoIntersections(y);
       DoTopOfScanbeam(y);
       while (PopHorz(e)) DoHorizontal(*e);
     }
-    ProcessJoinerList();
     return succeeded_;
+  }
+
+  inline void FixOutRecPts(OutRec* outrec)
+  {
+    OutPt* op = outrec->pts;
+    do {
+      op->outrec = outrec;
+      op = op->next;
+    } while (op != outrec->pts);
+  }
+
+  inline void FixOutRecPts(OutPt* op, OutRec* outrec)
+  {
+    OutPt* op2 = op;
+    do {
+      op2->outrec = outrec;
+      op2 = op2->next;
+    } while (op2 != op);
+  }
+
+  inline HorzFlag UpdateHorzSegment(HorzSegment& hs, int64_t  curr_y)
+  {
+    hs.outrec = GetRealOutRec(hs.outrec);
+    OutRec* outrec = hs.outrec;
+    if (outrec->horzFlag != HorzFlag::Unprocessed) return HorzFlag::Error;
+    outrec->horzFlag = HorzFlag::Error; // assume error pro. tem.
+
+    OutPt* op = outrec->pts, *op2 = op->next;
+    if (op->pt.y != curr_y) op = op2;
+    else if (op2->pt.y != curr_y) op2 = op;
+
+    while (op->prev != op2 && op->prev->pt.y == op->pt.y) op = op->prev;
+    while (op2->next != op && op2->next->pt.y == op2->pt.y) op2 = op2->next;
+    
+    // get horz position - whether bottom, middle or top of path
+    if (op2->next == op)
+    {
+      // make sure not both bottom and top - ie ignore
+      if (!outrec->front_edge) return HorzFlag::Error;
+      hs.position = HorzPosition::Bottom;
+    }
+    else if (!outrec->front_edge)
+      hs.position = HorzPosition::Top;
+    else
+      hs.position = HorzPosition::Middle;
+
+
+    // assign hs.leftOp and hs.rightOp
+    bool ltor;
+    if (hs.position == HorzPosition::Bottom)
+    {
+      ltor = (hs.outrec->pts->pt.x > hs.outrec->pts->next->pt.x);
+      if (ltor)
+      {
+        hs.leftOp = hs.outrec->pts->next;
+        hs.rightOp = hs.outrec->pts;
+      }
+      else
+      {
+        hs.leftOp = hs.outrec->pts;
+        hs.rightOp = hs.outrec->pts->next;
+      }
+    }
+    else
+    {
+      if (op->pt.x == op2->pt.x) return HorzFlag::Error;
+      ltor = op->pt.x < op2->pt.x;
+      if (ltor)
+      {
+        hs.leftOp = op;
+        hs.rightOp = op2;
+
+        // if safe, remove ops **between** left and right
+        if (hs.position == HorzPosition::Top)
+        {
+          while (hs.leftOp->next != hs.rightOp)
+            DisposeOutPt(hs.leftOp->next);
+          outrec->pts = hs.leftOp;
+        }
+      }
+      else
+      {
+        hs.leftOp = op2;
+        hs.rightOp = op;
+
+        // if safe, remove ops **between** left and right
+        if (hs.position == HorzPosition::Top)
+        {
+          while (hs.rightOp->next != hs.leftOp)
+            DisposeOutPt(hs.rightOp->next);
+          outrec->pts = hs.leftOp;
+        }
+      }
+    }
+    hs.leftToRight = ltor;
+    hs.outrec->horzFlag = HorzFlag::Processed;
+    return HorzFlag::Processed;
+  }
+
+  void ClipperBase::MergeHorzSegments(int64_t curr_y)
+  {
+    int j = 0;
+    //allow only one horizontal segment per outrec
+    for (auto& hs : horz_seg_list_)
+    {
+      if (UpdateHorzSegment(hs, curr_y) == HorzFlag::Processed)
+        horz_seg_list_[j++] = hs;
+    }
+    if (j < 2) return;
+    horz_seg_list_.resize(j);
+    std::sort(horz_seg_list_.begin(), horz_seg_list_.end(), HorzSegSorter());
+
+    std::vector<HorzSegment>::iterator hs = horz_seg_list_.begin(),
+      hs_end = horz_seg_list_.end(), hs_last = hs_end - 1, hs2;
+
+    for (; hs != hs_last; ++hs)
+    {
+      OutRec *or1 = hs->outrec;
+      if (or1->horzFlag == HorzFlag::Error) continue;
+
+      for (hs2 = hs +1; hs2 != hs_end; ++hs2)
+      {
+        OutRec* or2 = hs2->outrec;
+        if (or2->horzFlag == HorzFlag::Error ||
+          hs->leftToRight == hs2->leftToRight) continue;
+
+        // if this horz segment doesn't partially overlap
+        // 1 then neither will any subsequent edges
+        if (hs2->leftOp->pt.x >= hs->rightOp->pt.x) break;
+
+        OutPt *left1, *left2, *right1, *right2;
+        if (hs->leftToRight)
+        {
+          right1 = hs->rightOp;
+          right2 = hs2->rightOp;
+
+          while (right1->prev != or1->pts && 
+            right1->prev->pt.x >= right2->pt.x)
+              right1 = right1->prev;
+          while (right2 != or2->pts &&
+            right2->next->pt.x >= right1->pt.x)
+              right2 = right2->next;
+          left1 = right1->prev;
+          left2 = right2->next;
+
+          //make sure left-right does not include the path loop
+          if ((hs->position == HorzPosition::Middle && left1 == or1->pts) ||
+            (hs2->position == HorzPosition::Middle && right2 == or2->pts))
+              break;
+        }
+        else
+        {
+          right1 = hs->rightOp;
+          right2 = hs2->rightOp;
+          while (right1 != or1->pts && 
+            right1->next->pt.x >= right2->pt.x)
+              right1 = right1->next;
+          while (right2->prev != or2->pts && 
+            right2->prev->pt.x >= right1->pt.x)
+              right2 = right2->prev;
+          left1 = right1->next;
+          left2 = right2->prev;
+
+          //make sure left-right does not include the path loop
+          if ((hs->position == HorzPosition::Middle && right1 == or1->pts) ||
+            (hs2->position == HorzPosition::Middle && left2 == or2->pts))
+            break;
+        }
+
+        if (hs->position == HorzPosition::Top)
+        {
+          // when joining make sure that
+          // the lower idx is always the owner
+          if (or1->idx < or2->idx)
+          {
+            FixOutRecPts(or2->pts, or1);
+            or1->pts = or2->pts;
+            or2->pts  = nullptr;
+            or2->owner = or1;
+            or1->front_edge = or2->front_edge;
+            if (or1->front_edge)
+              or1->front_edge->outrec = or1;
+            or1->back_edge = or2->back_edge;
+            if (or1->back_edge)
+              or1->back_edge->outrec = or1;
+            hs2->outrec = or1;
+          }
+          else
+          {
+            FixOutRecPts(or1->pts, or2);
+            or1->pts = nullptr;
+            or1->owner = or2;
+          }        
+        }
+        else if (hs2->position == HorzPosition::Top)
+        {
+          if (or2->idx < or1->idx)
+          {
+            FixOutRecPts(or1->pts, or2);
+            or2->pts = or1->pts;
+            or1->pts = nullptr;
+            or1->owner = or2;
+            or2->front_edge = or1->front_edge;
+            if (or2->front_edge)
+              or2->front_edge->outrec = or2;
+            or2->back_edge = or1->back_edge;
+            if (or2->back_edge)
+              or2->back_edge->outrec = or2;
+          }
+          else
+          {
+            FixOutRecPts(or2->pts, or1);
+            or2->pts = nullptr;
+            or2->owner = or1;
+            hs2->outrec = or1;
+          }
+        }
+
+        if (hs->leftToRight)
+        {
+          left1->next = left2;
+          left2->prev = left1;
+          right2->next = right1;
+          right1->prev = right2;
+        }
+        else
+        {
+          left1->prev = left2;
+          left2->next = left1;
+          right2->prev = right1;
+          right1->next = right2;
+        }
+
+        if (hs->position != HorzPosition::Top && 
+          hs2->position != HorzPosition::Top)
+        {
+          // no merging, just breaking and rejoining
+          right1 = or1->pts->next;
+          right2 = or2->pts->next;
+
+          or1->pts->next = right2;
+          right2->prev = or1->pts;
+          or2->pts->next = right1;
+          right1->prev = or2->pts;
+
+          Active* e = or1->back_edge;
+          or1->back_edge = or2->back_edge;
+          or2->back_edge = e;
+          or1->back_edge->outrec = or1;
+          or2->back_edge->outrec = or2;
+          FixOutRecPts(or1);
+          FixOutRecPts(or2);
+        }
+        hs2->outrec->horzFlag = HorzFlag::Unprocessed;
+        UpdateHorzSegment(*hs2, curr_y);
+        break;
+      }
+    }
   }
 
   void ClipperBase::DoIntersections(const int64_t top_y)
@@ -2119,21 +2325,12 @@ namespace Clipper2Lib {
       IntersectEdges(*node.edge1, *node.edge2, node.pt);
       SwapPositionsInAEL(*node.edge1, *node.edge2);
 
-      if (TestJoinWithPrev2(*node.edge2, node.pt))
-      {
-        OutPt* op1 = AddOutPt(*node.edge2->prev_in_ael, node.pt);
-        OutPt* op2 = AddOutPt(*node.edge2, node.pt);
-        if (op1 != op2) AddJoin(op1, op2);
-      }
-      else if (TestJoinWithNext2(*node.edge1, node.pt))
-      {
-        OutPt* op1 = AddOutPt(*node.edge1, node.pt);
-        OutPt* op2 = AddOutPt(*node.edge1->next_in_ael, node.pt);
-        if (op1 != op2) AddJoin(op1, op2);
-      }
+      node.edge1->curr_x = node.pt.x;
+      node.edge2->curr_x = node.pt.x;
+      CheckJoinLeft(*node.edge2, node.pt);
+      CheckJoinRight(*node.edge1, node.pt);
     }
   }
-
 
   void ClipperBase::SwapPositionsInAEL(Active& e1, Active& e2)
   {
@@ -2149,6 +2346,12 @@ namespace Clipper2Lib {
     if (!e2.prev_in_ael) actives_ = &e2;
   }
 
+  void ClipperBase::AddTrialHorzJoin(OutRec* outrec)
+  {
+    if (outrec->is_open) return;
+    outrec->horzFlag = HorzFlag::Unprocessed;
+    horz_seg_list_.push_back(HorzSegment(outrec));
+  }
 
   bool ClipperBase::ResetHorzDirection(const Active& horz,
     const Active* max_pair, int64_t& horz_left, int64_t& horz_right)
@@ -2246,11 +2449,15 @@ namespace Clipper2Lib {
       ResetHorzDirection(horz, max_pair, horz_left, horz_right);
 
     if (IsHotEdge(horz))
+    {
 #ifdef USINGZ
       AddOutPt(horz, Point64(horz.curr_x, y, horz.bot.z));
 #else
       AddOutPt(horz, Point64(horz.curr_x, y));
 #endif
+      AddTrialHorzJoin(horz.outrec);
+    }
+    OutRec* currHorzOutrec = horz.outrec;
 
     OutPt* op;
     while (true) // loop through consec. horizontal edges
@@ -2268,9 +2475,11 @@ namespace Clipper2Lib {
 
       while (e)
       {
-
         if (e == max_pair)
         {
+          if (IsHotEdge(horz) && IsJoined(*e))
+            Split(*e, e->top);
+
           if (IsHotEdge(horz))
           {
             while (horz.vertex_top != e->vertex_top)
@@ -2278,9 +2487,10 @@ namespace Clipper2Lib {
               AddOutPt(horz, horz.top);
               UpdateEdgeIntoAEL(&horz);
             }
-            op = AddLocalMaxPoly(horz, *e, horz.top);
-            if (op && !IsOpen(horz) && op->pt == horz.top)
-              AddTrialHorzJoin(op);
+            if (is_left_to_right)
+              AddLocalMaxPoly(horz, *e, horz.top);
+            else
+              AddLocalMaxPoly(*e, horz, horz.top);
           }
           DeleteFromAEL(*e);
           DeleteFromAEL(horz);
@@ -2323,41 +2533,23 @@ namespace Clipper2Lib {
 
         if (is_left_to_right)
         {
-          op = IntersectEdges(horz, *e, pt);
+          IntersectEdges(horz, *e, pt);
           SwapPositionsInAEL(horz, *e);
-          // todo: check if op->pt == pt test is still needed
-          // expect op != pt only after AddLocalMaxPoly when horz.outrec == nullptr
-          if (IsHotEdge(horz) && op && !IsOpen(horz) && op->pt == pt)
-            AddTrialHorzJoin(op);
-
-          if (!IsHorizontal(*e) && TestJoinWithPrev1(*e))
-          {
-            op = AddOutPt(*e->prev_in_ael, pt);
-            OutPt* op2 = AddOutPt(*e, pt);
-            AddJoin(op, op2);
-          }
-
           horz.curr_x = e->curr_x;
           e = horz.next_in_ael;
         }
         else
         {
-          op = IntersectEdges(*e, horz, pt);
+          IntersectEdges(*e, horz, pt);
           SwapPositionsInAEL(*e, horz);
-
-          if (IsHotEdge(horz) && op &&
-            !IsOpen(horz) && op->pt == pt)
-            AddTrialHorzJoin(op);
-
-          if (!IsHorizontal(*e) && TestJoinWithNext1(*e))
-          {
-            op = AddOutPt(*e, pt);
-            OutPt* op2 = AddOutPt(*e->next_in_ael, pt);
-            AddJoin(op, op2);
-          }
-
           horz.curr_x = e->curr_x;
           e = horz.prev_in_ael;
+        }
+
+        if (horz.outrec && horz.outrec != currHorzOutrec)
+        {
+          currHorzOutrec = horz.outrec;
+          AddTrialHorzJoin(currHorzOutrec);
         }
       }
 
@@ -2392,40 +2584,26 @@ namespace Clipper2Lib {
     }
 
     if (IsHotEdge(horz))
-    {
       op = AddOutPt(horz, horz.top);
-      if (!IsOpen(horz))
-        AddTrialHorzJoin(op);
-    }
-    else
-      op = nullptr;
 
     if ((horzIsOpen && !IsOpenEnd(horz)) ||
       (!horzIsOpen && vertex_max != horz.vertex_top))
     {
       UpdateEdgeIntoAEL(&horz); // this is the end of an intermediate horiz.
       if (IsOpen(horz)) return;
-
-      if (is_left_to_right && TestJoinWithNext1(horz))
-      {
-        OutPt* op2 = AddOutPt(*horz.next_in_ael, horz.bot);
-        AddJoin(op, op2);
-      }
-      else if (!is_left_to_right && TestJoinWithPrev1(horz))
-      {
-        OutPt* op2 = AddOutPt(*horz.prev_in_ael, horz.bot);
-        AddJoin(op2, op);
-      }
     }
-    else if (IsHotEdge(horz))
-      AddLocalMaxPoly(horz, *max_pair, horz.top);
     else
     {
-      DeleteFromAEL(*max_pair);
-      DeleteFromAEL(horz);
+      if (IsHotEdge(horz))
+        AddLocalMaxPoly(horz, *max_pair, horz.top);
+      else
+      {
+        if (IsJoined(*max_pair)) Split(*max_pair, max_pair->top);
+        DeleteFromAEL(*max_pair);
+        DeleteFromAEL(horz);
+      }
     }
   }
-
 
   void ClipperBase::DoTopOfScanbeam(const int64_t y)
   {
@@ -2487,6 +2665,9 @@ namespace Clipper2Lib {
       if (!max_pair) return next_e;  // eMaxPair is horizontal
     }
 
+    if (IsJoined(e)) Split(e, e.top);
+    if (IsJoined(*max_pair)) Split(*max_pair, max_pair->top);
+
     //only non-horizontal maxima here.
     //process any edges between maxima pair ...
     while (next_e != max_pair)
@@ -2505,7 +2686,7 @@ namespace Clipper2Lib {
       return (prev_e ? prev_e->next_in_ael : actives_);
     }
 
-    //here E.next_in_ael == ENext == EMaxPair ...
+    // e.next_in_ael== max_pair ...
     if (IsHotEdge(e))
       AddLocalMaxPoly(e, *max_pair, e.top);
 
@@ -2514,143 +2695,69 @@ namespace Clipper2Lib {
     return (prev_e ? prev_e->next_in_ael : actives_);
   }
 
-
-  void ClipperBase::SafeDeleteOutPtJoiners(OutPt* op)
+  void ClipperBase::Split(Active& e, const Point64& pt)
   {
-    Joiner* joiner = op->joiner;
-    if (!joiner) return;
-
-    while (joiner)
+    if (e.join_with == JoinWith::Right)
     {
-      if (joiner->idx < 0)
-        DeleteTrialHorzJoin(op);
-      else if (horz_joiners_)
-      {
-        if (OutPtInTrialHorzList(joiner->op1))
-          DeleteTrialHorzJoin(joiner->op1);
-        if (OutPtInTrialHorzList(joiner->op2))
-          DeleteTrialHorzJoin(joiner->op2);
-        DeleteJoin(joiner);
-      }
-      else
-        DeleteJoin(joiner);
-      joiner = op->joiner;
+      e.join_with = JoinWith::None;
+      // anticipate temporary separation of joined edges
+      Active* e2 = e.next_in_ael;
+      while (e2 && !IsJoined(*e2)) e2 = e2->next_in_ael;
+      if (!e2 || e2->join_with != JoinWith::Left) return; //error!!!!
+      e2->join_with = JoinWith::None;
+      AddLocalMinPoly(e, *e2, pt, true);
+    }
+    else
+    {
+      e.join_with = JoinWith::None;
+      // anticipate temporary separation of joined edges
+      Active* e2 = e.prev_in_ael;
+      while (e2 && !IsJoined(*e2)) e2 = e2->prev_in_ael;
+      if (!e2 || e2->join_with != JoinWith::Right) return; //error!!!!
+      e2->join_with = JoinWith::None;
+      AddLocalMinPoly(*e2, e, pt, true);
     }
   }
 
-
-  Joiner* ClipperBase::GetHorzTrialParent(const OutPt* op)
+  void ClipperBase::CheckJoinLeft(Active& e, const Point64& pt)
   {
-    Joiner* joiner = op->joiner;
-    while (joiner)
-    {
-      if (joiner->op1 == op)
-      {
-        if (joiner->next1 && joiner->next1->idx < 0) return joiner;
-        else joiner = joiner->next1;
-      }
-      else
-      {
-        if (joiner->next2 && joiner->next2->idx < 0) return joiner;
-        else joiner = joiner->next1;
-      }
-    }
-    return joiner;
+    if (IsOpen(e) || !IsHotEdge(e) || 
+      !e.prev_in_ael || IsOpen(*e.prev_in_ael) ||
+      !IsHotEdge(*e.prev_in_ael) || e.curr_x != e.prev_in_ael->curr_x ||
+      pt.y <= e.top.y || pt.y <= e.prev_in_ael->top.y ||
+      IsJoined(e) || IsOpen(e) || 
+      CrossProduct(e.top, pt, e.prev_in_ael->top)) 
+        return;
+
+    if (e.outrec->idx == e.prev_in_ael->outrec->idx)
+      AddLocalMaxPoly(*e.prev_in_ael, e, pt);
+    else if (e.outrec->idx < e.prev_in_ael->outrec->idx)
+      JoinOutrecPaths(e, *e.prev_in_ael);
+    else
+      JoinOutrecPaths(*e.prev_in_ael, e);
+    e.prev_in_ael->join_with = JoinWith::Right;
+    e.join_with = JoinWith::Left;
   }
 
-
-  bool ClipperBase::OutPtInTrialHorzList(OutPt* op)
+  void ClipperBase::CheckJoinRight(Active& e, const Point64& pt)
   {
-    return op->joiner && ((op->joiner->idx < 0) || GetHorzTrialParent(op));
+    if (IsOpen(e) || !IsHotEdge(e) ||
+      !e.next_in_ael || IsOpen(*e.next_in_ael) ||
+      !IsHotEdge(*e.next_in_ael) || e.curr_x != e.next_in_ael->curr_x ||
+      pt.y <= e.top.y || pt.y <= e.next_in_ael->top.y ||
+      IsJoined(e) || IsOpen(e) ||
+      CrossProduct(e.top, pt, e.next_in_ael->top)) 
+        return;
+
+    if (e.outrec->idx == e.next_in_ael->outrec->idx)
+      AddLocalMaxPoly(e, *e.next_in_ael, pt);
+    else if (e.outrec->idx < e.next_in_ael->outrec->idx)
+      JoinOutrecPaths(e, *e.next_in_ael);
+    else
+      JoinOutrecPaths(*e.next_in_ael, e);
+    e.join_with = JoinWith::Right;
+    e.next_in_ael->join_with = JoinWith::Left;
   }
-
-
-  void ClipperBase::AddTrialHorzJoin(OutPt* op)
-  {
-    //make sure 'op' isn't added more than once
-    if (!op->outrec->is_open && !OutPtInTrialHorzList(op))
-      horz_joiners_ = new Joiner(op, nullptr, horz_joiners_);
-  }
-
-
-  Joiner* FindTrialJoinParent(Joiner*& joiner, const OutPt* op)
-  {
-    Joiner* parent = joiner;
-    while (parent)
-    {
-      if (op == parent->op1)
-      {
-        if (parent->next1 && parent->next1->idx < 0)
-        {
-          joiner = parent->next1;
-          return parent;
-        }
-        parent = parent->next1;
-      }
-      else
-      {
-        if (parent->next2 && parent->next2->idx < 0)
-        {
-          joiner = parent->next2;
-          return parent;
-        }
-        parent = parent->next2;
-      }
-    }
-    return nullptr;
-  }
-
-
-  void ClipperBase::DeleteTrialHorzJoin(OutPt* op)
-  {
-    if (!horz_joiners_) return;
-
-    Joiner* joiner = op->joiner;
-    Joiner* parentH, * parentOp = nullptr;
-    while (joiner)
-    {
-      if (joiner->idx < 0)
-      {
-        //first remove joiner from FHorzTrials
-        if (joiner == horz_joiners_)
-          horz_joiners_ = joiner->nextH;
-        else
-        {
-          parentH = horz_joiners_;
-          while (parentH->nextH != joiner)
-            parentH = parentH->nextH;
-          parentH->nextH = joiner->nextH;
-        }
-
-        //now remove joiner from op's joiner list
-        if (!parentOp)
-        {
-          //joiner must be first one in list
-          op->joiner = joiner->next1;
-          delete joiner;
-          joiner = op->joiner;
-        }
-        else
-        {
-          //the trial joiner isn't first
-          if (op == parentOp->op1)
-            parentOp->next1 = joiner->next1;
-          else
-            parentOp->next2 = joiner->next1;
-          delete joiner;
-          joiner = parentOp;
-        }
-      }
-      else
-      {
-        //not a trial join so look further along the linked list
-        parentOp = FindTrialJoinParent(joiner, op);
-        if (!parentOp) break;
-      }
-      //loop in case there's more than one trial join
-    }
-  }
-
 
   inline bool GetHorzExtendedHorzSeg(OutPt*& op, OutPt*& op2)
   {
@@ -2725,188 +2832,6 @@ namespace Clipper2Lib {
       ValueEqualOrBetween(pt.y, corner1.y, corner2.y);
   }
 
-
-  Joiner* FindJoinParent(const Joiner* joiner, OutPt* op)
-  {
-    Joiner* result = op->joiner;
-    for (; ; )
-    {
-      if (op == result->op1)
-      {
-        if (result->next1 == joiner) return result;
-        else result = result->next1;
-      }
-      else
-      {
-        if (result->next2 == joiner) return result;
-        else result = result->next2;
-      }
-    }
-  }
-
-
-  void ClipperBase::ConvertHorzTrialsToJoins()
-  {
-    while (horz_joiners_)
-    {
-      Joiner* joiner = horz_joiners_;
-      horz_joiners_ = horz_joiners_->nextH;
-      OutPt* op1a = joiner->op1;
-      if (op1a->joiner == joiner)
-      {
-        op1a->joiner = joiner->next1;
-      }
-      else
-      {
-        Joiner* joinerParent = FindJoinParent(joiner, op1a);
-        if (joinerParent->op1 == op1a)
-          joinerParent->next1 = joiner->next1;
-        else
-          joinerParent->next2 = joiner->next1;
-      }
-      delete joiner;
-
-      OutPt* op1b;
-      if (!GetHorzExtendedHorzSeg(op1a, op1b))
-      {
-        CleanCollinear(op1a->outrec);
-        continue;
-      }
-
-      bool joined = false;
-      joiner = horz_joiners_;
-      while (joiner)
-      {
-        OutPt* op2a = joiner->op1, * op2b;
-        if (GetHorzExtendedHorzSeg(op2a, op2b) &&
-          HorzEdgesOverlap(op1a->pt.x, op1b->pt.x, op2a->pt.x, op2b->pt.x))
-        {
-          //overlap found so promote to a 'real' join
-          joined = true;
-          if (op1a->pt == op2b->pt)
-            AddJoin(op1a, op2b);
-          else if (op1b->pt == op2a->pt)
-            AddJoin(op1b, op2a);
-          else if (op1a->pt == op2a->pt)
-            AddJoin(op1a, op2a);
-          else if (op1b->pt == op2b->pt)
-            AddJoin(op1b, op2b);
-          else if (ValueBetween(op1a->pt.x, op2a->pt.x, op2b->pt.x))
-            AddJoin(op1a, InsertOp(op1a->pt, op2a));
-          else if (ValueBetween(op1b->pt.x, op2a->pt.x, op2b->pt.x))
-            AddJoin(op1b, InsertOp(op1b->pt, op2a));
-          else if (ValueBetween(op2a->pt.x, op1a->pt.x, op1b->pt.x))
-            AddJoin(op2a, InsertOp(op2a->pt, op1a));
-          else if (ValueBetween(op2b->pt.x, op1a->pt.x, op1b->pt.x))
-            AddJoin(op2b, InsertOp(op2b->pt, op1a));
-          break;
-        }
-        joiner = joiner->nextH;
-      }
-      if (!joined)
-        CleanCollinear(op1a->outrec);
-    }
-  }
-
-
-  void ClipperBase::AddJoin(OutPt* op1, OutPt* op2)
-  {
-    if ((op1->outrec == op2->outrec) && ((op1 == op2) ||
-      //unless op1.next or op1.prev crosses the start-end divide
-      //don't waste time trying to join adjacent vertices
-      ((op1->next == op2) && (op1 != op1->outrec->pts)) ||
-      ((op2->next == op1) && (op2 != op1->outrec->pts)))) return;
-
-    Joiner* j = new Joiner(op1, op2, nullptr);
-    j->idx = static_cast<int>(joiner_list_.size());
-    joiner_list_.push_back(j);
-  }
-
-
-  void ClipperBase::DeleteJoin(Joiner* joiner)
-  {
-    //This method deletes a single join, and it doesn't check for or
-    //delete trial horz. joins. For that, use the following method.
-    OutPt* op1 = joiner->op1, * op2 = joiner->op2;
-
-    Joiner* parent_joiner;
-    if (op1->joiner != joiner)
-    {
-      parent_joiner = FindJoinParent(joiner, op1);
-      if (parent_joiner->op1 == op1)
-        parent_joiner->next1 = joiner->next1;
-      else
-        parent_joiner->next2 = joiner->next1;
-    }
-    else
-      op1->joiner = joiner->next1;
-
-    if (op2->joiner != joiner)
-    {
-      parent_joiner = FindJoinParent(joiner, op2);
-      if (parent_joiner->op1 == op2)
-        parent_joiner->next1 = joiner->next2;
-      else
-        parent_joiner->next2 = joiner->next2;
-    }
-    else
-      op2->joiner = joiner->next2;
-
-    joiner_list_[joiner->idx] = nullptr;
-    delete joiner;
-  }
-
-
-  void ClipperBase::ProcessJoinerList()
-  {
-    for (Joiner* j : joiner_list_)
-    {
-      if (!j) continue;
-      if (succeeded_)
-      {
-        OutRec* outrec = ProcessJoin(j);
-        CleanCollinear(outrec);
-      }
-      else
-        delete j;
-    }
-
-    joiner_list_.resize(0);
-  }
-
-
-  bool CheckDisposeAdjacent(OutPt*& op, const OutPt* guard, OutRec& outRec)
-  {
-    bool result = false;
-    while (op->prev != op)
-    {
-      if (op->pt == op->prev->pt && op != guard &&
-        op->prev->joiner && !op->joiner)
-      {
-        if (op == outRec.pts) outRec.pts = op->prev;
-        op = DisposeOutPt(op);
-        op = op->prev;
-      }
-      else
-        break;
-    }
-
-    while (op->next != op)
-    {
-      if (op->pt == op->next->pt && op != guard &&
-        op->next->joiner && !op->joiner)
-      {
-        if (op == outRec.pts) outRec.pts = op->prev;
-        op = DisposeOutPt(op);
-        op = op->prev;
-      }
-      else
-        break;
-    }
-    return result;
-  }
-
-
   inline bool IsValidPath(OutPt* op)
   {
     return (op && op->next != op);
@@ -2973,216 +2898,6 @@ namespace Clipper2Lib {
     return true;
   }
 
-  OutRec* ClipperBase::ProcessJoin(Joiner* joiner)
-  {
-    OutPt* op1 = joiner->op1, * op2 = joiner->op2;
-    OutRec* or1 = GetRealOutRec(op1->outrec);
-    OutRec* or2 = GetRealOutRec(op2->outrec);
-    DeleteJoin(joiner);
-
-    if (or2->pts == nullptr) return or1;
-    else if (!IsValidClosedPath(op2))
-    {
-      SafeDisposeOutPts(op2);
-      return or1;
-    }
-    else if ((or1->pts == nullptr) || !IsValidClosedPath(op1))
-    {
-      SafeDisposeOutPts(op1);
-      return or2;
-    }
-    else if (or1 == or2 &&
-      ((op1 == op2) || (op1->next == op2) || (op1->prev == op2))) return or1;
-
-    CheckDisposeAdjacent(op1, op2, *or1);
-    CheckDisposeAdjacent(op2, op1, *or2);
-    if (op1->next == op2 || op2->next == op1) return or1;
-    OutRec* result = or1;
-
-    for (; ; )
-    {
-      if (!IsValidPath(op1) || !IsValidPath(op2) ||
-        (or1 == or2 && (op1->prev == op2 || op1->next == op2))) return or1;
-
-      if (op1->prev->pt == op2->next->pt ||
-        ((CrossProduct(op1->prev->pt, op1->pt, op2->next->pt) == 0) &&
-          CollinearSegsOverlap(op1->prev->pt, op1->pt, op2->pt, op2->next->pt)))
-      {
-        if (or1 == or2)
-        {
-          //SPLIT REQUIRED
-          //make sure op1.prev and op2.next match positions
-          //by inserting an extra vertex if needed
-          if (op1->prev->pt != op2->next->pt)
-          {
-            if (PointEqualOrBetween(op1->prev->pt, op2->pt, op2->next->pt))
-              op2->next = InsertOp(op1->prev->pt, op2);
-            else
-              op1->prev = InsertOp(op2->next->pt, op1->prev);
-          }
-
-          //current              to     new
-          //op1.p[opA] >>> op1   ...    opA \   / op1
-          //op2.n[opB] <<< op2   ...    opB /   \ op2
-          OutPt* opA = op1->prev, * opB = op2->next;
-          opA->next = opB;
-          opB->prev = opA;
-          op1->prev = op2;
-          op2->next = op1;
-          CompleteSplit(op1, opA, *or1);
-        }
-        else
-        {
-          //JOIN, NOT SPLIT
-          OutPt* opA = op1->prev, * opB = op2->next;
-          opA->next = opB;
-          opB->prev = opA;
-          op1->prev = op2;
-          op2->next = op1;
-
-          //SafeDeleteOutPtJoiners(op2);
-          //DisposeOutPt(op2);
-
-          if (or1->idx < or2->idx)
-          {
-            or1->pts = op1;
-            or2->pts = nullptr;
-            if (or1->owner && (!or2->owner ||
-              or2->owner->idx < or1->owner->idx))
-              or1->owner = or2->owner;
-            or2->owner = or1;
-          }
-          else
-          {
-            result = or2;
-            or2->pts = op1;
-            or1->pts = nullptr;
-            if (or2->owner && (!or1->owner ||
-              or1->owner->idx < or2->owner->idx))
-              or2->owner = or1->owner;
-            or1->owner = or2;
-          }
-        }
-        break;
-      }
-      else if (op1->next->pt == op2->prev->pt ||
-        ((CrossProduct(op1->next->pt, op2->pt, op2->prev->pt) == 0) &&
-          CollinearSegsOverlap(op1->next->pt, op1->pt, op2->pt, op2->prev->pt)))
-      {
-        if (or1 == or2)
-        {
-          //SPLIT REQUIRED
-          //make sure op2.prev and op1.next match positions
-          //by inserting an extra vertex if needed
-          if (op2->prev->pt != op1->next->pt)
-          {
-            if (PointEqualOrBetween(op2->prev->pt, op1->pt, op1->next->pt))
-              op1->next = InsertOp(op2->prev->pt, op1);
-            else
-              op2->prev = InsertOp(op1->next->pt, op2->prev);
-          }
-
-          //current              to     new
-          //op2.p[opA] >>> op2   ...    opA \   / op2
-          //op1.n[opB] <<< op1   ...    opB /   \ op1
-          OutPt* opA = op2->prev, * opB = op1->next;
-          opA->next = opB;
-          opB->prev = opA;
-          op2->prev = op1;
-          op1->next = op2;
-          CompleteSplit(op1, opA, *or1);
-        }
-        else
-        {
-          //JOIN, NOT SPLIT
-          OutPt* opA = op1->next, * opB = op2->prev;
-          opA->prev = opB;
-          opB->next = opA;
-          op1->next = op2;
-          op2->prev = op1;
-
-          //SafeDeleteOutPtJoiners(op2);
-          //DisposeOutPt(op2);
-
-          if (or1->idx < or2->idx)
-          {
-            or1->pts = op1;
-            or2->pts = nullptr;
-            if (or1->owner && (!or2->owner ||
-              or2->owner->idx < or1->owner->idx))
-              or1->owner = or2->owner;
-            or2->owner = or1;
-          }
-          else
-          {
-            result = or2;
-            or2->pts = op1;
-            or1->pts = nullptr;
-            if (or2->owner && (!or1->owner ||
-              or1->owner->idx < or2->owner->idx))
-              or2->owner = or1->owner;
-            or1->owner = or2;
-          }
-        }
-        break;
-      }
-      else if (PointBetween(op1->next->pt, op2->pt, op2->prev->pt) &&
-        DistanceFromLineSqrd(op1->next->pt, op2->pt, op2->prev->pt) < 2.01)
-      {
-        InsertOp(op1->next->pt, op2->prev);
-        continue;
-      }
-      else if (PointBetween(op2->next->pt, op1->pt, op1->prev->pt) &&
-        DistanceFromLineSqrd(op2->next->pt, op1->pt, op1->prev->pt) < 2.01)
-      {
-        InsertOp(op2->next->pt, op1->prev);
-        continue;
-      }
-      else if (PointBetween(op1->prev->pt, op2->pt, op2->next->pt) &&
-        DistanceFromLineSqrd(op1->prev->pt, op2->pt, op2->next->pt) < 2.01)
-      {
-        InsertOp(op1->prev->pt, op2);
-        continue;
-      }
-      else if (PointBetween(op2->prev->pt, op1->pt, op1->next->pt) &&
-        DistanceFromLineSqrd(op2->prev->pt, op1->pt, op1->next->pt) < 2.01)
-      {
-        InsertOp(op2->prev->pt, op1);
-        continue;
-      }
-
-      //something odd needs tidying up
-      if (CheckDisposeAdjacent(op1, op2, *or1)) continue;
-      else if (CheckDisposeAdjacent(op2, op1, *or1)) continue;
-      else if (op1->prev->pt != op2->next->pt &&
-        (DistanceSqr(op1->prev->pt, op2->next->pt) < 2.01))
-      {
-        op1->prev->pt = op2->next->pt;
-        continue;
-      }
-      else if (op1->next->pt != op2->prev->pt &&
-        (DistanceSqr(op1->next->pt, op2->prev->pt) < 2.01))
-      {
-        op2->prev->pt = op1->next->pt;
-        continue;
-      }
-      else
-      {
-        //OK, there doesn't seem to be a way to join after all
-        //so just tidy up the polygons
-        or1->pts = op1;
-        if (or2 != or1)
-        {
-          or2->pts = op2;
-          CleanCollinear(or2);
-        }
-        break;
-      }
-    }
-    return result;
-
-  }
-
   inline bool Path1InsidePath2(const OutRec* or1, const OutRec* or2)
   {
     PointInPolygonResult result = PointInPolygonResult::IsOn;
@@ -3215,7 +2930,7 @@ namespace Clipper2Lib {
 
   bool BuildPath64(OutPt* op, bool reverse, bool isOpen, Path64& path)
   {
-    if (op->next == op || (!isOpen && op->next == op->prev))
+    if (!op || op->next == op || (!isOpen && op->next == op->prev))
       return false;
 
     path.resize(0);
@@ -3306,8 +3021,13 @@ namespace Clipper2Lib {
       solutionOpen->reserve(outrec_list_.size());
     }
 
-    for (OutRec* outrec : outrec_list_)
+    // nb: outrec_list_.size() may change in the following
+    // while loop because polygons may be split during
+    // calls to CleanCollinear which calls FixSelfIntersects
+    size_t i = 0;
+    while (i < outrec_list_.size())
     {
+      OutRec* outrec = outrec_list_[i++];
       if (outrec->pts == nullptr) continue;
 
       Path64 path;
@@ -3318,6 +3038,7 @@ namespace Clipper2Lib {
       }
       else
       {
+        CleanCollinear(outrec);
         //closed paths should always return a Positive orientation
         if (BuildPath64(outrec->pts, ReverseSolution, false, path))
           solutionClosed.emplace_back(std::move(path));
@@ -3332,8 +3053,10 @@ namespace Clipper2Lib {
     if (has_open_paths_)
       open_paths.reserve(outrec_list_.size());
 
-    for (OutRec* outrec : outrec_list_)
+    size_t i = 0;
+    while (i < outrec_list_.size())
     {
+      OutRec* outrec = outrec_list_[i++];
       if (!outrec || !outrec->pts) continue;
       if (outrec->is_open)
       {
@@ -3343,6 +3066,7 @@ namespace Clipper2Lib {
         continue;
       }
 
+      CleanCollinear(outrec);
       if (!BuildPath64(outrec->pts, ReverseSolution, false, outrec->path))
         continue;
       if (outrec->bounds.IsEmpty()) outrec->bounds = GetBounds(outrec->path);
@@ -3377,7 +3101,9 @@ namespace Clipper2Lib {
 
   bool BuildPathD(OutPt* op, bool reverse, bool isOpen, PathD& path, double inv_scale)
   {
-    if (op->next == op || (!isOpen && op->next == op->prev)) return false;
+    if (!op || op->next == op || (!isOpen && op->next == op->prev)) 
+      return false;
+
     path.resize(0);
     Point64 lastPt;
     OutPt* op2;
@@ -3392,22 +3118,23 @@ namespace Clipper2Lib {
       lastPt = op->pt;
       op2 = op->next;
     }
-    path.push_back(PointD(lastPt.x * inv_scale, lastPt.y * inv_scale
 #ifdef USINGZ
-              , lastPt.z
+    path.push_back(PointD(lastPt.x * inv_scale, lastPt.y * inv_scale, lastPt.z));
+#else
+    path.push_back(PointD(lastPt.x * inv_scale, lastPt.y * inv_scale));
 #endif
-    ));
 
     while (op2 != op)
     {
       if (op2->pt != lastPt)
       {
         lastPt = op2->pt;
-        path.push_back(PointD(lastPt.x * inv_scale, lastPt.y * inv_scale
 #ifdef USINGZ
-              , lastPt.z
+        path.push_back(PointD(lastPt.x * inv_scale, lastPt.y * inv_scale, lastPt.z));
+#else
+        path.push_back(PointD(lastPt.x * inv_scale, lastPt.y * inv_scale));
 #endif
-        ));
+        
       }
       if (reverse)
         op2 = op2->prev;
@@ -3440,6 +3167,7 @@ namespace Clipper2Lib {
       }
       else
       {
+        CleanCollinear(outrec);
         //closed paths should always return a Positive orientation
         if (BuildPathD(outrec->pts, ReverseSolution, false, path, invScale_))
           solutionClosed.emplace_back(std::move(path));
@@ -3465,6 +3193,7 @@ namespace Clipper2Lib {
         continue;
       }
 
+      CleanCollinear(outrec);
       if (!BuildPath64(outrec->pts, ReverseSolution, false, outrec->path))
         continue;
       if (outrec->bounds.IsEmpty()) outrec->bounds = GetBounds(outrec->path);

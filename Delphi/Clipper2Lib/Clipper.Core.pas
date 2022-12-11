@@ -2,7 +2,7 @@ unit Clipper.Core;
 
 (*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  16 November 2022                                                *
+* Date      :  6 December 2022                                                 *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  Core Clipper Library module                                     *
 *              Contains structures and functions used throughout the library   *
@@ -101,19 +101,23 @@ type
   end;
 
   TListEx = class
+  private
+    fCount    : integer;
+    fCapacity : integer;
+    fList     : TPointerList;
   protected
-    fList       : TList;
-    fCount      : integer;
+    function Add(item: Pointer): integer;
+    function UnsafeGet(idx: integer): Pointer; // no range checking
+    procedure UnsafeSet(idx: integer; val: Pointer);
   public
-    constructor Create(blockSize: integer = 8); virtual;
+    constructor Create(capacity: integer = 0); virtual;
     destructor Destroy; override;
     procedure Clear; virtual;
-    function UnsafeGet(idx: integer): Pointer;
-    procedure UnsafeSwap(idx1, idx2: integer);
-    procedure UnsafeSet(idx: integer; val: Pointer);
-    function ListPtr: PPointer;
+    procedure Swap(idx1, idx2: integer);
     procedure Sort(Compare: TListSortCompare);
+    procedure Resize(count: integer);
     property Count: integer read fCount;
+    property Item[idx: integer]: Pointer read UnsafeGet; default;
   end;
 
   TClipType = (ctNone, ctIntersection, ctUnion, ctDifference, ctXor);
@@ -300,6 +304,9 @@ procedure GetSinCos(angle: double; out sinA, cosA: double);
 function Ellipse(const rec: TRect64; steps: integer = 0): TPath64; overload;
 function Ellipse(const rec: TRectD; steps: integer = 0): TPathD; overload;
 
+procedure QuickSort(SortList: TPointerList;
+  L, R: Integer; const SCompare: TListSortCompareFunc);
+
 procedure CheckPrecisionRange(var precision: integer);
 
 const
@@ -456,60 +463,135 @@ end;
 // TListEx class
 //------------------------------------------------------------------------------
 
-constructor TListEx.Create(blockSize: integer = 8);
+constructor TListEx.Create(capacity: integer);
 begin
-  fList := TList.Create;
+  if capacity > 0 then
+  begin
+    fCapacity := 16;
+    while capacity > fCapacity do fCapacity := fCapacity * 2;
+    SetLength(fList, fCapacity);
+  end;
 end;
 //------------------------------------------------------------------------------
 
 destructor TListEx.Destroy;
 begin
   Clear;
-  fList.Free;
   inherited;
 end;
 //------------------------------------------------------------------------------
 
 procedure TListEx.Clear;
 begin
+  fList := nil;
   fCount := 0;
-  fList.Clear;
+  fCapacity := 0;
+end;
+//------------------------------------------------------------------------------
+
+function TListEx.Add(item: Pointer): integer;
+begin
+  if fCount = fCapacity then
+  begin
+    if fCapacity = 0 then
+      fCapacity := 16 else
+      fCapacity := fCapacity *2;
+    SetLength(fList, fCapacity);
+  end;
+  fList[fCount] := item;
+  Result := fCount;
+  inc(fCount);
+end;
+//------------------------------------------------------------------------------
+
+procedure QuickSort(SortList: TPointerList; L, R: Integer;
+  const SCompare: TListSortCompareFunc);
+var
+  I, J: Integer;
+  P, T: Pointer;
+begin
+  if L >= R then Exit;
+
+  repeat
+    if (R - L) = 1 then
+    begin
+      if SCompare(SortList[L], SortList[R]) > 0 then
+      begin
+        T := SortList[L];
+        SortList[L] := SortList[R];
+        SortList[R] := T;
+      end;
+      break;
+    end;
+
+    I := L;
+    J := R;
+    P := SortList[(L + R) shr 1];
+    repeat
+      while SCompare(SortList[I], P) < 0 do Inc(I);
+      while SCompare(SortList[J], P) > 0 do Dec(J);
+      if I <= J then
+      begin
+        if I <> J then
+        begin
+          T := SortList[I];
+          SortList[I] := SortList[J];
+          SortList[J] := T;
+        end;
+        Inc(I);
+        Dec(J);
+      end;
+    until I > J;
+
+    if (J - L) > (R - I) then
+    begin
+      if I < R then QuickSort(SortList, I, R, SCompare);
+      R := J;
+    end
+    else
+    begin
+      if L < J then QuickSort(SortList, L, J, SCompare);
+      L := I;
+    end;
+  until L >= R;
 end;
 //------------------------------------------------------------------------------
 
 procedure TListEx.Sort(Compare: TListSortCompare);
 begin
-  FList.Sort(Compare);
+  if fCount < 2 then Exit;
+  QuickSort(FList, 0, fCount - 1, Compare);
+end;
+//------------------------------------------------------------------------------
+
+procedure TListEx.Resize(count: integer);
+begin
+  if (fCapacity = 0) then fCapacity := 16;
+  while count > fCapacity do fCapacity := fCapacity * 2;
+  SetLength(fList, fCapacity);
+  fCount := count;
 end;
 //------------------------------------------------------------------------------
 
 function TListEx.UnsafeGet(idx: integer): Pointer;
 begin
-  Result := fList.List[idx];
+  Result := fList[idx];
 end;
 //------------------------------------------------------------------------------
 
 procedure TListEx.UnsafeSet(idx: integer; val: Pointer);
 begin
-  fList.List[idx] := val;
+  fList[idx] := val;
 end;
 //------------------------------------------------------------------------------
 
-procedure TListEx.UnsafeSwap(idx1, idx2: integer);
+procedure TListEx.Swap(idx1, idx2: integer);
 var
   p: Pointer;
 begin
-  p := UnsafeGet(idx1);
-  fList.List[idx1] := fList.List[idx2];
-  fList.List[idx2] := p;
-end;
-//------------------------------------------------------------------------------
-
-function TListEx.ListPtr: PPointer;
-begin
-  if fCount = 0 then
-    Result := nil else
-    Result := @fList.List[0];
+  p := fList[idx1];
+  fList[idx1] := fList[idx2];
+  fList[idx2] := p;
 end;
 
 //------------------------------------------------------------------------------

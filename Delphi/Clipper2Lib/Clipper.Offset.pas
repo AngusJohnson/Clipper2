@@ -150,20 +150,18 @@ function GetUnitNormal(const pt1, pt2: TPoint64): TPointD;
 var
   dx, dy, inverseHypot: Double;
 begin
-  if (pt2.X = pt1.X) and (pt2.Y = pt1.Y) then
+  dx := (pt2.X - pt1.X);
+  dy := (pt2.Y - pt1.Y);
+  if (dx = 0) and (dy = 0) then
   begin
     Result.X := 0;
     Result.Y := 0;
-    Exit;
+  end else
+  begin
+    inverseHypot := 1 / Hypot(dx, dy);
+    Result.X := dy * inverseHypot;
+    Result.Y := -dx * inverseHypot; //ie left side of vector
   end;
-
-  dx := (pt2.X - pt1.X);
-  dy := (pt2.Y - pt1.Y);
-  inverseHypot := 1 / Hypot(dx, dy);
-  dx := dx * inverseHypot;
-  dy := dy * inverseHypot;
-  Result.X := dy;
-  Result.Y := -dx
 end;
 //------------------------------------------------------------------------------
 
