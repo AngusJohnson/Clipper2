@@ -1,6 +1,6 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  30 October 2022                                                 *
+* Date      :  11 December 2022                                                *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  This module exports the Clipper2 Library (ie DLL/so)            *
@@ -730,7 +730,7 @@ inline CPathsD CreateCPathsD(const Paths64& pp, double scale)
 }
 
 inline void InitCPolyPath64(CPolyTree64* cpt, 
-  bool is_hole, const PolyPath64* pp)
+  bool is_hole, const std::unique_ptr <PolyPath64>& pp)
 {
   cpt->polygon = CreateCPath64(pp->Polygon());
   cpt->is_hole = is_hole;
@@ -740,7 +740,7 @@ inline void InitCPolyPath64(CPolyTree64* cpt,
   if (!child_cnt) return;
   cpt->childs = new CPolyPath64[child_cnt];
   CPolyPath64* child = cpt->childs;
-  for (const PolyPath64* pp_child : *pp)
+  for (const std::unique_ptr <PolyPath64>& pp_child : *pp)
     InitCPolyPath64(child++, !is_hole, pp_child);  
 }
 
@@ -755,7 +755,7 @@ inline CPolyTree64* CreateCPolyTree64(const PolyTree64& pt)
   if (!child_cnt) return result;
   result->childs = new CPolyPath64[child_cnt];
   CPolyPath64* child = result->childs;
-  for (const PolyPath64* pp : pt)
+  for (const std::unique_ptr <PolyPath64>& pp : pt)
     InitCPolyPath64(child++, true, pp);
   return result;
 }
@@ -778,7 +778,7 @@ EXTERN_DLL_EXPORT void DisposeExportedCPolyTree64(CPolyTree64*& cpt)
 }
 
 inline void InitCPolyPathD(CPolyTreeD* cpt,
-  bool is_hole, const PolyPath64* pp, double scale)
+  bool is_hole, const std::unique_ptr <PolyPath64>& pp, double scale)
 {
   cpt->polygon = CreateCPathD(pp->Polygon(), scale);
   cpt->is_hole = is_hole;
@@ -788,7 +788,7 @@ inline void InitCPolyPathD(CPolyTreeD* cpt,
   if (!child_cnt) return;
   cpt->childs = new CPolyPathD[child_cnt];
   CPolyPathD* child = cpt->childs;
-  for (const PolyPath64* pp_child : *pp)
+  for (const std::unique_ptr <PolyPath64>& pp_child : *pp)
     InitCPolyPathD(child++, !is_hole, pp_child, scale);
 }
 
@@ -803,7 +803,7 @@ inline CPolyTreeD* CreateCPolyTreeD(const PolyTree64& pt, double scale)
   if (!child_cnt) return result;
   result->childs = new CPolyPathD[child_cnt];
   CPolyPathD* child = result->childs;
-  for (const PolyPath64* pp : pt)
+  for (const std::unique_ptr <PolyPath64>& pp : pt)
     InitCPolyPathD(child++, true, pp, scale);
   return result;
 }
