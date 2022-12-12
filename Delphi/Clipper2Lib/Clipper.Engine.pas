@@ -2,7 +2,7 @@ unit Clipper.Engine;
 
 (*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  8 December 2022                                                 *
+* Date      :  12 December 2022                                                *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  This is the main polygon clipping module                        *
@@ -691,6 +691,21 @@ begin
 end;
 //------------------------------------------------------------------------------
 
+function GetCurrYMaximaVertexOpen(e: PActive): PVertex;
+begin
+  Result := e.vertTop;
+  if e.windDx > 0 then
+    while (Result.next.pt.Y = Result.pt.Y) and
+      (Result.flags * [vfOpenEnd, vfLocMax] = []) do
+        Result := Result.next
+  else
+    while (Result.prev.pt.Y = Result.pt.Y) and
+      (Result.flags * [vfOpenEnd, vfLocMax] = []) do
+        Result := Result.prev;
+  if not IsMaxima(Result) then Result := nil; // not a maxima
+end;
+//------------------------------------------------------------------------------
+
 function GetCurrYMaximaVertex(e: PActive): PVertex;
 begin
   // nb: function not safe with open paths
@@ -709,25 +724,6 @@ begin
   while assigned(Result) do
   begin
     if Result.vertTop = e.vertTop then Exit;  // Found!
-    Result := Result.nextInAEL;
-  end;
-  Result := nil;
-end;
-//------------------------------------------------------------------------------
-
-function GetHorzMaximaPair(horz: PActive; maxVert: PVertex): PActive;
-begin
-  // we can't be sure whether the MaximaPair is on the left or right, so ...
-  Result := horz.prevInAEL;
-  while assigned(Result) and (Result.currX >= maxVert.pt.X) do
-  begin
-    if Result.vertTop = maxVert then Exit;  // Found!
-    Result := Result.prevInAEL;
-  end;
-  Result := horz.nextInAEL;
-  while assigned(Result) and (TopX(Result, horz.top.Y) <= maxVert.pt.X) do
-  begin
-    if Result.vertTop = maxVert then Exit;  // Found!
     Result := Result.nextInAEL;
   end;
   Result := nil;
@@ -3267,7 +3263,7 @@ end;
 
 procedure TClipperBase.DoHorizontal(horzEdge: PActive);
 var
-  maxPair: PActive;
+  maxVertex: PVertex;
   horzLeft, horzRight: Int64;
 
   function ResetHorzDirection: Boolean;
@@ -3280,7 +3276,7 @@ var
       horzLeft := horzEdge.currX;
       horzRight := horzEdge.currX;
       e := horzEdge.nextInAEL;
-      while assigned(e) and (e <> maxPair) do
+      while assigned(e) and (e.vertTop <> maxVertex) do
         e := e.nextInAEL;
       Result := assigned(e);
       // nb: this block isn't yet redundant
@@ -3304,7 +3300,6 @@ var
   e: PActive;
   pt: TPoint64;
   currOr: POutRec;
-  maxVertex: PVertex;
   isLeftToRight, horzIsOpen: Boolean;
 begin
 (*******************************************************************************
@@ -3325,20 +3320,14 @@ begin
   horzIsOpen := IsOpen(horzEdge);
   Y := horzEdge.bot.Y;
   maxVertex := nil;
-  maxPair := nil;
 
-  if not horzIsOpen then
-  begin
+  if horzIsOpen then
+    maxVertex := GetCurrYMaximaVertexOpen(horzEdge) else
     maxVertex := GetCurrYMaximaVertex(horzEdge);
-    if Assigned(maxVertex) then
-    begin
-      maxPair := GetHorzMaximaPair(horzEdge, maxVertex);
-      // remove 180 deg.spikes and also simplify
-      // consecutive horizontals when PreserveCollinear = true
-      if (maxVertex <> horzEdge.vertTop) then
-          TrimHorz(horzEdge, FPreserveCollinear);
-    end;
-  end;
+
+  if Assigned(maxVertex) and not horzIsOpen and
+    (maxVertex <> horzEdge.vertTop) then
+      TrimHorz(horzEdge, FPreserveCollinear);
 
   isLeftToRight := ResetHorzDirection;
 
@@ -3356,33 +3345,19 @@ begin
 
   while true do // loop through consec. horizontal edges
   begin
-
-    if horzIsOpen and
-      IsMaxima(horzEdge) and not IsOpenEnd(horzEdge) then
-    begin
-      maxVertex := GetCurrYMaximaVertex(horzEdge);
-      if Assigned(maxVertex) then
-        maxPair := GetHorzMaximaPair(horzEdge, maxVertex);
-    end;
-
     if isLeftToRight  then
       e := horzEdge.nextInAEL else
       e := horzEdge.prevInAEL;
 
     while assigned(e) do
     begin
-      if (e = maxPair) then
+      if (e.vertTop = maxVertex) then
       begin
         if IsHotEdge(horzEdge) and IsJoined(e) then
           Split(e, e.top);
 
         if IsHotEdge(horzEdge) then
         begin
-          while horzEdge.vertTop <> e.vertTop do
-          begin
-            AddOutPt(horzEdge, horzEdge.top);
-            UpdateEdgeIntoAEL(horzEdge);
-          end;
           if isLeftToRight then
             AddLocalMaxPoly(horzEdge, e, horzEdge.top) else
             AddLocalMaxPoly(e, horzEdge, horzEdge.top);
@@ -3462,7 +3437,7 @@ begin
       Exit;
     end
     else if (NextVertex(horzEdge).pt.Y <> horzEdge.top.Y) then
-      Break;
+      Break; // end of an intermediate horizontal
 
     // there must be a following (consecutive) horizontal
 
@@ -3480,22 +3455,7 @@ begin
   if IsHotEdge(horzEdge) then
     AddOutPt(horzEdge, horzEdge.top);
 
-  if (horzIsOpen and not IsOpenEnd(horzEdge)) or
-    (not horzIsOpen and (maxVertex <> horzEdge.vertTop)) then
-  begin
-    UpdateEdgeIntoAEL(horzEdge); // this is the end of an intermediate horiz.
-    if IsOpen(horzEdge) then Exit;
-  end else
-  begin
-    if IsHotEdge(horzEdge) then
-      AddLocalMaxPoly(horzEdge, maxPair, horzEdge.top)
-    else
-    begin
-      if IsJoined(maxPair) then Split(maxPair, maxPair.top);
-      DeleteFromAEL(maxPair);
-      DeleteFromAEL(horzEdge);
-    end;
-  end;
+  UpdateEdgeIntoAEL(horzEdge); // this is the end of an intermediate horiz.
 end;
 //------------------------------------------------------------------------------
 

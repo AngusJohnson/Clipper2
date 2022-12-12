@@ -1,6 +1,6 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  11 December 2022                                                *
+* Date      :  12 December 2022                                                *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  This is the main polygon clipping module                        *
@@ -230,7 +230,24 @@ namespace Clipper2Lib {
     return IsMaxima(*e.vertex_top);
   }
 
-  Vertex* GetCurrYMaximaVertex(const Active& e)
+  inline Vertex* GetCurrYMaximaVertex_Open(const Active& e)
+  {
+    Vertex* result = e.vertex_top;
+    if (e.wind_dx > 0)
+      while ((result->next->pt.y == result->pt.y) &&
+        ((result->flags & (VertexFlags::OpenEnd | 
+          VertexFlags::LocalMax)) == VertexFlags::None))
+            result = result->next;
+    else
+      while (result->prev->pt.y == result->pt.y &&
+        ((result->flags & (VertexFlags::OpenEnd | 
+          VertexFlags::LocalMax)) == VertexFlags::None))
+          result = result->prev;
+    if (!IsMaxima(*result)) result = nullptr; // not a maxima   
+    return result;
+  }
+
+    inline Vertex* GetCurrYMaximaVertex(const Active& e)
   {
     Vertex* result = e.vertex_top;
     if (e.wind_dx > 0)
@@ -249,24 +266,6 @@ namespace Clipper2Lib {
     {
       if (e2->vertex_top == e.vertex_top) return e2;  // Found!
       e2 = e2->next_in_ael;
-    }
-    return nullptr;
-  }
-
-  Active* GetHorzMaximaPair(const Active& horz, const Vertex* vert_max)
-  {
-    //we can't be sure whether the MaximaPair is on the left or right, so ...
-    Active* result = horz.prev_in_ael;
-    while (result && result->curr_x >= vert_max->pt.x)
-    {
-      if (result->vertex_top == vert_max) return result;  // Found!
-      result = result->prev_in_ael;
-    }
-    result = horz.next_in_ael;
-    while (result && TopX(*result, horz.top.y) <= vert_max->pt.x)
-    {
-      if (result->vertex_top == vert_max) return result;  // Found!
-      result = result->next_in_ael;
     }
     return nullptr;
   }
@@ -2354,7 +2353,7 @@ namespace Clipper2Lib {
   }
 
   bool ClipperBase::ResetHorzDirection(const Active& horz,
-    const Active* max_pair, int64_t& horz_left, int64_t& horz_right)
+    const Vertex* max_vertex, int64_t& horz_left, int64_t& horz_right)
   {
     if (horz.bot.x == horz.top.x)
     {
@@ -2362,7 +2361,7 @@ namespace Clipper2Lib {
       horz_left = horz.curr_x;
       horz_right = horz.curr_x;
       Active* e = horz.next_in_ael;
-      while (e && e != max_pair) e = e->next_in_ael;
+      while (e && e->vertex_top != max_vertex) e = e->next_in_ael;
       return e != nullptr;
     }
     else if (horz.curr_x < horz.top.x)
@@ -2428,25 +2427,20 @@ namespace Clipper2Lib {
     Point64 pt;
     bool horzIsOpen = IsOpen(horz);
     int64_t y = horz.bot.y;
-    Vertex* vertex_max = nullptr;
-    Active* max_pair = nullptr;
-
-    if (!horzIsOpen)
-    {
+    Vertex* vertex_max;
+    if (horzIsOpen)
+      vertex_max = GetCurrYMaximaVertex_Open(horz);
+    else
       vertex_max = GetCurrYMaximaVertex(horz);
-      if (vertex_max)
-      {
-        max_pair = GetHorzMaximaPair(horz, vertex_max);
-        //remove 180 deg.spikes and also simplify
-        //consecutive horizontals when PreserveCollinear = true
-        if (vertex_max != horz.vertex_top)
-          TrimHorz(horz, PreserveCollinear);
-      }
-    }
+
+    // remove 180 deg.spikes and also simplify
+    // consecutive horizontals when PreserveCollinear = true
+    if (vertex_max && !horzIsOpen && vertex_max != horz.vertex_top)
+      TrimHorz(horz, PreserveCollinear);
 
     int64_t horz_left, horz_right;
     bool is_left_to_right =
-      ResetHorzDirection(horz, max_pair, horz_left, horz_right);
+      ResetHorzDirection(horz, vertex_max, horz_left, horz_right);
 
     if (IsHotEdge(horz))
     {
@@ -2461,20 +2455,13 @@ namespace Clipper2Lib {
 
     while (true) // loop through consec. horizontal edges
     {
-      if (horzIsOpen && IsMaxima(horz) && !IsOpenEnd(horz))
-      {
-        vertex_max = GetCurrYMaximaVertex(horz);
-        if (vertex_max)
-          max_pair = GetHorzMaximaPair(horz, vertex_max);
-      }
-
       Active* e;
       if (is_left_to_right) e = horz.next_in_ael;
       else e = horz.prev_in_ael;
 
       while (e)
       {
-        if (e == max_pair)
+        if (e->vertex_top == vertex_max)
         {
           if (IsHotEdge(horz) && IsJoined(*e))
             Split(*e, e->top);
@@ -2579,29 +2566,11 @@ namespace Clipper2Lib {
         TrimHorz(horz, true);
 
       is_left_to_right =
-        ResetHorzDirection(horz, max_pair, horz_left, horz_right);
+        ResetHorzDirection(horz, vertex_max, horz_left, horz_right);
     }
 
-    if (IsHotEdge(horz))
-      AddOutPt(horz, horz.top);
-
-    if ((horzIsOpen && !IsOpenEnd(horz)) ||
-      (!horzIsOpen && vertex_max != horz.vertex_top))
-    {
-      UpdateEdgeIntoAEL(&horz); // this is the end of an intermediate horiz.
-      if (IsOpen(horz)) return;
-    }
-    else
-    {
-      if (IsHotEdge(horz))
-        AddLocalMaxPoly(horz, *max_pair, horz.top);
-      else
-      {
-        if (IsJoined(*max_pair)) Split(*max_pair, max_pair->top);
-        DeleteFromAEL(*max_pair);
-        DeleteFromAEL(horz);
-      }
-    }
+    if (IsHotEdge(horz)) AddOutPt(horz, horz.top);
+    UpdateEdgeIntoAEL(&horz); // end of an intermediate horiz.
   }
 
   void ClipperBase::DoTopOfScanbeam(const int64_t y)

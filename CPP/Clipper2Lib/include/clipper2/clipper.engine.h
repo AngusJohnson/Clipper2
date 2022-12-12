@@ -1,6 +1,6 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  11 December 2022                                                *
+* Date      :  12 December 2022                                                *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  This is the main polygon clipping module                        *
@@ -213,7 +213,7 @@ namespace Clipper2Lib {
 			const Point64& pt, bool is_new = false);
 		OutPt* AddLocalMaxPoly(Active &e1, Active &e2, const Point64& pt);
 		void DoHorizontal(Active &horz);
-		bool ResetHorzDirection(const Active &horz, const Active *max_pair,
+		bool ResetHorzDirection(const Active &horz, const Vertex* max_vertex,
 			int64_t &horz_left, int64_t &horz_right);
 		void DoTopOfScanbeam(const int64_t top_y);
 		Active *DoMaxima(Active &e);
