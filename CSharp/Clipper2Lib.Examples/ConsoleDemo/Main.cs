@@ -21,6 +21,7 @@ namespace ClipperDemo1
       ClipSimpleShapes();
       ClipTestPolys();
     }
+
     public static void ClipSimpleShapes()
     {
       Paths64 subject = new ();
@@ -31,7 +32,7 @@ namespace ClipperDemo1
       clip.Add(Clipper.MakePath(new int[] { 98, 63, 4, 68, 77, 8, 52, 100, 19, 12 }));
       Paths64 solution = Clipper.Intersect(subject, clip, fillrule);
 
-      SimpleSvgWriter svg = new ();
+      SvgWriter svg = new ();
       SvgUtils.AddSubject(svg, subject);
       SvgUtils.AddClip(svg, clip);
       SvgUtils.SaveToFile(svg, "..\\..\\..\\clipperA.svg", fillrule, 400, 300, 20);
@@ -52,7 +53,7 @@ namespace ClipperDemo1
       Paths64 clip = LoadPathsFromResource("ConsoleDemo.clip.bin");
       Paths64 solution = Clipper.Intersect(subject, clip, fillrule);
 
-      SimpleSvgWriter svg = new ();
+      SvgWriter svg = new ();
       SvgUtils.AddSubject(svg, subject);
       SvgUtils.AddClip(svg, clip);
       SvgUtils.SaveToFile(svg, "..\\..\\..\\clipperC.svg", fillrule, 800, 600, 20);

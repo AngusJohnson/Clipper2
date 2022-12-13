@@ -424,6 +424,10 @@ namespace Clipper2Lib
 
     bool Intersects(const Rect<T>& rec) const
     {
+      // nb: if you get compile errors here, then it's almost certainly
+      // due to including windows.h before including this header.
+      // To fix this, add #define NOMINMAX just above where you
+      // #include <windows.h> in you own code.
       return (std::max(left, rec.left) < std::min(right, rec.right)) &&
         (std::max(top, rec.top) < std::min(bottom, rec.bottom));
     };

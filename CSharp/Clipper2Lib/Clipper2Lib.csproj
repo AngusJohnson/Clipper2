@@ -14,8 +14,15 @@
     <Copyright>Copyright © 2010-2022</Copyright>
     <RepositoryType>git</RepositoryType>
     <RepositoryUrl>https://github.com/AngusJohnson/Clipper2</RepositoryUrl>
-    <PackageReleaseNotes>This is a major update of my original Clipper library, first released over 10yrs ago.</PackageReleaseNotes>
+    <PackageReleaseNotes>Version 1.1 (beta)- 13 December 2022
+  Major revision to merging polygons in clipping solutions</PackageReleaseNotes>
     <Platforms>AnyCPU;x86</Platforms>
+    <PackageIcon>icon.png</PackageIcon>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <PackageTags>geometry; polygon; polygon-intersection; polygon-clipping-algorithm; clipping; polygon-union; polygon-clipping; polygon-boolean; boolean-operations; offsetting; clipping-algorithm</PackageTags>
+    <PackageLicenseFile>LICENSE</PackageLicenseFile>
+    <EnableNETAnalyzers>True</EnableNETAnalyzers>
+    <AnalysisLevel>latest-minimum</AnalysisLevel>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
@@ -28,6 +35,21 @@
 
   <ItemGroup>
     <None Remove="*.ico" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="..\..\Clipper2Repository\LICENSE">
+      <Pack>True</Pack>
+      <PackagePath>\</PackagePath>
+    </None>
+    <None Include="..\..\README.md">
+      <Pack>True</Pack>
+      <PackagePath>\</PackagePath>
+    </None>
+    <None Include="..\..\icon.png">
+      <Pack>True</Pack>
+      <PackagePath>\</PackagePath>
+    </None>
   </ItemGroup>
 
 </Project>

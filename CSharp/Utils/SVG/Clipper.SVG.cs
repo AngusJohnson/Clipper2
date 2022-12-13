@@ -13,9 +13,8 @@ using System.IO;
 
 namespace Clipper2Lib
 {
-  public class SimpleSvgWriter
+  public class SvgWriter
   {
-
     public const uint black = 0xFF000000;
     public const uint white = 0xFFFFFFFF;
     public const uint maroon = 0xFF800000;
@@ -30,10 +29,10 @@ namespace Clipper2Lib
     public const uint aqua = 0xFF00FFFF;
 
     private static RectD rectMax =
-      new (double.MaxValue, double.MaxValue, -double.MaxValue, -double.MaxValue);
+      new RectD(double.MaxValue, double.MaxValue, -double.MaxValue, -double.MaxValue);
     public static RectD RectMax => rectMax;
 
-    private static RectD rectEmpty = new (0, 0, 0, 0);
+    private static RectD rectEmpty = new RectD(0, 0, 0, 0);
     public static RectD RectEmpty => rectEmpty;
     internal static bool IsValidRect(RectD rec)
     {
@@ -92,8 +91,8 @@ namespace Clipper2Lib
     }
 
     public FillRule FillRule { get; set; }
-    private readonly List<PolyInfo> PolyInfoList = new ();
-    private readonly List<TextInfo> textInfos = new ();
+    private readonly List<PolyInfo> PolyInfoList = new List<PolyInfo>();
+    private readonly List<TextInfo> textInfos = new List<TextInfo>();
     private readonly CoordStyle coordStyle;
 
     private const string svg_header = "<?xml version=\"1.0\" standalone=\"no\"?>\n" +
@@ -105,7 +104,7 @@ namespace Clipper2Lib
     private const string svg_path_format2 = "\"\n style=\"fill:none; stroke:{0};" +
         "stroke-opacity:{1:f2}; stroke-width:{2:f2};\"/>\n\n";
 
-    public SimpleSvgWriter(FillRule fillrule = FillRule.EvenOdd,
+    public SvgWriter(FillRule fillrule = FillRule.EvenOdd,
       string coordFontName = "Verdana", int coordFontsize = 9, uint coordFontColor = black)
     {
       coordStyle = new CoordStyle(coordFontName, coordFontsize, coordFontColor);
@@ -153,7 +152,7 @@ namespace Clipper2Lib
 
     private RectD GetBounds()
     {
-      RectD bounds = new (RectMax);
+      RectD bounds = new RectD(RectMax);
       foreach (PolyInfo pi in PolyInfoList)
         foreach (PathD path in pi.paths)
           foreach (PointD pt in path)

@@ -44,14 +44,14 @@ namespace ClipperDemo1
       //nb: using the ClipperOffest class directly here to control 
       //different join types within the same offset operation
       ClipperOffset co = new ();
-      co.AddPaths(p, JoinType.Miter, EndType.Joined);
+      co.AddPaths(p, JoinType.Square, EndType.Joined);
       p = Clipper.TranslatePaths(p, 120, 100);
       pp.AddRange(p);
       co.AddPaths(p, JoinType.Round, EndType.Joined);
       p = co.Execute(20);
       pp.AddRange(p);
 
-      SimpleSvgWriter svg = new ();
+      SvgWriter svg = new ();
       SvgUtils.AddSolution(svg, pp, false);
       SvgUtils.SaveToFile(svg, "../../../inflate.svg", FillRule.EvenOdd, 800, 600, 20);
       ClipperFileIO.OpenFileWithDefaultApp("../../../inflate.svg");
@@ -72,7 +72,7 @@ namespace ClipperDemo1
         solution.AddRange(pd);
       }
 
-      SimpleSvgWriter svg = new ();
+      SvgWriter svg = new ();
       SvgUtils.AddSolution(svg, solution, false);
       SvgUtils.SaveToFile(svg, "../../../rabbit2.svg", FillRule.EvenOdd, 450, 720, 10);
       ClipperFileIO.OpenFileWithDefaultApp("../../../rabbit2.svg");

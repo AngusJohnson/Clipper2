@@ -84,7 +84,6 @@ namespace Clipper2Lib {
 	struct OutRec {
 		size_t idx = 0;
 		OutRec* owner = nullptr;
-		OutRecList* splits = nullptr;
 		Active* front_edge = nullptr;
 		Active* back_edge = nullptr;
 		OutPt* pts = nullptr;
@@ -93,7 +92,6 @@ namespace Clipper2Lib {
 		Path64 path;
 		bool is_open = false;
 		HorzFlag horzFlag = HorzFlag::Unprocessed;
-		~OutRec() { if (splits) delete splits; };
 	};
 
 	///////////////////////////////////////////////////////////////////
@@ -341,7 +339,7 @@ namespace Clipper2Lib {
 			const size_t level_indent = 4;
 			const size_t coords_per_line = 4;
 			const size_t last_on_line = coords_per_line - 1;
-			unsigned level = polypath.Level();
+			size_t level = static_cast<size_t>(polypath.Level());
 			if (level > 0)
 			{
 				std::string level_padding;

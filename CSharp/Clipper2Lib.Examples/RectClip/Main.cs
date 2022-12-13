@@ -68,7 +68,7 @@ namespace ClipperDemo1
       solOpen = Clipper.RectClipLines(rec, subjOpen);
       /////////////////////////////////////////////////
 
-      SimpleSvgWriter svg = new ();
+      SvgWriter svg = new ();
       SvgUtils.AddSubject(svg, subjOpen, false);
       SvgUtils.AddClip(svg, clip);
       SvgUtils.AddSolution(svg, solOpen, false, false, false);

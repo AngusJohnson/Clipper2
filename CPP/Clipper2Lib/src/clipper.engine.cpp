@@ -1090,7 +1090,8 @@ namespace Clipper2Lib {
         if (contributing)
         {
           AddLocalMinPoly(*left_bound, *right_bound, left_bound->bot, true);
-          CheckJoinLeft(*left_bound, left_bound->bot);
+          if (!IsHorizontal(*left_bound))
+            CheckJoinLeft(*left_bound, left_bound->bot);
         }
 
         while (right_bound->next_in_ael &&
@@ -1099,12 +1100,14 @@ namespace Clipper2Lib {
           IntersectEdges(*right_bound, *right_bound->next_in_ael, right_bound->bot);
           SwapPositionsInAEL(*right_bound, *right_bound->next_in_ael);
         }
-        CheckJoinRight(*right_bound, right_bound->bot);
 
         if (IsHorizontal(*right_bound))
           PushHorz(*right_bound);
         else
+        {
+          CheckJoinRight(*right_bound, right_bound->bot);
           InsertScanline(right_bound->top.y);
+        }
       }
       else if (contributing)
       {
@@ -1491,58 +1494,6 @@ namespace Clipper2Lib {
     }
     outrec->pts = nullptr;
   }
-
-
-  void ClipperBase::CompleteSplit(OutPt* op1, OutPt* op2, OutRec& outrec)
-  {
-    double area1 = Area(op1);
-    double area2 = Area(op2);
-    bool signs_change = (area1 > 0) == (area2 < 0);
-
-    if (area1 == 0 || (signs_change && std::abs(area1) < 2))
-    {
-      SafeDisposeOutPts(op1);
-      outrec.pts = op2;
-    }
-    else if (area2 == 0 || (signs_change && std::abs(area2) < 2))
-    {
-      SafeDisposeOutPts(op2);
-      outrec.pts = op1;
-    }
-    else
-    {
-      OutRec* newOr = new OutRec();
-      newOr->idx = outrec_list_.size();
-      outrec_list_.push_back(newOr);
-      newOr->polypath = nullptr;
-
-      if (using_polytree_)
-      {
-        if (!outrec.splits) outrec.splits = new OutRecList();
-        outrec.splits->push_back(newOr);
-      }
-
-      if (std::abs(area1) >= std::abs(area2))
-      {
-        outrec.pts = op1;
-        newOr->pts = op2;
-      }
-      else
-      {
-        outrec.pts = op2;
-        newOr->pts = op1;
-      }
-
-      if ((area1 > 0) == (area2 > 0))
-        newOr->owner = outrec.owner;
-      else
-        newOr->owner = &outrec;
-
-      UpdateOutrecOwner(newOr);
-      CleanCollinear(newOr);
-    }
-  }
-
 
   OutPt* ClipperBase::StartOpenPath(Active& e, const Point64& pt)
   {
@@ -2090,10 +2041,10 @@ namespace Clipper2Lib {
         {
           right1 = hs->rightOp;
           right2 = hs2->rightOp;
-          while (right1 != or1->pts && 
+          while ((right1 != or1->pts) && 
             right1->next->pt.x >= right2->pt.x)
               right1 = right1->next;
-          while (right2->prev != or2->pts && 
+          while ((right2->prev != or2->pts) && 
             right2->prev->pt.x >= right1->pt.x)
               right2 = right2->prev;
           left1 = right1->next;
@@ -2352,7 +2303,7 @@ namespace Clipper2Lib {
     horz_seg_list_.push_back(HorzSegment(outrec));
   }
 
-  bool ClipperBase::ResetHorzDirection(const Active& horz,
+  bool ClipperBase::ResetHorzDirection(const Active& horz, 
     const Vertex* max_vertex, int64_t& horz_left, int64_t& horz_right)
   {
     if (horz.bot.x == horz.top.x)
@@ -2468,7 +2419,7 @@ namespace Clipper2Lib {
 
           if (IsHotEdge(horz))
           {
-            while (horz.vertex_top != e->vertex_top)
+            while (horz.vertex_top != vertex_max)
             {
               AddOutPt(horz, horz.top);
               UpdateEdgeIntoAEL(&horz);
@@ -2627,11 +2578,9 @@ namespace Clipper2Lib {
       }
       return next_e;
     }
-    else
-    {
-      max_pair = GetMaximaPair(e);
-      if (!max_pair) return next_e;  // eMaxPair is horizontal
-    }
+
+    max_pair = GetMaximaPair(e);
+    if (!max_pair) return next_e;  // eMaxPair is horizontal
 
     if (IsJoined(e)) Split(e, e.top);
     if (IsJoined(*max_pair)) Split(*max_pair, max_pair->top);
@@ -2668,22 +2617,14 @@ namespace Clipper2Lib {
     if (e.join_with == JoinWith::Right)
     {
       e.join_with = JoinWith::None;
-      // anticipate temporary separation of joined edges
-      Active* e2 = e.next_in_ael;
-      while (e2 && !IsJoined(*e2)) e2 = e2->next_in_ael;
-      if (!e2 || e2->join_with != JoinWith::Left) return; //error!!!!
-      e2->join_with = JoinWith::None;
-      AddLocalMinPoly(e, *e2, pt, true);
+      e.next_in_ael->join_with = JoinWith::None;
+      AddLocalMinPoly(e, *e.next_in_ael, pt, true);
     }
     else
     {
       e.join_with = JoinWith::None;
-      // anticipate temporary separation of joined edges
-      Active* e2 = e.prev_in_ael;
-      while (e2 && !IsJoined(*e2)) e2 = e2->prev_in_ael;
-      if (!e2 || e2->join_with != JoinWith::Right) return; //error!!!!
-      e2->join_with = JoinWith::None;
-      AddLocalMinPoly(*e2, e, pt, true);
+      e.prev_in_ael->join_with = JoinWith::None;
+      AddLocalMinPoly(*e.prev_in_ael, e, pt, true);
     }
   }
 
@@ -2749,122 +2690,6 @@ namespace Clipper2Lib {
     }
   }
 
-
-  inline bool HorzEdgesOverlap(int64_t x1a, int64_t x1b, int64_t x2a, int64_t x2b)
-  {
-    const int64_t minOverlap = 2;
-    if (x1a > x1b + minOverlap)
-    {
-      if (x2a > x2b + minOverlap)
-        return !((x1a <= x2b) || (x2a <= x1b));
-      else
-        return !((x1a <= x2a) || (x2b <= x1b));
-    }
-    else if (x1b > x1a + minOverlap)
-    {
-      if (x2a > x2b + minOverlap)
-        return !((x1b <= x2b) || (x2a <= x1a));
-      else
-        return !((x1b <= x2a) || (x2b <= x1a));
-    }
-    else
-      return false;
-  }
-
-
-  inline bool ValueBetween(int64_t val, int64_t end1, int64_t end2)
-  {
-    //NB accommodates axis aligned between where end1 == end2
-    return ((val != end1) == (val != end2)) &&
-      ((val > end1) == (val < end2));
-  }
-
-
-  inline bool ValueEqualOrBetween(int64_t val, int64_t end1, int64_t end2)
-  {
-    return (val == end1) || (val == end2) || ((val > end1) == (val < end2));
-  }
-
-
-  inline bool PointBetween(Point64 pt, Point64 corner1, Point64 corner2)
-  {
-    //NB points may not be collinear
-    return ValueBetween(pt.x, corner1.x, corner2.x) &&
-      ValueBetween(pt.y, corner1.y, corner2.y);
-  }
-
-  inline bool PointEqualOrBetween(Point64 pt, Point64 corner1, Point64 corner2)
-  {
-    //NB points may not be collinear
-    return ValueEqualOrBetween(pt.x, corner1.x, corner2.x) &&
-      ValueEqualOrBetween(pt.y, corner1.y, corner2.y);
-  }
-
-  inline bool IsValidPath(OutPt* op)
-  {
-    return (op && op->next != op);
-  }
-
-
-  bool CollinearSegsOverlap(const Point64& seg1a, const Point64& seg1b,
-    const Point64& seg2a, const Point64& seg2b)
-  {
-    //precondition: seg1 and seg2 are collinear      
-    if (seg1a.x == seg1b.x)
-    {
-      if (seg2a.x != seg1a.x || seg2a.x != seg2b.x) return false;
-    }
-    else if (seg1a.x < seg1b.x)
-    {
-      if (seg2a.x < seg2b.x)
-      {
-        if (seg2a.x >= seg1b.x || seg2b.x <= seg1a.x) return false;
-      }
-      else
-      {
-        if (seg2b.x >= seg1b.x || seg2a.x <= seg1a.x) return false;
-      }
-    }
-    else
-    {
-      if (seg2a.x < seg2b.x)
-      {
-        if (seg2a.x >= seg1a.x || seg2b.x <= seg1b.x) return false;
-      }
-      else
-      {
-        if (seg2b.x >= seg1a.x || seg2a.x <= seg1b.x) return false;
-      }
-    }
-
-    if (seg1a.y == seg1b.y)
-    {
-      if (seg2a.y != seg1a.y || seg2a.y != seg2b.y) return false;
-    }
-    else if (seg1a.y < seg1b.y)
-    {
-      if (seg2a.y < seg2b.y)
-      {
-        if (seg2a.y >= seg1b.y || seg2b.y <= seg1a.y) return false;
-      }
-      else
-      {
-        if (seg2b.y >= seg1b.y || seg2a.y <= seg1a.y) return false;
-      }
-    }
-    else
-    {
-      if (seg2a.y < seg2b.y)
-      {
-        if (seg2a.y >= seg1a.y || seg2b.y <= seg1b.y) return false;
-      }
-      else
-      {
-        if (seg2b.y >= seg1a.y || seg2a.y <= seg1b.y) return false;
-      }
-    }
-    return true;
-  }
 
   inline bool Path1InsidePath2(const OutRec* or1, const OutRec* or2)
   {
@@ -2937,37 +2762,9 @@ namespace Clipper2Lib {
   bool ClipperBase::DeepCheckOwner(OutRec* outrec, OutRec* owner)
   {
     if (owner->bounds.IsEmpty()) owner->bounds = GetBounds(owner->path);
-    bool is_inside_owner_bounds = owner->bounds.Contains(outrec->bounds);
-
-    // while looking for the correct owner, check the owner's 
-    // splits **before** checking the owner itself because 
-    // splits can occur internally, and checking the owner 
-    // first would miss the inner split's true ownership
-    if (owner->splits)
-    {
-      for (OutRec* split : *owner->splits)
-      {
-        split = GetRealOutRec(split);
-        if (!split || split->idx <= owner->idx || split == outrec) continue;
-
-        if (split->splits && DeepCheckOwner(outrec, split)) return true;
-
-        if (!split->path.size())
-          BuildPath64(split->pts, ReverseSolution, false, split->path);
-        if (split->bounds.IsEmpty()) split->bounds = GetBounds(split->path);
-
-        if (split->bounds.Contains(outrec->bounds) &&
-          Path1InsidePath2(outrec, split))
-        {
-          outrec->owner = split;
-          return true;
-        }
-      }
-    }
-
     // only continue past here when not inside recursion
     if (owner != outrec->owner) return false;
-
+    bool is_inside_owner_bounds = owner->bounds.Contains(outrec->bounds);
     for (;;)
     {
       if (is_inside_owner_bounds && Path1InsidePath2(outrec, outrec->owner))
@@ -3006,6 +2803,7 @@ namespace Clipper2Lib {
       }
       else
       {
+        // nb: CleanCollinear can add to outrec_list_
         CleanCollinear(outrec);
         //closed paths should always return a Positive orientation
         if (BuildPath64(outrec->pts, ReverseSolution, false, path))
@@ -3034,6 +2832,7 @@ namespace Clipper2Lib {
         continue;
       }
 
+      // nb: CleanCollinear can add to outrec_list_
       CleanCollinear(outrec);
       if (!BuildPath64(outrec->pts, ReverseSolution, false, outrec->path))
         continue;
