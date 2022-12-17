@@ -1,6 +1,6 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  17 December 2022                                                *
+* Date      :  18 December 2022                                                *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  This is the main polygon clipping module                        *
@@ -2053,12 +2053,14 @@ namespace Clipper2Lib {
         if (hs1->position == HorzPosition::Middle)
         {
           if (hs2->position != HorzPosition::Bottom ||
+            (or1->pts->next->pt.y != or1->pts->pt.y) ||
             (!DoMiddleCheckStart(*hs1, *hs2) &&
             !DoMiddleCheckEnd(*hs1, *hs2))) continue;
         }
         else if (hs2->position == HorzPosition::Middle)
         {
           if (hs1->position != HorzPosition::Bottom ||
+            (or2->pts->next->pt.y != or2->pts->pt.y) ||
             (!DoMiddleCheckStart(*hs2, *hs1) &&
             !DoMiddleCheckEnd(*hs2, *hs1))) continue;
         }

@@ -2517,12 +2517,14 @@ namespace Clipper2Lib
           if (hs1.position == HorzPosition.Middle)
           {
             if (hs2.position != HorzPosition.Bottom ||
+            (or1.pts!.next!.pt.Y != or1.pts.pt.Y) ||
               (!DoMiddleCheckStart(ref hs1, hs2) &&
               !DoMiddleCheckEnd(ref hs1, hs2))) continue;
           }
           else if (hs2.position == HorzPosition.Middle)
           {
             if (hs1.position != HorzPosition.Bottom ||
+              (or2.pts!.next!.pt.Y != or2.pts.pt.Y) ||
               (!DoMiddleCheckStart(ref hs2, hs1) &&
               !DoMiddleCheckEnd(ref hs2, hs1))) continue;
           }

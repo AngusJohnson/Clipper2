@@ -2,7 +2,7 @@ unit Clipper.Engine;
 
 (*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  17 December 2022                                                *
+* Date      :  18 December 2022                                                *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  This is the main polygon clipping module                        *
@@ -2717,12 +2717,14 @@ begin
       if (hs1.position = hpMiddle) then
       begin
         if (hs2.position <> hpBottom) or
+          (or1.pts.next.pt.Y <> or1.pts.pt.Y) or
           (not DoMiddleCheckPathStart(hs1, hs2) and
           not DoMiddleCheckPathEnd(hs1, hs2)) then Continue;
       end
       else if (hs2.position = hpMiddle) then
       begin
         if (hs1.position <> hpBottom) or
+          (or2.pts.next.pt.Y <> or2.pts.pt.Y) or
           (not DoMiddleCheckPathStart(hs2, hs1) and
           not DoMiddleCheckPathEnd(hs2, hs1)) then Continue;
       end else
