@@ -4,7 +4,7 @@
     <TargetFramework>netstandard2.0</TargetFramework>
     <Nullable>enable</Nullable>
     <LangVersion>8</LangVersion>
-    <Version>1.0.5</Version>
+    <Version>1.1.0</Version>
     <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
     <Authors>Angus Johnson</Authors>
     <Description>Polygon Clipping and Offsetting Library</Description>
@@ -14,14 +14,8 @@
     <Copyright>Copyright © 2010-2022</Copyright>
     <RepositoryType>git</RepositoryType>
     <RepositoryUrl>https://github.com/AngusJohnson/Clipper2</RepositoryUrl>
-    <PackageReleaseNotes>Version 1.1 (beta)- 13 December 2022</PackageReleaseNotes>
+    <PackageReleaseNotes>Major revision to merging polygons in clipping solutions</PackageReleaseNotes>
     <Platforms>AnyCPU;x86</Platforms>
-    <PackageIcon>icon.png</PackageIcon>
-    <PackageReadmeFile>README.md</PackageReadmeFile>
-    <PackageTags>geometry; polygon; polygon-intersection; polygon-clipping-algorithm; clipping; polygon-union; polygon-clipping; polygon-boolean; boolean-operations; offsetting; clipping-algorithm</PackageTags>
-    <PackageLicenseFile>LICENSE</PackageLicenseFile>
-    <EnableNETAnalyzers>True</EnableNETAnalyzers>
-    <AnalysisLevel>latest-minimum</AnalysisLevel>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
