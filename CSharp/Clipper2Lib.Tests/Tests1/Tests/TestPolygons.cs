@@ -54,7 +54,6 @@ namespace Clipper2Lib.UnitTests
         else if (IsInList(testNum, new int[] { 23, 37, 43, 45, 87, 102, 111, 118, 119 }))
           Assert.IsTrue(countDiff <= 1);
         else
-          if (countDiff > 0)
           Assert.IsTrue(countDiff == 0);
 
         // check polygon areas

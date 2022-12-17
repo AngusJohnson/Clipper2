@@ -75,7 +75,7 @@ TEST(Clipper2Tests, TestMultiplePolygons)
       EXPECT_LE(count_diff, 5);
     else if (IsInList(test_number, { 27, 126, 145, 173, 176, 177, 179 }))
       EXPECT_LE(count_diff, 2);
-    else if (IsInList(test_number, { 23, 102, 111, 120, 123, 129, 145, 148, 160, 171, 172, 183 }))
+    else if (IsInList(test_number, { 23, 87, 102, 111, 120, 123, 129, 145, 148, 160, 171, 172, 183 }))
       EXPECT_LE(count_diff, 1);
     else 
       EXPECT_EQ(count_diff, 0);

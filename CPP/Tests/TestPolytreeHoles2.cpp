@@ -113,7 +113,7 @@ TEST(Clipper2Tests, TestPolytreeHoles2)
   // 1a. check solution_paths_area  is smaller than subject_area
   EXPECT_LT(solution_paths_area, subject_area);
   // 1b. but not too much smaller
-  EXPECT_GT(solution_paths_area, (subject_area * 0.95)); 
+  EXPECT_GT(solution_paths_area, (subject_area * 0.92)); 
 
   // 2. check solution_tree's area matches solution_paths' area
   EXPECT_NEAR(solution_tree_area, solution_paths_area, 0.0001);
