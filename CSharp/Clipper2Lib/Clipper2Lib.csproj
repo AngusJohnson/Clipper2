@@ -14,8 +14,7 @@
     <Copyright>Copyright © 2010-2022</Copyright>
     <RepositoryType>git</RepositoryType>
     <RepositoryUrl>https://github.com/AngusJohnson/Clipper2</RepositoryUrl>
-    <PackageReleaseNotes>Version 1.1 (beta)- 13 December 2022
-  Major revision to merging polygons in clipping solutions</PackageReleaseNotes>
+    <PackageReleaseNotes>Version 1.1 (beta)- 13 December 2022</PackageReleaseNotes>
     <Platforms>AnyCPU;x86</Platforms>
     <PackageIcon>icon.png</PackageIcon>
     <PackageReadmeFile>README.md</PackageReadmeFile>
@@ -35,21 +34,6 @@
 
   <ItemGroup>
     <None Remove="*.ico" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <None Include="..\..\Clipper2Repository\LICENSE">
-      <Pack>True</Pack>
-      <PackagePath>\</PackagePath>
-    </None>
-    <None Include="..\..\README.md">
-      <Pack>True</Pack>
-      <PackagePath>\</PackagePath>
-    </None>
-    <None Include="..\..\icon.png">
-      <Pack>True</Pack>
-      <PackagePath>\</PackagePath>
-    </None>
   </ItemGroup>
 
 </Project>

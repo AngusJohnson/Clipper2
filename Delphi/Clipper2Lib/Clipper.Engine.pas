@@ -2,7 +2,7 @@ unit Clipper.Engine;
 
 (*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  12 December 2022                                                *
+* Date      :  17 December 2022                                                *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  This is the main polygon clipping module                        *
@@ -71,7 +71,6 @@ type
   end;
 
   TOutRecArray  = array of POutRec;
-  THorzFlag     = (hfUnprocessed, hfProcessed, hfError);
   THorzPosition = (hpBottom, hpMiddle, hpTop);
 
 
@@ -86,7 +85,7 @@ type
     bounds   : TRect64;
     path     : TPath64;
     isOpen   : Boolean;
-    horzFlag : THorzFlag; // see MergeHorzSegs()
+    horzDone : Boolean;
   end;
 
   TOutRecList = class(TListEx)
@@ -475,7 +474,7 @@ var
   hs: PHorzSegment;
 begin
   if outrec.isOpen then Exit;
-  outrec.horzFlag := hfUnprocessed;
+  outrec.horzDone := false;
   new(hs);
   hs.outrec := outrec;
   inherited Add(hs);
@@ -2535,46 +2534,72 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-function UpdateHorzSegment(hs: PHorzSegment; currY: Int64): THorzFlag;
+procedure nullop; begin end;
+
+function UpdateHorzSegment(hs: PHorzSegment; currY: Int64): boolean;
   {$IFDEF INLINING} inline; {$ENDIF}
 var
   op, op2: POutPt;
   outrec: POutrec;
-  ltor: Boolean;
 begin
   hs.outrec := GetRealOutRec(hs.outrec);
   outrec := hs.outrec;
 
-  Result := hfError;
-  if (outrec.horzFlag <> hfUnprocessed) then Exit;
-  outrec.horzFlag := Result;
+  hs.outrec := nil; // temporary flag to skip
+  Result := false;
+  if outrec.horzDone then Exit;
+  outrec.horzDone := true;
 
   op := outrec.pts;
   op2 := op.next;
   if op.pt.Y <> currY then op := op2
   else if op2.pt.Y <> currY then op2 := op;
 
-  while (op.prev <> op2) and (op.prev.pt.Y = op.pt.Y) do
+  while (op.prev <> op2) and (op.prev.pt.Y = currY) do
       op := op.prev;
-  while (op2.next <> op) and (op2.next.pt.Y = op2.pt.Y) do
+  while (op2.next <> op) and (op2.next.pt.Y = currY) do
     op2 := op2.next;
+
+  if op.pt.X = op2.pt.X then Exit;
 
   // get horz position - whether bottom, middle or top of path
   if (op2.next = op) then
   begin
-    // make sure not both bottom and top - ie ignore
+    // no vertices where Y <> currY so must be 'bottom'
+    // but make sure it's not 'top' too, otherwise ignore
     if not Assigned(outrec.frontE) then Exit;
-    hs.position := hpBottom
-  end else if not Assigned(outrec.frontE) then
-    hs.position := hpTop
-  else
-    hs.position := hpMiddle;
 
-  // assign hs.leftOp and hs.rightOp
-  if hs.position = hpBottom then
+    hs.position := hpBottom;
+  end else if Assigned(outrec.frontE) then
   begin
-    ltor := (outrec.pts.pt.X > outrec.pts.next.pt.X);
-    if ltor then
+    // when hs.position == Middle then heading etc is
+    // contextual, but we'll still need hs.leftOp for sorting
+    hs.position := hpMiddle;
+  end else
+    hs.position := hpTop;
+
+  // assign left to right heading, and hs.leftOp and hs.rightOp
+  if hs.position = hpTop then
+  begin
+    hs.leftToRight := op.pt.X < op2.pt.X;
+    while op.next <> op2 do DisposeOutPt(op.next);
+    outrec.pts := op; // just in case previous one deleted
+    if hs.leftToRight then
+    begin
+      hs.leftOp := op;
+      hs.rightOp := op2;
+    end else
+    begin
+      hs.leftOp := op2;
+      hs.rightOp := op;
+    end;
+  end else
+  begin
+    if hs.position = hpBottom then
+      while outrec.pts.prev <> outrec.pts.next do
+        DisposeOutPt(outrec.pts.prev);
+    hs.leftToRight := outrec.pts.pt.X > outrec.pts.next.pt.X;
+    if hs.leftToRight then
     begin
       hs.leftOp := outrec.pts.next;
       hs.rightOp := outrec.pts;
@@ -2583,41 +2608,69 @@ begin
       hs.leftOp := outrec.pts;
       hs.rightOp := outrec.pts.next;
     end;
+  end;
+  hs.outrec := outrec;
+  Result := true;
+end;
+//------------------------------------------------------------------------------
+
+function DoMiddleCheckPathStart(hs, compareTo: PHorzSegment): Boolean;
+var
+  op, op2: POutPt;
+  currY: Int64;
+begin
+  Result := false;
+  op := hs.outrec.pts;
+  op2 := op;
+  currY := op.pt.Y;
+  while op2.prev.pt.Y = currY do op2 := op2.prev;
+  if op2.pt.X = op.pt.X then Exit;
+
+  hs.leftToRight := op.pt.X > op2.pt.X;
+  if hs.leftToRight = compareTo.leftToRight then Exit;
+
+  if hs.leftToRight then
+  begin
+    hs.leftOp := op2;
+    hs.rightOp := op;
   end else
   begin
-    if op.pt.X = op2.pt.X then Exit;
-    ltor := op.pt.X < op2.pt.X;
-    if ltor then
-    begin
-      hs.leftOp := op;
-      hs.rightOp := op2;
-
-      // if safe, remove ops **between** left and right
-      if hs.position = hpTop then
-      begin
-        while hs.leftOp.next <> hs.rightOp do
-          DisposeOutPt(hs.leftOp.next);
-        outrec.pts := hs.leftOp;
-      end;
-    end else
-    begin
-      hs.leftOp := op2;
-      hs.rightOp := op;
-
-      // if safe, remove ops **between** left and right
-      if hs.position = hpTop then
-      begin
-        while hs.rightOp.next <> hs.leftOp do
-          DisposeOutPt(hs.rightOp.next);
-        outrec.pts := hs.leftOp;
-      end;
-    end;
-
+    hs.leftOp := op;
+    hs.rightOp := op2;
   end;
+  Result :=
+    (hs.leftOp.pt.X < compareTo.rightOp.pt.X) and
+    (hs.rightOp.pt.X > compareTo.leftOp.pt.X);
+end;
+//------------------------------------------------------------------------------
 
-  hs.leftToRight := ltor;
-  Result := hfProcessed;
-  outrec.horzFlag := Result;
+function DoMiddleCheckPathEnd(hs, compareTo: PHorzSegment): Boolean;
+var
+  op, op2: POutPt;
+  currY: Int64;
+begin
+  Result := false;
+  op := hs.outrec.pts.next;
+  op2 := op;
+  currY := op.pt.Y;
+  while op2.next.pt.Y = currY do op2 := op2.next;
+  if op2.pt.X = op.pt.X then Exit;
+
+  hs.leftToRight := op2.pt.X > op.pt.X;
+  if hs.leftToRight = compareTo.leftToRight then Exit;
+
+  if hs.leftToRight then
+  begin
+    hs.leftOp := op;
+    hs.rightOp := op2;
+  end else
+  begin
+    hs.leftOp := op2;
+    hs.rightOp := op;
+  end;
+  Result :=
+    (hs.leftOp.pt.X < compareTo.rightOp.pt.X) and
+    (hs.rightOp.pt.X > compareTo.leftOp.pt.X);
 end;
 //------------------------------------------------------------------------------
 
@@ -2634,7 +2687,7 @@ begin
   for i := 0 to FHorzSegList.Count -1 do
   begin
     hs1 := FHorzSegList.UnsafeGet(i);
-    if UpdateHorzSegment(hs1, currY) = hfProcessed then
+    if UpdateHorzSegment(hs1, currY) then
     begin
       FHorzSegList.UnsafeSet(j, hs1);
       inc(j);
@@ -2651,58 +2704,48 @@ begin
   begin
     hs1 := FHorzSegList.UnsafeGet(i);
     or1 := hs1.outrec;
-    if or1.horzFlag = hfError then Continue;
+    if not Assigned(or1) then Continue;
 
     for j := i +1 to FHorzSegList.Count -1 do
     begin
       hs2 := FHorzSegList.UnsafeGet(j);
       or2 := hs2.outrec;
+      if not Assigned(or2) then Continue;
 
-      if (or2.horzFlag = hfError) or // should never happen
-        (hs2.leftToRight = hs1.leftToRight) then
-          Continue;
-
-      // if this horz segment doesn't partially overlap
-      // 1 then neither will any subsequent edges
-      if (hs2.leftOp.pt.X >= hs1.rightOp.pt.X) then Break;
+      // when position == hpMiddle then orientation etc is contextual
+      // and it's only safe to merge with hpBottom horizontals
+      if (hs1.position = hpMiddle) then
+      begin
+        if (hs2.position <> hpBottom) or
+          (not DoMiddleCheckPathStart(hs1, hs2) and
+          not DoMiddleCheckPathEnd(hs1, hs2)) then Continue;
+      end
+      else if (hs2.position = hpMiddle) then
+      begin
+        if (hs1.position <> hpBottom) or
+          (not DoMiddleCheckPathStart(hs2, hs1) and
+          not DoMiddleCheckPathEnd(hs2, hs1)) then Continue;
+      end else
+      begin
+        // if these horz segments don't partially overlap
+        // then neither will subsequent ones
+        if (hs2.leftOp.pt.X >= hs1.rightOp.pt.X) then Break;
+        // only merge counter oriented paths
+        if (hs2.leftToRight = hs1.leftToRight) then Continue;
+      end;
 
       if hs1.leftToRight then
       begin
         right1 := hs1.rightOp;
         right2 := hs2.rightOp;
-
-        while (right1.prev <> or1.pts) and
-          (right1.prev.pt.X >= right2.pt.X) do
-            right1 := right1.prev;
-        while (right2 <> or2.pts) and
-          (right2.next.pt.X >= right1.pt.X) do
-            right2 := right2.next;
-
         left1 := right1.prev;
         left2 := right2.next;
-
-        //make sure left-right does not include the path loop
-        if ((hs1.position = hpMiddle) and (left1 = or1.pts)) or
-          ((hs2.position = hpMiddle) and (right2 = or2.pts)) then
-            break;
-
       end else
       begin
         right1 := hs1.rightOp;
         right2 := hs2.rightOp;
-        while (right1 <> or1.pts) and
-          (right1.next.pt.X >= right2.pt.X) do
-          right1 := right1.next;
-        while (right2.prev <> or2.pts) and
-          (right2.prev.pt.X >= right1.pt.X) do
-            right2 := right2.prev;
         left1 := right1.next;
         left2 := right2.prev;
-
-        //make sure left-right does not include the path loop
-        if ((hs1.position = hpMiddle) and (right1 = or1.pts)) or
-          ((hs2.position = hpMiddle) and (left2 = or2.pts)) then
-            break;
       end;
 
       if hs1.position = hpTop then
@@ -2787,11 +2830,12 @@ begin
         FixOutRecPts(or1);
         FixOutRecPts(or2);
       end;
-      hs2.outrec.horzFlag := hfUnprocessed;
+      hs2.outrec.horzDone := false;
       UpdateHorzSegment(hs2, currY);
       Break;
     end;
   end;
+
 end;
 //------------------------------------------------------------------------------
 

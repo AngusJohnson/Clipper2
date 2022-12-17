@@ -1,6 +1,6 @@
 ﻿/*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  17 July 2022                                                    *
+* Date      :  17 December 2022                                                *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * License   :  http://www.boost.org/LICENSE_1_0.txt                            *
@@ -10,16 +10,65 @@ using System.Collections.Generic;
 using System.Reflection;
 using System.IO;
 using Clipper2Lib;
+using System;
 
 namespace ClipperDemo1
 {
   public class Application
   {
 
+
     public static void Main()
     {
+      //LoopThruPolygons();
       ClipSimpleShapes();
       ClipTestPolys();
+    }
+
+    public static void LoopThruPolygons(int start = 0, int end = 0)
+    {
+      Paths64 subject = new Paths64();
+      Paths64 subject_open = new Paths64();
+      Paths64 clip = new Paths64();
+      Paths64 solution = new Paths64();
+      Paths64 solution_open = new Paths64();
+      ClipType ct;
+      FillRule fr;
+      bool do_all = (start == 0 && end == 0);
+      if (do_all) { start = 1; end = 0xFFFF; }
+      else if (end == 0) end = start;
+
+      int test_number = start;
+      for (; test_number <= end; ++test_number)
+      {
+        if (!ClipperFileIO.LoadTestNum(@"..\..\..\..\..\..\Tests\Polygons.txt", 
+          test_number, subject, subject_open, clip, 
+          out ct, out fr, out _, out _, out _)) break;
+        Clipper64 c64 = new Clipper64();
+        c64.AddSubject(subject);
+        c64.AddOpenSubject(subject_open);
+        c64.AddClip(clip);
+        if (!c64.Execute(ct, fr, solution, solution_open)) return;
+
+        if (do_all) continue; //don't show them all
+
+        SvgWriter svg = new SvgWriter();
+        SvgUtils.AddSubject(svg, subject);
+        SvgUtils.AddClip(svg, clip);
+        if (fr == FillRule.Negative)
+          solution = Clipper.ReversePaths(solution);
+        SvgUtils.AddSolution(svg, solution, false);
+        SvgUtils.AddCaption(svg, test_number.ToString(), 20, 20);
+        string filename = @"..\..\..\poly" + (test_number - 1).ToString() + ".svg";
+        SvgUtils.SaveToFile(svg, filename, fr, 800, 600, 10);
+        ClipperFileIO.OpenFileWithDefaultApp(filename);
+      }
+
+      if (do_all)
+      {
+        Console.WriteLine(string.Format("\ntest ended at polygon {0}.\n", test_number));
+        Console.ReadKey();
+      }
     }
 
     public static void ClipSimpleShapes()

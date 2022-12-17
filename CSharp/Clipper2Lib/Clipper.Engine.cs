@@ -1,6 +1,6 @@
 ﻿/*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  13 December 2022                                                *
+* Date      :  17 December 2022                                                *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  This is the main polygon clipping module                        *
@@ -15,6 +15,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using System.Runtime.ConstrainedExecution;
+using Clipper2Lib;
 
 namespace Clipper2Lib
 {
@@ -134,7 +135,6 @@ namespace Clipper2Lib
   };
 
   internal enum JoinWith { None, Left, Right };
-  internal enum HorzFlag { Unprocessed, Processed, Error };
   internal enum HorzPosition { Bottom, Middle, Top };
 
 
@@ -150,7 +150,7 @@ namespace Clipper2Lib
     public Rect64 bounds;
     public Path64 path;
     public bool isOpen;
-    public HorzFlag horzFlag;
+    public bool horzDone;
     public OutRec() 
     { 
       bounds = new Rect64(); 
@@ -168,7 +168,7 @@ namespace Clipper2Lib
 
   internal struct HorzSegment
   {
-    public OutRec outrec;
+    public OutRec? outrec;
     public OutPt? leftOp;
     public OutPt? rightOp;
     public bool leftToRight;
@@ -2367,12 +2367,13 @@ namespace Clipper2Lib
       } while (op2 != op);
     }
 
-    private static HorzFlag UpdateHorzSegment(ref HorzSegment hs, long currY)
+    private static bool UpdateHorzSegment(ref HorzSegment hs, long currY)
     {
       hs.outrec = GetRealOutRec(hs.outrec)!;
-      OutRec outrec = hs.outrec!;
-      if (outrec.horzFlag != HorzFlag.Unprocessed) return HorzFlag.Error;
-      outrec.horzFlag = HorzFlag.Error; // assume error pro. tem.
+      OutRec outrec = hs.outrec;
+      hs.outrec = null; // temporarily flagged to skip
+      if (outrec.horzDone) return false;
+      outrec.horzDone = true;
 
       OutPt op = outrec.pts!, op2 = op.next!;
       if (op.pt.Y != currY) op = op2;
@@ -2380,70 +2381,108 @@ namespace Clipper2Lib
 
       while (op.prev != op2 && op.prev.pt.Y == op.pt.Y) op = op.prev;
       while (op2.next != op && op2.next!.pt.Y == op2.pt.Y) op2 = op2.next;
+      if (op.pt.X == op2.pt.X) return false;
 
       // get horz position - whether bottom, middle or top of path
       if (op2.next == op)
       {
-        // make sure not both bottom and top - ie ignore
-        if (outrec.frontEdge == null) return HorzFlag.Error;
+        // no vertices where Y != currY so must be 'bottom'
+        // but make sure it's not 'top' too, otherwise ignore
+        if (outrec.frontEdge == null) return false;
         hs.position = HorzPosition.Bottom;
       }
-      else if (outrec.frontEdge == null)
-        hs.position = HorzPosition.Top;
-      else
-        hs.position = HorzPosition.Middle;
-
-
-      // assign hs.leftOp and hs.rightOp
-      bool ltor;
-      if (hs.position == HorzPosition.Bottom)
+      else if (outrec.frontEdge != null)
       {
-        ltor = (hs.outrec.pts!.pt.X > hs.outrec.pts.next!.pt.X);
-        if (ltor)
-        {
-          hs.leftOp = hs.outrec.pts.next;
-          hs.rightOp = hs.outrec.pts;
-        }
-        else
-        {
-          hs.leftOp = hs.outrec.pts;
-          hs.rightOp = hs.outrec.pts.next;
-        }
+        // when hs.position == Middle then heading etc is 
+        // contextual, but we'll still need hs.leftOp for sorting
+        hs.position = HorzPosition.Middle;
       }
       else
+        hs.position = HorzPosition.Top;
+
+
+      // assign left to right heading, and hs.leftOp and hs.rightOp
+      if (hs.position == HorzPosition.Top)
       {
-        if (op.pt.X == op2.pt.X) return HorzFlag.Error;
-        ltor = op.pt.X < op2.pt.X;
-        if (ltor)
+        hs.leftToRight = op.pt.X < op2.pt.X;
+        while (op.next != op2) DisposeOutPt(op.next!);
+        outrec.pts = op; // just in case previous one deleted
+        if (hs.leftToRight)
         {
           hs.leftOp = op;
           hs.rightOp = op2;
-
-          // if safe, remove ops **between** left and right
-          if (hs.position == HorzPosition.Top)
-          {
-            while (hs.leftOp.next != hs.rightOp)
-              DisposeOutPt(hs.leftOp.next!);
-            outrec.pts = hs.leftOp;
-          }
         }
         else
         {
           hs.leftOp = op2;
           hs.rightOp = op;
-
-          // if safe, remove ops **between** left and right
-          if (hs.position == HorzPosition.Top)
-          {
-            while (hs.rightOp.next != hs.leftOp)
-              DisposeOutPt(hs.rightOp.next!);
-            outrec.pts = hs.leftOp;
-          }
         }
       }
-      hs.leftToRight = ltor;
-      hs.outrec.horzFlag = HorzFlag.Processed;
-      return HorzFlag.Processed;
+      else
+      {
+        if (hs.position == HorzPosition.Bottom)
+          while (outrec.pts!.prev != outrec.pts.next)
+            DisposeOutPt(outrec.pts.prev);
+        hs.leftToRight = (outrec.pts!.pt.X > outrec.pts.next!.pt.X);
+        if (hs.leftToRight)
+        {
+          hs.leftOp = outrec.pts.next;
+          hs.rightOp = outrec.pts;
+        }
+        else
+        {
+          hs.leftOp = outrec.pts;
+          hs.rightOp = outrec.pts.next;
+        }
+      }
+      hs.outrec = outrec;
+      return true;
+    }
+
+    private static bool DoMiddleCheckStart(ref HorzSegment hs, HorzSegment compareTo)
+    {
+      OutPt op = hs.outrec!.pts!, op2 = op;
+      long currY = op.pt.Y;
+      while (op2.prev.pt.Y == currY) op2 = op2.prev;
+      hs.leftToRight = op.pt.X > op2.pt.X;
+      if (hs.leftToRight == compareTo.leftToRight) return false;
+
+      if (hs.leftToRight)
+      {
+        hs.leftOp = op2;
+        hs.rightOp = op;
+      }
+      else
+      {
+        hs.leftOp = op;
+        hs.rightOp = op2;
+      }
+      return (op2 != op &&
+        (hs.leftOp.pt.X < compareTo.rightOp!.pt.X) &&
+        (hs.rightOp.pt.X > compareTo.leftOp!.pt.X));
+    }
+
+    private static bool DoMiddleCheckEnd(ref HorzSegment hs, HorzSegment compareTo)
+    {
+      OutPt op = hs.outrec!.pts!.next!, op2 = op;
+      long currY = op.pt.Y;
+      while (op2.next!.pt.Y == currY) op2 = op2.next;
+      hs.leftToRight = op2.pt.X > op.pt.X;
+      if (hs.leftToRight == compareTo.leftToRight) return false;
+
+      if (hs.leftToRight)
+      {
+        hs.leftOp = op;
+        hs.rightOp = op2;
+      }
+      else
+      {
+        hs.leftOp = op2;
+        hs.rightOp = op;
+      }
+      return (op2 != op &&
+        (hs.leftOp.pt.X < compareTo.rightOp.pt.X) &&
+        (hs.rightOp.pt.X > compareTo.leftOp.pt.X));
     }
 
     private void MergeHorzSegs(long currY)
@@ -2454,7 +2493,7 @@ namespace Clipper2Lib
       for (int i = 0; i < _horzSegList.Count; i++)
       {
         HorzSegment hs = _horzSegList[i];
-        if (UpdateHorzSegment(ref hs, currY) == HorzFlag.Processed)
+        if (UpdateHorzSegment(ref hs, currY))
           _horzSegList[k++] = hs;
       }
       if (k < 2) return;
@@ -2464,57 +2503,52 @@ namespace Clipper2Lib
       for (int i = 0; i < _horzSegList.Count -1; i++)
       {
         HorzSegment hs1 = _horzSegList[i]; 
-        OutRec or1 = hs1.outrec;
-        if (or1.horzFlag == HorzFlag.Error) continue;
+        OutRec? or1 = hs1.outrec;
+        if (or1 == null) continue;
 
         for (int j = i+1; j < _horzSegList.Count; j++)
         {
           HorzSegment hs2 = _horzSegList[j];
-          OutRec or2 = hs2.outrec;
-          if (or2.horzFlag == HorzFlag.Error ||
-            hs1.leftToRight == hs2.leftToRight) continue;
+          OutRec? or2 = hs2.outrec;
+          if (or2 == null) continue;
 
-          // if this horz segment doesn't partially overlap
-          // 1 then neither will any subsequent edges
-          if (hs2.leftOp!.pt.X >= hs1.rightOp!.pt.X) break;
+          // when position == HorzPosition::Middle then orientation etc 
+          // is contextual and only safe to merge with HorzPosition::Bottom
+          if (hs1.position == HorzPosition.Middle)
+          {
+            if (hs2.position != HorzPosition.Bottom ||
+              (!DoMiddleCheckStart(ref hs1, hs2) &&
+              !DoMiddleCheckEnd(ref hs1, hs2))) continue;
+          }
+          else if (hs2.position == HorzPosition.Middle)
+          {
+            if (hs1.position != HorzPosition.Bottom ||
+              (!DoMiddleCheckStart(ref hs2, hs1) &&
+              !DoMiddleCheckEnd(ref hs2, hs1))) continue;
+          }
+          else
+          {
+            // if these horz segments don't partially overlap
+            // then neither will subsequent ones
+            if (hs2.leftOp!.pt.X >= hs1.rightOp!.pt.X) break;
+            // only merge counter oriented paths
+            if (hs2.leftToRight == hs1.leftToRight) continue;
+          }
 
           OutPt left1, left2, right1, right2;
           if (hs1.leftToRight)
           {
-            right1 = hs1.rightOp;
+            right1 = hs1.rightOp!;
             right2 = hs2.rightOp!;
-
-            while (right1.prev != or1.pts &&
-              right1.prev.pt.X >= right2.pt.X)
-              right1 = right1.prev;
-            while (right2 != or2.pts &&
-              right2!.next!.pt.X >= right1.pt.X)
-              right2 = right2.next!;
             left1 = right1.prev;
             left2 = right2.next!;
-
-            //make sure left-right does not include the path loop
-            if ((hs1.position == HorzPosition.Middle && left1 == or1.pts) ||
-              (hs2.position == HorzPosition.Middle && right2 == or2.pts))
-              break;
           }
           else
           {
-            right1 = hs1.rightOp;
+            right1 = hs1.rightOp!;
             right2 = hs2.rightOp!;
-            while (right1 != or1.pts &&
-              right1.next!.pt.X >= right2.pt.X)
-              right1 = right1.next;
-            while (right2.prev != or2.pts &&
-              right2.prev.pt.X >= right1.pt.X)
-              right2 = right2.prev;
             left1 = right1.next!;
             left2 = right2.prev;
-
-            //make sure left-right does not include the path loop
-            if ((hs1.position == HorzPosition.Middle && right1 == or1.pts) ||
-              (hs2.position == HorzPosition.Middle && left2 == or2.pts))
-              break;
           }
 
           if (hs1.position == HorzPosition.Top)
@@ -2601,7 +2635,7 @@ namespace Clipper2Lib
             FixOutRecPts(or1);
             FixOutRecPts(or2);
           }
-          hs2.outrec.horzFlag = HorzFlag.Unprocessed;
+          hs2.outrec.horzDone = false;
           UpdateHorzSegment(ref hs2, currY);
           _horzSegList[j] = hs2;
           break;
@@ -2610,18 +2644,10 @@ namespace Clipper2Lib
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private void ClearHorzSegList()
-    {
-      foreach (HorzSegment h in _horzSegList)
-        h.outrec.horzFlag = HorzFlag.Unprocessed;
-      _horzSegList.Clear();
-    }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private void AddToHorzSegList(OutRec outrec)
     {
       if (outrec.isOpen) return;
-      outrec.horzFlag = HorzFlag.Unprocessed;
+      outrec.horzDone = false;
       _horzSegList.Add(new HorzSegment(outrec));
     }
 
@@ -2740,8 +2766,8 @@ namespace Clipper2Lib
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private void DoSplitOp(OutRec outrec, OutPt splitOp)
     {
-      // splitOp.prev -> splitOp &&
-      // splitOp.next -> splitOp.next.next are intersecting
+      // splitOp.prev . splitOp &&
+      // splitOp.next . splitOp.next.next are intersecting
       OutPt prevOp = splitOp.prev;
       OutPt nextNextOp = splitOp.next!.next!;
       outrec.pts = prevOp;

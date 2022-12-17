@@ -1,6 +1,6 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  12 December 2022                                                *
+* Date      :  15 December 2022                                                *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  This is the main polygon clipping module                        *
@@ -74,8 +74,6 @@ namespace Clipper2Lib {
 	using PolyTree64 = PolyPath64;
 	using PolyTreeD = PolyPathD;
 
-	enum class HorzFlag { Unprocessed, Processed, Error };
-
 	struct OutRec;
 	typedef std::vector<OutRec*> OutRecList;
 
@@ -91,7 +89,7 @@ namespace Clipper2Lib {
 		Rect64 bounds = {};
 		Path64 path;
 		bool is_open = false;
-		HorzFlag horzFlag = HorzFlag::Unprocessed;
+		bool horz_done = false;
 	};
 
 	///////////////////////////////////////////////////////////////////
