@@ -36,7 +36,7 @@ jobs:
     - name: Run tests
       run: |
         cd CPP/build
-        make test
+        env CTEST_OUTPUT_ON_FAILURE=1 make test
   ubuntu-latest-gcc-11:
     runs-on: 'ubuntu-latest'
     steps:
@@ -57,7 +57,7 @@ jobs:
     - name: Run tests
       run: |
         cd CPP/build
-        make test
+        env CTEST_OUTPUT_ON_FAILURE=1 make test
   ubuntu-latest-clang-default:
     runs-on: 'ubuntu-latest'
     steps:
@@ -75,7 +75,7 @@ jobs:
     - name: Run tests
       run: |
         cd CPP/build
-        make test
+        env CTEST_OUTPUT_ON_FAILURE=1 make test
   ubuntu-latest-clang-13:
     runs-on: 'ubuntu-latest'
     steps:
@@ -98,7 +98,7 @@ jobs:
     - name: Run tests
       run: |
         cd CPP/build
-        make test
+        env CTEST_OUTPUT_ON_FAILURE=1 make test
   macos-latest:
     runs-on: 'macos-latest'
     steps:
@@ -114,4 +114,4 @@ jobs:
     - name: Run tests
       run: |
         cd CPP/build
-        make test
+        env CTEST_OUTPUT_ON_FAILURE=1 make test
