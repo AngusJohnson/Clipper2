@@ -8,37 +8,40 @@
 using namespace std;
 using namespace Clipper2Lib;
 
-void System(const std::string& filename)
+void DoRabbit();
+void DoSimpleShapes();
+void System(const std::string& filename);
+
+int main(int argc, char* argv[])
 {
-#ifdef _WIN32
-  system(filename.c_str());
-#else
-  system(("firefox " + filename).c_str());
-#endif
+  DoSimpleShapes();
+  DoRabbit();
 }
 
 void DoSimpleShapes() 
 {
-
   //open path offsets 
   Paths64 op1, op2;
 
   FillRule fr2 = FillRule::EvenOdd;
   SvgWriter svg2;
-  op1.push_back(MakePath("100,100, 20,20 180,20 180,180, 20,180"));
-  op2 = InflatePaths(op1, 20, JoinType::Square, EndType::Square);
+  op1.push_back(MakePath("80,60, 20,20 180,20 180,80, 20,180 180,180"));
+  op2 = InflatePaths(op1, 20, JoinType::Square, EndType::Butt);
   SvgAddOpenSubject(svg2, op1, fr2, false);
   SvgAddSolution(svg2, Paths64ToPathsD(op2), fr2, false);
+  SvgAddCaption(svg2, "Square Joins; Butt Ends", 20, 220);
 
   op1 = TranslatePaths(op1, 250, 0);
-  op2 = InflatePaths(op1, 20, JoinType::Miter, EndType::Butt, 5);
+  op2 = InflatePaths(op1, 20, JoinType::Miter, EndType::Square, 3);
   SvgAddOpenSubject(svg2, op1, fr2, false);
   SvgAddSolution(svg2, Paths64ToPathsD(op2), fr2, false);
+  SvgAddCaption(svg2, "Miter Joins; Square Ends", 300, 220);
 
   op1 = TranslatePaths(op1, 250, 0);
   op2 = InflatePaths(op1, 20, JoinType::Round, EndType::Round);
   SvgAddOpenSubject(svg2, op1, fr2, false);
   SvgAddSolution(svg2, Paths64ToPathsD(op2), fr2, false);
+  SvgAddCaption(svg2, "Round Joins; Round Ends", 580, 220);
 
   SvgSaveToFile(svg2, "open_paths.svg", 800, 600, 20);
   System("open_paths.svg");
@@ -104,9 +107,11 @@ void DoRabbit()
   System("solution_off2.svg");
 }
 
-int main(int argc, char* argv[])
+void System(const std::string& filename)
 {
-  DoSimpleShapes();
-  DoRabbit();
+#ifdef _WIN32
+  system(filename.c_str());
+#else
+  system(("firefox " + filename).c_str());
+#endif
 }
-//---------------------------------------------------------------------------

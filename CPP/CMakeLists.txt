@@ -104,24 +104,36 @@ if(CLIPPER2_EXAMPLES)
   ##########################################################################
   ##########################################################################
 
-  add_executable(ConsoleDemo1 Examples/ConsoleDemo1/ConsoleDemo1.cpp)
-  target_link_libraries(ConsoleDemo1 PRIVATE Clipper2 Clipper2utils)
+  add_executable(Benchmarks Examples/Benchmarks/Benchmarks.cpp)
+  target_link_libraries(Benchmarks PRIVATE Clipper2 Clipper2utils)
 
-  add_executable(ConsoleDemo2 Examples/ConsoleDemo2/ConsoleDemo2.cpp)
-  target_link_libraries(ConsoleDemo2 PRIVATE Clipper2 Clipper2utils)
+  add_executable(Inflate Examples/Inflate/Inflate.cpp)
+  target_link_libraries(Inflate PRIVATE Clipper2 Clipper2utils)
 
-  file(COPY Examples/InflateDemo/rabbit.svg DESTINATION ${CMAKE_BINARY_DIR} FILE_PERMISSIONS OWNER_READ GROUP_READ WORLD_READ )
+  add_executable(MemLeakTest Examples/MemLeakTest/MemLeakTest.cpp)
+  target_link_libraries(MemLeakTest PRIVATE Clipper2 Clipper2utils)
 
-  add_executable(InflateDemo1 Examples/InflateDemo/InflateDemo1.cpp)
-  target_link_libraries(InflateDemo1 PRIVATE Clipper2 Clipper2utils)
+  add_executable(PolygonSamples Examples/PolygonSamples/PolygonSamples.cpp)
+  target_link_libraries(PolygonSamples PRIVATE Clipper2 Clipper2utils)
 
-  add_executable(RectClipDemo1 Examples/RectClipDemo/RectClipDemo1.cpp)
-  target_link_libraries(RectClipDemo1 PRIVATE Clipper2 Clipper2utils)
+  add_executable(RandomClipping Examples/RandomClipping/RandomClipping.cpp)
+  target_link_libraries(RandomClipping PRIVATE Clipper2 Clipper2utils)
 
-  add_executable(UsingZ1 Examples/UsingZ/UsingZ1.cpp)
-  target_link_libraries(UsingZ1 PRIVATE Clipper2Z Clipper2Zutils)
+  add_executable(RandomClipping2 Examples/RandomClipping2/RandomClipping2.cpp)
+  target_link_libraries(RandomClipping2 PRIVATE Clipper2 Clipper2utils)
 
-  set_target_properties(ConsoleDemo1 ConsoleDemo2 InflateDemo1 RectClipDemo1 UsingZ1 PROPERTIES FOLDER Examples)
+  add_executable(RectClipping Examples/RectClipping/RectClipping.cpp)
+  target_link_libraries(RectClipping PRIVATE Clipper2 Clipper2utils)
+
+  add_executable(SimpleClipping Examples/SimpleClipping/SimpleClipping.cpp)
+  target_link_libraries(SimpleClipping PRIVATE Clipper2 Clipper2utils)
+
+  file(COPY Examples/Inflate/rabbit.svg DESTINATION ${CMAKE_BINARY_DIR} FILE_PERMISSIONS OWNER_READ GROUP_READ WORLD_READ )
+
+  add_executable(UsingZ Examples/UsingZ/UsingZ.cpp)
+  target_link_libraries(UsingZ PRIVATE Clipper2Z Clipper2Zutils)
+
+  set_target_properties(Benchmarks Inflate MemLeakTest PolygonSamples RandomClipping RandomClipping2 RectClipping SimpleClipping UsingZ PROPERTIES FOLDER Examples)
   if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
     target_compile_options(ConsoleDemo1 PRIVATE -Wno-unused-result -Wno-unused-function)
     target_compile_options(ConsoleDemo2 PRIVATE -Wno-unused-result -Wno-unused-function)
