@@ -20,14 +20,10 @@ int main()
   std::cout.imbue(std::locale(""));
   srand((unsigned)time(0));
 
-  DoLoopThruPolygons(87,90); //polygons: 1..194
+  //DoLoopThruPolygons();         // check all
+  //DoLoopThruPolygons(46);       // display one
+  DoLoopThruPolygons(110,113);    // display a range
 
-  std::cout << std::endl;
-//#ifdef _DEBUG
-  std::string s;
-  std::cout << "Press Enter to continue" << std::endl;
-  std::getline(std::cin, s);
-//#endif
   return 0;
 }
 
@@ -37,6 +33,7 @@ void DoLoopThruPolygons(int start, int end)
   int64_t stored_area, stored_count;
   ClipType ct;
   FillRule fr;
+  bool first_fail = true;
   bool do_all = (start == 0 && end == 0);
   if (do_all) { start = 1; end = 0xFFFF; }
   else if (end == 0) end = start;
@@ -52,12 +49,30 @@ void DoLoopThruPolygons(int start, int end)
     c64.AddClip(clip);
     if (!c64.Execute(ct, fr, solution, solution_open)) return;
 
-    //int area = (int)Area(solution);
-    //int count = (int)(solution.size());
-    //std::cout << test_number -1 << " " << count << " " << area << std::endl;
-    //solution = BooleanOp(ct, fr, subject, clip);
-    if (do_all) continue;
-
+    if (do_all)
+    {
+      double area = (double)Area(solution);
+      double area_diff = (double)stored_area <= 0 ?
+        0 :
+        std::fabs((area / (double)stored_area) - 1.0);
+      int count = (int)(solution.size());
+      double count_diff = stored_count <= 0 ? 
+        0 : 
+        std::abs(count - stored_count)/(double)stored_count;
+      if (count_diff > 0.02 || (area_diff > 0.1))
+      {
+        if (first_fail)
+        {
+          std::cout << "\nCount and area differences (expected vs measured):\n" << std::endl;
+          first_fail = false;
+        }
+        if (count_diff > 0.02)
+          std::cout << test_number << ": counts " << stored_count << " vs " << count << std::endl;
+        if (area_diff > 0.1)
+          std::cout << test_number << ": areas  " << stored_area << " vs " << area << std::endl;
+      }
+      continue;
+    }
     SvgWriter svg;
     SvgAddSubject(svg, subject, fr);
     SvgAddClip(svg, clip, fr);
@@ -69,6 +84,12 @@ void DoLoopThruPolygons(int start, int end)
     SvgSaveToFile(svg, filename, 800, 600, 10);
     System(filename);
   }
+
+  if (!do_all) return;
+  std::cout << std::endl;
+  std::string s;
+  std::cout << "Press Enter to continue" << std::endl;
+  std::getline(std::cin, s);
 }
 
 void System(const std::string &filename)

@@ -2,7 +2,7 @@ unit Clipper.Engine;
 
 (*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  4 January 2023                                                  *
+* Date      :  5 January 2023                                                  *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2023                                         *
 * Purpose   :  This is the main polygon clipping module                        *
@@ -1899,10 +1899,9 @@ begin
     ((area2 > 0) = (area1 > 0))) then
   begin
     newOutRec := FOutRecList.Add;
-    // while managing self-intersects here I don't think it's
-    // possible for the split path to be *inside* outrec's path.
-    //AddSplit(outrec, newOutRec); // ie only needed if inside
+    AddSplit(outrec, newOutRec);
     newOutRec.isOpen := false;
+    newOutRec.owner := outrec.owner;
 
     splitOp.outrec := newOutRec;
     splitOp.next.outrec := newOutRec;
@@ -2668,7 +2667,7 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-procedure InsertAndSplit(ltorHS, rtolHS: PHorzSegment; orList: TOutRecList);
+procedure InsertAndSplit(ltorHS, rtolHS: PHorzSegment);
   {$IFDEF INLINING} inline; {$ENDIF}
 var
   ltorA, ltorZ, ltorR, ltorRP: POutPt;
@@ -2718,7 +2717,7 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-procedure DoPseudoTopAndBottom(topHS, botHS: PHorzSegment; orList: TOutRecList);
+procedure DoPseudoTopAndBottom(topHS, botHS: PHorzSegment);
 begin
 
   if topHs.leftToRight = botHs.leftToRight or
@@ -2726,8 +2725,8 @@ begin
     (topHs.rightOp.pt.X <= botHs.leftOp.pt.X) then Exit;
 
   if topHs.leftToRight then
-    InsertAndSplit(topHS, botHs, orList) else
-    InsertAndSplit(botHs, topHS, orList);
+    InsertAndSplit(topHS, botHs) else
+    InsertAndSplit(botHs, topHS);
 end;
 //------------------------------------------------------------------------------
 
@@ -2801,7 +2800,8 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-procedure MakeHole(hs: PHorzSegment; orList: TOutRecList);
+procedure MakeHole(hs: PHorzSegment;
+  orList: TOutRecList; usingPolytree: Boolean);
 var
   op, op2, opA, opZ: POutPt;
   outrec, newOr: POutRec;
@@ -2827,14 +2827,16 @@ begin
   end;
 
   newOr := orList.Add;
-  AddSplit(outrec, newOr);
+  if usingPolytree then
+    AddSplit(outrec, newOr);
   newOr.owner := outrec;
   newOr.pts := op;
   FixOutRecPts(newOr);
 end;
 //------------------------------------------------------------------------------
 
-procedure MergeTops(ltorHS, rtolHS: PHorzSegment; orList: TOutRecList);
+procedure MergeTops(ltorHS, rtolHS: PHorzSegment;
+  orList: TOutRecList; usingPolytree: Boolean);
 var
   ltorOr, rtolOr: POutRec;
 begin
@@ -2848,7 +2850,7 @@ begin
     // a little work-around so rtolHS.rightOp
     // will be treated as opZ inside MakeHole() ...
     ltorOr.pts := rtolHS.rightOp.prev;
-    MakeHole(ltorHS, orList);
+    MakeHole(ltorHS, orList, usingPolytree);
     Exit;
   end;
 
@@ -2889,10 +2891,6 @@ procedure MergeMiddle(midHS, othHS: PHorzSegment);
 var
   midOr, othOr: POutrec;
 begin
-//  CheckOutRec(midHS.leftOp); //////////////////////////////
-//  CheckOutRec(othHS.leftOp); //////////////////////////////
-
-
   midOr := midHS.leftOp.outrec;
   othOr := othHS.leftOp.outrec;
   if othHS.leftToRight then
@@ -2940,7 +2938,8 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-function DoMiddle(midHS, otherHS: PHorzSegment; orList: TOutRecList): Boolean;
+function DoMiddle(midHS, otherHS: PHorzSegment;
+  orList: TOutRecList; usingPolytree: Boolean): Boolean;
 var
   op, midA, midZ: POutPt;
   midOr, othOr: POutRec;
@@ -3009,7 +3008,7 @@ begin
   if midOr = othOr then
   begin
     if otherHS.position <> hpTop then Exit;
-    MakeHole(otherHS, orList);
+    MakeHole(otherHS, orList, usingPolytree);
     otherHS.finished := true;
     midHS.leftOp := midOr.pts;
     UpdateHorzSegment(midHS, true);
@@ -3017,8 +3016,8 @@ begin
   else if Assigned(othOr.frontE) then
   begin
     if otherHS.leftToRight then
-      InsertAndSplit(otherHS, midHS, orList) else
-      InsertAndSplit( midHS, otherHS, orList);
+      InsertAndSplit(otherHS, midHS) else
+      InsertAndSplit( midHS, otherHS);
   end else
     MergeMiddle(midHS, otherHS);
   Result := true;
@@ -3087,7 +3086,7 @@ begin
       if (hs1.position = hpMiddle) then
       begin
         if (hs2.position <> hpMiddle)then
-          DoMiddle(hs1, hs2, FOutRecList);
+          DoMiddle(hs1, hs2, FOutRecList, FUsingPolytree);
 
         if (hs2.position = hpMiddle) and
           (hs2.leftOp.pt.X < hs1.leftOp.pt.X) then
@@ -3100,7 +3099,7 @@ begin
       end
       else if (hs2.position = hpMiddle) then
         begin
-        DoMiddle(hs2, hs1, FOutRecList);
+        DoMiddle(hs2, hs1, FOutRecList, FUsingPolytree);
       end else
       begin
         // if these horz segments don't partially overlap
@@ -3114,17 +3113,17 @@ begin
           if hs2.position = hpTop then
           begin
             if hs1.leftToRight then
-              MergeTops(hs1, hs2, FOutRecList) else
-              MergeTops(hs2, hs1, FOutRecList);
+              MergeTops(hs1, hs2, FOutRecList, FUsingPolytree) else
+              MergeTops(hs2, hs1, FOutRecList, FUsingPolytree);
           end
           else if Assigned(or1.frontE) then
-            DoPseudoTopAndBottom(hs1, hs2, FOutRecList) else
+            DoPseudoTopAndBottom(hs1, hs2) else
             DoTopAndBottom(hs1, hs2);
         end
         else if hs2.position = hpTop then
         begin
           if Assigned(or2.frontE) then
-            DoPseudoTopAndBottom(hs2, hs1, FOutRecList) else
+            DoPseudoTopAndBottom(hs2, hs1) else
             DoTopAndBottom(hs2, hs1);
         end;
       end;
@@ -3783,15 +3782,16 @@ function TClipperBase.CheckBounds(outrec: POutRec): Boolean;
 begin
   if not Assigned(outrec.pts) then
     Result := false
-  else if outrec.bounds.IsEmpty then
+  else if not outrec.bounds.IsEmpty then
+    Result := true
+  else
   begin
     CleanCollinear(outrec);
-    result := Assigned(outrec.pts);
+    result := Assigned(outrec.pts) and
+      BuildPath(outrec.pts, FReverseSolution, false, outrec.path);
     if not Result then Exit;
-    BuildPath(outrec.pts, FReverseSolution, false, outrec.path);
     outrec.bounds := Clipper.Core.GetBounds(outrec.path);
-  end else
-    Result := true;
+  end;
 end;
 //------------------------------------------------------------------------------
 
@@ -3848,7 +3848,8 @@ begin
       for i := 0 to High(outrec.owner.splits) do
       begin
         split := GetRealOutRec(outrec.owner.splits[i]);
-        if (split = outrec) or (split = outrec.owner) or
+        if not Assigned(split) or
+          (split = outrec) or (split = outrec.owner) or
           not CheckBounds(split) then Continue;
 
         if split.bounds.Contains(outrec.bounds) and
@@ -3896,8 +3897,9 @@ begin
     cntOpen := 0;
 
     i := 0;
-    // Since FixSelfIntersects that's called by CheckBounds below 
-    // (via CleanCollinear) can add to FOutRecList, so ...
+    // FixSelfIntersects is called by CheckBounds below
+    // (via CleanCollinear), and that function can
+    //  add to FOutRecList, so ...
     while i < FOutRecList.Count do
     begin
       outrec := FOutRecList.UnsafeGet(i);

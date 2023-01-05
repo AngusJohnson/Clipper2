@@ -1,8 +1,8 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  15 December 2022                                                *
+* Date      :  5 January 2023                                                  *
 * Website   :  http://www.angusj.com                                           *
-* Copyright :  Angus Johnson 2010-2022                                         *
+* Copyright :  Angus Johnson 2010-2023                                         *
 * Purpose   :  This is the main polygon clipping module                        *
 * License   :  http://www.boost.org/LICENSE_1_0.txt                            *
 *******************************************************************************/
@@ -10,7 +10,7 @@
 #ifndef CLIPPER_ENGINE_H
 #define CLIPPER_ENGINE_H
 
-constexpr auto CLIPPER2_VERSION = "1.0.6";
+constexpr auto CLIPPER2_VERSION = "1.1.0";
 
 #include <cstdlib>
 #include <queue>
@@ -28,6 +28,7 @@ namespace Clipper2Lib {
 	struct Vertex;
 	struct LocalMinima;
 	struct OutRec;
+	struct HorzSegment;
 
 	//Note: all clipping operations except for Difference are commutative.
 	enum class ClipType { None, Intersection, Union, Difference, Xor };
@@ -61,6 +62,7 @@ namespace Clipper2Lib {
 		OutPt*	next = nullptr;
 		OutPt*	prev = nullptr;
 		OutRec* outrec;
+		HorzSegment* horz = nullptr;
 
 		OutPt(const Point64& pt_, OutRec* outrec_): pt(pt_), outrec(outrec_) {
 			next = this;
@@ -86,10 +88,16 @@ namespace Clipper2Lib {
 		Active* back_edge = nullptr;
 		OutPt* pts = nullptr;
 		PolyPath* polypath = nullptr;
+		OutRecList* splits = nullptr;
 		Rect64 bounds = {};
 		Path64 path;
 		bool is_open = false;
 		bool horz_done = false;
+		~OutRec() { 
+			if (splits) delete splits;
+			// nb: don't delete the split pointers
+			// as these are owned by ClipperBase's outrec_list_
+		};
 	};
 
 	///////////////////////////////////////////////////////////////////
@@ -144,12 +152,13 @@ namespace Clipper2Lib {
 	enum class HorzPosition { Bottom, Middle, Top };
 
 	struct HorzSegment {
-		OutRec* outrec;
-		OutPt* leftOp = nullptr;
-		OutPt* rightOp = nullptr;
-		bool leftToRight = true;
+		OutPt* left_op;
+		OutPt* right_op = nullptr;
 		HorzPosition position = HorzPosition::Bottom;
-		HorzSegment(OutRec* outrec_ = nullptr) : outrec(outrec_) {};
+		bool left_to_right = true;
+		bool finished = false;
+		HorzSegment() : left_op(nullptr) { }
+		HorzSegment(OutPt* op) : left_op(op) { op->horz = this; }
 	};
 
 #ifdef USINGZ
@@ -177,12 +186,13 @@ namespace Clipper2Lib {
 		std::vector<Vertex*> vertex_lists_;
 		std::priority_queue<int64_t> scanline_list_;
 		std::vector<IntersectNode> intersect_nodes_;
-		std::vector<HorzSegment> horz_seg_list_;
+		std::vector<HorzSegment*> horz_seg_list_;
 		void Reset();
 		void InsertScanline(int64_t y);
 		bool PopScanline(int64_t &y);
 		bool PopLocalMinima(int64_t y, LocalMinima *&local_minima);
 		void DisposeAllOutRecs();
+		void DisposeHorzSegs();
 		void DisposeVerticesAndLocalMinima();
 		void DeleteEdges(Active*& e);
 		void AddLocMin(Vertex &vert, PathType polytype, bool is_open);
@@ -220,8 +230,8 @@ namespace Clipper2Lib {
 		void DoSplitOp(OutRec* outRec, OutPt* splitOp);
 		void SafeDisposeOutPts(OutPt*& op);
 		
-		void AddTrialHorzJoin(OutRec* op);
-		void MergeHorzSegments(int64_t curr_y);
+		void AddTrialHorzJoin(OutPt* op);
+		void MergeHorzSegments();
 		void Split(Active& e, const Point64& pt);
 		void CheckJoinLeft(Active& e, const Point64& pt);
 		void CheckJoinRight(Active& e, const Point64& pt);
@@ -231,7 +241,9 @@ namespace Clipper2Lib {
 		std::vector<OutRec*> outrec_list_; //pointers in case list memory reallocated
 		bool ExecuteInternal(ClipType ct, FillRule ft, bool use_polytrees);
 		void CleanCollinear(OutRec* outrec);
-		bool DeepCheckOwner(OutRec* outrec, OutRec* owner);
+		bool CheckBounds(OutRec* outrec);
+		OutRec* CheckOwner(OutRec* outrec, PolyPath* polypath);
+		void DeepCheckOwner(OutRec* outrec, PolyPath* polypath);
 #ifdef USINGZ
 		ZCallback64 zCallback_ = nullptr;
 		void SetZ(const Active& e1, const Active& e2, Point64& pt);
@@ -283,13 +295,9 @@ namespace Clipper2Lib {
 
 		bool IsHole() const 
 		{
-			const PolyPath* pp = parent_;
-			bool is_hole = pp;
-			while (pp) {
-				is_hole = !is_hole;
-				pp = pp->parent_;
-			}
-			return is_hole;
+			unsigned lvl = Level();
+			// any even level except the top most one
+			return lvl && !(lvl & 1);
 		}
 	};
 

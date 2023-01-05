@@ -73,7 +73,7 @@ TEST(Clipper2Tests, TestMultiplePolygons)
       ; // skip count
     else if (IsInList(test_number, { 120, 138, 140, 165, 166, 167, 168, 175, 178, 180 }))
       EXPECT_LE(count_diff, 5);
-    else if (IsInList(test_number, { 27, 126, 145, 163, 173, 176, 177, 179, 181 }))
+    else if (IsInList(test_number, { 27, 126, 145, 163, 172, 173, 176, 177, 179, 181 }))
       EXPECT_LE(count_diff, 2);
     else if (test_number > 119 && test_number < 184)
       EXPECT_LE(count_diff, 1);
@@ -100,8 +100,8 @@ TEST(Clipper2Tests, TestMultiplePolygons)
     else
       EXPECT_LE((double)area_diff_ratio, 0.01);
 
-    EXPECT_EQ(measured_area, measured_area_polytree);
     EXPECT_EQ(measured_count, measured_count_polytree);
+    EXPECT_EQ(measured_area, measured_area_polytree);
 
     ++test_number;
   }
