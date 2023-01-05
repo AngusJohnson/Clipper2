@@ -166,6 +166,7 @@ else()
 endif()
   set(ClipperTests_SRC
     Tests/TestLines.cpp
+    Tests/TestOffsets.cpp
     Tests/TestOffsetOrientation.cpp
     Tests/TestOrientation.cpp
     Tests/TestPolygons.cpp
