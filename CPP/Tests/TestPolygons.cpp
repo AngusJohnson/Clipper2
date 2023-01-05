@@ -72,33 +72,33 @@ TEST(Clipper2Tests, TestMultiplePolygons)
     if (stored_count <= 0) 
       ; // skip count
     else if (IsInList(test_number, { 120, 138, 140, 165, 166, 167, 168, 175, 178, 180 }))
-      EXPECT_LE(count_diff, 5);
+      EXPECT_LE(count_diff, 5) << " in test " << test_number;
     else if (IsInList(test_number, { 27, 126, 145, 163, 172, 173, 176, 177, 179, 181 }))
-      EXPECT_LE(count_diff, 2);
+      EXPECT_LE(count_diff, 2) << " in test " << test_number;
     else if (test_number > 119 && test_number < 184)
-      EXPECT_LE(count_diff, 1);
+      EXPECT_LE(count_diff, 1) << " in test " << test_number;
     else if (IsInList(test_number, { 23, 87, 102, 111, 113, 191 }))
-      EXPECT_LE(count_diff, 1);
+      EXPECT_LE(count_diff, 1) << " in test " << test_number;
     else 
-      EXPECT_EQ(count_diff, 0);
+      EXPECT_EQ(count_diff, 0) << " in test " << test_number;
 
     // check polygon areas
     if (stored_area <= 0)
       ; // skip area
     else if (IsInList(test_number, { 19, 22, 23, 24 }))
-      EXPECT_LE((double)area_diff_ratio, 0.5);
+      EXPECT_LE((double)area_diff_ratio, 0.5) << " in test " << test_number;
     else if (test_number == 193)
-      EXPECT_LE((double)area_diff_ratio, 0.2);
+      EXPECT_LE((double)area_diff_ratio, 0.2) << " in test " << test_number;
     else if (test_number == 63)
-      EXPECT_LE((double)area_diff_ratio, 0.1);
+      EXPECT_LE((double)area_diff_ratio, 0.1) << " in test " << test_number;
     else if (test_number == 16)
-      EXPECT_LE((double)area_diff_ratio, 0.075);
+      EXPECT_LE((double)area_diff_ratio, 0.075) << " in test " << test_number;
     else if (test_number == 26)
-      EXPECT_LE((double)area_diff_ratio, 0.05);
+      EXPECT_LE((double)area_diff_ratio, 0.05) << " in test " << test_number;
     else if (IsInList(test_number, { 15, 52, 53, 54, 59, 60, 64, 117, 119, 184 }))
-      EXPECT_LE((double)area_diff_ratio, 0.02);
+      EXPECT_LE((double)area_diff_ratio, 0.02) << " in test " << test_number;
     else
-      EXPECT_LE((double)area_diff_ratio, 0.01);
+      EXPECT_LE((double)area_diff_ratio, 0.01) << " in test " << test_number;
 
     EXPECT_EQ(measured_count, measured_count_polytree);
     EXPECT_EQ(measured_area, measured_area_polytree);
