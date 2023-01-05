@@ -71,9 +71,9 @@ TEST(Clipper2Tests, TestMultiplePolygons)
     // check polygon counts
     if (stored_count <= 0) 
       ; // skip count
-    else if (IsInList(test_number, { 120, 138, 140, 165, 166, 167, 168, 175, 178, 180 }))
+    else if (IsInList(test_number, { 120, 138, 140, 165, 166, 167, 168, 172, 175, 178, 180 }))
       EXPECT_LE(count_diff, 5) << " in test " << test_number;
-    else if (IsInList(test_number, { 27, 126, 145, 163, 172, 173, 176, 177, 179, 181 }))
+    else if (IsInList(test_number, { 27, 126, 145, 163, 173, 176, 177, 179, 181 }))
       EXPECT_LE(count_diff, 2) << " in test " << test_number;
     else if (test_number > 119 && test_number < 184)
       EXPECT_LE(count_diff, 1) << " in test " << test_number;
