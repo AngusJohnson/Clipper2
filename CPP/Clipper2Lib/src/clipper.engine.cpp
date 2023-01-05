@@ -995,11 +995,7 @@ namespace Clipper2Lib {
         e2 = e2->next_in_ael;
       if (e2->join_with == JoinWith::Right)
         e2 = e2->next_in_ael;
-# pragma warning( push )
-# pragma warning(disable:6011)
-# pragma warning(disable:28182)
       e.next_in_ael = e2->next_in_ael;
-# pragma warning( pop )
       if (e2->next_in_ael) e2->next_in_ael->prev_in_ael = &e;
       e.prev_in_ael = e2;
       e2->next_in_ael = &e;
@@ -3079,7 +3075,6 @@ namespace Clipper2Lib {
     result->owner = CheckOwner(result, polypath);
     while (result->owner)
     {
-      _ASSERT(!result->owner->bounds.IsEmpty());
       if (result->owner->bounds.Contains(result->bounds) &&
         Path1InsidePath2(result, result->owner)) break;
       result->owner = result->owner->owner;
