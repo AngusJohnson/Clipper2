@@ -2,7 +2,7 @@ unit Clipper.Engine;
 
 (*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  5 January 2023                                                  *
+* Date      :  7 January 2023                                                  *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2023                                         *
 * Purpose   :  This is the main polygon clipping module                        *
@@ -1105,6 +1105,16 @@ begin
   active2 := node.active2;
   Result := (active1.nextInAEL = active2) or (active1.prevInAEL = active2);
 end;
+//------------------------------------------------------------------------------
+
+procedure SetOwner(outrec, newOwner: POutRec);
+begin
+  //precondition1: new_owner is never null
+  while Assigned(newOwner.owner) and
+    not Assigned(newOwner.owner.pts) do
+      newOwner.owner := newOwner.owner.owner;
+  outrec.owner := newOwner;
+end;
 
 //------------------------------------------------------------------------------
 // TClipperBase methods ...
@@ -1763,6 +1773,8 @@ begin
     // the ascending edge (see AddLocalMinPoly).
     if Assigned(prevHotEdge) then
     begin
+      if FUsingPolytree then
+        SetOwner(newOr, prevHotEdge.outrec);
       if OutrecIsAscending(prevHotEdge) = isNew then
         SetSides(newOr, e2, e1) else
         SetSides(newOr, e1, e2);
@@ -1899,9 +1911,10 @@ begin
     ((area2 > 0) = (area1 > 0))) then
   begin
     newOutRec := FOutRecList.Add;
-    AddSplit(outrec, newOutRec);
-    newOutRec.isOpen := false;
     newOutRec.owner := outrec.owner;
+
+    if FUsingPolytree then
+      AddSplit(outrec, newOutRec);
 
     splitOp.outrec := newOutRec;
     splitOp.next.outrec := newOutRec;
@@ -1975,9 +1988,9 @@ begin
       e := GetPrevHotEdge(e1);
       if not Assigned(e) then
         outRec.owner := nil else
-        outRec.owner := GetRealOutRec(e.outrec);
+        SetOwner(outRec, e.outrec);
       // nb: outRec.owner here is likely NOT the real
-      // owner but this will be fixed in DeepCheckOwner()
+      // owner but this will be checked in DeepCheckOwner()
     end;
     UncoupleOutRec(e1);
   end
@@ -2033,7 +2046,7 @@ begin
   e2.outrec.frontE := nil;
   e2.outrec.backE := nil;
   e2.outrec.pts := nil;
-  e2.outrec.owner := e1.outrec;
+  SetOwner(e2.outrec, e1.outrec);
 
   if IsOpenEnd(e1) then
   begin
@@ -2607,7 +2620,7 @@ begin
       // horizontal middle, otherwise it's a pseudo-top
       tmp := op;
       while (tmp <> opA) and (tmp <> op2) do tmp := tmp.next;
-      if tmp = opA then // must be a middle
+      if (op = opZ)  or (tmp = opA) then // must be a middle
       begin
         if op.pt.X < op2.pt.X then
           hs.leftOp := op else
@@ -2775,7 +2788,7 @@ begin
   topOr.pts := nil;
   topHs.finished := true;
   FixOutRecPts(botOr);
-  topOr.owner := botOr;
+  SetOwner(topOr, botOr);
   UpdateHorzSegment(botHS, true);
 end;
 //------------------------------------------------------------------------------
@@ -2843,7 +2856,6 @@ begin
   ltorOr := ltorHS.leftOp.outrec;
   rtolOr := rtolHS.leftOp.outrec;
   if Assigned(ltorOr.frontE) and  Assigned(rtolOr.frontE) then Exit;
-    //raise Exception.Create('Error Message'); //??do InserAndSplit ??
 
   if ltorOr = rtolOr then
   begin
@@ -2933,7 +2945,7 @@ begin
   FixOutRecPts(midOr);
   othHS.finished := true;
   midHS.leftOp := midOr.pts;
-  othOr.owner := midOr;
+  SetOwner(othOr, midOr);
   UpdateHorzSegment(midHS, true);
 end;
 //------------------------------------------------------------------------------
@@ -2975,15 +2987,14 @@ begin
     midIsLtor := false;
   end;
 
-  // if there isn't a horizontal overlap with the current
-  // leftOp and rightOP (that lead up to midA) then
-  // try for an overlap by setting leftOp and rightOP
-  // with the horizontal that leads away from MidZ
   if (midIsLtor = otherHS.leftToRight) or
     (midHs.leftOp.pt.X = midHs.rightOp.pt.X) or
    (midHs.rightOp.pt.X <= otherHS.leftOp.pt.X) or
     (midHs.leftOp.pt.X >= otherHS.rightOp.pt.X) then
   begin
+    // there isn't a horizontal overlap on the MidA
+    // side of the midA-MidZ loop around, so we'll
+    // now try for an overlap on the MidZ side ...
     if midZ.pt.Y <> currY then Exit;
     op := midZ;
     while (op.next.pt.Y = currY) do op := op.next;
@@ -3027,7 +3038,21 @@ end;
 function IsValidHorzSeg(hs: PHorzSegment): Boolean;
   {$IFDEF INLINING} inline; {$ENDIF}
 begin
-  Result := not hs.finished and (hs.leftOp.horz = hs);
+  Result := not hs.finished;
+  if not Result then Exit;
+
+  CheckOutRec(hs.leftOp);
+  if Assigned(hs.rightOp) then
+  begin
+    // make sure that leftOp and rightOp
+    // still share the same path
+    CheckOutRec(hs.rightOp);
+    Result := (hs.leftOp.horz = hs) and
+      (hs.rightOp.outrec = hs.leftOp.outrec);
+  end
+  else
+    Result := (hs.leftOp.horz = hs);
+  if not Result then hs.finished := true;
 end;
 //------------------------------------------------------------------------------
 
@@ -3069,11 +3094,9 @@ begin
     for j := i + 1 to FHorzSegList.Count - 1 do
     begin
       if not IsValidHorzSeg(hs1) then break;
-      CheckOutRec(hs1.leftOp);
       or1 :=  hs1.leftOp.outrec;
       hs2 := FHorzSegList.UnsafeGet(j);
       if not IsValidHorzSeg(hs2) then Continue;;
-      CheckOutRec(hs2.leftOp);
       or2 := hs2.leftOp.outrec;
 
       // when position == Middle then L-to-R orientation is

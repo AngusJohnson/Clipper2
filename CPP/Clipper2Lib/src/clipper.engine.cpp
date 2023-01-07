@@ -1,6 +1,6 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  5 January 2023                                                  *
+* Date      :  7 January 2023                                                  *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2023                                         *
 * Purpose   :  This is the main polygon clipping module                        *
@@ -402,7 +402,6 @@ namespace Clipper2Lib {
     } while (op1 != op);
   }
 
-
   inline void SwapSides(OutRec& outrec)
   {
     Active* e2 = outrec.front_edge;
@@ -410,7 +409,6 @@ namespace Clipper2Lib {
     outrec.back_edge = e2;
     outrec.pts = outrec.pts->next;
   }
-
 
   inline OutRec* GetRealOutRec(OutRec* outrec)
   {
@@ -470,6 +468,14 @@ namespace Clipper2Lib {
   inline bool IsJoined(Active& e)
   {
     return e.join_with != JoinWith::None;
+  }
+
+  inline void SetOwner(OutRec* outrec, OutRec* new_owner)
+  {
+    //precondition1: new_owner is never null
+    while (new_owner->owner && !new_owner->owner->pts)
+      new_owner->owner = new_owner->owner->owner;
+    outrec->owner = new_owner;
   }
 
   //------------------------------------------------------------------------------
@@ -995,6 +1001,7 @@ namespace Clipper2Lib {
         e2 = e2->next_in_ael;
       if (e2->join_with == JoinWith::Right)
         e2 = e2->next_in_ael;
+      if (!e2) return; // should never happen and stops compiler warning :)
       e.next_in_ael = e2->next_in_ael;
       if (e2->next_in_ael) e2->next_in_ael->prev_in_ael = &e;
       e.prev_in_ael = e2;
@@ -1149,11 +1156,7 @@ namespace Clipper2Lib {
   OutPt* ClipperBase::AddLocalMinPoly(Active& e1, Active& e2,
     const Point64& pt, bool is_new)
   {
-    OutRec* outrec = new OutRec();
-    outrec->idx = (unsigned)outrec_list_.size();
-    outrec_list_.push_back(outrec);
-    outrec->pts = nullptr;
-    outrec->polypath = nullptr;
+    OutRec* outrec = NewOutRec();
     e1.outrec = outrec;
     e2.outrec = outrec;
 
@@ -1175,7 +1178,8 @@ namespace Clipper2Lib {
       //the ascending edge (see AddLocalMinPoly).
       if (prevHotEdge)
       {
-        outrec->owner = prevHotEdge->outrec;
+        if (using_polytree_)
+          SetOwner(outrec, prevHotEdge->outrec);
         if (OutrecIsAscending(prevHotEdge) == is_new)
           SetSides(*outrec, e2, e1);
         else
@@ -1227,15 +1231,15 @@ namespace Clipper2Lib {
         if (!e)
           outrec.owner = nullptr; 
         else
-          outrec.owner = GetRealOutRec(e->outrec);
+          SetOwner(&outrec, e->outrec);
         // nb: outRec.owner here is likely NOT the real
-        // owner but this will be fixed in DeepCheckOwner()
+        // owner but this will be checked in DeepCheckOwner()
       }
 
       UncoupleOutRec(e1);
       result = outrec.pts;
       if (outrec.owner && !outrec.owner->front_edge)
-        outrec.owner = GetRealOutRec(outrec.owner->owner);
+        outrec.owner = GetRealOutRec(outrec.owner);
     }
     //and to preserve the winding orientation of outrec ...
     else if (IsOpen(e1))
@@ -1249,10 +1253,6 @@ namespace Clipper2Lib {
       JoinOutrecPaths(e1, e2);
     else
       JoinOutrecPaths(e2, e1);
-
-    if (result && !result->outrec->pts) 
-      result->outrec = result->outrec->owner;
-
     return result;
   }
 
@@ -1290,7 +1290,7 @@ namespace Clipper2Lib {
     e2.outrec->front_edge = nullptr;
     e2.outrec->back_edge = nullptr;
     e2.outrec->pts = nullptr;
-    e2.outrec->owner = e1.outrec;
+    SetOwner(e2.outrec, e1.outrec);
 
     if (IsOpenEnd(e1))
     {
@@ -1301,6 +1301,18 @@ namespace Clipper2Lib {
     //and e1 and e2 are maxima and are about to be dropped from the Actives list.
     e1.outrec = nullptr;
     e2.outrec = nullptr;
+  }
+
+  OutRec* ClipperBase::NewOutRec()
+  {
+    OutRec* result = new OutRec();
+    result->idx = outrec_list_.size();
+    outrec_list_.push_back(result);
+    result->pts = nullptr;
+    result->owner = nullptr;
+    result->polypath = nullptr;
+    result->is_open = false;
+    return result;
   }
 
 
@@ -1425,24 +1437,21 @@ namespace Clipper2Lib {
     if (absArea2 >= 1 &&
       (absArea2 > absArea1 || (area2 > 0) == (area1 > 0)))
     {
-      OutRec* newOutRec = new OutRec();
-      newOutRec->idx = outrec_list_.size();
-      outrec_list_.push_back(newOutRec);
-      newOutRec->owner = outrec->owner;
-      newOutRec->polypath = nullptr;
+      OutRec* newOr = NewOutRec();
+      newOr->owner = outrec->owner;
       
       if (using_polytree_)
       {
         if (!outrec->splits) outrec->splits = new OutRecList();
-        outrec->splits->push_back(newOutRec);
+        outrec->splits->push_back(newOr);
       }
 
-      splitOp->outrec = newOutRec;
-      splitOp->next->outrec = newOutRec;
-      OutPt* newOp = new OutPt(ip, newOutRec);
+      splitOp->outrec = newOr;
+      splitOp->next->outrec = newOr;
+      OutPt* newOp = new OutPt(ip, newOr);
       newOp->prev = splitOp->next;
       newOp->next = splitOp;
-      newOutRec->pts = newOp;
+      newOr->pts = newOp;
       splitOp->prev = newOp;
       splitOp->next->next = newOp;
     }
@@ -1510,13 +1519,8 @@ namespace Clipper2Lib {
 
   OutPt* ClipperBase::StartOpenPath(Active& e, const Point64& pt)
   {
-    OutRec* outrec = new OutRec();
-    outrec->idx = outrec_list_.size();
-    outrec_list_.push_back(outrec);
-    outrec->owner = nullptr;
+    OutRec* outrec = NewOutRec();
     outrec->is_open = true;
-    outrec->pts = nullptr;
-    outrec->polypath = nullptr;
 
     if (e.wind_dx > 0)
     {
@@ -1960,12 +1964,11 @@ namespace Clipper2Lib {
       if (outrec->front_edge)
       {
         // must be a middle or pseudo-top
-
         // if opA is between op and op2 then this is a
         // horizontal middle, otherwise it's a pseudo-top
         OutPt* tmp = op;
         while (tmp != opA && tmp != op2) tmp = tmp->next;
-        if (tmp == opA) // must be a middle
+        if (op == opZ || tmp == opA) // must be a middle
         {
           if (op->pt.x < op2->pt.x)
             hs->left_op = op; else
@@ -2038,7 +2041,6 @@ namespace Clipper2Lib {
     OutPt* rtolZ = rtolA->next;
     OutPt* rtolRN = rtolR->next;
 
-
     // insert rotated bot into mid/top just after motZ
     ltorRP->next = rtolRN;
     rtolRN->prev = ltorRP;
@@ -2078,7 +2080,7 @@ namespace Clipper2Lib {
       InsertAndSplit(botHS, topHS);
   }
 
-  static void DoTopAndBottom(HorzSegment* topHS, HorzSegment* botHS)
+  void DoTopAndBottom(HorzSegment* topHS, HorzSegment* botHS)
   {
     OutRec* botOr = botHS->left_op->outrec;
     OutPt* botA = botOr->pts, * botZ = botA->next;
@@ -2112,7 +2114,7 @@ namespace Clipper2Lib {
     }
 
     topOr->pts = nullptr;
-    topOr->owner = botOr;
+    SetOwner(topOr, botOr);
     topHS->finished = true;
     FixOutRecPts(botOr);
     UpdateHorzSegment(botHS, true);
@@ -2154,8 +2156,7 @@ namespace Clipper2Lib {
     FixOutRecPts(newOr);
   }
 
-  static void MergeTops(HorzSegment* ltorHS,  HorzSegment* rtolHS, 
-    std::vector<OutRec*>& or_list, bool using_polytree)
+  void ClipperBase::MergeTops(HorzSegment* ltorHS,  HorzSegment* rtolHS)
   {
     OutRec* ltorOr = ltorHS->left_op->outrec;
     OutRec* rtolOr = rtolHS->left_op->outrec;
@@ -2166,7 +2167,7 @@ namespace Clipper2Lib {
       // a little work-around so rtolHS->rightOp
       // will be treated as opZ inside MakeHole() ...
       ltorOr->pts = rtolHS->right_op->prev;
-      MakeHole(ltorHS, or_list, using_polytree);
+      MakeHole(ltorHS, outrec_list_, using_polytree_);
       return;
     }
 
@@ -2202,10 +2203,12 @@ namespace Clipper2Lib {
     UpdateHorzSegment(ltorHS, true);
   }
   
-  static void MergeMiddle(HorzSegment* midHS, HorzSegment* othHS)
+  void MergeMiddle(HorzSegment* midHS, HorzSegment* othHS)
   {
     OutRec* midOr = midHS->left_op->outrec;
     OutRec* othOr = othHS->left_op->outrec;
+    if (midOr == othOr) return;
+
     if (othHS->left_to_right)
     {
       while (midHS->right_op->next->pt.x >= othHS->right_op->pt.x)
@@ -2243,15 +2246,14 @@ namespace Clipper2Lib {
       othOr->back_edge = nullptr;
     }
     othOr->pts = nullptr;
-    othOr->owner = midOr;
+    SetOwner(othOr, midOr);
     FixOutRecPts(midOr);
     othHS->finished = true;
     midHS->left_op = midOr->pts;
     UpdateHorzSegment(midHS, true);
   }
 
-  static bool DoMiddle(HorzSegment* midHS, HorzSegment* otherHS, 
-    std::vector<OutRec*>& or_list, bool using_polytree)
+  bool ClipperBase::DoMiddle(HorzSegment* midHS, HorzSegment* otherHS)
   {
     OutRec* midOr = midHS->left_op->outrec;
     OutRec* othOr = otherHS->left_op->outrec;
@@ -2281,15 +2283,14 @@ namespace Clipper2Lib {
       midIsLtor = false;
     }
 
-    // if there isn't a horizontal overlap with the current
-    // left_op and right_op (that lead up to midA) then
-    // try for an overlap by setting left_op and right_op
-    // with the horizontal that leads away from MidZ
     if (midIsLtor == otherHS->left_to_right ||
       midHS->left_op->pt.x == midHS->right_op->pt.x ||
       midHS->right_op->pt.x <= otherHS->left_op->pt.x ||
       midHS->left_op->pt.x >= otherHS->right_op->pt.x) 
     {
+      // there isn't a horizontal overlap on the MidA
+      // side of the midA-MidZ loop around, so we'll
+      // now try for an overlap on the MidZ side ...
       if (midZ->pt.y != currY) return false;
       op = midZ;
       while (op->next->pt.y == currY) op = op->next;
@@ -2316,7 +2317,7 @@ namespace Clipper2Lib {
     if (midOr == othOr)
     {
       if (otherHS->position != HorzPosition::Top) return false;
-      MakeHole(otherHS, or_list, using_polytree);
+      MakeHole(otherHS, outrec_list_, using_polytree_);
       otherHS->finished = true;
       midHS->left_op = midOr->pts;
       UpdateHorzSegment(midHS, true);
@@ -2334,7 +2335,21 @@ namespace Clipper2Lib {
 
   inline bool IsValidHorzSeg(HorzSegment* hs)
   {
-    return !hs->finished && (hs->left_op->horz == hs);
+    if (hs->finished) return false;
+    bool result;
+    CheckOutRec(hs->left_op);
+    if (hs->right_op)
+    {
+      // also make sure that leftOp and rightOp
+      // still share the same path
+      CheckOutRec(hs->right_op);
+      result = (hs->left_op->horz == hs) &&
+        (hs->right_op->outrec == hs->left_op->outrec);
+    }
+    else
+      result = (hs->left_op->horz == hs);
+    if (!result) hs->finished = true;
+    return result;
   }
 
   void ClipperBase::MergeHorzSegments()
@@ -2344,6 +2359,7 @@ namespace Clipper2Lib {
       if (UpdateHorzSegment(hs, false)) ++j;
     if (j < 2) return;
     std::sort(horz_seg_list_.begin(), horz_seg_list_.end(), HorzSegSorter());
+    for (size_t i = j; i < horz_seg_list_.size(); ++i) delete horz_seg_list_[i];
     horz_seg_list_.resize(j);
 
     // horizontal segments are separated into 3 types: bottom, middle & top.
@@ -2366,8 +2382,6 @@ namespace Clipper2Lib {
       {
         if (!IsValidHorzSeg(*hs1)) break;
         if (!IsValidHorzSeg(*hs2)) continue;
-        CheckOutRec((*hs1)->left_op);
-        CheckOutRec((*hs2)->left_op);
         OutRec* or1 = (*hs1)->left_op->outrec;
         OutRec* or2 = (*hs2)->left_op->outrec;
 
@@ -2381,7 +2395,7 @@ namespace Clipper2Lib {
         if ((*hs1)->position == HorzPosition::Middle)
         {
           if ((*hs2)->position != HorzPosition::Middle)
-            DoMiddle(*hs1, *hs2, outrec_list_, using_polytree_);
+            DoMiddle(*hs1, *hs2);
 
           if ((*hs2)->position == HorzPosition::Middle &&
             (*hs2)->left_op->pt.x < (*hs1)->left_op->pt.x)
@@ -2389,7 +2403,7 @@ namespace Clipper2Lib {
         }
         else if ((*hs2)->position == HorzPosition::Middle)
         {
-          DoMiddle(*hs2, *hs1, outrec_list_, using_polytree_);
+          DoMiddle(*hs2, *hs1);
         }
         else
         {
@@ -2404,8 +2418,8 @@ namespace Clipper2Lib {
             if ((*hs2)->position == HorzPosition::Top)
             {
               if ((*hs1)->left_to_right)
-                MergeTops(*hs1, *hs2, outrec_list_, using_polytree_); else
-                MergeTops(*hs2, *hs1, outrec_list_, using_polytree_);
+                MergeTops(*hs1, *hs2); else
+                MergeTops(*hs2, *hs1);
             }
             else if (or1->front_edge)
               DoPseudoTopAndBottom(*hs1, *hs2); else

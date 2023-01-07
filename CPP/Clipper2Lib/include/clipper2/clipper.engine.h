@@ -1,6 +1,6 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  5 January 2023                                                  *
+* Date      :  7 January 2023                                                  *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2023                                         *
 * Purpose   :  This is the main polygon clipping module                        *
@@ -214,6 +214,7 @@ namespace Clipper2Lib {
 		bool BuildIntersectList(const int64_t top_y);
 		void ProcessIntersectList();
 		void SwapPositionsInAEL(Active& edge1, Active& edge2);
+		OutRec* NewOutRec();
 		OutPt* AddOutPt(const Active &e, const Point64& pt);
 		OutPt* AddLocalMinPoly(Active &e1, Active &e2, 
 			const Point64& pt, bool is_new = false);
@@ -232,13 +233,16 @@ namespace Clipper2Lib {
 		
 		void AddTrialHorzJoin(OutPt* op);
 		void MergeHorzSegments();
+		bool DoMiddle(HorzSegment* midHS, HorzSegment* othHS);
+		void MergeTops(HorzSegment* ltorHS, HorzSegment* rtolHS);
+
 		void Split(Active& e, const Point64& pt);
 		void CheckJoinLeft(Active& e, const Point64& pt);
 		void CheckJoinRight(Active& e, const Point64& pt);
 	protected:
 		bool has_open_paths_ = false;
 		bool succeeded_ = true;
-		std::vector<OutRec*> outrec_list_; //pointers in case list memory reallocated
+		OutRecList outrec_list_; //pointers in case list memory reallocated
 		bool ExecuteInternal(ClipType ct, FillRule ft, bool use_polytrees);
 		void CleanCollinear(OutRec* outrec);
 		bool CheckBounds(OutRec* outrec);
@@ -456,7 +460,7 @@ namespace Clipper2Lib {
 			closed_paths.clear();
 			open_paths.clear();
 			if (ExecuteInternal(clip_type, fill_rule, false))
-				BuildPaths64(closed_paths, &open_paths);
+					BuildPaths64(closed_paths, &open_paths);
 			CleanUp();
 			return succeeded_;
 		}

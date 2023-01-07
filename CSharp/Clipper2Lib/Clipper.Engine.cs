@@ -1,6 +1,6 @@
 ﻿/*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  5 January 2023                                                  *
+* Date      :  7 January 2023                                                  *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2023                                         *
 * Purpose   :  This is the main polygon clipping module                        *
@@ -541,6 +541,15 @@ namespace Clipper2Lib
 
       ae1.outrec = or2;
       ae2.outrec = or1;
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static void SetOwner(OutRec outrec, OutRec newOwner)
+    {
+      //precondition1: new_owner is never null
+      while (newOwner.owner != null && newOwner.owner.pts == null)
+        newOwner.owner = newOwner.owner.owner;
+      outrec.owner = newOwner;
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -1238,11 +1247,7 @@ namespace Clipper2Lib
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private OutPt AddLocalMinPoly(Active ae1, Active ae2, Point64 pt, bool isNew = false)
     {
-      OutRec outrec = new OutRec();
-      _outrecList.Add(outrec);
-      outrec.idx = _outrecList.Count - 1;
-      outrec.pts = null;
-      outrec.polypath = null;
+      OutRec outrec = NewOutRec();
       ae1.outrec = outrec;
       ae2.outrec = outrec;
 
@@ -1265,6 +1270,8 @@ namespace Clipper2Lib
         // the ascending edge (see AddLocalMinPoly).
         if (prevHotEdge != null)
         {
+          if (_using_polytree)
+            SetOwner(outrec, prevHotEdge.outrec!);
           outrec.owner = prevHotEdge.outrec;
           if (OutrecIsAscending(prevHotEdge) == isNew)
             SetSides(outrec, ae2, ae1);
@@ -1317,7 +1324,7 @@ namespace Clipper2Lib
           if (e == null)
             outrec.owner = null;
           else
-            outrec.owner = GetRealOutRec(e.outrec);
+            SetOwner(outrec, e.outrec!);
           // nb: outRec.owner here is likely NOT the real
           // owner but this will be fixed in DeepCheckOwner()
         }
@@ -1375,7 +1382,7 @@ namespace Clipper2Lib
       ae2.outrec.frontEdge = null;
       ae2.outrec.backEdge = null;
       ae2.outrec.pts = null;
-      ae2.outrec.owner = ae1.outrec; // this may be redundant
+      SetOwner(ae2.outrec, ae1.outrec);
 
       if (IsOpenEnd(ae1))
       {
@@ -1412,15 +1419,23 @@ namespace Clipper2Lib
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private OutRec NewOutRec()
+    {
+      OutRec result = new OutRec();
+      result.idx = _outrecList.Count;
+      _outrecList.Add(result);
+      //result.pts = null;
+      //result.owner = null;
+      //result.polypath = null;
+      //result.isOpen = false;
+      return result;
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private OutPt StartOpenPath(Active ae, Point64 pt)
     {
-      OutRec outrec = new OutRec();
-      _outrecList.Add(outrec);
-      outrec.idx = _outrecList.Count - 1;
-      outrec.owner = null;
+      OutRec outrec = NewOutRec();
       outrec.isOpen = true;
-      outrec.pts = null;
-      outrec.polypath = null;
       if (ae.windDx > 0)
       {
         outrec.frontEdge = ae;
@@ -2405,12 +2420,11 @@ namespace Clipper2Lib
         if (outrec.frontEdge != null)
         {
           // must be a middle or pseudo-top
-
           // if opA is between op and op2 then this is a
           // horizontal middle, otherwise it's a pseudo-top
           OutPt tmpOp = op;
           while (tmpOp != opA && tmpOp != op2) tmpOp = tmpOp.next!;
-          if (tmpOp == opA) // must be a middle
+          if (op == opZ || tmpOp == opA) // must be a middle
           {
             if (op.pt.X < op2.pt.X)
               hs.leftOp = op;
@@ -2559,7 +2573,7 @@ namespace Clipper2Lib
       }
 
       topOr.pts = null;
-      topOr.owner = botOr;
+      SetOwner(topOr, botOr);
       topHS.finished = true;
       FixOutRecPts(botOr);
       UpdateHorzSegment(botHS, true);
@@ -2693,7 +2707,7 @@ namespace Clipper2Lib
         othOr.backEdge = null;
       }
       othOr.pts = null;
-      othOr.owner = midOr;
+      SetOwner(othOr, midOr);
       FixOutRecPts(midOr);
       othHS.finished = true;
       midHS.leftOp = midOr.pts;
@@ -2731,15 +2745,14 @@ namespace Clipper2Lib
         midIsLtor = false;
       }
 
-      // if there isn't a horizontal overlap with the current
-      // leftOp and rightOp (that lead up to midA) then
-      // try for an overlap by setting leftOp and rightOp
-      // with the horizontal that leads away from MidZ
       if (midIsLtor == otherHS.leftToRight ||
         midHS.leftOp.pt.X == midHS.rightOp.pt.X ||
         midHS.rightOp.pt.X <= otherHS.leftOp.pt.X ||
         midHS.leftOp.pt.X >= otherHS.rightOp!.pt.X)
       {
+        // there isn't a horizontal overlap on the MidA
+        // side of the midA-MidZ loop around, so we'll
+        // now try for an overlap on the MidZ side ...
         if (midZ.pt.Y != currY) return false;
         op = midZ;
         while (op.next!.pt.Y == currY) op = op.next;
@@ -2785,7 +2798,21 @@ namespace Clipper2Lib
 
     private static bool IsValidHorzSeg(HorzSegment hs)
     {
-      return !hs.finished && (hs.leftOp!.horz == hs);
+      if (hs.finished) return false;
+      bool result;
+      CheckOutRec(hs.leftOp!);
+      if (hs.rightOp != null)
+      {
+        // also make sure that leftOp and rightOp
+        // still share the same path
+        CheckOutRec(hs.rightOp);
+        result = (hs.leftOp!.horz == hs) &&
+          (hs.rightOp.outrec == hs.leftOp.outrec);
+      }
+      else
+        result = (hs.leftOp!.horz == hs);
+      if (!result) hs.finished = true;
+      return result;
     }
 
     private void MergeHorzSegments()
@@ -2816,11 +2843,9 @@ namespace Clipper2Lib
           if (!IsValidHorzSeg(hs1)) break;
           HorzSegment hs2 = _horzSegList[j];
           if (!IsValidHorzSeg(hs2)) continue;
-          CheckOutRec(hs1.leftOp!);
-          CheckOutRec(hs2.leftOp!);
 
           OutRec or1 = hs1.leftOp!.outrec;
-          OutRec or2 = GetRealOutRec(hs2.leftOp!.outrec)!;
+          OutRec or2 = hs2.leftOp!.outrec;
 
           // when position == Middle then L-to-R orientation is
           // contextual. This is because the horizontal contains
@@ -3033,13 +3058,8 @@ namespace Clipper2Lib
           (absArea2 > absArea1 ||
            ((area2 > 0) == (area1 > 0))))
       {
-        OutRec newOutRec = new OutRec
-        {
-          idx = _outrecList.Count
-        };
-        _outrecList.Add(newOutRec);
+        OutRec newOutRec = NewOutRec();
         newOutRec.owner = outrec.owner;
-        newOutRec.polypath = null;
         splitOp.outrec = newOutRec;
         splitOp.next.outrec = newOutRec;
 
