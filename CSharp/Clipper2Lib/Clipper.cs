@@ -1,8 +1,8 @@
 ﻿/*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  19 November 2022                                                *
+* Date      :  5 January 2023                                                  *
 * Website   :  http://www.angusj.com                                           *
-* Copyright :  Angus Johnson 2010-2022                                         *
+* Copyright :  Angus Johnson 2010-2023                                         *
 * Purpose   :  This module contains simple functions that will likely cover    *
 *              most polygon boolean and offsetting needs, while also avoiding  *
 *              the inherent complexities of the other modules.                 *
@@ -92,7 +92,7 @@ namespace Clipper2Lib
         subject, clip, fillRule, precision);
     }
 
-    public static Paths64 BooleanOp(ClipType clipType, 
+    public static Paths64 BooleanOp(ClipType clipType,
       Paths64? subject, Paths64? clip, FillRule fillRule)
     {
       Paths64 solution = new Paths64();
@@ -105,6 +105,18 @@ namespace Clipper2Lib
       return solution;
     }
 
+    public static void BooleanOp(ClipType clipType,
+      Paths64? subject, Paths64? clip, 
+      PolyTree64 polytree, FillRule fillRule)
+    {
+      if (subject == null) return;
+      Clipper64 c = new Clipper64();
+      c.AddPaths(subject, PathType.Subject);
+      if (clip != null)
+        c.AddPaths(clip, PathType.Clip);
+      c.Execute(clipType, fillRule, polytree);
+    }
+
     public static PathsD BooleanOp(ClipType clipType, PathsD subject, PathsD? clip, 
       FillRule fillRule, int precision = 2)
     {
@@ -115,6 +127,18 @@ namespace Clipper2Lib
         c.AddClip(clip);
       c.Execute(clipType, fillRule, solution);
       return solution;
+    }
+
+    public static void BooleanOp(ClipType clipType,
+      PathsD? subject, PathsD? clip,
+      PolyTreeD polytree, FillRule fillRule, int precision = 2)
+    {
+      if (subject == null) return;
+      ClipperD c = new ClipperD(precision);
+      c.AddPaths(subject, PathType.Subject);
+      if (clip != null)
+        c.AddPaths(clip, PathType.Clip);
+      c.Execute(clipType, fillRule, polytree);
     }
 
     public static Paths64 InflatePaths(Paths64 paths, double delta, JoinType joinType,

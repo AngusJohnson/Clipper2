@@ -1,8 +1,8 @@
 ﻿/*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  19 November 2022                                                *
+* Date      :  5 January 2023                                                  *
 * Website   :  http://www.angusj.com                                           *
-* Copyright :  Angus Johnson 2010-2022                                         *
+* Copyright :  Angus Johnson 2010-2023                                         *
 * Purpose   :  Core structures and functions for the Clipper Library           *
 * License   :  http://www.boost.org/LICENSE_1_0.txt                            *
 *******************************************************************************/
