@@ -2259,7 +2259,7 @@ namespace Clipper2Lib {
     OutRec* othOr = otherHS->left_op->outrec;
     OutPt* midA = midOr->pts, * midZ = midA->next, *op = midA;
 
-    int64_t currY = midA->pt.y;
+    int64_t currY = midA->pt.y <= midZ->pt.y ? midA->pt.y: midZ->pt.y;
     // middle horz segments are tricky because we need to assess for
     // horizontal overlaps on both sides of the midA-midZ loop-around
     while (op->prev != midA && op->prev->pt.y == currY) op = op->prev;
@@ -2316,7 +2316,8 @@ namespace Clipper2Lib {
 
     if (midOr == othOr)
     {
-      if (otherHS->position != HorzPosition::Top) return false;
+      if ((otherHS->position != HorzPosition::Top) ||
+        (midA->pt.y != midZ->pt.y)) return false;
       MakeHole(otherHS, outrec_list_, using_polytree_);
       otherHS->finished = true;
       midHS->left_op = midOr->pts;

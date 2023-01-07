@@ -2778,7 +2778,9 @@ namespace Clipper2Lib
 
       if (midOr == othOr)
       {
-        if (otherHS.position != HorzPosition.Top) return false;
+        if ((otherHS.position != HorzPosition.Top) ||
+          (midZ.pt.Y != midZ.pt.Y)) 
+            return false;
         MakeHole(otherHS, or_list, usingPolytree);
         otherHS.finished = true;
         midHS.leftOp = midOr.pts;

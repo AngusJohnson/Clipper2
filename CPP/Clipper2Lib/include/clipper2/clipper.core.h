@@ -1,8 +1,8 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  3 December 2022                                                 *
+* Date      :  7 January 2023                                                  *
 * Website   :  http://www.angusj.com                                           *
-* Copyright :  Angus Johnson 2010-2022                                         *
+* Copyright :  Angus Johnson 2010-2023                                         *
 * Purpose   :  Core Clipper Library structures and functions                   *
 * License   :  http://www.boost.org/LICENSE_1_0.txt                            *
 *******************************************************************************/
@@ -85,7 +85,7 @@ namespace Clipper2Lib
 
     friend std::ostream& operator<<(std::ostream& os, const Point& point)
     {
-      os << point.x << " " << point.y << " " << point.z;
+      os << point.x << "," << point.y << "," << point.z << " ";
       return os;
     }
 
@@ -122,7 +122,7 @@ namespace Clipper2Lib
 
     friend std::ostream& operator<<(std::ostream& os, const Point& point)
     {
-      os << point.x << " " << point.y;
+      os << point.x << "," << point.y << " ";
       return os;
     }
 #endif

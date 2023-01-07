@@ -3018,7 +3018,8 @@ begin
 
   if midOr = othOr then
   begin
-    if otherHS.position <> hpTop then Exit;
+    if (otherHS.position <> hpTop) or
+      (midZ.pt.Y <> midA.pt.Y) then Exit;
     MakeHole(otherHS, orList, usingPolytree);
     otherHS.finished := true;
     midHS.leftOp := midOr.pts;
