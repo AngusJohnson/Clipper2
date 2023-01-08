@@ -1,6 +1,6 @@
 ﻿/*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  7 January 2023                                                  *
+* Date      :  8 January 2023                                                  *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2023                                         *
 * Purpose   :  This is the main polygon clipping module                        *
@@ -2573,39 +2573,74 @@ namespace Clipper2Lib
       }
 
       topOr.pts = null;
-      SetOwner(topOr, botOr);
       topHS.finished = true;
-      FixOutRecPts(botOr);
+      botOr.pts.outrec = botOr;
+      SetOwner(topOr, botOr);
       UpdateHorzSegment(botHS, true);
     }
 
-  private static void MakeHole(HorzSegment hs, 
-    List<OutRec> or_list, bool usingPolytree)
-  {
+    private static bool MakeHole(HorzSegment hs,
+      List<OutRec> or_list, bool usingPolytree)
+    {
       OutRec outrec = hs.leftOp!.outrec;
       OutPt opA = outrec.pts!, opZ = opA.next!;
-      OutPt op = opZ.next!, op2;
+      OutPt opL, opR, opQ;
+
+      // first, try for an overlap on opA's side
+      opL = opA; opR = opA;
+      long currY = opA.pt.Y;
+      if (hs.leftToRight)
+        while (opR.prev.pt.Y == currY) opR = opR.prev;
+      else
+        while (opL.prev.pt.Y == currY) opL = opL.prev;
+
+      if ((currY != hs.leftOp.pt.Y) ||
+        (opL.pt.X >= opR.pt.X) ||
+        (opR.pt.X <= hs.leftOp.pt.X) ||
+        (opL.pt.X >= hs.rightOp!.pt.X))
+      {
+        // no luck so try on opZ's side
+        currY = opZ.pt.Y;
+        opL = opZ; opR = opZ;
+        if (hs.leftToRight)
+          while (opL.next!.pt.Y == currY) opL = opL.next;
+        else
+          while (opR.next!.pt.Y == currY) opR = opR.next;
+
+        if ((currY != hs.leftOp.pt.Y) ||
+          (opL.pt.X >= opR.pt.X) ||
+          (opR.pt.X <= hs.leftOp.pt.X) ||
+          (opL.pt.X >= hs.rightOp!.pt.X))
+          return false; // no overlap on either side, so give up
+      }
+
       if (hs.leftToRight)
       {
-        op2 = hs.rightOp!.prev;
-        op2.next = op;
-        op.prev = op2;
-        opZ.next = hs.rightOp;
-        hs.rightOp.prev = opZ;
+        // opL  <<<< opR
+        // hs.L >>>> hs.R
+        opQ = (opL == opA) ? opR : opL;
+        opR = opL.prev;
+        hs.rightOp = hs.leftOp.next;
+        hs.leftOp.next = opL;
+        opL.prev = hs.leftOp;
+        opR.next = hs.rightOp;
+        hs.rightOp!.prev = opR;
       }
       else
       {
-        op2 = hs.leftOp.prev;
-        op2.next = op;
-        op.prev = op2;
-        opZ.next = hs.leftOp;
-        hs.leftOp.prev = opZ;
+        // opL  >>>> opR
+        // hs.L <<<< hs.R
+        opQ = (opR == opA) ? opL : opR;
+        opR = opL.next!;
+        hs.rightOp = hs.leftOp.prev;
+        hs.leftOp.prev = opL;
+        opL.next = hs.leftOp;
+        opR.prev = hs.rightOp;
+        hs.rightOp.next = opR;
       }
 
-      OutRec newOr = new OutRec
-      {
-        idx = or_list.Count
-      };
+      OutRec newOr = new OutRec();
+      newOr.idx = or_list.Count;
       or_list.Add(newOr);
 
       if (usingPolytree)
@@ -2615,25 +2650,17 @@ namespace Clipper2Lib
       }
 
       newOr.owner = outrec;
-      newOr.pts = op;
+      newOr.pts = opQ;
       FixOutRecPts(newOr);
+      hs.finished = true;
+      return true;
     }
 
-    private static void MergeTops(HorzSegment ltorHS, 
-      HorzSegment rtolHS, List<OutRec> or_list, bool usingPolytree)
+    private static void MergeTops(HorzSegment ltorHS, HorzSegment rtolHS)
     {
       OutRec ltorOr = ltorHS.leftOp!.outrec;
       OutRec rtolOr = rtolHS.leftOp!.outrec;
       if (ltorOr.frontEdge != null && rtolOr.frontEdge != null) return;
-
-      if (ltorOr == rtolOr)
-      {
-        // a little work-around so rtolHS.rightOp
-        // will be treated as opZ inside MakeHole() ...
-        ltorOr.pts = rtolHS.rightOp!.prev;
-        MakeHole(ltorHS, or_list, usingPolytree);
-        return;
-      }
 
       if (ltorHS.rightOp!.pt.X <= rtolHS.leftOp.pt.X ||
         ltorHS.leftOp.pt.X >= rtolHS.rightOp!.pt.X) return;
@@ -2661,7 +2688,7 @@ namespace Clipper2Lib
       }
       rtolOr.pts = null;
       rtolHS.finished = true;
-      FixOutRecPts(ltorOr);
+      ltorOr.pts.outrec = ltorOr;
       ltorHS.leftOp = ltorOr.pts;
       UpdateHorzSegment(ltorHS, true);
     }
@@ -2707,21 +2734,20 @@ namespace Clipper2Lib
         othOr.backEdge = null;
       }
       othOr.pts = null;
-      SetOwner(othOr, midOr);
-      FixOutRecPts(midOr);
+      midOr.pts.outrec = midOr;
       othHS.finished = true;
       midHS.leftOp = midOr.pts;
+      SetOwner(othOr, midOr);
       UpdateHorzSegment(midHS, true);
     }
 
-    private static bool DoMiddle(HorzSegment midHS, HorzSegment otherHS, 
-      List<OutRec> or_list, bool usingPolytree)
+    private static bool DoMiddle(HorzSegment midHS, HorzSegment otherHS)
     {
       OutRec midOr = midHS.leftOp!.outrec;
       OutRec othOr = otherHS.leftOp!.outrec;
       OutPt midA = midOr.pts!, midZ = midA.next!, op = midA;
 
-      long currY = midA.pt.Y;
+      long currY = midA.pt.Y <= midZ.pt.Y ? midA.pt.Y : midZ.pt.Y;
       // middle horz segments are tricky because we need to assess for
       // horizontal overlaps on both sides of the midA-midZ loop-around
       while (op.prev != midA && op.prev.pt.Y == currY) op = op.prev;
@@ -2776,17 +2802,7 @@ namespace Clipper2Lib
       }
       CheckOutRec(midHS.leftOp);
 
-      if (midOr == othOr)
-      {
-        if ((otherHS.position != HorzPosition.Top) ||
-          (midZ.pt.Y != midZ.pt.Y)) 
-            return false;
-        MakeHole(otherHS, or_list, usingPolytree);
-        otherHS.finished = true;
-        midHS.leftOp = midOr.pts;
-        UpdateHorzSegment(midHS, true);
-      }
-      else if (othOr.frontEdge != null)
+      if (othOr.frontEdge != null)
       {
         if (otherHS.leftToRight)
           InsertAndSplit(otherHS, midHS);
@@ -2858,15 +2874,28 @@ namespace Clipper2Lib
 
           if (hs1.position == HorzPosition.Middle)
           {
-            if (hs2.position != HorzPosition.Middle)
-              DoMiddle(hs1, hs2, _outrecList, _using_polytree);
+            if (or1 == or2)
+            {
+              if (hs2.position != HorzPosition.Top) continue;
+              if (MakeHole(hs2, _outrecList, _using_polytree))
+                UpdateHorzSegment(hs1, true);
+            }
+            else if (hs2.position != HorzPosition.Middle)
+              DoMiddle(hs1, hs2);
 
             if (hs2.position == HorzPosition.Middle &&
               hs2.leftOp.pt.X < hs1.leftOp.pt.X) _ = hs2; // swap hs1 & hs2
           }
           else if (hs2.position == HorzPosition.Middle)
           {
-            DoMiddle(hs2,hs1, _outrecList, _using_polytree);
+            if (or1 == or2)
+            {
+              if (hs1.position != HorzPosition.Top) continue;
+              if (MakeHole(hs1, _outrecList, _using_polytree))
+                UpdateHorzSegment(hs2, true);
+              //break;
+            }
+            DoMiddle(hs2, hs1);
           }
           else
           {
@@ -2880,10 +2909,16 @@ namespace Clipper2Lib
             {
               if (hs2.position == HorzPosition.Top)
               {
-                if (hs1.leftToRight)
-                  MergeTops(hs1, hs2, _outrecList, _using_polytree);
+                if (or1 == or2)
+                {
+                  if (or1.frontEdge != null) continue;
+                  or1.pts = hs1.rightOp;
+                  MakeHole(hs2, _outrecList, _using_polytree);
+                }
+                else if (hs1.leftToRight)
+                  MergeTops(hs1, hs2);
                 else
-                  MergeTops(hs2, hs1, _outrecList, _using_polytree);
+                  MergeTops(hs2, hs1);
               }
               else if (or1.frontEdge != null)
                 DoPseudoTopAndBottom(hs1, hs2);
