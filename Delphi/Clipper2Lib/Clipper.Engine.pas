@@ -2927,6 +2927,7 @@ begin
     rtolOr.backE := nil;
   end;
   rtolOr.pts := nil;
+  SetOwner(rtolOr, ltorOr);
   rtolHS.finished := true;
   ltorOr.pts.outrec := ltorOr;
   ltorHS.leftOp := ltorOr.pts;
@@ -2962,8 +2963,6 @@ begin
     othHS.rightOp.next := midHS.rightOp;
     midHS.rightOp.prev := othHS.rightOp;
   end;
-
-  othOr.pts := nil;
 
   if Assigned(othOr.frontE) then
   begin

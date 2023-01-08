@@ -2227,6 +2227,7 @@ namespace Clipper2Lib {
       rtolOr->back_edge = nullptr;
     }
     rtolOr->pts = nullptr;
+    rtolOr->owner = ltorOr;
     ltorOr->pts->outrec = ltorOr;
     rtolHS->finished = true;
     ltorHS->left_op = ltorOr->pts;
@@ -2263,7 +2264,6 @@ namespace Clipper2Lib {
       midHS->right_op->prev = othHS->right_op;
     }
 
-    othOr->pts = nullptr;
     if (othOr->front_edge)
     {
       midOr->pts = othOr->pts;

@@ -2687,6 +2687,7 @@ namespace Clipper2Lib
         rtolOr.backEdge = null;
       }
       rtolOr.pts = null;
+      SetOwner(rtolOr, ltorOr);
       rtolHS.finished = true;
       ltorOr.pts.outrec = ltorOr;
       ltorHS.leftOp = ltorOr.pts;
@@ -2721,7 +2722,6 @@ namespace Clipper2Lib
         midHS.rightOp.prev = othHS.rightOp;
       }
 
-      othOr.pts = null;
       if (othOr.frontEdge != null)
       {
         midOr.pts = othOr.pts;
