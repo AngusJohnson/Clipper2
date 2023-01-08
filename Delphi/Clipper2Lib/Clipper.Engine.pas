@@ -2787,7 +2787,7 @@ begin
 
   topOr.pts := nil;
   topHs.finished := true;
-  FixOutRecPts(botOr);
+  botOr.pts.outrec := botOr;
   SetOwner(topOr, botOr);
   UpdateHorzSegment(botHS, true);
 end;
@@ -2928,7 +2928,7 @@ begin
   end;
   rtolOr.pts := nil;
   rtolHS.finished := true;
-  FixOutRecPts(ltorOr);
+  ltorOr.pts.outrec := ltorOr;
   ltorHS.leftOp := ltorOr.pts;
   UpdateHorzSegment(ltorHS, true);
 end;
@@ -2977,7 +2977,7 @@ begin
     othOr.backE := nil;
   end;
   othOr.pts := nil;
-  FixOutRecPts(midOr);
+  midOr.pts.outrec := midOr;
   othHS.finished := true;
   midHS.leftOp := midOr.pts;
   SetOwner(othOr, midOr);
@@ -2997,8 +2997,10 @@ begin
   othOr := otherHS.leftOp.outrec;
   midA := midOr.pts;
   midZ := midA.next;
+  if (midZ.pt.Y < midA.pt.Y) then
+    currY := midZ.pt.Y else
+    currY := midA.pt.Y;
 
-  currY := midA.pt.Y;
   // middle horz segments are tricky because we need to assess for
   // horizontal overlaps on both sides of the midA-midZ loop-around
   op := midA;

@@ -2114,9 +2114,9 @@ namespace Clipper2Lib {
     }
 
     topOr->pts = nullptr;
-    SetOwner(topOr, botOr);
+    botOr->pts->outrec = botOr;
     topHS->finished = true;
-    FixOutRecPts(botOr);
+    SetOwner(topOr, botOr);
     UpdateHorzSegment(botHS, true);
   }
 
@@ -2227,8 +2227,8 @@ namespace Clipper2Lib {
       rtolOr->back_edge = nullptr;
     }
     rtolOr->pts = nullptr;
+    ltorOr->pts->outrec = ltorOr;
     rtolHS->finished = true;
-    FixOutRecPts(ltorOr);
     ltorHS->left_op = ltorOr->pts;
     UpdateHorzSegment(ltorHS, true);
   }
@@ -2276,10 +2276,10 @@ namespace Clipper2Lib {
       othOr->back_edge = nullptr;
     }
     othOr->pts = nullptr;
-    SetOwner(othOr, midOr);
-    FixOutRecPts(midOr);
+    midOr->pts->outrec = midOr;
     othHS->finished = true;
     midHS->left_op = midOr->pts;
+    SetOwner(othOr, midOr);
     UpdateHorzSegment(midHS, true);
   }
 
@@ -2288,8 +2288,8 @@ namespace Clipper2Lib {
     OutRec* midOr = midHS->left_op->outrec;
     OutRec* othOr = otherHS->left_op->outrec;
     OutPt* midA = midOr->pts, * midZ = midA->next, *op = midA;
+    int64_t currY = midA->pt.y <= midZ->pt.y ? midA->pt.y : midZ->pt.y;
 
-    int64_t currY = midA->pt.y <= midZ->pt.y ? midA->pt.y: midZ->pt.y;
     // middle horz segments are tricky because we need to assess for
     // horizontal overlaps on both sides of the midA-midZ loop-around
     while (op->prev != midA && op->prev->pt.y == currY) op = op->prev;
