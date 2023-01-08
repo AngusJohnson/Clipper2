@@ -2,7 +2,7 @@ unit Clipper.Engine;
 
 (*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  7 January 2023                                                  *
+* Date      :  8 January 2023                                                  *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2023                                         *
 * Purpose   :  This is the main polygon clipping module                        *
@@ -2813,58 +2813,93 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-procedure MakeHole(hs: PHorzSegment;
-  orList: TOutRecList; usingPolytree: Boolean);
+function MakeHole(hs: PHorzSegment;
+  orList: TOutRecList; usingPolytree: Boolean): Boolean;
 var
-  op, op2, opA, opZ: POutPt;
+  opL, opR, opQ, opA, opZ: POutPt;
   outrec, newOr: POutRec;
+  currY: Int64;
 begin
+  Result := false;
   outrec := hs.leftOp.outrec;
   opA := outrec.pts;
   opZ := opA.next;
-  op := opZ.next;
-  if hs.leftToRight then
+
+  // first, try for an overlap on opA's side
+  opL := opA; opR := opA;
+  currY := opA.pt.Y;
+  if (hs.leftToRight) then
+    while (opR.prev.pt.Y = currY) do opR := opR.prev
+  else
+    while (opL.prev.pt.Y = currY) do opL := opL.prev;
+
+  if ((currY <> hs.leftOp.pt.Y) or
+    (opL.pt.X >= opR.pt.X) or
+    (opR.pt.X <= hs.leftOp.pt.X) or
+    (opL.pt.X >= hs.rightOp.pt.X)) then
   begin
-    op2 := hs.rightOp.prev;
-    op2.next := op;
-    op.prev := op2;
-    opZ.next := hs.rightOp;
-    hs.rightOp.prev := opZ;
-  end else
+    // no luck so try on opZ's side
+    currY := opZ.pt.Y;
+    opL := opZ; opR := opZ;
+    if (hs.leftToRight) then
+      while (opL.next.pt.Y = currY) do opL := opL.next
+    else
+      while (opR.next.pt.Y = currY) do opR := opR.next;
+
+    if ((currY <> hs.leftOp.pt.Y) or
+      (opL.pt.X >= opR.pt.X) or
+      (opR.pt.X <= hs.leftOp.pt.X) or
+      (opL.pt.X >= hs.rightOp.pt.X)) then
+        Exit; // no overlap on either side, so give up
+  end;
+
+  if (hs.leftToRight) then
   begin
-    op2 := hs.leftOp.prev;
-    op2.next := op;
-    op.prev := op2;
-    opZ.next := hs.leftOp;
-    hs.leftOp.prev := opZ;
+    // opL  <<<< opR
+    // hs.L >>>> hs.R
+    if (opL = opA) then
+      opQ := opR  else
+      opQ := opL;
+    opR := opL.prev;
+    hs.rightOp := hs.leftOp.next;
+    hs.leftOp.next := opL;
+    opL.prev := hs.leftOp;
+    opR.next := hs.rightOp;
+    hs.rightOp.prev := opR;
+  end
+  else
+  begin
+    // opL  >>>> opR
+    // hs.L <<<< hs.R
+    if (opR = opA) then
+      opQ := opL else
+      opQ := opR;
+    opR := opL.next;
+    hs.rightOp := hs.leftOp.prev;
+    hs.leftOp.prev := opL;
+    opL.next := hs.leftOp;
+    opR.prev := hs.rightOp;
+    hs.rightOp.next := opR;
   end;
 
   newOr := orList.Add;
   if usingPolytree then
     AddSplit(outrec, newOr);
   newOr.owner := outrec;
-  newOr.pts := op;
+  newOr.pts := opQ;
   FixOutRecPts(newOr);
+  hs.finished := true;
+  Result := true;
 end;
 //------------------------------------------------------------------------------
 
-procedure MergeTops(ltorHS, rtolHS: PHorzSegment;
-  orList: TOutRecList; usingPolytree: Boolean);
+procedure MergeTops(ltorHS, rtolHS: PHorzSegment);
 var
   ltorOr, rtolOr: POutRec;
 begin
   ltorOr := ltorHS.leftOp.outrec;
   rtolOr := rtolHS.leftOp.outrec;
   if Assigned(ltorOr.frontE) and  Assigned(rtolOr.frontE) then Exit;
-
-  if ltorOr = rtolOr then
-  begin
-    // a little work-around so rtolHS.rightOp
-    // will be treated as opZ inside MakeHole() ...
-    ltorOr.pts := rtolHS.rightOp.prev;
-    MakeHole(ltorHS, orList, usingPolytree);
-    Exit;
-  end;
 
   if (ltorHS.rightOp.pt.X <= rtolHS.leftOp.pt.X) or
     (ltorHS.leftOp.pt.X >= rtolHS.rightOp.pt.X) then Exit;
@@ -2950,8 +2985,7 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-function DoMiddle(midHS, otherHS: PHorzSegment;
-  orList: TOutRecList; usingPolytree: Boolean): Boolean;
+function DoMiddle(midHS, otherHS: PHorzSegment): Boolean;
 var
   op, midA, midZ: POutPt;
   midOr, othOr: POutRec;
@@ -3016,16 +3050,7 @@ begin
   end;
   CheckOutRec(midHs.leftOp);
 
-  if midOr = othOr then
-  begin
-    if (otherHS.position <> hpTop) or
-      (midZ.pt.Y <> midA.pt.Y) then Exit;
-    MakeHole(otherHS, orList, usingPolytree);
-    otherHS.finished := true;
-    midHS.leftOp := midOr.pts;
-    UpdateHorzSegment(midHS, true);
-  end
-  else if Assigned(othOr.frontE) then
+  if Assigned(othOr.frontE) then
   begin
     if otherHS.leftToRight then
       InsertAndSplit(otherHS, midHS) else
@@ -3109,8 +3134,14 @@ begin
 
       if (hs1.position = hpMiddle) then
       begin
-        if (hs2.position <> hpMiddle)then
-          DoMiddle(hs1, hs2, FOutRecList, FUsingPolytree);
+        if (or1 = or2) then
+        begin
+          if (hs2.position <> hpTop) then Continue;
+          if (MakeHole(hs2, FOutRecList, FUsingPolytree)) then
+            UpdateHorzSegment(hs1, true);
+        end
+        else if (hs2.position <> hpMiddle)then
+          DoMiddle(hs1, hs2);
 
         if (hs2.position = hpMiddle) and
           (hs2.leftOp.pt.X < hs1.leftOp.pt.X) then
@@ -3122,8 +3153,16 @@ begin
 
       end
       else if (hs2.position = hpMiddle) then
+      begin
+        if (or1 = or2) then
         begin
-        DoMiddle(hs2, hs1, FOutRecList, FUsingPolytree);
+          if (hs1.position <> hpTop) then Continue;
+          if (MakeHole(hs1, FOutRecList, FUsingPolytree)) then
+            UpdateHorzSegment(hs2, true);
+          //break; ??
+        end
+        else
+          DoMiddle(hs2, hs1);
       end else
       begin
         // if these horz segments don't partially overlap
@@ -3136,9 +3175,16 @@ begin
         begin
           if hs2.position = hpTop then
           begin
-            if hs1.leftToRight then
-              MergeTops(hs1, hs2, FOutRecList, FUsingPolytree) else
-              MergeTops(hs2, hs1, FOutRecList, FUsingPolytree);
+            if (or1 = or2) then
+            begin
+              if Assigned(or1.frontE) then Continue;
+              or1.pts := hs1.rightOp;
+              MakeHole(hs2, FOutRecList, FUsingPolytree);
+            end
+            else if hs1.leftToRight then
+              MergeTops(hs1, hs2)
+            else
+              MergeTops(hs2, hs1);
           end
           else if Assigned(or1.frontE) then
             DoPseudoTopAndBottom(hs1, hs2) else

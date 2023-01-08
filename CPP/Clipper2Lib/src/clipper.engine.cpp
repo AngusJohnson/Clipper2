@@ -1,6 +1,6 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  7 January 2023                                                  *
+* Date      :  8 January 2023                                                  *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2023                                         *
 * Purpose   :  This is the main polygon clipping module                        *
@@ -2120,40 +2120,79 @@ namespace Clipper2Lib {
     UpdateHorzSegment(botHS, true);
   }
 
-  static void MakeHole(HorzSegment* hs, 
+  static bool MakeHole(HorzSegment* hs,
     std::vector<OutRec*>& or_list, bool using_polytree)
   {
     OutRec* outrec = hs->left_op->outrec;
     OutPt* opA = outrec->pts, * opZ = opA->next;
-    OutPt* op = opZ->next, *op2;
+    OutPt* opL, * opR, * opQ;
+
+    // first, try for an overlap on opA's side
+    opL = opA; opR = opA;
+    int64_t curr_y = opA->pt.y;
+    if (hs->left_to_right)
+      while (opR->prev->pt.y == curr_y) opR = opR->prev;
+    else
+      while (opL->prev->pt.y == curr_y) opL = opL->prev;
+
+    if ((curr_y != hs->left_op->pt.y) ||
+      (opL->pt.x >= opR->pt.x) ||
+      (opR->pt.x <= hs->left_op->pt.x) ||
+      (opL->pt.x >= hs->right_op->pt.x))
+    {
+      // no luck so try on opZ's side
+      curr_y = opZ->pt.y;
+      opL = opZ; opR = opZ;
+      if (hs->left_to_right)
+        while (opL->next->pt.y == curr_y) opL = opL->next;
+      else
+        while (opR->next->pt.y == curr_y) opR = opR->next;
+
+      if ((curr_y != hs->left_op->pt.y) ||
+        (opL->pt.x >= opR->pt.x) ||
+        (opR->pt.x <= hs->left_op->pt.x) ||
+        (opL->pt.x >= hs->right_op->pt.x))
+        return false; // no overlap on either side, so give up
+    }
+
     if (hs->left_to_right)
     {
-      op2 = hs->right_op->prev;
-      op2->next = op;
-      op->prev = op2;
-      opZ->next = hs->right_op;
-      hs->right_op->prev = opZ;
+      // opL  <<<< opR
+      // hs.L >>>> hs.R
+      opQ = (opL == opA) ? opR : opL;
+      opR = opL->prev;
+      hs->right_op = hs->left_op->next;
+      hs->left_op->next = opL;
+      opL->prev = hs->left_op;
+      opR->next = hs->right_op;
+      hs->right_op->prev = opR;
     }
     else
     {
-      op2 = hs->left_op->prev;
-      op2->next = op;
-      op->prev = op2;
-      opZ->next = hs->left_op;
-      hs->left_op->prev = opZ;
+      // opL  >>>> opR
+      // hs.L <<<< hs.R
+      opQ = (opR == opA) ? opL : opR;
+      opR = opL->next;
+      hs->right_op = hs->left_op->prev;
+      hs->left_op->prev = opL;
+      opL->next = hs->left_op;
+      opR->prev = hs->right_op;
+      hs->right_op->next = opR;
     }
 
     OutRec* newOr = new OutRec();
     newOr->idx = or_list.size();
     or_list.push_back(newOr);
-    if (using_polytree) 
+    if (using_polytree)
     {
       if (!outrec->splits) outrec->splits = new OutRecList();
       outrec->splits->push_back(newOr);
     }
     newOr->owner = outrec;
-    newOr->pts = op;
+    newOr->pts = opQ;
     FixOutRecPts(newOr);
+    hs->finished = true;
+    return true;
   }
 
   void ClipperBase::MergeTops(HorzSegment* ltorHS,  HorzSegment* rtolHS)
@@ -2161,15 +2200,6 @@ namespace Clipper2Lib {
     OutRec* ltorOr = ltorHS->left_op->outrec;
     OutRec* rtolOr = rtolHS->left_op->outrec;
     if (ltorOr->front_edge && rtolOr->front_edge) return;
-
-    if (ltorOr == rtolOr)
-    {
-      // a little work-around so rtolHS->rightOp
-      // will be treated as opZ inside MakeHole() ...
-      ltorOr->pts = rtolHS->right_op->prev;
-      MakeHole(ltorHS, outrec_list_, using_polytree_);
-      return;
-    }
 
     if (ltorHS->right_op->pt.x <= rtolHS->left_op->pt.x ||
       ltorHS->left_op->pt.x >= rtolHS->right_op->pt.x) return;
@@ -2313,17 +2343,7 @@ namespace Clipper2Lib {
         return false;
     }
     CheckOutRec(midHS->left_op);
-
-    if (midOr == othOr)
-    {
-      if ((otherHS->position != HorzPosition::Top) ||
-        (midA->pt.y != midZ->pt.y)) return false;
-      MakeHole(otherHS, outrec_list_, using_polytree_);
-      otherHS->finished = true;
-      midHS->left_op = midOr->pts;
-      UpdateHorzSegment(midHS, true);
-    }
-    else if (othOr->front_edge)
+    if (othOr->front_edge)
     {
       if (otherHS->left_to_right)
         InsertAndSplit(otherHS, midHS); else
@@ -2395,7 +2415,13 @@ namespace Clipper2Lib {
 
         if ((*hs1)->position == HorzPosition::Middle)
         {
-          if ((*hs2)->position != HorzPosition::Middle)
+          if (or1 == or2)
+          {
+            if ((*hs2)->position != HorzPosition::Top) continue;
+            if (MakeHole(*hs2, outrec_list_, using_polytree_))
+              UpdateHorzSegment(*hs1, true);
+          }
+          else if ((*hs2)->position != HorzPosition::Middle)
             DoMiddle(*hs1, *hs2);
 
           if ((*hs2)->position == HorzPosition::Middle &&
@@ -2404,7 +2430,15 @@ namespace Clipper2Lib {
         }
         else if ((*hs2)->position == HorzPosition::Middle)
         {
-          DoMiddle(*hs2, *hs1);
+          if (or1 == or2)
+          {
+            if ((*hs1)->position != HorzPosition::Top) continue;
+            if (MakeHole(*hs1, outrec_list_, using_polytree_))
+              UpdateHorzSegment(*hs2, true);
+            //break;
+          }
+          else 
+            DoMiddle(*hs2, *hs1);
         }
         else
         {
@@ -2418,12 +2452,20 @@ namespace Clipper2Lib {
           {
             if ((*hs2)->position == HorzPosition::Top)
             {
-              if ((*hs1)->left_to_right)
-                MergeTops(*hs1, *hs2); else
+              if (or1 == or2)
+              {
+                if (or1->front_edge) continue;
+                or1->pts = (*hs1)->right_op;
+                MakeHole(*hs2, outrec_list_, using_polytree_);
+              }
+              else if ((*hs1)->left_to_right)
+                MergeTops(*hs1, *hs2); 
+              else
                 MergeTops(*hs2, *hs1);
             }
             else if (or1->front_edge)
-              DoPseudoTopAndBottom(*hs1, *hs2); else
+              DoPseudoTopAndBottom(*hs1, *hs2); 
+            else
               DoTopAndBottom(*hs1, *hs2);
           }
           else if ((*hs2)->position == HorzPosition::Top)
