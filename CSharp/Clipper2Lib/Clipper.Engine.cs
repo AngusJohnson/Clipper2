@@ -2574,7 +2574,7 @@ namespace Clipper2Lib
 
       topOr.pts = null;
       topHS.finished = true;
-      botOr.pts.outrec = botOr;
+      botOr.pts!.outrec = botOr;
       SetOwner(topOr, botOr);
       UpdateHorzSegment(botHS, true);
     }
@@ -2689,7 +2689,7 @@ namespace Clipper2Lib
       rtolOr.pts = null;
       SetOwner(rtolOr, ltorOr);
       rtolHS.finished = true;
-      ltorOr.pts.outrec = ltorOr;
+      ltorOr.pts!.outrec = ltorOr;
       ltorHS.leftOp = ltorOr.pts;
       UpdateHorzSegment(ltorHS, true);
     }
@@ -2734,7 +2734,7 @@ namespace Clipper2Lib
         othOr.backEdge = null;
       }
       othOr.pts = null;
-      midOr.pts.outrec = midOr;
+      midOr.pts!.outrec = midOr;
       othHS.finished = true;
       midHS.leftOp = midOr.pts;
       SetOwner(othOr, midOr);
