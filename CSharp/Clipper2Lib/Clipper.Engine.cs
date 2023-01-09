@@ -2833,7 +2833,7 @@ namespace Clipper2Lib
       // make sure Middles still have active edges
       result = result &&
         ((hs.position != HorzPosition.Middle) ||
-          hs.left_op.outrec.frontEdge);
+          hs.leftOp.outrec.frontEdge != null);
 
       if (!result) hs.finished = true;
       return result;
