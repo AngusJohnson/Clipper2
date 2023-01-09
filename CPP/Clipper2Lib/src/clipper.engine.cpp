@@ -2369,8 +2369,15 @@ namespace Clipper2Lib {
     }
     else
       result = (hs->left_op->horz == hs);
-    if (!result) hs->finished = true;
-    return result;
+
+    // make sure Middles still have active edges
+    result = result &&
+      ((hs->position != HorzPosition::Middle) ||
+        hs->left_op->outrec->front_edge);
+
+    if (result) return true;
+    hs->finished = true; 
+    return false;    
   }
 
   void ClipperBase::MergeHorzSegments()
@@ -2396,6 +2403,7 @@ namespace Clipper2Lib {
     std::vector<HorzSegment*>::iterator hs1 = horz_seg_list_.begin(), hs2;
     std::vector<HorzSegment*>::iterator hs_end = horz_seg_list_.end();
     std::vector<HorzSegment*>::iterator hs_end1 = hs_end - 1;
+
     for (; hs1 != hs_end1; ++hs1)
     {
       // for each HorzSegment, find others that overlap

@@ -3079,6 +3079,12 @@ begin
   end
   else
     Result := (hs.leftOp.horz = hs);
+
+  // make sure middles still have active edges
+  if Result and (hs.position = hpMiddle) and
+    not Assigned(hs.leftOp.outrec.frontE) then
+      Result := false;
+
   if not Result then hs.finished := true;
 end;
 //------------------------------------------------------------------------------
@@ -3113,6 +3119,7 @@ begin
   // middle: a horizontal that's neither bottom or top
   // Only tops that aren't pseudo-tops don't have start (A) and end (Z) points
   // that link to 'active' edges.
+
 
   // for each HorzSegment, find others that overlap
   for i := 0 to FHorzSegList.Count -2 do

@@ -1,6 +1,6 @@
 ﻿/*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  8 January 2023                                                  *
+* Date      :  9 January 2023                                                  *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2023                                         *
 * Purpose   :  This is the main polygon clipping module                        *
@@ -2829,6 +2829,12 @@ namespace Clipper2Lib
       }
       else
         result = (hs.leftOp!.horz == hs);
+
+      // make sure Middles still have active edges
+      result = result &&
+        ((hs.position != HorzPosition.Middle) ||
+          hs.left_op.outrec.frontEdge);
+
       if (!result) hs.finished = true;
       return result;
     }
