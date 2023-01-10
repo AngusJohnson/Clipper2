@@ -238,8 +238,6 @@ type
     function  DoMaxima(e: PActive): PActive;
     procedure DoHorizontal(horzEdge: PActive);
     procedure DoTopOfScanbeam(Y: Int64);
-    function  ValidateClosedPathEx(var op: POutPt): Boolean;
-    procedure SafeDisposeOutPts(var op: POutPt);
     procedure CleanCollinear(outRec: POutRec);
     procedure DoSplitOp(outrec: POutRec; splitOp: POutPt);
     procedure FixSelfIntersects(outrec: POutRec);
@@ -1790,16 +1788,11 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-procedure TClipperBase.SafeDisposeOutPts(var op: POutPt);
+procedure DisposeOutPts(outrec: POutRec); {$IFDEF INLINING} inline; {$ENDIF}
 var
-  tmpOp: POutPt;
-  outRec: POutRec;
+  op, tmpOp: POutPt;
 begin
-  outRec := GetRealOutRec(op.outrec);
-  if Assigned(outRec.frontE) then
-    outRec.frontE.outrec := nil;
-  if Assigned(outRec.backE) then
-    outRec.backE.outrec := nil;
+  op := outrec.pts;
   op.prev.next := nil;
   while Assigned(op) do
   begin
@@ -1807,7 +1800,7 @@ begin
     op := op.next;
     Dispose(tmpOp);
   end;
-  outRec.pts := nil; //must do this last (due to var parameter)
+  outrec.pts := nil;
 end;
 //------------------------------------------------------------------------------
 
@@ -1816,9 +1809,12 @@ var
   op2, startOp: POutPt;
 begin
   outRec := GetRealOutRec(outRec);
-  if not Assigned(outRec) or
-    not ValidateClosedPathEx(outRec.pts) then
-      Exit;
+  if not Assigned(outRec) or outRec.isOpen then Exit;
+  if not IsValidClosedPath(outRec.pts) then
+  begin
+    DisposeOutPts(outRec);
+    Exit;
+  end;
 
   startOp := outRec.pts;
   op2 := startOp;
@@ -1832,9 +1828,9 @@ begin
     begin
       if op2 = outRec.pts then outRec.pts := op2.prev;
       op2 := DisposeOutPt(op2);
-      if not ValidateClosedPathEx(op2) then
+      if not IsValidClosedPath(op2) then
       begin
-        outRec.pts := nil;
+        DisposeOutPts(outRec);
         Exit;
       end;
       startOp := op2;
@@ -1864,8 +1860,8 @@ var
   area1, area2, absArea1, absArea2: double;
   newOutRec: POutRec;
 begin
-  // splitOp.prev -> splitOp &&
-  // splitOp.next -> splitOp.next.next are intersecting
+  // splitOp.prev <=> splitOp &&
+  // splitOp.next <=> splitOp.next.next are intersecting
   prevOp := splitOp.prev;
   nextNextOp := splitOp.next.next;
   outrec.pts := prevOp;
@@ -1880,7 +1876,7 @@ begin
 
   if absArea1 < 2 then
   begin
-    SafeDisposeOutPts(splitOp);
+    DisposeOutPts(outrec);
     Exit;
   end;
 
@@ -2456,15 +2452,6 @@ end;
 {$HINTS ON}
 {$ENDIF}
 
-function TClipperBase.ValidateClosedPathEx(var op: POutPt): Boolean;
-begin
-  Result := IsValidClosedPath(op);
-  if Result then Exit;
-  if Assigned(op) then
-    SafeDisposeOutPts(op);
-end;
-//------------------------------------------------------------------------------
-
 procedure TClipperBase.DeleteEdges(var e: PActive);
 var
   e2: PActive;
@@ -2577,8 +2564,11 @@ begin
   outrec := GetRealOutRec(op.outrec);
 
   opA := outrec.pts;
-  opZ := opA.next; // nb: either opA or opZ may not be level with op
-  currY := Min(opA.pt.Y, opZ.pt.Y);
+  opZ := opA.next;
+
+  // nb: it's possible that opA and opZ are both below op
+  // (eg when there's been an intermediate maxima horz. join)
+  currY := op.pt.Y;
 
   op2 := op;
   while (op2.next <> op) and (op2.next.pt.Y = currY) do
@@ -3879,8 +3869,6 @@ end;
 //------------------------------------------------------------------------------
 
 procedure TClipperBase.RecursiveCheckOwners(outrec: POutRec; polytree: TPolyPathBase);
-var
-  ppb : TPolyPathBase;
 begin
   // pre-condition: outrec will have valid bounds
   // post-condition: if a valid path, outrec will have a polypath

@@ -2371,6 +2371,7 @@ namespace Clipper2Lib
       } while (op != outrec.pts);
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static OutPt SafeDispose(OutPt op)
     {
       if (op.horz == null) return DisposeOutPt(op)!;
@@ -2384,9 +2385,11 @@ namespace Clipper2Lib
       hs.finished = true;
       OutPt op = hs.leftOp!, tmp;
       OutRec outrec = GetRealOutRec(op!.outrec)!;
-
       OutPt opA = outrec.pts!, opZ = opA.next!, op2 = op;
-      long curr_y = Math.Min(opA.pt.Y, opZ.pt.Y);
+
+      // nb: it's possible that opA and opZ are both below op
+      // (eg when there's been an intermediate maxima horz. join)
+      long curr_y = op.pt.Y;
 
       while (op2.next != op && op2.next!.pt.Y == curr_y)
         op2 = op2.next;
@@ -2444,7 +2447,7 @@ namespace Clipper2Lib
           // horizontal middle, otherwise it's a pseudo-top
           tmp = op;
           while (tmp != opA && tmp != op2)
-            tmp = tmp.next;
+            tmp = tmp.next!;
 
           if (op == opZ || tmp == opA) // must be a middle
           {
@@ -2982,15 +2985,6 @@ namespace Clipper2Lib
 
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static bool ValidateClosedPathEx(ref OutPt? op)
-    {
-      if (IsValidClosedPath(op)) return true;
-      if (op != null)
-        SafeDisposeOutPts(ref op);
-      return false;
-    }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static OutPt? DisposeOutPt(OutPt op)
     {
       OutPt? result = (op.next == op ? null : op.next);
@@ -3001,31 +2995,17 @@ namespace Clipper2Lib
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static void SafeDisposeOutPts(ref OutPt op)
-    {
-      OutRec? outRec = GetRealOutRec(op.outrec);
-      if (outRec!.frontEdge != null)
-        outRec.frontEdge.outrec = null;
-      if (outRec.backEdge != null)
-        outRec.backEdge.outrec = null;
-
-      op.prev.next = null;
-      OutPt? op2 = op;
-      while (op2 != null)
-      {
-        OutPt? next = op2.next;
-        op2 = next;
-      }
-      outRec.pts = null;
-    }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private void CleanCollinear(OutRec? outrec)
     {
       outrec = GetRealOutRec(outrec);
       
-      if (outrec == null || !ValidateClosedPathEx(ref outrec.pts)) 
-          return;
+      if (outrec == null || outrec.isOpen) return;
+
+      if(!IsValidClosedPath(outrec.pts))
+      {
+        outrec.pts = null;
+        return;
+      }
 
       OutPt startOp = outrec.pts!;
       OutPt? op2 = startOp;
@@ -3039,7 +3019,7 @@ namespace Clipper2Lib
           if (op2 == outrec.pts)
             outrec.pts = op2.prev;
           op2 = DisposeOutPt(op2);
-          if (!ValidateClosedPathEx(ref op2))
+          if (!IsValidClosedPath(op2))
           {
             outrec.pts = null;
             return;
@@ -3056,8 +3036,8 @@ namespace Clipper2Lib
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private void DoSplitOp(OutRec outrec, OutPt splitOp)
     {
-      // splitOp.prev . splitOp &&
-      // splitOp.next . splitOp.next.next are intersecting
+      // splitOp.prev <=> splitOp &&
+      // splitOp.next <=> splitOp.next.next are intersecting
       OutPt prevOp = splitOp.prev;
       OutPt nextNextOp = splitOp.next!.next!;
       outrec.pts = prevOp;
@@ -3077,7 +3057,7 @@ namespace Clipper2Lib
       
       if (absArea1 < 2)
       {
-        SafeDisposeOutPts(ref splitOp);
+        outrec.pts = null;
         return;
       }
 

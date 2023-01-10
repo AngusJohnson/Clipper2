@@ -305,18 +305,17 @@ namespace Clipper2Lib {
   }
 
 
-  inline void DisposeOutPts(OutRec& outrec)
+  inline void DisposeOutPts(OutRec* outrec)
   {
-    if (!outrec.pts) return;
-    OutPt* op2 = outrec.pts->next;
-    while (op2 != outrec.pts)
+    OutPt* op = outrec->pts, *tmp;
+    op->prev->next = nullptr;
+    while (op)
     {
-      OutPt* tmp = op2->next;
-      delete op2;
-      op2 = tmp;
-    }
-    delete outrec.pts;
-    outrec.pts = nullptr;
+      tmp = op;
+      op = op->next;
+      delete tmp;
+    };
+    outrec->pts = nullptr;
   }
 
 
@@ -701,7 +700,7 @@ namespace Clipper2Lib {
   {
     for (auto outrec : outrec_list_)
     {
-      if (outrec->pts) DisposeOutPts(*outrec);
+      if (outrec->pts) DisposeOutPts(outrec);
       delete outrec;
     }
     outrec_list_.resize(0);
@@ -1345,19 +1344,15 @@ namespace Clipper2Lib {
   }
 
 
-  bool ClipperBase::ValidateClosedPathEx(OutPt*& outpt)
-  {
-    if (IsValidClosedPath(outpt)) return true;
-    if (outpt) SafeDisposeOutPts(outpt);
-    return false;
-  }
-
-
   void ClipperBase::CleanCollinear(OutRec* outrec)
   {
     outrec = GetRealOutRec(outrec);
-    if (!outrec || outrec->is_open ||
-      !ValidateClosedPathEx(outrec->pts)) return;
+    if (!outrec || outrec->is_open) return;
+    if (!IsValidClosedPath(outrec->pts))
+    {
+      DisposeOutPts(outrec);
+      return;
+    }
 
     OutPt* startOp = outrec->pts, * op2 = startOp;
     for (; ; )
@@ -1372,9 +1367,9 @@ namespace Clipper2Lib {
         if (op2 == outrec->pts) outrec->pts = op2->prev;
 
         op2 = DisposeOutPt(op2);
-        if (!ValidateClosedPathEx(op2))
+        if (!IsValidClosedPath(op2))
         {
-          outrec->pts = nullptr;
+          DisposeOutPts(outrec);
           return;
         }
         startOp = op2;
@@ -1406,7 +1401,7 @@ namespace Clipper2Lib {
     double absArea1 = std::fabs(area1);
     if (absArea1 < 2)
     {
-      SafeDisposeOutPts(outrec->pts);
+      DisposeOutPts(outrec);
       return;
     }
 
@@ -1498,24 +1493,6 @@ namespace Clipper2Lib {
     }
   }
 
-
-  void ClipperBase::SafeDisposeOutPts(OutPt*& op)
-  {
-    OutRec* outrec = GetRealOutRec(op->outrec);
-    if (outrec->front_edge)
-      outrec->front_edge->outrec = nullptr;
-    if (outrec->back_edge)
-      outrec->back_edge->outrec = nullptr;
-
-    op->prev->next = nullptr;
-    while (op)
-    {
-      OutPt* tmp = op->next;
-      delete op;
-      op = tmp;
-    }
-    outrec->pts = nullptr;
-  }
 
   OutPt* ClipperBase::StartOpenPath(Active& e, const Point64& pt)
   {
@@ -1929,7 +1906,9 @@ namespace Clipper2Lib {
     OutRec* outrec = GetRealOutRec(op->outrec);
   
     OutPt* opA = outrec->pts, * opZ = opA->next, * op2 = op;
-    int64_t curr_y = std::min(opA->pt.y, opZ->pt.y);
+    // nb: it's possible that opA and opZ are both below op
+    // (eg when there's been an intermediate maxima horz. join)
+    int64_t curr_y = op->pt.y; 
 
     while (op2->next != op && op2->next->pt.y == curr_y)
       op2 = op2->next;

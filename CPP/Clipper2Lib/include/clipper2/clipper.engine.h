@@ -226,10 +226,8 @@ namespace Clipper2Lib {
 		Active *DoMaxima(Active &e);
 		void JoinOutrecPaths(Active &e1, Active &e2);
 		void CompleteSplit(OutPt* op1, OutPt* op2, OutRec& outrec);
-		bool ValidateClosedPathEx(OutPt*& outrec);
 		void FixSelfIntersects(OutRec* outrec);
 		void DoSplitOp(OutRec* outRec, OutPt* splitOp);
-		void SafeDisposeOutPts(OutPt*& op);
 		
 		void AddTrialHorzJoin(OutPt* op);
 		void MergeHorzSegments();
