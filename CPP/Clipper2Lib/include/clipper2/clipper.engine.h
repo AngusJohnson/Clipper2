@@ -1,6 +1,6 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  8 January 2023                                                  *
+* Date      :  10 January 2023                                                 *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2023                                         *
 * Purpose   :  This is the main polygon clipping module                        *
@@ -246,8 +246,8 @@ namespace Clipper2Lib {
 		bool ExecuteInternal(ClipType ct, FillRule ft, bool use_polytrees);
 		void CleanCollinear(OutRec* outrec);
 		bool CheckBounds(OutRec* outrec);
-		OutRec* CheckOwner(OutRec* outrec, PolyPath* polypath);
-		void DeepCheckOwner(OutRec* outrec, PolyPath* polypath);
+		void RecursiveCheckOwners(OutRec* outrec, PolyPath* polypath);
+		void DeepCheckOwners(OutRec* outrec, PolyPath* polypath);
 #ifdef USINGZ
 		ZCallback64 zCallback_ = nullptr;
 		void SetZ(const Active& e1, const Active& e2, Point64& pt);
@@ -300,7 +300,7 @@ namespace Clipper2Lib {
 		bool IsHole() const 
 		{
 			unsigned lvl = Level();
-			// any even level except the top most one
+			//Even levels except level 0
 			return lvl && !(lvl & 1);
 		}
 	};
@@ -346,30 +346,26 @@ namespace Clipper2Lib {
 
 		friend std::ostream& operator << (std::ostream& outstream, const PolyPath64& polypath)
 		{
-			const size_t level_indent = 4;
-			const size_t coords_per_line = 4;
-			const size_t last_on_line = coords_per_line - 1;
+			// returns polytree structure
+			const size_t level_indent = 2;
 			size_t level = static_cast<size_t>(polypath.Level());
-			if (level > 0)
+			std::string childs = polypath.Count() == 1 ? " child" : " children";
+			if (level == 0)
+			{
+				outstream << "polytree contains " << polypath.Count() << childs << std::endl;
+				for (auto& child : polypath) outstream << *child;
+			}
+			else if (polypath.Count())
 			{
 				std::string level_padding;
-				level_padding.insert(0, (level - 1) * level_indent, ' ');
-				std::string caption = polypath.IsHole() ? "Hole " : "Outer Polygon ";
-				std::string childs = polypath.Count() == 1 ? " child" : " children";
-				outstream << level_padding.c_str() << caption << "with " << polypath.Count() << childs << std::endl;
-				outstream << level_padding;
-				size_t i = 0, highI = polypath.Polygon().size() - 1;
-				for (; i < highI; ++i)
-				{
-					outstream << polypath.Polygon()[i] << ' ';
-					if ((i % coords_per_line) == last_on_line)
-						outstream << std::endl << level_padding;
-				}
-				if (highI > 0) outstream << polypath.Polygon()[i];
-				outstream << std::endl;
+				level_padding.insert(0, level * level_indent, ' ');
+				std::string caption = polypath.IsHole() ? 
+					"including a hole with " : 
+					"including a polygon with ";
+				outstream << level_padding.c_str() << caption << 
+					polypath.Count() << childs << std::endl;
+				for (auto& child : polypath) outstream << *child;
 			}
-			for (auto& child : polypath)
-				outstream << *child;
 			return outstream;
 		}
 

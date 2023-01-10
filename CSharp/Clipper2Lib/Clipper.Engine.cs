@@ -1,6 +1,6 @@
 ﻿/*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  9 January 2023                                                  *
+* Date      :  10 January 2023                                                 *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2023                                         *
 * Purpose   :  This is the main polygon clipping module                        *
@@ -2379,12 +2379,14 @@ namespace Clipper2Lib
 
     private static bool UpdateHorzSegment(HorzSegment hs, bool force)
     {
+
       if (hs.finished) return false;
       hs.finished = true;
-      OutPt op = hs.leftOp!;
-      OutRec? outrec = GetRealOutRec(op.outrec)!;
-      long curr_y = op.pt.Y;
+      OutPt op = hs.leftOp!, tmp;
+      OutRec outrec = GetRealOutRec(op!.outrec)!;
+
       OutPt opA = outrec.pts!, opZ = opA.next!, op2 = op;
+      long curr_y = Math.Min(opA.pt.Y, opZ.pt.Y);
 
       while (op2.next != op && op2.next!.pt.Y == curr_y)
         op2 = op2.next;
@@ -2392,12 +2394,14 @@ namespace Clipper2Lib
       if (op2.next == op)
       {
         // all pts horizontal, so must be bottom of path.
-        // now check it's a valid horizontal segment
-        if (opA.pt.X == opZ.pt.X || outrec.frontEdge == null) return false;
+        // now check it's still a valid horizontal segment
+        if (opA.pt.X == opZ.pt.X || outrec.frontEdge == null) 
+          return false;
 
         // clean up horizontals
-        OutPt tmp = opZ.next!;
-        while (tmp != opA) tmp = SafeDispose(tmp);
+        tmp = opZ.next!;
+        while (tmp != opA)
+          tmp = SafeDispose(tmp);
 
         hs.leftToRight = opZ.pt.X < opA.pt.X;
         if (hs.leftToRight)
@@ -2412,50 +2416,10 @@ namespace Clipper2Lib
         }
         hs.position = HorzPosition.Bottom;
       }
-      else
+      else // either a middle or a top
       {
-        // either a middle or a top
         while (op.prev.pt.Y == curr_y) op = op.prev;
-
-        if (outrec.frontEdge != null)
-        {
-          // must be a middle or pseudo-top
-          // if opA is between op and op2 then this is a
-          // horizontal middle, otherwise it's a pseudo-top
-          OutPt tmpOp = op;
-          while (tmpOp != opA && tmpOp != op2) tmpOp = tmpOp.next!;
-          if (op == opZ || tmpOp == opA) // must be a middle
-          {
-            if (op.pt.X < op2.pt.X)
-              hs.leftOp = op;
-            else
-              hs.leftOp = op2;
-
-            if (!force && hs.leftOp.horz != null && hs.leftOp.horz != hs)
-              return false;
-
-            //nb: middle segments' leftToRight is contextual
-            hs.position = HorzPosition.Middle;
-            hs.leftOp.outrec = outrec;
-            hs.leftOp.horz = hs;
-            hs.rightOp = null;
-            hs.finished = false;
-            return true;
-          }
-        }
-
         if (op.pt.X == op2.pt.X) return false;
-        // when hs.position == Middle then heading etc is 
-        // contextual, but we'll still need hs.leftOp for sorting
-        hs.position = HorzPosition.Top;
-
-        // cleanup horizontals
-        OutPt tmp = op.next!;
-        while (tmp != op2)
-        {
-          if (tmp == opA) tmp = tmp.next!;
-          else tmp = SafeDispose(tmp);
-        }
 
         if (op.pt.X < op2.pt.X)
         {
@@ -2469,15 +2433,45 @@ namespace Clipper2Lib
           hs.rightOp = op;
           hs.leftToRight = false;
         }
+
+        if (!force && hs.leftOp.horz != null && hs.leftOp.horz != hs)
+          return false;
+
+        if (outrec.frontEdge != null)
+        {
+          // must be a middle or pseudo-top
+          // if opA is between op and op2 then this is a
+          // horizontal middle, otherwise it's a pseudo-top
+          tmp = op;
+          while (tmp != opA && tmp != op2)
+            tmp = tmp.next;
+
+          if (op == opZ || tmp == opA) // must be a middle
+          {
+            //nb: middle segments' leftToRight is contextual
+            hs.position = HorzPosition.Middle;
+            hs.leftOp.outrec = outrec;
+            hs.leftOp.horz = hs;
+            hs.finished = false;
+            return true;
+          }
+        }
+        hs.position = HorzPosition.Top;
+
+        // cleanup horizontals
+        tmp = op.next!;
+        while (tmp != op2)
+        {
+          if (tmp == opA) tmp = tmp.next!;
+          else tmp = SafeDispose(tmp);
+        }
+
       }
-      if (!force && hs.leftOp.horz != null && hs.leftOp.horz != hs)
-        return false;
       hs.leftOp.horz = hs;
       hs.leftOp.outrec = outrec;
       hs.finished = false;
       return true;
     }
-
 
     private static void CheckOutRec(OutPt op)
     {
@@ -2590,9 +2584,15 @@ namespace Clipper2Lib
       opL = opA; opR = opA;
       long currY = opA.pt.Y;
       if (hs.leftToRight)
+      {
         while (opR.prev.pt.Y == currY) opR = opR.prev;
+        if (opR.prev == opA) return false; // should never happen
+      }
       else
+      {
         while (opL.prev.pt.Y == currY) opL = opL.prev;
+        if (opL.prev == opA) return false; // should never happen
+      }
 
       if ((currY != hs.leftOp.pt.Y) ||
         (opL.pt.X >= opR.pt.X) ||
@@ -2747,34 +2747,40 @@ namespace Clipper2Lib
       OutRec othOr = otherHS.leftOp!.outrec;
       OutPt midA = midOr.pts!, midZ = midA.next!, op = midA;
 
-      long currY = midA.pt.Y <= midZ.pt.Y ? midA.pt.Y : midZ.pt.Y;
+      long currY = Math.Min(midA.pt.Y, midZ.pt.Y);
       // middle horz segments are tricky because we need to assess for
       // horizontal overlaps on both sides of the midA-midZ loop-around
       while (op.prev != midA && op.prev.pt.Y == currY) op = op.prev;
       if (op.prev == midA)
       {
-        UpdateHorzSegment(midHS, true); // no longer a middle
+        // This is no longer a Middle, so evidently
+        // another HS has changed the geometry of this path.
+        UpdateHorzSegment(midHS, true);
         return false;
       }
 
       bool midIsLtor;
-      if (op.pt.X < midA.pt.X)
+      bool usingSideA = op.pt.X != midA.pt.X;
+      if (usingSideA)
       {
-        midHS.leftOp = op;
-        midHS.rightOp = midA;
-        midIsLtor = true;
-      }
-      else
-      {
-        midHS.leftOp = midA;
-        midHS.rightOp = op;
-        midIsLtor = false;
+        if (op.pt.X < midA.pt.X)
+        {
+          midHS.leftOp = op;
+          midHS.rightOp = midA;
+          midIsLtor = true;
+        }
+        else
+        {
+          midHS.leftOp = midA;
+          midHS.rightOp = op;
+          midIsLtor = false;
+        }
+        usingSideA = midIsLtor != otherHS.leftToRight &&
+          midHS.rightOp.pt.X > otherHS.leftOp.pt.X &&
+          midHS.leftOp.pt.X < otherHS.rightOp!.pt.X;
       }
 
-      if (midIsLtor == otherHS.leftToRight ||
-        midHS.leftOp.pt.X == midHS.rightOp.pt.X ||
-        midHS.rightOp.pt.X <= otherHS.leftOp.pt.X ||
-        midHS.leftOp.pt.X >= otherHS.rightOp!.pt.X)
+      if (!usingSideA)
       {
         // there isn't a horizontal overlap on the MidA
         // side of the midA-MidZ loop around, so we'll
@@ -2782,6 +2788,7 @@ namespace Clipper2Lib
         if (midZ.pt.Y != currY) return false;
         op = midZ;
         while (op.next!.pt.Y == currY) op = op.next;
+        if (op.pt.X == midZ.pt.X) return false;
 
         if (op.pt.X > midZ.pt.X)
         {
@@ -2897,11 +2904,12 @@ namespace Clipper2Lib
             if (or1 == or2)
             {
               if (hs1.position != HorzPosition.Top) continue;
-              if (MakeHole(hs1, _outrecList, _using_polytree))
-                UpdateHorzSegment(hs2, true);
-              //break;
+              MakeHole(hs1, _outrecList, _using_polytree);
+              hs2.finished = true;
+              break;
             }
-            DoMiddle(hs2, hs1);
+            else 
+              DoMiddle(hs2, hs1);
           }
           else
           {
@@ -3185,7 +3193,10 @@ namespace Clipper2Lib
       solutionOpen.Clear();
       solutionClosed.Capacity = _outrecList.Count;
       solutionOpen.Capacity = _outrecList.Count;
+      
       int i = 0;
+      // _outrecList.Count is not static here because
+      // CleanCollinear can indirectly add additional OutRec
       while (i < _outrecList.Count)
       {
         OutRec outrec = _outrecList[i++];
@@ -3199,7 +3210,6 @@ namespace Clipper2Lib
         }
         else
         {
-          // nb: CleanCollinear can add to _outrecList
           CleanCollinear(outrec);
           // closed paths should always return a Positive orientation
           // except when ReverseSolution == true
@@ -3254,82 +3264,56 @@ namespace Clipper2Lib
       return true;
     }
 
-    private OutRec? CheckOwner(OutRec outrec, PolyPathBase polypath)
+    private void RecursiveCheckOwners(OutRec outrec, PolyPathBase polypath)
     {
-      OutRec? result = outrec.owner;
-      while (result != null && !CheckBounds(result))
-        result = result.owner;
-      if (result == null || result.polypath != null) return result;
+      // pre-condition: outrec will have valid bounds
+      // post-condition: if a valid path, outrec will have a polypath
 
-      result.owner = CheckOwner(result, polypath);
-      while (result.owner != null)
-      {
-        if (result.owner.bounds.Contains(result.bounds) &&
-          Path1InsidePath2(result, result.owner)) break;
-        result.owner = result.owner.owner;
-      }
+      if (outrec.polypath != null || outrec.bounds.IsEmpty()) return;
 
-      PolyPathBase ppb;
-      if (result.owner != null)
-        ppb = result.owner.polypath!;
+      while (outrec.owner != null &&
+        (outrec.owner.pts == null || !CheckBounds(outrec.owner)))
+          outrec.owner = outrec.owner.owner;
+
+      if (outrec.owner != null && outrec.owner.polypath == null)
+        RecursiveCheckOwners(outrec.owner, polypath);
+
+      while (outrec.owner != null)
+        if (outrec.owner.bounds.Contains(outrec.bounds) &&
+          Path1InsidePath2(outrec, outrec.owner))
+          break; // found - owner contain outrec!
+        else
+          outrec.owner = outrec.owner.owner;
+
+      if (outrec.owner != null)
+        outrec.polypath = outrec.owner.polypath!.AddChild(outrec.path);
       else
-        ppb = polypath;
-
-      result.polypath = ppb.AddChild(result.path);
-      return result;
+        outrec.polypath = polypath.AddChild(outrec.path);
     }
 
-    private void DeepCheckOwner(OutRec outrec, PolyPathBase polypath)
+    private void DeepCheckOwners(OutRec outrec, PolyPathBase polypath)
     {
-      outrec.owner = GetRealOutRec(outrec.owner);
-      while (outrec.owner != null)
+      RecursiveCheckOwners(outrec, polypath);
+
+      while (outrec.owner != null && outrec.owner.splits != null)
       {
-        if (outrec.owner == outrec)
+        OutRec? split = null;
+        foreach (int i in outrec.owner.splits)
         {
-          _succeeded = false;
-          outrec.owner = null;
-          return;
-        }
-
-        // check owner's splits first because their
-        // ownership will take precidence over the owner
-        if (outrec.owner.splits != null)
-        {
-          OutRec? split = null;
-          bool split_found = false;
-          foreach (int i  in outrec.owner.splits)
-          {
-            split = GetRealOutRec(_outrecList[i]);
-            if (split == null || split == outrec ||
-              split == outrec.owner || !CheckBounds(split))
-                continue;
-
-            if (split.bounds.Contains(outrec.bounds) &&
+          split = GetRealOutRec(_outrecList[i]);
+          if (split != null && split != outrec &&
+            split != outrec.owner && CheckBounds(split) &&
+            split.bounds.Contains(outrec.bounds) &&
               Path1InsidePath2(outrec, split))
-            {
-              outrec.owner = split; //found in split
-              CheckOwner(outrec, polypath);
-              split_found = true;
-              break;
-            }
-          }
-          if (split_found)
           {
-            // now check for nested splits
-            if (split!.splits != null) continue;
-            break;
+            RecursiveCheckOwners(split, polypath);
+            outrec.owner = split; //found in split
+            break; // inner 'for' loop
           }
+          else split = null;
         }
-        // not owned by any of owner's splits so
-        // now check if this is really the owner
-        CheckOwner(outrec, polypath);
-        if (outrec.owner == null ||
-          (outrec.owner.bounds.Contains(outrec.bounds) &&
-            Path1InsidePath2(outrec, outrec.owner))) break;
-
-        // not the real owner, so try owner's owner
-        outrec.owner = GetRealOutRec(outrec.owner.owner);
-      } 
+        if (split == null) break;
+      }
     }
 
     protected void BuildTree(PolyPathBase polytree, Paths64 solutionOpen)
@@ -3340,6 +3324,9 @@ namespace Clipper2Lib
         solutionOpen.Capacity = _outrecList.Count;
 
       int i = 0;
+      // _outrecList.Count is not static here because
+      // CheckBounds below can indirectly add additional
+      // OutRec (via FixOutRecPts & CleanCollinear)
       while (i < _outrecList.Count)
       {
         OutRec outrec = _outrecList[i++];
@@ -3353,14 +3340,8 @@ namespace Clipper2Lib
           continue;
         }
 
-        if (outrec.polypath != null || !CheckBounds(outrec)) continue;
-        DeepCheckOwner(outrec, polytree);
-
-        PolyPathBase owner_pp = outrec.owner != null ? 
-          outrec.owner.polypath! : 
-          polytree;
-
-        outrec.polypath = owner_pp.AddChild(outrec.path);
+        if (CheckBounds(outrec))
+          DeepCheckOwners(outrec, polytree);
       }
     }
 

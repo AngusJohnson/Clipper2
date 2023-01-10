@@ -2,7 +2,7 @@ unit Clipper.Engine;
 
 (*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  8 January 2023                                                  *
+* Date      :  10 January 2023                                                 *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2023                                         *
 * Purpose   :  This is the main polygon clipping module                        *
@@ -244,8 +244,8 @@ type
     procedure DoSplitOp(outrec: POutRec; splitOp: POutPt);
     procedure FixSelfIntersects(outrec: POutRec);
     function  CheckBounds(outrec: POutRec): Boolean;
-    function  CheckOwner(outrec: POutRec; polytree: TPolyPathBase): POutRec;
-    procedure DeepCheckOwner(outrec: POutRec; polytree: TPolyPathBase);
+    procedure RecursiveCheckOwners(outrec: POutRec; polytree: TPolyPathBase);
+    procedure DeepCheckOwners(outrec: POutRec; polytree: TPolyPathBase);
   protected
     FUsingPolytree : Boolean;
     procedure AddPath(const path: TPath64;
@@ -2576,9 +2576,9 @@ begin
   op := hs.leftOp;
   outrec := GetRealOutRec(op.outrec);
 
-  currY := op.pt.Y;
   opA := outrec.pts;
   opZ := opA.next; // nb: either opA or opZ may not be level with op
+  currY := Min(opA.pt.Y, opZ.pt.Y);
 
   op2 := op;
   while (op2.next <> op) and (op2.next.pt.Y = currY) do
@@ -2610,49 +2610,8 @@ begin
   end
   else // either a middle or a top
   begin
-
     while (op.prev.pt.Y = currY) do op := op.prev;
-
-    if Assigned(outrec.frontE) then
-    begin
-      // must be a middle or pseudo-top
-      // if opA is between op and op2 then this is a
-      // horizontal middle, otherwise it's a pseudo-top
-      tmp := op;
-      while (tmp <> opA) and (tmp <> op2) do tmp := tmp.next;
-      if (op = opZ)  or (tmp = opA) then // must be a middle
-      begin
-        if op.pt.X < op2.pt.X then
-          hs.leftOp := op else
-          hs.leftOp := op2;
-
-        if not force and (Assigned(hs.leftOp.horz) and
-          (hs.leftOp.horz <> hs)) then Exit;
-
-        //nb: middle segments' leftToRight is contextual
-        hs.position := hpMiddle;
-        hs.leftOp.outrec := outrec;
-        hs.leftOp.horz := hs;
-        hs.rightOp := nil;
-        result := true;
-        hs.finished := false;
-        Exit;
-      end
-
-    end;
-
     if op.pt.X = op2.pt.X then Exit;
-    hs.position := hpTop;
-
-    // cleanup horizontals
-    tmp := op.next;
-    while (tmp <> op2) do
-    begin
-      if (tmp = opA) then
-        tmp := tmp.next else
-        tmp := SafeDisposeOutPt(tmp);
-    end;
-
     if op.pt.X < op2.pt.X then
     begin
       hs.leftOp := op;
@@ -2664,9 +2623,40 @@ begin
       hs.rightOp := op;
       hs.leftToRight := false;
     end;
+
+    if not force and (Assigned(hs.leftOp.horz) and
+      (hs.leftOp.horz <> hs)) then Exit;
+
+    if Assigned(outrec.frontE) then
+    begin
+      // must be a middle or pseudo-top
+      // if opA is between op and op2 then this is a
+      // horizontal middle, otherwise it's a pseudo-top
+      tmp := op;
+      while (tmp <> opA) and (tmp <> op2) do tmp := tmp.next;
+      if (op = opZ)  or (tmp = opA) then // must be a middle
+      begin
+        //nb: middle segments' leftToRight is contextual
+        hs.position := hpMiddle;
+        hs.leftOp.outrec := outrec;
+        hs.leftOp.horz := hs;
+        result := true;
+        hs.finished := false;
+        Exit;
+      end;
+    end;
+
+    hs.position := hpTop;
+    // cleanup horizontals
+    tmp := op.next;
+    while (tmp <> op2) do
+    begin
+      if (tmp = opA) then
+        tmp := tmp.next else
+        tmp := SafeDisposeOutPt(tmp);
+    end;
+
   end;
-  if not force and Assigned(hs.leftOp.horz) and
-    (hs.leftOp.horz <> hs) then Exit;
   hs.leftOp.horz := hs;
   hs.leftOp.outrec := outrec;
   hs.finished := false;
@@ -2727,6 +2717,7 @@ begin
 
   UpdateHorzSegment(ltorHS, true);
   UpdateHorzSegment(rtolHS, true);
+
 end;
 //------------------------------------------------------------------------------
 
@@ -2829,9 +2820,16 @@ begin
   opL := opA; opR := opA;
   currY := opA.pt.Y;
   if (hs.leftToRight) then
-    while (opR.prev.pt.Y = currY) do opR := opR.prev
-  else
-    while (opL.prev.pt.Y = currY) do opL := opL.prev;
+  begin
+    while (opR.prev <> opA) and (opR.prev.pt.Y = currY) do
+      opR := opR.prev;
+    if opR.prev = opA then Exit; // should never happen
+  end else
+  begin
+    while (opL.prev <> opA) and (opL.prev.pt.Y = currY) do
+      opL := opL.prev;
+    if opL.prev = opA then Exit; // should never happen
+  end;
 
   if ((currY <> hs.leftOp.pt.Y) or
     (opL.pt.X >= opR.pt.X) or
@@ -2989,52 +2987,59 @@ var
   op, midA, midZ: POutPt;
   midOr, othOr: POutRec;
   currY: Int64;
-  midIsLtor: Boolean;
+  midIsLtor, useSideA: Boolean;
 begin
   result := false;
   midOr := midHS.leftOp.outrec;
   othOr := otherHS.leftOp.outrec;
   midA := midOr.pts;
   midZ := midA.next;
-  if (midZ.pt.Y < midA.pt.Y) then
-    currY := midZ.pt.Y else
-    currY := midA.pt.Y;
+  currY := Min(midA.pt.Y, midZ.pt.Y);
 
   // middle horz segments are tricky because we need to assess for
-  // horizontal overlaps on both sides of the midA-midZ loop-around
+  // horizontal overlaps on both sides of the A-Z loop-around
   op := midA;
   while (op.prev <> midA) and (op.prev.pt.Y = currY) do op := op.prev;
   if (op.prev = midA) then
   begin
-    UpdateHorzSegment(midHS, true); // no longer a middle
+    // This is no longer a Middle, so evidently
+    // another HS has changed the geometry of this path.
+    UpdateHorzSegment(midHS, true);
     Exit;
   end;
 
-  if op.pt.X < midA.pt.X then
+  useSideA := op.pt.X <> midA.pt.X;
+  if useSideA then
   begin
-    midHs.leftOp := op;
-    midHs.rightOp := midA;
-    midIsLtor := true;
-  end else
-  begin
-    midHs.leftOp := midA;
-    midHs.rightOp := op;
-    midIsLtor := false;
+    if op.pt.X < midA.pt.X then
+    begin
+      midHs.leftOp := op;
+      midHs.rightOp := midA;
+      midIsLtor := true;
+    end else
+    begin
+      midHs.leftOp := midA;
+      midHs.rightOp := op;
+      midIsLtor := false;
+    end;
+
+    useSideA :=
+      (midIsLtor <> otherHS.leftToRight) and
+      (midHs.rightOp.pt.X > otherHS.leftOp.pt.X) and
+      (midHs.leftOp.pt.X < otherHS.rightOp.pt.X);
   end;
 
-  if (midIsLtor = otherHS.leftToRight) or
-    (midHs.leftOp.pt.X = midHs.rightOp.pt.X) or
-   (midHs.rightOp.pt.X <= otherHS.leftOp.pt.X) or
-    (midHs.leftOp.pt.X >= otherHS.rightOp.pt.X) then
+  if not useSideA then
   begin
-    // there isn't a horizontal overlap on the MidA
-    // side of the midA-MidZ loop around, so we'll
-    // now try for an overlap on the MidZ side ...
+    // there isn't a horizontal overlap on the
+    // A side of the A-Z loop around, so we'll
+    // now try for an overlap on the Z side ...
     if midZ.pt.Y <> currY then Exit;
     op := midZ;
     while (op.next.pt.Y = currY) do op := op.next;
+    if op.pt.X = midZ.pt.X then Exit
 
-    if op.pt.X > midZ.pt.X then
+    else if op.pt.X > midZ.pt.X then
     begin
       if otherHS.leftToRight then Exit;
       midHs.leftOp := midZ;
@@ -3049,8 +3054,8 @@ begin
       (midHs.rightOp.pt.X <= otherHS.leftOp.pt.X) then
         Exit;
   end;
-  CheckOutRec(midHs.leftOp);
 
+  CheckOutRec(midHs.leftOp);
   if Assigned(othOr.frontE) then
   begin
     if otherHS.leftToRight then
@@ -3130,7 +3135,7 @@ begin
       if not IsValidHorzSeg(hs1) then break;
       or1 :=  hs1.leftOp.outrec;
       hs2 := FHorzSegList.UnsafeGet(j);
-      if not IsValidHorzSeg(hs2) then Continue;;
+      if not IsValidHorzSeg(hs2) then Continue;
       or2 := hs2.leftOp.outrec;
 
       // when position == Middle then L-to-R orientation is
@@ -3165,9 +3170,9 @@ begin
         if (or1 = or2) then
         begin
           if (hs1.position <> hpTop) then Continue;
-          if (MakeHole(hs1, FOutRecList, FUsingPolytree)) then
-            UpdateHorzSegment(hs2, true);
-          //break; ??
+          MakeHole(hs1, FOutRecList, FUsingPolytree);
+          hs2.finished := true;
+          break;
         end
         else
           DoMiddle(hs2, hs1);
@@ -3873,89 +3878,64 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-function TClipperBase.CheckOwner(outrec: POutRec;
-  polytree: TPolyPathBase): POutRec;
+procedure TClipperBase.RecursiveCheckOwners(outrec: POutRec; polytree: TPolyPathBase);
 var
-  ppb         : TPolyPathBase;
+  ppb : TPolyPathBase;
 begin
-  Result := outrec.owner;
-  while Assigned(Result) and not CheckBounds(Result) do
-    Result := Result.owner;
-  if not Assigned(Result) or Assigned(Result.polypath) then Exit;
+  // pre-condition: outrec will have valid bounds
+  // post-condition: if a valid path, outrec will have a polypath
 
-  Result.owner := CheckOwner(Result, polytree);
-  while Assigned(Result.owner) do
-  begin
-    if Result.owner.bounds.Contains(Result.bounds) and
-      Path1InsidePath2(Result, Result.owner) then break;
-    Result.owner := Result.owner.owner;
-  end;
+  if Assigned(outrec.polypath) or
+    outrec.bounds.IsEmpty then
+      Exit;
 
-  if Assigned(Result.owner) then
-    ppb := Result.owner.polypath else
-    ppb := polytree;
+  while Assigned(outrec.owner) and
+    (not Assigned(outrec.owner.pts) or
+    not CheckBounds(outrec.owner)) do
+      outrec.owner := outrec.owner.owner;
 
-  Result.polypath := ppb.AddChild(Result.path);
+  if Assigned(outrec.owner) and
+    not Assigned(outrec.owner.polypath) then
+      RecursiveCheckOwners(outrec.owner, polytree);
+
+  while Assigned(outrec.owner) do
+    if (outrec.owner.bounds.Contains(outrec.bounds) and
+      Path1InsidePath2(outrec, outrec.owner)) then
+        break // found - owner contain outrec!
+    else
+      outrec.owner := outrec.owner.owner;
+
+  if Assigned(outrec.owner) then
+    outrec.polypath := outrec.owner.polypath.AddChild(outrec.path) else
+    outrec.polypath := polytree.AddChild(outrec.path);
 end;
 //------------------------------------------------------------------------------
 
-procedure TClipperBase.DeepCheckOwner(outrec: POutRec;
-  polytree: TPolyPathBase);
+procedure TClipperBase.DeepCheckOwners(outrec: POutRec; polytree: TPolyPathBase);
 var
-  i           : integer;
-  split       : POutrec;
-  splitFound  : Boolean;
+  i     : integer;
+  split : POutrec;
 begin
+  RecursiveCheckOwners(outrec, polytree);
 
-  outrec.owner := GetRealOutRec(outrec.owner);
-  while Assigned(outrec.owner) do
+  while Assigned(outrec.owner) and Assigned(outrec.owner.splits) do
   begin
-    if (outrec.owner = outrec) then
+    split := nil;
+    for i := 0 to High(outrec.owner.splits) do
     begin
-      FSucceeded := false;
-      outrec.owner := nil;
-      Exit;
-    end;
-
-    // check owner's splits first because their
-    // ownership will take precidence over the owner
-    if Assigned(outrec.owner.splits) then
-    begin
-      split := nil;
-      splitFound := false;
-      for i := 0 to High(outrec.owner.splits) do
+      split := GetRealOutRec(outrec.owner.splits[i]);
+      if Assigned(split) and (split <> outrec) and
+        (split <> outrec.owner) and CheckBounds(split) and
+        (split.bounds.Contains(outrec.bounds) and
+          Path1InsidePath2(outrec, split)) then
       begin
-        split := GetRealOutRec(outrec.owner.splits[i]);
-        if not Assigned(split) or
-          (split = outrec) or (split = outrec.owner) or
-          not CheckBounds(split) then Continue;
-
-        if split.bounds.Contains(outrec.bounds) and
-          Path1InsidePath2(outrec, split) then
-        begin
-          outrec.owner := split; //found in split
-          CheckOwner(outrec, polytree);
-          splitFound := true;
-          Break;
-        end;
-      end;
-      if splitFound then
-      begin
-        // check for nested splits
-        if Assigned(split.splits) then Continue
-        else Break;
-      end;
+        RecursiveCheckOwners(split, polytree);
+        outrec.owner := split; //found in split
+        break; // inner 'for' loop
+      end else
+        split := nil;
     end;
-
-    // not owned by any of owner's splits so
-    // now check if this is really the owner
-    CheckOwner(outrec, polytree);
-    if not Assigned(outrec.owner) or
-      (outrec.owner.bounds.Contains(outrec.bounds) and
-      Path1InsidePath2(outrec, outrec.owner)) then Break;
-
-    // not the real owner, so try owner's owner
-    outrec.owner := GetRealOutRec(outrec.owner.owner);
+    if not Assigned(split) then break;
   end;
 end;
 //------------------------------------------------------------------------------
@@ -3975,9 +3955,9 @@ begin
     cntOpen := 0;
 
     i := 0;
-    // FixSelfIntersects is called by CheckBounds below
-    // (via CleanCollinear), and that function can
-    //  add to FOutRecList, so ...
+    // FOutRecList.Count is not static here because
+    // CheckBounds below can indirectly add additional
+    // OutRec (via FixOutRecPts & CleanCollinear)
     while i < FOutRecList.Count do
     begin
       outrec := FOutRecList.UnsafeGet(i);
@@ -3996,16 +3976,8 @@ begin
         Continue;
       end;
 
-      if assigned(outrec.polypath) or
-        not CheckBounds(outrec) then Continue;
-      DeepCheckOwner(outrec, polytree);
-
-      Assert(not Assigned(outrec.polypath), 'oops!');
-
-      if assigned(outrec.owner) then
-        outrec.polypath := outrec.owner.polypath.AddChild(outrec.path)
-      else
-        outrec.polypath := polytree.AddChild(outrec.path);
+      if CheckBounds(outrec) then
+        DeepCheckOwners(outrec, polytree);
     end;
     setLength(openPaths, cntOpen);
     Result := FSucceeded;
