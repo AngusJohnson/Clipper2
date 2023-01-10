@@ -3,7 +3,7 @@
 #include <fstream>
 #include <random>
 
-int GenerateRandomInteger(std::default_random_engine& rng, int min_value, int max_value)
+int GenerateRandomInt(std::default_random_engine& rng, int min_value, int max_value)
 {
   if (min_value == max_value)
     return min_value;
@@ -17,13 +17,13 @@ Clipper2Lib::Paths64 GenerateRandomPaths(std::default_random_engine& rng, int mi
   std::uniform_int_distribution<int> first_point_coordinate_distribution(-max_complexity, max_complexity * 2);
   std::uniform_int_distribution<int> difference_to_previous_point_distribution(-5, 5);
 
-  const int path_count = GenerateRandomInteger(rng, min_path_count, max_complexity);
+  const int path_count = GenerateRandomInt(rng, min_path_count, max_complexity);
   Clipper2Lib::Paths64 result(path_count);
 
   for (int path = 0; path < path_count; ++path)
   {
     const int min_point_count = 3;
-    const int path_length = GenerateRandomInteger(rng, min_point_count, std::max(min_point_count, max_complexity));
+    const int path_length = GenerateRandomInt(rng, min_point_count, std::max(min_point_count, max_complexity));
     auto& result_path = result[path];
     result_path.reserve(path_length);
 
@@ -125,8 +125,8 @@ TEST(Clipper2Tests, TestRandomPaths)
     const auto subject_open = GenerateRandomPaths(rng, 0, max_complexity);
     const auto clip         = GenerateRandomPaths(rng, 0, max_complexity);
 
-    const Clipper2Lib::ClipType ct = static_cast<Clipper2Lib::ClipType>(GenerateRandomInteger(rng, 0, 4));
-    const Clipper2Lib::FillRule fr = static_cast<Clipper2Lib::FillRule>(GenerateRandomInteger(rng, 0, 3));
+    const Clipper2Lib::ClipType ct = static_cast<Clipper2Lib::ClipType>(GenerateRandomInt(rng, 0, 4));
+    const Clipper2Lib::FillRule fr = static_cast<Clipper2Lib::FillRule>(GenerateRandomInt(rng, 0, 3));
 
     SaveInputToFile(subject, subject_open, clip, ct, fr);
 
@@ -153,6 +153,11 @@ TEST(Clipper2Tests, TestRandomPaths)
     const auto count_polytree = solution_polytree_paths.size() + solution_polytree_open.size();
 
     EXPECT_EQ(area_paths, area_polytree);
-    EXPECT_EQ(count_paths, count_polytree);
+    // polytree does an additional bounds check on each path
+    // and discards paths with empty bounds, so count_polytree
+    // may on occasions be slightly less than count_paths even
+    // though areas match
+    EXPECT_LE(count_polytree, count_paths);
+    EXPECT_LE(count_paths - count_polytree, 2);
   }
 }
