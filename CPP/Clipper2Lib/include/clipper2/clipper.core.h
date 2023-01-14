@@ -199,11 +199,11 @@ namespace Clipper2Lib
 #ifdef USINGZ
     std::transform(path.begin(), path.end(), back_inserter(result),
       [scale_x, scale_y](const auto& pt) 
-      { return Point<T1>(pt.x * scale_x, pt.y * scale_x, pt.z); });
+      { return Point<T1>(pt.x * scale_x, pt.y * scale_y, pt.z); });
 #else
     std::transform(path.begin(), path.end(), back_inserter(result),
       [scale_x, scale_y](const auto& pt) 
-      { return Point<T1>(pt.x * scale_x, pt.y * scale_x); });
+      { return Point<T1>(pt.x * scale_x, pt.y * scale_y); });
 #endif
     return result;
   }
