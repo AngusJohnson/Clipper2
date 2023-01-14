@@ -1,6 +1,6 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  16 November 2022                                                *
+* Date      :  14 January 2023                                                 *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  FAST rectangular clipping                                       *
@@ -17,7 +17,7 @@ namespace Clipper2Lib {
   // Miscellaneous methods
   //------------------------------------------------------------------------------
 
-  inline PointInPolygonResult Path1ContainsPath2(Path64 path1, Path64 path2)
+  inline PointInPolygonResult Path1ContainsPath2(const Path64& path1, const Path64& path2)
   {
     PointInPolygonResult result = PointInPolygonResult::IsOn;
     for(const Point64& pt : path2)
@@ -180,7 +180,7 @@ namespace Clipper2Lib {
   }
 
   inline bool IsClockwise(Location prev, Location curr,
-    Point64 prev_pt, Point64 curr_pt, Point64 rect_mp)
+    const Point64& prev_pt, const Point64& curr_pt, const Point64& rect_mp)
   {
     if (AreOpposites(prev, curr))
       return CrossProduct(prev_pt, rect_mp, curr_pt) < 0;
@@ -447,7 +447,7 @@ namespace Clipper2Lib {
     int i = 1, highI = static_cast<int>(path.size()) - 1;
 
     Location prev = Location::Inside, loc;
-    Location crossing_loc = Location::Inside;
+    Location crossing_loc;
     if (!GetLocation(rect_, path[0], loc))
     {
       while (i <= highI && !GetLocation(rect_, path[i], prev)) ++i;

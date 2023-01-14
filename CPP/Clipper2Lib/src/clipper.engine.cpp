@@ -1,6 +1,6 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  10 January 2023                                                 *
+* Date      :  14 January 2023                                                 *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2023                                         *
 * Purpose   :  This is the main polygon clipping module                        *
@@ -307,11 +307,11 @@ namespace Clipper2Lib {
 
   inline void DisposeOutPts(OutRec* outrec)
   {
-    OutPt* op = outrec->pts, *tmp;
+    OutPt* op = outrec->pts;
     op->prev->next = nullptr;
     while (op)
     {
-      tmp = op;
+      OutPt* tmp = op;
       op = op->next;
       delete tmp;
     };
@@ -464,7 +464,7 @@ namespace Clipper2Lib {
     return (inode.edge1->next_in_ael == inode.edge2) || (inode.edge1->prev_in_ael == inode.edge2);
   }
 
-  inline bool IsJoined(Active& e)
+  inline bool IsJoined(const Active& e)
   {
     return e.join_with != JoinWith::None;
   }
@@ -575,9 +575,12 @@ namespace Clipper2Lib {
     if (is_open) has_open_paths_ = true;
     minima_list_sorted_ = false;
 
-    Path64::size_type total_vertex_count = 0;
-    for (const Path64& path : paths) total_vertex_count += path.size();
+    const auto total_vertex_count =
+      std::accumulate(paths.begin(), paths.end(), 0, 
+        [](const auto& a, const Path64& path) 
+        {return a + static_cast<unsigned>(path.size());});
     if (total_vertex_count == 0) return;
+
     Vertex* vertices = new Vertex[total_vertex_count], * v = vertices;
     for (const Path64& path : paths)
     {
@@ -1901,30 +1904,71 @@ namespace Clipper2Lib {
   inline bool UpdateHorzSegment(HorzSegment* hs, bool force)
   {
     if (hs->finished) return false;
-    hs->finished = true;
+    hs->finished = true; // temporary flag in case update fails
     OutPt* op = hs->left_op;
     OutRec* outrec = GetRealOutRec(op->outrec);
-  
+
     OutPt* opA = outrec->pts, * opZ = opA->next, * op2 = op;
     // nb: it's possible that opA and opZ are both below op
     // (eg when there's been an intermediate maxima horz. join)
-    int64_t curr_y = op->pt.y; 
-
-    while (op2->next != op && op2->next->pt.y == curr_y)
-      op2 = op2->next;
-
-    if (op2->next == op)
+    int64_t curr_y = op->pt.y;
+    bool is_bottom;
+    if (outrec->front_edge)
     {
-      // all pts horizontal, so must be bottom of path.
-      // now check it's still a valid horizontal segment
-      if (opA->pt.x == opZ->pt.x || !outrec->front_edge) return false;
+      if (hs->position == HorzPosition::Middle)
+      {
+        // if a Middle then just a quick check that it still is one
+        op = opA;
+        while (op->next != opA && op->pt.y == curr_y)
+          op = op->next;
+        if (op->next != opA)
+        {
+          // yep, still a Middle :)
+          if (opA->pt.y == curr_y)
+            hs->left_op = opA;
+          else
+            hs->left_op = opZ;
+          hs->right_op = nullptr;
+          hs->left_op->outrec = outrec;
+          hs->left_op->horz = hs;
+          hs->finished = false;
+          return true;
+        }
+        // nope, it's a Bottom now :)
+        op = op2;
+      }
 
-      // clean up horizontals
-      OutPt* tmp = opZ->next;
-      while (tmp != opA) 
-        tmp = SafeDispose(tmp);
+      while (op != opZ && op->prev->pt.y == curr_y)
+        op = op->prev;
+      while (op2 != opA && op2->next->pt.y == curr_y)
+        op2 = op2->next;
 
-      hs->left_to_right = opZ->pt.x < opA->pt.x;
+      if (op->pt.x == op2->pt.x)
+      {
+        if (hs->left_op != opA) return false;
+        op = opZ;
+        op2 = op;
+        while (op != opZ && op->prev->pt.y == curr_y)
+          op = op->prev;
+        while (op2 != opA && op2->next->pt.y == curr_y)
+          op2 = op2->next;
+        if (op->pt.x == op2->pt.x) return false;
+      }
+      is_bottom = (op == opZ && op2 == opA);
+    }
+    else // ie no front_edge
+    {
+      while (op->prev != op2 && op->prev->pt.y == curr_y)
+        op = op->prev;
+      while (op2->next != op && op2->next->pt.y == curr_y)
+        op2 = op2->next;
+      if (op2->next == op || op->pt.x == op2->pt.x) return false;
+      is_bottom = false;
+    }
+
+    if (is_bottom)
+    {
+      hs->left_to_right = (opZ->pt.x < opA->pt.x);
       if (hs->left_to_right)
       {
         hs->left_op = opZ;
@@ -1934,14 +1978,19 @@ namespace Clipper2Lib {
       {
         hs->left_op = opA;
         hs->right_op = opZ;
-      }
+      };
+      if (!force && hs->left_op->horz &&
+        hs->left_op->horz != hs) return false;;
+
+      // clean up horizontals
+      op = opZ->next;
+      while (op != opA)
+        op = SafeDispose(op);
       hs->position = HorzPosition::Bottom;
     }
-    else // either a middle or a top
-    {      
-      while (op->prev->pt.y == curr_y) op = op->prev;
+    else // Middle or Top
+    {
       if (op->pt.x == op2->pt.x) return false;
-
       if (op->pt.x < op2->pt.x)
       {
         hs->left_op = op;
@@ -1955,38 +2004,36 @@ namespace Clipper2Lib {
         hs->left_to_right = false;
       }
 
-      if (!force && hs->left_op->horz && hs->left_op->horz != hs)
-        return false;
-
       if (outrec->front_edge)
       {
         // must be a middle or pseudo-top
-        // if opA is between op and op2 then this is a
+        // if op2 = opA or op = opZ then this is a
         // horizontal middle, otherwise it's a pseudo-top
-        OutPt* tmp = op;
-        while (tmp != opA && tmp != op2) 
-          tmp = tmp->next;
-
-        if (op == opZ || tmp == opA) // must be a middle
+        if (op == opZ || op2 == opA) // must be a middle
         {
-          //nb: middle segments' left_to_right is contextual
-          hs->position = HorzPosition::Middle;
+          if (!force && opA->horz && opA->horz != hs) return false;
+          if (opA->pt.y == curr_y)
+            hs->left_op = opA;
+          else
+            hs->left_op = opZ;
+          hs->right_op = nullptr;
           hs->left_op->outrec = outrec;
           hs->left_op->horz = hs;
+          hs->position = HorzPosition::Middle;
           hs->finished = false;
           return true;
         }
       }
+
+      if (!force && hs->left_op->horz &&
+        hs->left_op->horz != hs) return false;
+
       hs->position = HorzPosition::Top;
-
       // cleanup horizontals
-      OutPt* tmp = op->next;
-      while (tmp != op2)
-      {
-        if (tmp == opA) tmp = tmp->next;
-        else tmp = SafeDispose(tmp);
-      }
-
+      op = op->next;
+      while (op != op2)
+        if (op == opA) op = op->next;
+        else op = SafeDispose(op);
     }
     hs->left_op->horz = hs;
     hs->left_op->outrec = outrec;
@@ -1999,7 +2046,19 @@ namespace Clipper2Lib {
     op->outrec = GetRealOutRec(op->outrec);
   }
 
-  static void InsertAndSplit(HorzSegment* ltorHS, HorzSegment* rtolHS)
+  inline void TransferActiveEdges(OutRec* src, OutRec* dst)
+  {
+    dst->front_edge  = src->front_edge;
+    src->front_edge = nullptr;
+    if (dst->front_edge) 
+      dst->front_edge->outrec = dst;
+    dst->back_edge = src->back_edge;
+    src->back_edge = nullptr;
+    if (dst->back_edge) 
+      dst->back_edge->outrec = dst;
+  }
+
+  static void SplitThenMergeHorz(HorzSegment* ltorHS, HorzSegment* rtolHS)
   {
     //nb: both HorzSegs have assigned edges
     OutPt* ltorR = ltorHS->right_op;
@@ -2042,336 +2101,308 @@ namespace Clipper2Lib {
     UpdateHorzSegment(rtolHS, true);
   }
 
-  static void DoPseudoTopAndBottom(HorzSegment* topHS, HorzSegment* botHS)
+  inline Rect64 GetBounds(OutPt* op)
   {
-    if (topHS->left_to_right == botHS->left_to_right ||
-      topHS->left_op->pt.x >= botHS->right_op->pt.x ||
-      topHS->right_op->pt.x <= botHS->left_op->pt.x) return;
-
-    if (topHS->left_to_right)
-      InsertAndSplit(topHS, botHS); else
-      InsertAndSplit(botHS, topHS);
+    Rect64 result(op->pt.x, op->pt.y, op->pt.x, op->pt.y);
+    OutPt* op2 = op->next;
+    while (op2 != op)
+    {
+      if (op2->pt.x < result.left) result.left = op2->pt.x;
+      else if (op2->pt.x > result.right) result.right = op2->pt.x;
+      if (op2->pt.y < result.top) result.top = op2->pt.y;
+      else if (op2->pt.y > result.bottom) result.bottom = op2->pt.y;
+      op2 = op2->next;
+    }
+    return result;
   }
 
-  void DoTopAndBottom(HorzSegment* topHS, HorzSegment* botHS)
+  static bool GetMiddleSideA(HorzSegment& hs, const HorzSegment& compare)
   {
-    OutRec* botOr = botHS->left_op->outrec;
-    OutPt* botA = botOr->pts, * botZ = botA->next;
-    OutRec* topOr = topHS->left_op->outrec;
+    CheckOutRec(hs.left_op);
+    int64_t curr_y = hs.left_op->pt.y;
+    OutRec* outrec = hs.left_op->outrec;
+    OutPt* opA = outrec->pts, * opZ = opA->next, * op = opA;
+    if (opA->pt.y != curr_y ||
+      compare.position == HorzPosition::Middle) return false;
+    while (op->prev != opZ && op->prev->pt.y == curr_y) op = op->prev;
+    if (op->prev == opZ || op->pt.x == opA->pt.x) return false;
+    op->outrec = outrec;
+    hs.left_to_right = (op->pt.x < opA->pt.x);
+    if (hs.left_to_right == compare.left_to_right) return false;
 
-    if (topHS->left_to_right == botHS->left_to_right ||
-      topHS->left_op->pt.x >= botHS->right_op->pt.x ||
-      topHS->right_op->pt.x <= botHS->left_op->pt.x) return;
-
-    if (topHS->left_to_right)
+    if (hs.left_to_right)
     {
-      while (topHS->right_op->prev->pt.x >= botZ->pt.x)
-        topHS->right_op = topHS->right_op->prev;
-      topHS->left_op = topHS->right_op->prev;
-      OutPt* op = botZ->next;
-      botZ->next = topHS->right_op;
-      topHS->right_op->prev = botZ;
-      op->prev = topHS->left_op;
-      topHS->left_op->next = op;
+      hs.left_op = op;
+      hs.right_op = opA;
     }
     else
     {
-      while (topHS->right_op->next->pt.x >= botA->pt.x)
-        topHS->right_op = topHS->right_op->next;
-      topHS->left_op = topHS->right_op->next;
-      OutPt* op = botA->prev;
-      botA->prev = topHS->right_op;
-      topHS->right_op->next = botA;
-      topHS->left_op->prev = op;
-      op->next = topHS->left_op;
+      hs.left_op = opA;
+      hs.right_op = op;
     }
-
-    topOr->pts = nullptr;
-    botOr->pts->outrec = botOr;
-    topHS->finished = true;
-    SetOwner(topOr, botOr);
-    UpdateHorzSegment(botHS, true);
+    return (hs.left_op->pt.x < compare.right_op->pt.x&&
+      hs.right_op->pt.x > compare.left_op->pt.x);
   }
 
-  static bool MakeHole(HorzSegment* hs,
-    std::vector<OutRec*>& or_list, bool using_polytree)
-  {
-    OutRec* outrec = hs->left_op->outrec;
-    OutPt* opA = outrec->pts, * opZ = opA->next;
-    OutPt* opL, * opR, * opQ;
+  static bool GetMiddleSideZ(HorzSegment &hs, const HorzSegment &compare)
+  {  
+    if (hs.position != HorzPosition::Middle) return false;
+    CheckOutRec(hs.left_op);
+    OutRec* outrec = hs.left_op->outrec;
+    OutPt* opA = outrec->pts, *opZ = opA->next, *op = opZ;
+    if (opZ->pt.y > opA->pt.y || 
+      compare.position == HorzPosition::Middle) return false;
+    int64_t curr_y = opZ->pt.y;
+    while (op->next != opA && op->next->pt.y == curr_y) op = op->next;
+    if (op->next == opA || op->pt.x == opZ->pt.x) return false;
+    op->outrec = outrec;
+    opZ->outrec = outrec;
 
-    // first, try for an overlap on opA's side
-    opL = opA; opR = opA;
+    hs.left_to_right = (opZ->pt.x < op->pt.x);
+    if (hs.left_to_right == compare.left_to_right) return false;
+    if (hs.left_to_right)
+    {
+      hs.left_op = opZ;
+      hs.right_op = op;
+    }
+    else
+    {
+      hs.left_op = op;
+      hs.right_op = opZ;
+    };
+    return (hs.left_op->pt.x < compare.right_op->pt.x &&
+      hs.right_op->pt.x > compare.left_op->pt.x);
+  }
+
+  inline bool MiddleChecked(HorzSegment* hs) 
+  {
+    return (hs->right_op);
+  }
+
+  static void CheckMiddleSplit(HorzSegment& hs,
+    std::vector<OutRec*>& or_list, bool using_polytree)    
+  {
+    // assign hs.right_op to flag the HS has been checked.
+    // there's only value in doing this op once unless the
+    // Middle is changed and updated (ie UpdateHorzSegment).
+    hs.right_op = hs.left_op;
+
+    CheckOutRec(hs.left_op);
+    OutRec* outrec = hs.left_op->outrec;
+    OutPt* opA = outrec->pts, * opZ = opA->next, * op = opA, * op2 = opZ;
+    if (opZ->pt.y != opA->pt.y) return;
+
     int64_t curr_y = opA->pt.y;
-    if (hs->left_to_right)
+    while (op->prev != opA && op->prev->pt.y == curr_y) op = op->prev;
+    if (op->prev == opA)
     {
-      while (opR->prev->pt.y == curr_y) opR = opR->prev;
-      if (opR->prev == opA) return false; // should never happen
+      // no longer a Middle
+      UpdateHorzSegment(&hs, true);
+      return;
     }
-    else
-    {
-      while (opL->prev->pt.y == curr_y) opL = opL->prev;
-      if (opL->prev == opA) return false; // should never happen
-    }
+    while (op2->next->pt.y == curr_y) op2 = op2->next;
 
-    if ((curr_y != hs->left_op->pt.y) ||
-      (opL->pt.x >= opR->pt.x) ||
-      (opR->pt.x <= hs->left_op->pt.x) ||
-      (opL->pt.x >= hs->right_op->pt.x))
-    {
-      // no luck so try on opZ's side
-      curr_y = opZ->pt.y;
-      opL = opZ; opR = opZ;
-      if (hs->left_to_right)
-        while (opL->next->pt.y == curr_y) opL = opL->next;
-      else
-        while (opR->next->pt.y == curr_y) opR = opR->next;
+    //op  >>> opA
+    //op2 <<< opZ
+    if (!((opA->pt.x < opZ->pt.x) && (op->pt.x > opZ->pt.x)) &&
+      !((opA->pt.x > opZ->pt.x) && (op->pt.x < opZ->pt.x))) return;
 
-      if ((curr_y != hs->left_op->pt.y) ||
-        (opL->pt.x >= opR->pt.x) ||
-        (opR->pt.x <= hs->left_op->pt.x) ||
-        (opL->pt.x >= hs->right_op->pt.x))
-        return false; // no overlap on either side, so give up
-    }
+    // split into top and bottom
+    op2 = opZ->next;
+    op = opA->prev;
+    opZ->next = opA;
+    opA->prev = opZ;
+    op->next = op2;
+    op2->prev = op;
 
-    if (hs->left_to_right)
-    {
-      // opL  <<<< opR
-      // hs.L >>>> hs.R
-      opQ = (opL == opA) ? opR : opL;
-      opR = opL->prev;
-      hs->right_op = hs->left_op->next;
-      hs->left_op->next = opL;
-      opL->prev = hs->left_op;
-      opR->next = hs->right_op;
-      hs->right_op->prev = opR;
-    }
-    else
-    {
-      // opL  >>>> opR
-      // hs.L <<<< hs.R
-      opQ = (opR == opA) ? opL : opR;
-      opR = opL->next;
-      hs->right_op = hs->left_op->prev;
-      hs->left_op->prev = opL;
-      opL->next = hs->left_op;
-      opR->prev = hs->right_op;
-      hs->right_op->next = opR;
-    }
-
-    OutRec* newOr = new OutRec();
-    newOr->idx = or_list.size();
+    OutRec* newOr = new OutRec; 
     or_list.push_back(newOr);
+    newOr->pts = opA;
+    outrec->pts = op;
+    op->outrec = outrec;
+
+    FixOutRecPts(outrec);
+    FixOutRecPts(newOr);
+    TransferActiveEdges(outrec, newOr);
+
     if (using_polytree)
     {
-      if (!outrec->splits) outrec->splits = new OutRecList();
+      if (!outrec->splits) 
+        outrec->splits = new OutRecList();
       outrec->splits->push_back(newOr);
     }
     newOr->owner = outrec;
-    newOr->pts = opQ;
+    // re-assign hs.left_op with a new (useable) op
+    if (!op->horz) hs.left_op = op;
+    else if (!op2->horz) hs.left_op = op2;
+    else hs.finished = true;
+    UpdateHorzSegment(&hs, true);
+  }
+
+  static void SplitOrHoleHorz(HorzSegment& hs1, HorzSegment& hs2,
+  std::vector<OutRec*>& or_list, bool using_polytree)
+  {
+    OutRec* outrec = hs1.left_op->outrec;
+    OutPt* opA = outrec->pts, *opZ = opA->next, *opQ;
+    if (opZ->pt.y < opA->pt.y)
+      opQ = opZ; 
+    else
+      opQ = opA;
+
+    OutPt* op1R, *op2R;
+    if (hs1.left_to_right)
+    {
+      // op1L  >>>> op1R
+      // op2L <<<< op2R
+      op1R = hs1.left_op->next;
+      op2R = hs2.left_op->prev;
+      op1R->prev = op2R;
+      op2R->next = op1R;
+      hs1.left_op->next = hs2.left_op;
+      hs2.left_op->prev = hs1.left_op;
+    }
+    else
+    {
+      // op1L  <<<< op1R
+      // op2L >>>> op2R
+      op1R = hs1.left_op->prev;
+      op2R = hs2.left_op->next;
+      op1R->next = op2R;
+      op2R->prev = op1R;
+      hs1.left_op->prev = hs2.left_op;
+      hs2.left_op->next = hs1.left_op;
+    };
+    OutRec* newOr = new OutRec;
+    or_list.push_back(newOr);
+    if (using_polytree)
+    {
+      if (!outrec->splits)
+        outrec->splits = new OutRecList();
+      outrec->splits->push_back(newOr);
+    }
+    newOr->owner = outrec;
+    newOr->pts = op1R;
     FixOutRecPts(newOr);
-    hs->finished = true;
-    return true;
-  }
 
-  void ClipperBase::MergeTops(HorzSegment* ltorHS,  HorzSegment* rtolHS)
-  {
-    OutRec* ltorOr = ltorHS->left_op->outrec;
-    OutRec* rtolOr = rtolHS->left_op->outrec;
-    if (ltorOr->front_edge && rtolOr->front_edge) return;
-
-    if (ltorHS->right_op->pt.x <= rtolHS->left_op->pt.x ||
-      ltorHS->left_op->pt.x >= rtolHS->right_op->pt.x) return;
-
-    while (ltorHS->right_op->prev->pt.x >= rtolHS->right_op->pt.x)
-      ltorHS->right_op = ltorHS->right_op->prev;
-    ltorHS->left_op = ltorHS->right_op->prev;
-    while (rtolHS->right_op->next->pt.x >= ltorHS->right_op->pt.x)
-      rtolHS->right_op = rtolHS->right_op->next;
-    rtolHS->left_op = rtolHS->right_op->next;
-
-    ltorHS->right_op->prev = rtolHS->right_op;
-    rtolHS->right_op->next = ltorHS->right_op;
-    ltorHS->left_op->next = rtolHS->left_op;
-    rtolHS->left_op->prev = ltorHS->left_op;
-
-    if (rtolOr->front_edge)
+    if (GetRealOutRec(opA->outrec) != outrec)
     {
-      ltorOr->pts = rtolOr->pts;
-      ltorOr->front_edge = rtolOr->front_edge;
-      ltorOr->front_edge->outrec = ltorOr;
-      rtolOr->front_edge = nullptr;
-      ltorOr->back_edge = rtolOr->back_edge;
-      ltorOr->back_edge->outrec = ltorOr;
-      rtolOr->back_edge = nullptr;
+      // opA must now be in newOr
+      newOr->pts = opA;
+      outrec->pts = hs1.left_op;
+      std::swap(hs1.left_op, hs2.left_op);
+      if (hs1.position == HorzPosition::Middle)
+        hs2.left_op = opQ;
+      hs1.left_op->horz = &hs1;
+      hs2.left_op->horz = &hs2;
+
+      if (outrec->front_edge)
+        TransferActiveEdges(outrec, newOr);
     }
-    rtolOr->pts = nullptr;
-    SetOwner(rtolOr, ltorOr);
-    ltorOr->pts->outrec = ltorOr;
-    rtolHS->finished = true;
-    ltorHS->left_op = ltorOr->pts;
-    UpdateHorzSegment(ltorHS, true);
+    UpdateHorzSegment(&hs1, true);
+    UpdateHorzSegment(&hs2, true);
   }
-  
-  void MergeMiddle(HorzSegment* midHS, HorzSegment* othHS)
+
+  static void JustMergeHorz(HorzSegment& activeHS, HorzSegment& inactiveHS)
   {
-    OutRec* midOr = midHS->left_op->outrec;
-    OutRec* othOr = othHS->left_op->outrec;
-    if (midOr == othOr) return;
+    OutRec* activeOr = activeHS.left_op->outrec;
+    OutRec* inactiveOr = inactiveHS.left_op->outrec;
+    OutPt* op1L, *op1R = activeHS.right_op;
+    OutPt* op2L, *op2R = inactiveHS.right_op;
 
-    if (othHS->left_to_right)
+    if (inactiveHS.left_to_right)
     {
-      while (midHS->right_op->next->pt.x >= othHS->right_op->pt.x)
-        midHS->right_op = midHS->right_op->next;
-      midHS->left_op = midHS->right_op->next;
-      othHS->left_op = othHS->right_op->prev;
+      while (op1R->next->pt.x >= op2R->pt.x)
+        op1R = op1R->next;
+      op1L = op1R->next;
+      op2L = op2R->prev;
 
-      othHS->left_op->next = midHS->left_op;
-      midHS->left_op->prev = othHS->left_op;
-      othHS->right_op->prev = midHS->right_op;
-      midHS->right_op->next = othHS->right_op;
+      op2L->next = op1L;
+      op1L->prev = op2L;
+      op2R->prev = op1R;
+      op1R->next = op2R;
     }
     else
     {
-      while (midHS->right_op->prev->pt.x >= othHS->right_op->pt.x)
-        midHS->right_op = midHS->right_op->prev;
-      midHS->left_op = midHS->right_op->prev;
-      othHS->left_op = othHS->right_op->next;
-      othHS->left_op->prev = midHS->left_op;
-      midHS->left_op->next = othHS->left_op;
-      othHS->right_op->next = midHS->right_op;
-      midHS->right_op->prev = othHS->right_op;
+      while (op1R->prev->pt.x >= op2R->pt.x) 
+        op1R = op1R->prev;
+      op1L = op1R->prev;
+      op2L = op2R->next;
+      op2L->prev = op1L;
+      op1L->next = op2L;
+      op2R->next = op1R;
+      op1R->prev = op2R;
     }
 
-    if (othOr->front_edge)
-    {
-      midOr->pts = othOr->pts;
-      midHS->left_op = othHS->left_op;
-      midOr->front_edge = othOr->front_edge;
-      midOr->back_edge = othOr->back_edge;
-      midOr->front_edge->outrec = midOr;
-      midOr->back_edge->outrec = midOr;
-      othOr->front_edge = nullptr;
-      othOr->back_edge = nullptr;
-    }
-    othOr->pts = nullptr;
-    midOr->pts->outrec = midOr;
-    othHS->finished = true;
-    midHS->left_op = midOr->pts;
-    SetOwner(othOr, midOr);
-    UpdateHorzSegment(midHS, true);
+    inactiveOr->pts = nullptr;
+    activeOr->pts->outrec = activeOr;
+    inactiveHS.finished = true;
+    SetOwner(inactiveOr, activeOr);
+    UpdateHorzSegment(&activeHS, true);
   }
 
-  bool ClipperBase::DoMiddle(HorzSegment* midHS, HorzSegment* otherHS)
+  inline void DoMiddle(HorzSegment& midHS, HorzSegment& othHS,
+    std::vector<OutRec*>& or_list, bool using_polytree)
   {
-    OutRec* midOr = midHS->left_op->outrec;
-    OutRec* othOr = otherHS->left_op->outrec;
-    OutPt* midA = midOr->pts, * midZ = midA->next, *op = midA;
-    int64_t currY = std::min(midA->pt.y, midZ->pt.y);
-
-    // middle horz segments are tricky because we need to assess for
-    // horizontal overlaps on both sides of the midA-midZ loop-around
-    while (op->prev != midA && op->prev->pt.y == currY) op = op->prev;
-    if (op->prev == midA)
+    if (midHS.left_op->outrec == othHS.left_op->outrec)
     {
-      // This is no longer a Middle, so evidently
-      // another HS has changed the geometry of this path.
-      UpdateHorzSegment(midHS, true);
-      return false;
+      SplitOrHoleHorz(midHS, othHS, or_list, using_polytree);
     }
-
-    bool midIsLtor;
-    bool using_sideA = op->pt.x != midA->pt.x;
-    if (using_sideA)
+    else if (othHS.left_op->outrec->front_edge)
     {
-      if (op->pt.x < midA->pt.x)
-      {
-        midHS->left_op = op;
-        midHS->right_op = midA;
-        midIsLtor = true;
-      }
+      if (othHS.left_to_right)
+        SplitThenMergeHorz(&othHS, &midHS);
       else
-      {
-        midHS->left_op = midA;
-        midHS->right_op = op;
-        midIsLtor = false;
-      }
-
-      using_sideA = midIsLtor != otherHS->left_to_right &&
-        midHS->right_op->pt.x > otherHS->left_op->pt.x &&
-        midHS->left_op->pt.x < otherHS->right_op->pt.x;
-    }
-
-    if (!using_sideA)
-    {
-      // there isn't a horizontal overlap on the MidA
-      // side of the midA-MidZ loop around, so we'll
-      // now try for an overlap on the MidZ side ...
-      if (midZ->pt.y != currY) return false;
-      op = midZ;
-      while (op->next->pt.y == currY) op = op->next;
-      if (op->pt.x == midZ->pt.x) return false;
-
-      if (op->pt.x > midZ->pt.x)
-      {
-        if (otherHS->left_to_right) return false;
-        midHS->left_op = midZ;
-        midHS->right_op = op;
-      }
-      else
-      {
-        if (!otherHS->left_to_right) return false;
-        midHS->left_op = op;
-        midHS->right_op = midZ;
-      }
-
-      if (midHS->left_op->pt.x >= otherHS->right_op->pt.x ||
-        midHS->right_op->pt.x <= otherHS->left_op->pt.x)
-          return false;
-    }
-    CheckOutRec(midHS->left_op);
-    if (othOr->front_edge)
-    {
-      if (otherHS->left_to_right)
-        InsertAndSplit(otherHS, midHS); else
-        InsertAndSplit(midHS, otherHS);
+        SplitThenMergeHorz(&midHS, &othHS);
     }
     else
-      MergeMiddle(midHS, otherHS);
-    return true;
+      JustMergeHorz(midHS, othHS);
   }
 
   inline bool IsValidHorzSeg(HorzSegment* hs)
   {
     if (hs->finished) return false;
-    bool result;
-    CheckOutRec(hs->left_op);
-    if (hs->right_op)
+    if (hs->left_op->horz &&
+      hs->left_op->horz != hs)
     {
-      // also make sure that leftOp and rightOp
-      // still share the same path
-      CheckOutRec(hs->right_op);
-      result = (hs->left_op->horz == hs) &&
-        (hs->right_op->outrec == hs->left_op->outrec);
+      hs->finished = true;
+      return false;
+    }
+    CheckOutRec(hs->left_op);
+    if (hs->position != HorzPosition::Top) return true;
+    int64_t curr_y = hs->left_op->pt.y;
+    hs->right_op = hs->left_op;
+    if (hs->left_to_right)
+    {
+      while (hs->right_op->next != hs->left_op &&
+        hs->right_op->next->pt.y == curr_y)
+        hs->right_op = hs->right_op->next;
+      if (hs->right_op->next == hs->left_op ||
+        hs->right_op->pt.x == hs->left_op->pt.x) return true;
     }
     else
-      result = (hs->left_op->horz == hs);
+    {
+      while (hs->right_op->prev != hs->left_op &&
+        hs->right_op->prev->pt.y == curr_y)
+        hs->right_op = hs->right_op->prev;
+      if (hs->right_op->prev == hs->left_op ||
+        hs->right_op->pt.x == hs->left_op->pt.x) return true;
+    }
+    CheckOutRec(hs->right_op);
 
     // make sure Middles still have active edges
-    result = result &&
-      ((hs->position != HorzPosition::Middle) ||
-        hs->left_op->outrec->front_edge);
-
-    if (result) return true;
-    hs->finished = true; 
-    return false;    
+    if (hs->position == HorzPosition::Middle &&
+      !hs->left_op->outrec->front_edge)
+    {
+      hs->finished = true;
+      return false;
+    }
+    return true;
   }
 
   void ClipperBase::MergeHorzSegments()
   {
-    int j = 0;
-    for (auto hs : horz_seg_list_)
-      if (UpdateHorzSegment(hs, false)) ++j;
+    auto j = std::count_if(horz_seg_list_.begin(), horz_seg_list_.end(),
+      [](auto& hs) { return UpdateHorzSegment(hs, false); });
     if (j < 2) return;
     std::sort(horz_seg_list_.begin(), horz_seg_list_.end(), HorzSegSorter());
     for (size_t i = j; i < horz_seg_list_.size(); ++i) delete horz_seg_list_[i];
@@ -2391,10 +2422,11 @@ namespace Clipper2Lib {
     std::vector<HorzSegment*>::iterator hs_end = horz_seg_list_.end();
     std::vector<HorzSegment*>::iterator hs_end1 = hs_end - 1;
 
-    for (; hs1 != hs_end1; ++hs1)
+    int cnt1, cnt2;
+    for (cnt1 = 0; hs1 != hs_end1; ++hs1, ++cnt1)
     {
       // for each HorzSegment, find others that overlap
-      for (hs2 = hs1 + 1; hs2 != hs_end; ++hs2)
+      for (cnt2 = cnt1 +1, hs2 = hs1 + 1; hs2 != hs_end; ++hs2, ++cnt2)
       {
         if (!IsValidHorzSeg(*hs1)) break;
         if (!IsValidHorzSeg(*hs2)) continue;
@@ -2408,70 +2440,59 @@ namespace Clipper2Lib {
         // L-to-R orientation will differ between sides whenever
         // A or Z are left-most or right-most in the horizontal.
 
+        // Do CheckMiddleSplit() before the following code blocks because
+        // these HS may no longer be Middles after checks and splits
+        if ((*hs1)->position == HorzPosition::Middle && !MiddleChecked(*hs1))
+          CheckMiddleSplit(**hs1, outrec_list_, using_polytree_);
+        if ((*hs2)->position == HorzPosition::Middle && !MiddleChecked(*hs2))
+          CheckMiddleSplit(**hs2, outrec_list_, using_polytree_);
+
         if ((*hs1)->position == HorzPosition::Middle)
         {
-          if (or1 == or2)
-          {
-            if ((*hs2)->position != HorzPosition::Top) continue;
-            if (MakeHole(*hs2, outrec_list_, using_polytree_))
-              UpdateHorzSegment(*hs1, true);
-          }
-          else if ((*hs2)->position != HorzPosition::Middle)
-            DoMiddle(*hs1, *hs2);
+          if ((*hs2)->position == HorzPosition::Middle) continue;
 
+          if (GetMiddleSideA(**hs1, **hs2)) 
+            DoMiddle(**hs1, **hs2, outrec_list_, using_polytree_);
+          else if (GetMiddleSideZ(**hs1, **hs2))
+            DoMiddle(**hs1, **hs2, outrec_list_, using_polytree_);
+
+          // After DoMiddle(), hs2 may have become a Middle too.
+          // When it does, give the left most HS priority
           if ((*hs2)->position == HorzPosition::Middle &&
             (*hs2)->left_op->pt.x < (*hs1)->left_op->pt.x)
-              std::swap(*hs1, *hs2);
+            std::swap(*hs1, *hs2);
         }
         else if ((*hs2)->position == HorzPosition::Middle)
         {
-          if (or1 == or2)
-          {
-            if ((*hs1)->position != HorzPosition::Top) continue;
-            MakeHole(*hs1, outrec_list_, using_polytree_);
-            (*hs2)->finished = true;
-            break;
-          }
-          else 
-            DoMiddle(*hs2, *hs1);
+          if (GetMiddleSideA(**hs2, **hs1))
+            DoMiddle(**hs2, **hs1, outrec_list_, using_polytree_);
+          else if (GetMiddleSideZ(**hs2, **hs1))
+            DoMiddle(**hs2, **hs1, outrec_list_, using_polytree_);
         }
-        else
+        else if ((*hs2)->left_op->pt.x >= (*hs1)->right_op->pt.x) 
+          break;
+        else if (((*hs2)->right_op->pt.x <= (*hs1)->left_op->pt.x) ||
+          ((*hs2)->left_to_right == (*hs1)->left_to_right)) 
+          continue;
+        else if (or2 == or1)
         {
-          // if these horz segments don't partially overlap
-          // then, because of sorting, neither will subsequent ones
-          if ((*hs2)->left_op->pt.x >= (*hs1)->right_op->pt.x) break;
-          // only merge counter oriented paths
-          if ((*hs2)->left_to_right == (*hs1)->left_to_right) continue;
-
-          if ((*hs1)->position == HorzPosition::Top)
-          {
-            if ((*hs2)->position == HorzPosition::Top)
-            {
-              if (or1 == or2)
-              {
-                if (or1->front_edge) continue;
-                or1->pts = (*hs1)->right_op;
-                MakeHole(*hs2, outrec_list_, using_polytree_);
-              }
-              else if ((*hs1)->left_to_right)
-                MergeTops(*hs1, *hs2); 
-              else
-                MergeTops(*hs2, *hs1);
-            }
-            else if (or1->front_edge)
-              DoPseudoTopAndBottom(*hs1, *hs2); 
-            else
-              DoTopAndBottom(*hs1, *hs2);
-          }
-          else if ((*hs2)->position == HorzPosition::Top)
-          {
-            if (or2->front_edge)
-              DoPseudoTopAndBottom(*hs2, *hs1); else
-              DoTopAndBottom(*hs2, *hs1);
-          }
+          if (!or1->front_edge) 
+            SplitOrHoleHorz(**hs1, **hs2, outrec_list_, using_polytree_);
         }
-      }
-    }
+        else if (or1->front_edge)
+        {
+          if (!or2->front_edge)
+            JustMergeHorz(**hs1, **hs2);
+          else if ((*hs1)->left_to_right)
+            SplitThenMergeHorz(*hs1, *hs2);
+          else
+            SplitThenMergeHorz(*hs2, *hs1);
+        }
+        else 
+          JustMergeHorz(**hs2, **hs1);
+
+      } // for (hs2 = 
+    } // for (hs1 = 
   }
 
   void ClipperBase::DoIntersections(const int64_t top_y)
@@ -3017,40 +3038,23 @@ namespace Clipper2Lib {
     }
   }
 
-  inline Rect64 GetBounds(OutPt* op)
-  {
-    Rect64 result(op->pt.x, op->pt.y, op->pt.x, op->pt.y);
-    OutPt* op2 = op->next;
-    while (op2 != op)
-    {
-      if (op2->pt.x < result.left) result.left = op2->pt.x;
-      else if (op2->pt.x > result.right) result.right = op2->pt.x;
-      if (op2->pt.y < result.top) result.top = op2->pt.y;
-      else if (op2->pt.y > result.bottom) result.bottom = op2->pt.y;
-      op2 = op2->next;
-    }
-    return result;
-  }
-
   inline bool Path1InsidePath2(const OutRec* or1, const OutRec* or2)
   {
-    int inside_count = 0;    
-    PointInPolygonResult result = PointInPolygonResult::IsOn;
+    // we need to make some accommodation for rounding errors
+    // so we won't jump if the first vertex is found outside
+    int outside_cnt = 0;
     OutPt* op = or1->pts;
     do
     {
-      result = PointInPolygon(op->pt, or2->path);
-      if (result == PointInPolygonResult::IsOutside) --inside_count;
-      else if (result == PointInPolygonResult::IsInside) ++inside_count;
+      PointInPolygonResult result = PointInPolygon(op->pt, or2->path);
+      if (result == PointInPolygonResult::IsOutside) ++outside_cnt;
+      else if (result == PointInPolygonResult::IsInside) --outside_cnt;      
       op = op->next;
-    } while (op != or1->pts && std::abs(inside_count) < 2);
-    if (std::abs(inside_count) < 2)
-    {
-      Point64 mp = GetBounds(op).MidPoint();
-      return  PointInPolygon(mp, or2->path) == PointInPolygonResult::IsInside;
-    }
-    else
-      return inside_count > 0;
+    } while (op != or1->pts && std::abs(outside_cnt) < 2);
+    if (std::abs(outside_cnt) > 1) return (outside_cnt < 0);
+    // since path1's location is still equivocal, check its midpoint
+    Point64 mp = GetBounds(op).MidPoint();
+    return  PointInPolygon(mp, or2->path) == PointInPolygonResult::IsInside;
   }
 
   inline Rect64 GetBounds(const Path64& path)

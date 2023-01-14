@@ -1,6 +1,6 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  29 October 2022                                                 *
+* Date      :  14 January 2023                                                 *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  This module provides a simple interface to the Clipper Library  *
@@ -160,8 +160,8 @@ namespace Clipper2Lib {
   {
     Path64 result;
     result.reserve(path.size());
-    for (const Point64& pt : path)
-      result.push_back(Point64(pt.x + dx, pt.y + dy));
+    std::transform(path.begin(), path.end(), back_inserter(result),
+      [dx, dy](const auto& pt) { return Point64(pt.x + dx, pt.y +dy); });
     return result;
   }
 
@@ -169,8 +169,8 @@ namespace Clipper2Lib {
   {
     PathD result;
     result.reserve(path.size());
-    for (const PointD& pt : path)
-      result.push_back(PointD(pt.x + dx, pt.y + dy));
+    std::transform(path.begin(), path.end(), back_inserter(result),
+      [dx, dy](const auto& pt) { return PointD(pt.x + dx, pt.y + dy); });
     return result;
   }
 
@@ -178,8 +178,8 @@ namespace Clipper2Lib {
   {
     Paths64 result;
     result.reserve(paths.size());
-    for (const Path64& path : paths)
-      result.push_back(TranslatePath(path, dx, dy));
+    std::transform(paths.begin(), paths.end(), back_inserter(result),
+      [dx, dy](const auto& path) { return TranslatePath(path, dx, dy); });
     return result;
   }
 
@@ -187,8 +187,8 @@ namespace Clipper2Lib {
   {
     PathsD result;
     result.reserve(paths.size());
-    for (const PathD& path : paths)
-      result.push_back(TranslatePath(path, dx, dy));
+    std::transform(paths.begin(), paths.end(), back_inserter(result),
+      [dx, dy](const auto& path) { return TranslatePath(path, dx, dy); });
     return result;
   }
 
@@ -420,9 +420,28 @@ namespace Clipper2Lib {
     {
       for (const auto& child : pp)
       {
+        // return false if this child isn't fully contained by its parent
+
+        // the following algorithm is a bit too crude, and doesn't account
+        // for rounding errors. A better algorithm is to return false when
+        // consecutive vertices are found outside the parent's polygon.
+
+        //const Path64& path = pp.Polygon();
+        //if (std::any_of(child->Polygon().cbegin(), child->Polygon().cend(),
+        //  [path](const auto& pt) {return (PointInPolygon(pt, path) ==
+        //    PointInPolygonResult::IsOutside); })) return false;
+
+        int outsideCnt = 0;
         for (const Point64& pt : child->Polygon())
-          if (PointInPolygon(pt, pp.Polygon()) == PointInPolygonResult::IsOutside)
-            return false;
+        {
+          PointInPolygonResult result = PointInPolygon(pt, pp.Polygon());
+          if (result == PointInPolygonResult::IsInside) --outsideCnt;
+          else if (result == PointInPolygonResult::IsOutside) ++outsideCnt;
+          if (outsideCnt > 1) return false;
+          else if (outsideCnt < -1) break;
+        }
+
+        // now check any nested children too
         if (child->Count() > 0 && !PolyPath64ContainsChildren(*child))
           return false;
       }
@@ -751,8 +770,9 @@ namespace Clipper2Lib {
   {
     Paths<T> result;
     result.reserve(paths.size());
-    for (const Path<T>& path : paths)
-      result.push_back(RamerDouglasPeucker<T>(path, epsilon));
+    std::transform(paths.begin(), paths.end(), back_inserter(result),
+      [epsilon](const auto& path) 
+      { return RamerDouglasPeucker<T>(path, epsilon); });
     return result;
   }
 

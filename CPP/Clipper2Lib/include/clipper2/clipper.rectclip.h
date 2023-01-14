@@ -33,7 +33,7 @@ namespace Clipper2Lib
     void AddCorner(Location prev, Location curr);
     void AddCorner(Location& loc, bool isClockwise);
   public:
-    RectClip(const Rect64& rect) :
+    explicit RectClip(const Rect64& rect) :
       rect_(rect),
       mp_(rect.MidPoint()),
       rectPath_(rect.AsPath()) {}
@@ -42,7 +42,7 @@ namespace Clipper2Lib
 
   class RectClipLines : public RectClip {
   public:
-    RectClipLines(const Rect64& rect) : RectClip(rect) {};
+    explicit RectClipLines(const Rect64& rect) : RectClip(rect) {};
     Paths64 Execute(const Path64& path);
   };
 

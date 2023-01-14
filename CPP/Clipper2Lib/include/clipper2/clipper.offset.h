@@ -63,7 +63,7 @@ private:
 	void OffsetPoint(Group& group, Path64& path, size_t j, size_t& k);
 	void DoGroupOffset(Group &group, double delta);
 public:
-	ClipperOffset(double miter_limit = 2.0,
+	explicit ClipperOffset(double miter_limit = 2.0,
 		double arc_tolerance = 0.0,
 		bool preserve_collinear = false, 
 		bool reverse_solution = false) :

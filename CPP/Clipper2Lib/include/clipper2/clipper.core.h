@@ -1,6 +1,6 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  7 January 2023                                                  *
+* Date      :  14 January 2023                                                 *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2023                                         *
 * Purpose   :  Core Clipper Library structures and functions                   *
@@ -197,11 +197,13 @@ namespace Clipper2Lib
     Path<T1> result;
     result.reserve(path.size());
 #ifdef USINGZ
-    for (const Point<T2>& pt : path)
-      result.push_back(Point<T1>(pt.x * scale_x, pt.y * scale_y, pt.z));
+    std::transform(path.begin(), path.end(), back_inserter(result),
+      [scale_x, scale_y](const auto& pt) 
+      { return Point<T1>(pt.x * scale_x, pt.y * scale_x, pt.z); });
 #else
-    for (const Point<T2>& pt : path)
-      result.push_back(Point<T1>(pt.x * scale_x, pt.y * scale_y));
+    std::transform(path.begin(), path.end(), back_inserter(result),
+      [scale_x, scale_y](const auto& pt) 
+      { return Point<T1>(pt.x * scale_x, pt.y * scale_x); });
 #endif
     return result;
   }
@@ -217,8 +219,9 @@ namespace Clipper2Lib
   {
     Paths<T1> result;
     result.reserve(paths.size());
-    for (const Path<T2>& path : paths)
-      result.push_back(ScalePath<T1, T2>(path, scale_x, scale_y));
+    std::transform(paths.begin(), paths.end(), back_inserter(result),
+      [scale_x, scale_y](const auto& path)
+      { return ScalePath<T1, T2>(path, scale_x, scale_y); });
     return result;
   }
 

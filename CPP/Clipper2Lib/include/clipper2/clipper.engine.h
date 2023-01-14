@@ -1,6 +1,6 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  10 January 2023                                                 *
+* Date      :  14 January 2023                                                 *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2023                                         *
 * Purpose   :  This is the main polygon clipping module                        *
@@ -19,6 +19,7 @@ constexpr auto CLIPPER2_VERSION = "1.1.0";
 #include <functional>
 #include "clipper.core.h"
 #include <memory>
+#include <numeric>
 
 namespace Clipper2Lib {
 
@@ -158,7 +159,7 @@ namespace Clipper2Lib {
 		bool left_to_right = true;
 		bool finished = false;
 		HorzSegment() : left_op(nullptr) { }
-		HorzSegment(OutPt* op) : left_op(op) { op->horz = this; }
+		explicit HorzSegment(OutPt* op) : left_op(op) { op->horz = this; }
 	};
 
 #ifdef USINGZ
@@ -231,8 +232,6 @@ namespace Clipper2Lib {
 		
 		void AddTrialHorzJoin(OutPt* op);
 		void MergeHorzSegments();
-		bool DoMiddle(HorzSegment* midHS, HorzSegment* othHS);
-		void MergeTops(HorzSegment* ltorHS, HorzSegment* rtolHS);
 
 		void Split(Active& e, const Point64& pt);
 		void CheckJoinLeft(Active& e, const Point64& pt);
@@ -309,7 +308,7 @@ namespace Clipper2Lib {
 		Path64 polygon_;
 		typedef typename std::vector<std::unique_ptr<PolyPath64>>::const_iterator pp64_itor;
 	public:
-		PolyPath64(PolyPath64* parent = nullptr) : PolyPath(parent) {}
+		explicit PolyPath64(PolyPath64* parent = nullptr) : PolyPath(parent) {}
 		PolyPath64* operator [] (size_t index) { return childs_[index].get(); }
 		pp64_itor begin() const { return childs_.cbegin(); }
 		pp64_itor end() const { return childs_.cend(); }
@@ -336,10 +335,9 @@ namespace Clipper2Lib {
 
 		double Area() const
 		{
-			double result = Clipper2Lib::Area<int64_t>(polygon_);
-			for (const auto& child : childs_)
-				result += child->Area();
-			return result;
+			return std::accumulate(childs_.cbegin(), childs_.cend(),
+				Clipper2Lib::Area<int64_t>(polygon_),
+				[](double a, const auto& child) {return a + child->Area(); });
 		}
 
 		friend std::ostream& operator << (std::ostream& outstream, const PolyPath64& polypath)
@@ -351,7 +349,7 @@ namespace Clipper2Lib {
 			if (level == 0)
 			{
 				outstream << "polytree contains " << polypath.Count() << childs << std::endl;
-				for (auto& child : polypath) outstream << *child;
+				for (const auto& child : polypath) outstream << *child;
 			}
 			else if (polypath.Count())
 			{
@@ -360,9 +358,9 @@ namespace Clipper2Lib {
 				std::string caption = polypath.IsHole() ? 
 					"including a hole with " : 
 					"including a polygon with ";
-				outstream << level_padding.c_str() << caption << 
+				outstream << level_padding << caption << 
 					polypath.Count() << childs << std::endl;
-				for (auto& child : polypath) outstream << *child;
+				for (const auto& child : polypath) outstream << *child;
 			}
 			return outstream;
 		}
@@ -376,7 +374,7 @@ namespace Clipper2Lib {
 		PathD polygon_;
 		typedef typename std::vector<std::unique_ptr<PolyPathD>>::const_iterator ppD_itor;
 	public:
-		PolyPathD(PolyPathD* parent = nullptr) : PolyPath(parent) 
+		explicit PolyPathD(PolyPathD* parent = nullptr) : PolyPath(parent)
 		{
 			inv_scale_ = parent ? parent->inv_scale_ : 1.0;
 		}
@@ -411,10 +409,9 @@ namespace Clipper2Lib {
 
 		double Area() const
 		{
-			double result = Clipper2Lib::Area<double>(polygon_);
-			for (const auto& child : childs_)
-				result += child->Area();
-			return result;
+			return std::accumulate(childs_.begin(), childs_.end(),
+				Clipper2Lib::Area<double>(polygon_),
+				[](double a, const auto& child) {return a + child->Area(); });
 		}
 	};
 
@@ -483,7 +480,7 @@ namespace Clipper2Lib {
 	private:
 		double scale_ = 1.0, invScale_ = 1.0;
 #ifdef USINGZ
-		ZCallbackD zCallback_ = nullptr;
+		ZCallbackD zCallbackD_ = nullptr;
 #endif
 		void BuildPathsD(PathsD& solutionClosed, PathsD* solutionOpen);
 		void BuildTreeD(PolyPathD& polytree, PathsD& open_paths);
@@ -499,7 +496,7 @@ namespace Clipper2Lib {
 		}
 
 #ifdef USINGZ
-		void SetZCallback(ZCallbackD cb) { zCallback_ = cb; };
+		void SetZCallback(ZCallbackD cb) { zCallbackD_ = cb; };
 
 		void ZCB(const Point64& e1bot, const Point64& e1top,
 			const Point64& e2bot, const Point64& e2top, Point64& pt)
@@ -513,13 +510,13 @@ namespace Clipper2Lib {
 			PointD e1t = PointD(e1top) * invScale_;
 			PointD e2b = PointD(e2bot) * invScale_;
 			PointD e2t = PointD(e2top) * invScale_;
-			zCallback_(e1b,e1t, e2b, e2t, tmp);
+			zCallbackD_(e1b,e1t, e2b, e2t, tmp);
 			pt.z = tmp.z; // only update 'z'
 		};
 
 		void CheckCallback()
 		{
-			if(zCallback_)
+			if(zCallbackD_)
 				// if the user defined float point callback has been assigned 
 				// then assign the proxy callback function
 				ClipperBase::zCallback_ = 
