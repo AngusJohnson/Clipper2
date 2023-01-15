@@ -1,13 +1,13 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  14 January 2023                                                 *
+* Date      :  15 January 2023                                                 *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2023                                         *
 * Purpose   :  This is the main polygon clipping module                        *
 * License   :  http://www.boost.org/LICENSE_1_0.txt                            *
 *******************************************************************************/
 
-#include <stdlib.h>
+#include <cstdlib>
 #include <cmath>
 #include <stdexcept>
 #include <vector>
@@ -474,6 +474,9 @@ namespace Clipper2Lib {
     //precondition1: new_owner is never null
     while (new_owner->owner && !new_owner->owner->pts)
       new_owner->owner = new_owner->owner->owner;
+    OutRec* tmp = new_owner;
+    while (tmp && tmp != outrec) tmp = tmp->owner;
+    if (tmp) new_owner->owner = outrec->owner;
     outrec->owner = new_owner;
   }
 
@@ -1901,6 +1904,40 @@ namespace Clipper2Lib {
     else return op->next;
   }
 
+  inline Rect64 GetBounds(OutPt* op)
+  {
+    Rect64 result(op->pt.x, op->pt.y, op->pt.x, op->pt.y);
+    OutPt* op2 = op->next;
+    while (op2 != op)
+    {
+      if (op2->pt.x < result.left) result.left = op2->pt.x;
+      else if (op2->pt.x > result.right) result.right = op2->pt.x;
+      if (op2->pt.y < result.top) result.top = op2->pt.y;
+      else if (op2->pt.y > result.bottom) result.bottom = op2->pt.y;
+      op2 = op2->next;
+    }
+    return result;
+  }
+
+  inline bool Path1InsidePath2(const OutRec* or1, const OutRec* or2)
+  {
+    // we need to make some accommodation for rounding errors
+    // so we won't jump if the first vertex is found outside
+    int outside_cnt = 0;
+    OutPt* op = or1->pts;
+    do
+    {
+      PointInPolygonResult result = PointInPolygon(op->pt, or2->path);
+      if (result == PointInPolygonResult::IsOutside) ++outside_cnt;
+      else if (result == PointInPolygonResult::IsInside) --outside_cnt;
+      op = op->next;
+    } while (op != or1->pts && std::abs(outside_cnt) < 2);
+    if (std::abs(outside_cnt) > 1) return (outside_cnt < 0);
+    // since path1's location is still equivocal, check its midpoint
+    Point64 mp = GetBounds(op).MidPoint();
+    return  PointInPolygon(mp, or2->path) == PointInPolygonResult::IsInside;
+  }
+
   inline bool UpdateHorzSegment(HorzSegment* hs, bool force)
   {
     if (hs->finished) return false;
@@ -2101,21 +2138,6 @@ namespace Clipper2Lib {
     UpdateHorzSegment(rtolHS, true);
   }
 
-  inline Rect64 GetBounds(OutPt* op)
-  {
-    Rect64 result(op->pt.x, op->pt.y, op->pt.x, op->pt.y);
-    OutPt* op2 = op->next;
-    while (op2 != op)
-    {
-      if (op2->pt.x < result.left) result.left = op2->pt.x;
-      else if (op2->pt.x > result.right) result.right = op2->pt.x;
-      if (op2->pt.y < result.top) result.top = op2->pt.y;
-      else if (op2->pt.y > result.bottom) result.bottom = op2->pt.y;
-      op2 = op2->next;
-    }
-    return result;
-  }
-
   static bool GetMiddleSideA(HorzSegment& hs, const HorzSegment& compare)
   {
     CheckOutRec(hs.left_op);
@@ -2240,7 +2262,7 @@ namespace Clipper2Lib {
   }
 
   static void SplitOrHoleHorz(HorzSegment& hs1, HorzSegment& hs2,
-  std::vector<OutRec*>& or_list, bool using_polytree)
+  std::vector<OutRec*>& or_list)
   {
     OutRec* outrec = hs1.left_op->outrec;
     OutPt* opA = outrec->pts, *opZ = opA->next, *opQ;
@@ -2274,15 +2296,26 @@ namespace Clipper2Lib {
     };
     OutRec* newOr = new OutRec;
     or_list.push_back(newOr);
-    if (using_polytree)
-    {
-      if (!outrec->splits)
-        outrec->splits = new OutRecList();
-      outrec->splits->push_back(newOr);
-    }
-    newOr->owner = outrec;
     newOr->pts = op1R;
     FixOutRecPts(newOr);
+
+    //if (Path1InsidePath2(newOr, outrec))
+    //{
+    //  newOr->owner = outrec;
+    //  if (using_polytree)
+    //  {
+    //    if (!outrec->splits)
+    //      outrec->splits = new OutRecList();
+    //    outrec->splits->push_back(newOr);
+    //  }
+    //}
+    //else if (Path1InsidePath2(newOr, outrec))
+    //{
+    //  newOr->owner = outrec->owner;
+    //  outrec->owner = newOr;
+    //}
+    //else
+      newOr->owner = outrec->owner;
 
     if (GetRealOutRec(opA->outrec) != outrec)
     {
@@ -2341,11 +2374,11 @@ namespace Clipper2Lib {
   }
 
   inline void DoMiddle(HorzSegment& midHS, HorzSegment& othHS,
-    std::vector<OutRec*>& or_list, bool using_polytree)
+    std::vector<OutRec*>& or_list)
   {
     if (midHS.left_op->outrec == othHS.left_op->outrec)
     {
-      SplitOrHoleHorz(midHS, othHS, or_list, using_polytree);
+      SplitOrHoleHorz(midHS, othHS, or_list);
     }
     else if (othHS.left_op->outrec->front_edge)
     {
@@ -2452,9 +2485,9 @@ namespace Clipper2Lib {
           if ((*hs2)->position == HorzPosition::Middle) continue;
 
           if (GetMiddleSideA(**hs1, **hs2)) 
-            DoMiddle(**hs1, **hs2, outrec_list_, using_polytree_);
+            DoMiddle(**hs1, **hs2, outrec_list_);
           else if (GetMiddleSideZ(**hs1, **hs2))
-            DoMiddle(**hs1, **hs2, outrec_list_, using_polytree_);
+            DoMiddle(**hs1, **hs2, outrec_list_);
 
           // After DoMiddle(), hs2 may have become a Middle too.
           // When it does, give the left most HS priority
@@ -2465,9 +2498,9 @@ namespace Clipper2Lib {
         else if ((*hs2)->position == HorzPosition::Middle)
         {
           if (GetMiddleSideA(**hs2, **hs1))
-            DoMiddle(**hs2, **hs1, outrec_list_, using_polytree_);
+            DoMiddle(**hs2, **hs1, outrec_list_);
           else if (GetMiddleSideZ(**hs2, **hs1))
-            DoMiddle(**hs2, **hs1, outrec_list_, using_polytree_);
+            DoMiddle(**hs2, **hs1, outrec_list_);
         }
         else if ((*hs2)->left_op->pt.x >= (*hs1)->right_op->pt.x) 
           break;
@@ -2477,7 +2510,7 @@ namespace Clipper2Lib {
         else if (or2 == or1)
         {
           if (!or1->front_edge) 
-            SplitOrHoleHorz(**hs1, **hs2, outrec_list_, using_polytree_);
+            SplitOrHoleHorz(**hs1, **hs2, outrec_list_);
         }
         else if (or1->front_edge)
         {
@@ -3036,25 +3069,6 @@ namespace Clipper2Lib {
         op2 = op2->next;
       return op2 != op && op2->next != op;
     }
-  }
-
-  inline bool Path1InsidePath2(const OutRec* or1, const OutRec* or2)
-  {
-    // we need to make some accommodation for rounding errors
-    // so we won't jump if the first vertex is found outside
-    int outside_cnt = 0;
-    OutPt* op = or1->pts;
-    do
-    {
-      PointInPolygonResult result = PointInPolygon(op->pt, or2->path);
-      if (result == PointInPolygonResult::IsOutside) ++outside_cnt;
-      else if (result == PointInPolygonResult::IsInside) --outside_cnt;      
-      op = op->next;
-    } while (op != or1->pts && std::abs(outside_cnt) < 2);
-    if (std::abs(outside_cnt) > 1) return (outside_cnt < 0);
-    // since path1's location is still equivocal, check its midpoint
-    Point64 mp = GetBounds(op).MidPoint();
-    return  PointInPolygon(mp, or2->path) == PointInPolygonResult::IsInside;
   }
 
   inline Rect64 GetBounds(const Path64& path)

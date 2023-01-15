@@ -2,7 +2,7 @@ unit Clipper.Engine;
 
 (*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  14 January 2023                                                 *
+* Date      :  15 January 2023                                                 *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2023                                         *
 * Purpose   :  This is the main polygon clipping module                        *
@@ -1108,11 +1108,19 @@ end;
 //------------------------------------------------------------------------------
 
 procedure SetOwner(outrec, newOwner: POutRec);
+var
+  tmp: POutRec;
 begin
   //precondition1: new_owner is never null
   while Assigned(newOwner.owner) and
     not Assigned(newOwner.owner.pts) do
       newOwner.owner := newOwner.owner.owner;
+  //make sure that outrec isn't an owner of newOwner
+  tmp := newOwner;
+  while Assigned(tmp) and (tmp <> outrec) do
+    tmp := tmp.owner;
+  if Assigned(tmp) then
+    newOwner.owner := outrec.owner;
   outrec.owner := newOwner;
 end;
 
@@ -2551,6 +2559,49 @@ begin
 end;
 //------------------------------------------------------------------------------
 
+function GetBounds(op: POutPt): TRect64;
+var
+  op2: POutPt;
+begin
+  result.Left := op.pt.X;
+  result.Right := op.pt.X;
+  result.Top := op.pt.Y;
+  result.Bottom := op.pt.Y;
+  op2 := op.next;
+  while op2 <> op do
+  begin
+    if op2.pt.X < result.Left then result.Left := op2.pt.X
+    else if op2.pt.X > result.Right then result.Right := op2.pt.X;
+    if op2.pt.Y < result.Top then result.Top := op2.pt.Y
+    else if op2.pt.Y > result.Bottom then result.Bottom := op2.pt.Y;
+    op2 := op2.next;
+  end;
+end;
+//------------------------------------------------------------------------------
+
+function Path1InsidePath2(const or1, or2: POutRec): Boolean;
+var
+  op: POutPt;
+  pipResult: TPointInPolygonResult;
+  outsideCnt: integer;
+begin
+  // we need to make some accommodation for rounding errors
+  // so we won't jump if the first vertex is found outside
+  outsideCnt := 0;
+  op := or1.pts;
+  repeat
+    pipResult := PointInPolygon(op.pt, or2.path);
+    if pipResult = pipOutside then inc(outsideCnt)
+    else if pipResult = pipInside then dec(outsideCnt);
+    op := op.next;
+  until (op = or1.pts) or (Abs(outsideCnt) = 2);
+  // if path1's location is still equivocal then check its midpoint
+  if Abs(outsideCnt) > 1 then
+    Result := outsideCnt < 0 else
+    Result := PointInPolygon(GetBounds(op).MidPoint, or2.path) = pipInside;
+end;
+//------------------------------------------------------------------------------
+
 function UpdateHorzSegment(hs: PHorzSegment; force: Boolean): boolean;
   {$IFDEF INLINING} inline; {$ENDIF}
 var
@@ -2770,26 +2821,6 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-function GetBounds(op: POutPt): TRect64;
-var
-  op2: POutPt;
-begin
-  result.Left := op.pt.X;
-  result.Right := op.pt.X;
-  result.Top := op.pt.Y;
-  result.Bottom := op.pt.Y;
-  op2 := op.next;
-  while op2 <> op do
-  begin
-    if op2.pt.X < result.Left then result.Left := op2.pt.X
-    else if op2.pt.X > result.Right then result.Right := op2.pt.X;
-    if op2.pt.Y < result.Top then result.Top := op2.pt.Y
-    else if op2.pt.Y > result.Bottom then result.Bottom := op2.pt.Y;
-    op2 := op2.next;
-  end;
-end;
-//------------------------------------------------------------------------------
-
 function GetMiddleSideA(hs, compare: PHorzSegment): Boolean;
   {$IFDEF INLINING} inline; {$ENDIF}
 var
@@ -2973,11 +3004,22 @@ begin
   end;
 
   newOr := orList.Add;
-  if usingPolytree then
-    AddSplit(outrec, newOr);
-  newOr.owner := outrec;
   newOr.pts := op1R;
   FixOutRecPts(newOr);
+
+//  if (Path1InsidePath2(newOr, outrec)) then
+//  begin
+//    newOr.owner := outrec;
+//    if usingPolytree then
+//      AddSplit(outrec, newOr);
+//  end
+//  else if (Path1InsidePath2(outrec, newOr)) then
+//  begin
+//    newOr.owner := outrec.owner;
+//    outrec.owner := newOr.owner;
+//  end
+//  else
+    newOr.owner := outrec.owner;
 
   if (GetRealOutRec(opA.outrec) <> outrec) then
   begin
@@ -3829,29 +3871,6 @@ begin
   except
     result := false;
   end;
-end;
-//------------------------------------------------------------------------------
-
-function Path1InsidePath2(const or1, or2: POutRec): Boolean;
-var
-  op: POutPt;
-  pipResult: TPointInPolygonResult;
-  outsideCnt: integer;
-begin
-  // we need to make some accommodation for rounding errors
-  // so we won't jump if the first vertex is found outside
-  outsideCnt := 0;
-  op := or1.pts;
-  repeat
-    pipResult := PointInPolygon(op.pt, or2.path);
-    if pipResult = pipOutside then inc(outsideCnt)
-    else if pipResult = pipInside then dec(outsideCnt);
-    op := op.next;
-  until (op = or1.pts) or (Abs(outsideCnt) = 2);
-  // if path1's location is still equivocal then check its midpoint
-  if Abs(outsideCnt) > 1 then
-    Result := outsideCnt < 0 else
-    Result := PointInPolygon(GetBounds(op).MidPoint, or2.path) = pipInside;
 end;
 //------------------------------------------------------------------------------
 
