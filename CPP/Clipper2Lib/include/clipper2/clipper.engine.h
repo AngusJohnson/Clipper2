@@ -1,6 +1,6 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  14 January 2023                                                 *
+* Date      :  21 January 2023                                                 *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2023                                         *
 * Purpose   :  This is the main polygon clipping module                        *
@@ -157,9 +157,15 @@ namespace Clipper2Lib {
 		OutPt* right_op = nullptr;
 		HorzPosition position = HorzPosition::Bottom;
 		bool left_to_right = true;
-		bool finished = false;
 		HorzSegment() : left_op(nullptr) { }
-		explicit HorzSegment(OutPt* op) : left_op(op) { op->horz = this; }
+		explicit HorzSegment(OutPt* op) : left_op(op) { }
+	};
+
+	struct HorzJoin {
+		OutPt* op1 = nullptr;
+		OutPt* op2 = nullptr;
+		HorzJoin() {};
+		explicit HorzJoin(OutPt* ltr, OutPt* rtl) : op1(ltr), op2(rtl) { }
 	};
 
 #ifdef USINGZ
@@ -188,6 +194,7 @@ namespace Clipper2Lib {
 		std::priority_queue<int64_t> scanline_list_;
 		std::vector<IntersectNode> intersect_nodes_;
 		std::vector<HorzSegment*> horz_seg_list_;
+		std::vector<HorzJoin> horz_join_list_;
 		void Reset();
 		void InsertScanline(int64_t y);
 		bool PopScanline(int64_t &y);
@@ -231,7 +238,8 @@ namespace Clipper2Lib {
 		void DoSplitOp(OutRec* outRec, OutPt* splitOp);
 		
 		void AddTrialHorzJoin(OutPt* op);
-		void MergeHorzSegments();
+		void ConvertHorzSegsToJoins();
+		void ProcessHorzJoins();
 
 		void Split(Active& e, const Point64& pt);
 		void CheckJoinLeft(Active& e, const Point64& pt);

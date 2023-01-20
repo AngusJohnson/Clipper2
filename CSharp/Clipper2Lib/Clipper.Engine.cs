@@ -1,6 +1,6 @@
 ﻿/*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  10 January 2023                                                 *
+* Date      :  21 January 2023                                                 *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2023                                         *
 * Purpose   :  This is the main polygon clipping module                        *
@@ -159,11 +159,11 @@ namespace Clipper2Lib
   {
     public int Compare(HorzSegment hs1, HorzSegment hs2)
     {
-      if (hs1.finished)
+      if (hs1.rightOp == null)
       {
-        return hs2.finished ? 0 : 1;
+        return hs2.rightOp == null ? 0 : 1;
       }
-      else if (hs2.finished)
+      else if (hs2.rightOp == null)
         return -1;
       else
         return hs1.leftOp!.pt.X.CompareTo(hs2.leftOp!.pt.X);
@@ -175,17 +175,22 @@ namespace Clipper2Lib
     public OutPt? leftOp;
     public OutPt? rightOp;
     public bool leftToRight;
-    public bool finished;
-    public HorzPosition position;
-
     public HorzSegment(OutPt op)
     {
       leftOp = op;
       rightOp = null;
       leftToRight = true;
-      finished = false;
-      position = HorzPosition.Bottom;  
-      op.horz = this;
+    }
+  }
+
+  internal class HorzJoin
+  {
+    public OutPt? op1;
+    public OutPt? op2;
+    public HorzJoin(OutPt ltor, OutPt rtol)
+    {
+      op1 = ltor;
+      op2 = rtol;
     }
   }
 
@@ -236,6 +241,7 @@ namespace Clipper2Lib
     private readonly List<OutRec> _outrecList;
     private readonly List<long> _scanlineList;
     private readonly List<HorzSegment> _horzSegList;
+    private readonly List<HorzJoin> _horzJoinList;
     private int _currentLocMin;
     private long _currentBotY;
     private bool _isSortedMinimaList;
@@ -260,6 +266,7 @@ namespace Clipper2Lib
       _outrecList = new List<OutRec>();
       _scanlineList = new List<long>();
       _horzSegList = new List<HorzSegment>();
+      _horzJoinList = new List<HorzJoin>();
       PreserveCollinear = true;
     }
 
@@ -549,6 +556,13 @@ namespace Clipper2Lib
       //precondition1: new_owner is never null
       while (newOwner.owner != null && newOwner.owner.pts == null)
         newOwner.owner = newOwner.owner.owner;
+
+      //make sure that outrec isn't an owner of newOwner
+      OutRec? tmp = newOwner;
+      while (tmp != null && tmp != outrec) 
+        tmp = tmp.owner;
+      if (tmp != null) 
+        newOwner.owner = outrec.owner;
       outrec.owner = newOwner;
     }
 
@@ -625,6 +639,7 @@ namespace Clipper2Lib
       DisposeIntersectNodes();
       _outrecList.Clear();
       _horzSegList.Clear();
+      _horzJoinList.Clear();
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -1795,7 +1810,7 @@ namespace Clipper2Lib
         while (PopHorz(out ae)) DoHorizontal(ae!);
         if (_horzSegList.Count > 0)
         {
-          MergeHorzSegments();
+          ConvertHorzSegsToJoins();
           _horzSegList.Clear();
         }
         _currentBotY = y; // bottom of scanbeam
@@ -1805,6 +1820,7 @@ namespace Clipper2Lib
         DoTopOfScanbeam(y);
         while (PopHorz(out ae)) DoHorizontal(ae!);
       }
+      if (_succeeded) ProcessHorzJoins(); 
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -2044,7 +2060,22 @@ namespace Clipper2Lib
       if (wasTrimmed) SetDx(horzEdge); // +/-infinity
     }
 
-    private void DoHorizontal(Active horz)
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private void AddToHorzSegList(OutPt op)
+    {
+      if (op.outrec.isOpen) return;
+      _horzSegList.Add(new HorzSegment(op));
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private OutPt GetLastOp(Active hotEdge)
+    { 
+      OutRec outrec = hotEdge.outrec!;
+      return (hotEdge == outrec.frontEdge) ?
+        outrec.pts! : outrec.pts!.next!;
+    }
+
+private void DoHorizontal(Active horz)
     /*******************************************************************************
      * Notes: Horizontal edges (HEs) at scanline intersections (i.e. at the top or    *
      * bottom of a scanbeam) are processed as if layered.The order in which HEs     *
@@ -2146,17 +2177,16 @@ namespace Clipper2Lib
 
           pt = new Point64(ae.curX, Y);
 
-          OutPt? op;
           if (isLeftToRight)
           {
-            op = IntersectEdges(horz, ae, pt);
+            IntersectEdges(horz, ae, pt);
             SwapPositionsInAEL(horz, ae);
             horz.curX = ae.curX;
             ae = horz.nextInAEL;
           }
           else
           {
-            op = IntersectEdges(ae, horz, pt);
+            IntersectEdges(ae, horz, pt);
             SwapPositionsInAEL(ae, horz);
             horz.curX = ae.curX;
             ae = horz.prevInAEL;
@@ -2165,7 +2195,7 @@ namespace Clipper2Lib
           if (IsHotEdge(horz) && (horz.outrec != currOutrec))
           {
             currOutrec = horz.outrec;
-            AddToHorzSegList(op!);
+            AddToHorzSegList(GetLastOp(horz));
           }
 
         } // we've reached the end of this horizontal
@@ -2371,595 +2401,269 @@ namespace Clipper2Lib
       } while (op != outrec.pts);
     }
 
+
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static OutPt SafeDispose(OutPt op)
+    private static bool SetHorzSegHeadingForward(HorzSegment hs, OutPt opP, OutPt opN)
     {
-      if (op.horz == null) return DisposeOutPt(op)!;
-      else return op.next!;
+      if (opP.pt.X == opN.pt.X) return false;
+      if (opP.pt.X < opN.pt.X)
+      {
+        hs.leftOp = opP;
+        hs.rightOp = opN;
+        hs.leftToRight = true;
+      }
+      else
+      {
+        hs.leftOp = opN;
+        hs.rightOp = opP;
+        hs.leftToRight = false;
+      }
+      return true;
     }
 
-    private static bool UpdateHorzSegment(HorzSegment hs, bool force)
+    private static bool UpdateHorzSegment(HorzSegment hs)
     {
-
-      if (hs.finished) return false;
-      hs.finished = true;
-      OutPt op = hs.leftOp!, tmp;
-      OutRec outrec = GetRealOutRec(op!.outrec)!;
-      OutPt opA = outrec.pts!, opZ = opA.next!, op2 = op;
-
-      // nb: it's possible that opA and opZ are both below op
-      // (eg when there's been an intermediate maxima horz. join)
+      OutPt op = hs.leftOp!;
+      OutRec outrec = GetRealOutRec(op.outrec)!;
+      bool outrecHasEdges = outrec.frontEdge != null;
       long curr_y = op.pt.Y;
-
-      while (op2.next != op && op2.next!.pt.Y == curr_y)
-        op2 = op2.next;
-
-      if (op2.next == op)
+      OutPt opP = op, opN = op;
+      if (outrecHasEdges)
       {
-        // all pts horizontal, so must be bottom of path.
-        // now check it's still a valid horizontal segment
-        if (opA.pt.X == opZ.pt.X || outrec.frontEdge == null) 
-          return false;
-
-        // clean up horizontals
-        tmp = opZ.next!;
-        while (tmp != opA)
-          tmp = SafeDispose(tmp);
-
-        hs.leftToRight = opZ.pt.X < opA.pt.X;
-        if (hs.leftToRight)
-        {
-          hs.leftOp = opZ;
-          hs.rightOp = opA;
-        }
-        else
-        {
-          hs.leftOp = opA;
-          hs.rightOp = opZ;
-        }
-        hs.position = HorzPosition.Bottom;
-      }
-      else // either a middle or a top
-      {
-        while (op.prev.pt.Y == curr_y) op = op.prev;
-        if (op.pt.X == op2.pt.X) return false;
-
-        if (op.pt.X < op2.pt.X)
-        {
-          hs.leftOp = op;
-          hs.rightOp = op2;
-          hs.leftToRight = true;
-        }
-        else
-        {
-          hs.leftOp = op2;
-          hs.rightOp = op;
-          hs.leftToRight = false;
-        }
-
-        if (!force && hs.leftOp.horz != null && hs.leftOp.horz != hs)
-          return false;
-
-        if (outrec.frontEdge != null)
-        {
-          // must be a middle or pseudo-top
-          // if opA is between op and op2 then this is a
-          // horizontal middle, otherwise it's a pseudo-top
-          tmp = op;
-          while (tmp != opA && tmp != op2)
-            tmp = tmp.next!;
-
-          if (op == opZ || tmp == opA) // must be a middle
-          {
-            //nb: middle segments' leftToRight is contextual
-            hs.position = HorzPosition.Middle;
-            hs.leftOp.outrec = outrec;
-            hs.leftOp.horz = hs;
-            hs.finished = false;
-            return true;
-          }
-        }
-        hs.position = HorzPosition.Top;
-
-        // cleanup horizontals
-        tmp = op.next!;
-        while (tmp != op2)
-        {
-          if (tmp == opA) tmp = tmp.next!;
-          else tmp = SafeDispose(tmp);
-        }
-
-      }
-      hs.leftOp.horz = hs;
-      hs.leftOp.outrec = outrec;
-      hs.finished = false;
-      return true;
-    }
-
-    private static void CheckOutRec(OutPt op)
-    {
-      op.outrec = GetRealOutRec(op.outrec)!;
-    }
-
-    private static void InsertAndSplit(HorzSegment ltorHS, HorzSegment rtolHS)
-    {
-      // nb: both HorzSegs have assigned edges
-      OutPt ltorR = ltorHS.rightOp!;
-      OutRec ltorOr = ltorHS.leftOp!.outrec;
-      OutPt ltorA = ltorOr.pts!;
-      OutPt ltorZ = ltorA.next!;
-      OutPt ltorRP = ltorR.prev;
-
-      OutPt rtolR = rtolHS.rightOp!;
-      OutRec rtolOr = rtolHS.leftOp!.outrec!;
-      OutPt rtolA = rtolOr.pts!;
-      OutPt rtolZ = rtolA.next!;
-      OutPt rtolRN = rtolR.next!;
-
-      // insert rotated bot into mid/top just after motZ
-      ltorRP.next = rtolRN;
-      rtolRN.prev = ltorRP;
-
-      ltorR.prev = rtolR;
-      rtolR.next = ltorR;
-
-      // re-separate merged paths
-      ltorA.next = rtolZ;
-      rtolZ.prev = ltorA;
-      rtolA.next = ltorZ;
-      ltorZ.prev = rtolA;
-
-      ltorHS.leftOp = ltorA;
-      rtolHS.leftOp = rtolA;
-
-      // swap back edges
-      (rtolOr.backEdge, ltorOr.backEdge) = (ltorOr.backEdge, rtolOr.backEdge);
-      ltorOr.backEdge!.outrec = ltorOr;
-      rtolOr.backEdge!.outrec = rtolOr;
-
-      FixOutRecPts(ltorOr);
-      FixOutRecPts(rtolOr);
-
-      UpdateHorzSegment(ltorHS, true);
-      UpdateHorzSegment(rtolHS, true);
-    }
-
-    private static void DoPseudoTopAndBottom(HorzSegment topHS, HorzSegment botHS)
-    {
-      if (topHS.leftToRight == botHS.leftToRight ||
-        topHS.leftOp!.pt.X >= botHS.rightOp!.pt.X ||
-        topHS.rightOp!.pt.X <= botHS.leftOp!.pt.X) return;
-
-      if (topHS.leftToRight)
-        InsertAndSplit(topHS, botHS);
-      else
-        InsertAndSplit(botHS, topHS);
-    }
-
-    private static void DoTopAndBottom(HorzSegment topHS, HorzSegment botHS)
-    {
-      OutRec botOr = botHS.leftOp!.outrec;
-      OutPt botA = botOr.pts!, botZ = botA.next!;
-      OutRec topOr = topHS.leftOp!.outrec;
-
-      if (topHS.leftToRight == botHS.leftToRight ||
-        topHS.leftOp.pt.X >= botHS.rightOp!.pt.X ||
-        topHS.rightOp!.pt.X <= botHS.leftOp.pt.X) return;
-
-      if (topHS.leftToRight)
-      {
-        while (topHS.rightOp.prev.pt.X >= botZ.pt.X)
-          topHS.rightOp = topHS.rightOp.prev;
-        topHS.leftOp = topHS.rightOp.prev;
-        OutPt op = botZ.next!;
-        botZ.next = topHS.rightOp;
-        topHS.rightOp.prev = botZ;
-        op.prev = topHS.leftOp;
-        topHS.leftOp.next = op;
+        OutPt opA = outrec.pts!, opZ = opA.next!;
+        while (opP != opZ && opP.prev.pt.Y == curr_y)
+          opP = opP.prev;
+        while (opN != opA && opN.next!.pt.Y == curr_y)
+          opN = opN.next;
       }
       else
       {
-        while (topHS.rightOp.next!.pt.X >= botA.pt.X)
-          topHS.rightOp = topHS.rightOp.next;
-        topHS.leftOp = topHS.rightOp.next;
-        OutPt op = botA.prev;
-        botA.prev = topHS.rightOp;
-        topHS.rightOp.next = botA;
-        topHS.leftOp.prev = op;
-        op.next = topHS.leftOp;
+        while (opP.prev != opN && opP.prev.pt.Y == curr_y)
+          opP = opP.prev;
+        while (opN.next != opP && opN.next!.pt.Y == curr_y)
+          opN = opN.next;
       }
+      bool result =
+        SetHorzSegHeadingForward(hs, opP, opN) &&
+        hs.leftOp!.horz == null;
 
-      topOr.pts = null;
-      topHS.finished = true;
-      botOr.pts!.outrec = botOr;
-      SetOwner(topOr, botOr);
-      UpdateHorzSegment(botHS, true);
-    }
-
-    private static bool MakeHole(HorzSegment hs,
-      List<OutRec> or_list, bool usingPolytree)
-    {
-      OutRec outrec = hs.leftOp!.outrec;
-      OutPt opA = outrec.pts!, opZ = opA.next!;
-      OutPt opL, opR, opQ;
-
-      // first, try for an overlap on opA's side
-      opL = opA; opR = opA;
-      long currY = opA.pt.Y;
-      if (hs.leftToRight)
-      {
-        while (opR.prev.pt.Y == currY) opR = opR.prev;
-        if (opR.prev == opA) return false; // should never happen
-      }
+      if (result)
+        hs.leftOp!.horz = hs;
       else
-      {
-        while (opL.prev.pt.Y == currY) opL = opL.prev;
-        if (opL.prev == opA) return false; // should never happen
-      }
-
-      if ((currY != hs.leftOp.pt.Y) ||
-        (opL.pt.X >= opR.pt.X) ||
-        (opR.pt.X <= hs.leftOp.pt.X) ||
-        (opL.pt.X >= hs.rightOp!.pt.X))
-      {
-        // no luck so try on opZ's side
-        currY = opZ.pt.Y;
-        opL = opZ; opR = opZ;
-        if (hs.leftToRight)
-          while (opL.next!.pt.Y == currY) opL = opL.next;
-        else
-          while (opR.next!.pt.Y == currY) opR = opR.next;
-
-        if ((currY != hs.leftOp.pt.Y) ||
-          (opL.pt.X >= opR.pt.X) ||
-          (opR.pt.X <= hs.leftOp.pt.X) ||
-          (opL.pt.X >= hs.rightOp!.pt.X))
-          return false; // no overlap on either side, so give up
-      }
-
-      if (hs.leftToRight)
-      {
-        // opL  <<<< opR
-        // hs.L >>>> hs.R
-        opQ = (opL == opA) ? opR : opL;
-        opR = opL.prev;
-        hs.rightOp = hs.leftOp.next;
-        hs.leftOp.next = opL;
-        opL.prev = hs.leftOp;
-        opR.next = hs.rightOp;
-        hs.rightOp!.prev = opR;
-      }
-      else
-      {
-        // opL  >>>> opR
-        // hs.L <<<< hs.R
-        opQ = (opR == opA) ? opL : opR;
-        opR = opL.next!;
-        hs.rightOp = hs.leftOp.prev;
-        hs.leftOp.prev = opL;
-        opL.next = hs.leftOp;
-        opR.prev = hs.rightOp;
-        hs.rightOp.next = opR;
-      }
-
-      OutRec newOr = new OutRec();
-      newOr.idx = or_list.Count;
-      or_list.Add(newOr);
-
-      if (usingPolytree)
-      {
-        if (outrec.splits == null) outrec.splits = new List<int>();
-        outrec.splits.Add(newOr.idx);
-      }
-
-      newOr.owner = outrec;
-      newOr.pts = opQ;
-      FixOutRecPts(newOr);
-      hs.finished = true;
-      return true;
-    }
-
-    private static void MergeTops(HorzSegment ltorHS, HorzSegment rtolHS)
-    {
-      OutRec ltorOr = ltorHS.leftOp!.outrec;
-      OutRec rtolOr = rtolHS.leftOp!.outrec;
-      if (ltorOr.frontEdge != null && rtolOr.frontEdge != null) return;
-
-      if (ltorHS.rightOp!.pt.X <= rtolHS.leftOp.pt.X ||
-        ltorHS.leftOp.pt.X >= rtolHS.rightOp!.pt.X) return;
-      while (ltorHS.rightOp.prev.pt.X >= rtolHS.rightOp.pt.X)
-        ltorHS.rightOp = ltorHS.rightOp.prev;
-      ltorHS.leftOp = ltorHS.rightOp.prev;
-      while (rtolHS.rightOp.next!.pt.X >= ltorHS.rightOp.pt.X)
-        rtolHS.rightOp = rtolHS.rightOp.next;
-      rtolHS.leftOp = rtolHS.rightOp.next;
-
-      ltorHS.rightOp.prev = rtolHS.rightOp;
-      rtolHS.rightOp.next = ltorHS.rightOp;
-      ltorHS.leftOp.next = rtolHS.leftOp;
-      rtolHS.leftOp.prev = ltorHS.leftOp;
-
-      if (rtolOr.frontEdge != null)
-      {
-        ltorOr.pts = rtolOr.pts;
-        ltorOr.frontEdge = rtolOr.frontEdge;
-        ltorOr.frontEdge.outrec = ltorOr;
-        rtolOr.frontEdge = null;
-        ltorOr.backEdge = rtolOr.backEdge;
-        ltorOr.backEdge!.outrec = ltorOr;
-        rtolOr.backEdge = null;
-      }
-      rtolOr.pts = null;
-      SetOwner(rtolOr, ltorOr);
-      rtolHS.finished = true;
-      ltorOr.pts!.outrec = ltorOr;
-      ltorHS.leftOp = ltorOr.pts;
-      UpdateHorzSegment(ltorHS, true);
-    }
-
-    private static void MergeMiddle(HorzSegment midHS, HorzSegment othHS)
-    {
-      OutRec midOr = midHS.leftOp!.outrec;
-      OutRec othOr = othHS.leftOp!.outrec;
-      if (othHS.leftToRight)
-      {
-        while (midHS.rightOp!.next!.pt.X >= othHS.rightOp!.pt.X)
-          midHS.rightOp = midHS.rightOp.next;
-        midHS.leftOp = midHS.rightOp.next;
-        othHS.leftOp = othHS.rightOp.prev;
-
-        othHS.leftOp.next = midHS.leftOp;
-        midHS.leftOp.prev = othHS.leftOp;
-        othHS.rightOp.prev = midHS.rightOp;
-        midHS.rightOp.next = othHS.rightOp;
-      }
-      else
-      {
-        while (midHS.rightOp!.prev.pt.X >= othHS.rightOp!.pt.X)
-          midHS.rightOp = midHS.rightOp.prev;
-        midHS.leftOp = midHS.rightOp.prev;
-        othHS.leftOp = othHS.rightOp.next;
-        othHS.leftOp!.prev = midHS.leftOp;
-        midHS.leftOp.next = othHS.leftOp;
-        othHS.rightOp.next = midHS.rightOp;
-        midHS.rightOp.prev = othHS.rightOp;
-      }
-
-      if (othOr.frontEdge != null)
-      {
-        midOr.pts = othOr.pts;
-        midHS.leftOp = othHS.leftOp;
-        midOr.frontEdge = othOr.frontEdge;
-        midOr.backEdge = othOr.backEdge;
-        midOr.frontEdge.outrec = midOr;
-        midOr.backEdge!.outrec = midOr;
-        othOr.frontEdge = null;
-        othOr.backEdge = null;
-      }
-      othOr.pts = null;
-      midOr.pts!.outrec = midOr;
-      othHS.finished = true;
-      midHS.leftOp = midOr.pts;
-      SetOwner(othOr, midOr);
-      UpdateHorzSegment(midHS, true);
-    }
-
-    private static bool DoMiddle(HorzSegment midHS, HorzSegment otherHS)
-    {
-      OutRec midOr = midHS.leftOp!.outrec;
-      OutRec othOr = otherHS.leftOp!.outrec;
-      OutPt midA = midOr.pts!, midZ = midA.next!, op = midA;
-
-      long currY = Math.Min(midA.pt.Y, midZ.pt.Y);
-      // middle horz segments are tricky because we need to assess for
-      // horizontal overlaps on both sides of the midA-midZ loop-around
-      while (op.prev != midA && op.prev.pt.Y == currY) op = op.prev;
-      if (op.prev == midA)
-      {
-        // This is no longer a Middle, so evidently
-        // another HS has changed the geometry of this path.
-        UpdateHorzSegment(midHS, true);
-        return false;
-      }
-
-      bool midIsLtor;
-      bool usingSideA = op.pt.X != midA.pt.X;
-      if (usingSideA)
-      {
-        if (op.pt.X < midA.pt.X)
-        {
-          midHS.leftOp = op;
-          midHS.rightOp = midA;
-          midIsLtor = true;
-        }
-        else
-        {
-          midHS.leftOp = midA;
-          midHS.rightOp = op;
-          midIsLtor = false;
-        }
-        usingSideA = midIsLtor != otherHS.leftToRight &&
-          midHS.rightOp.pt.X > otherHS.leftOp.pt.X &&
-          midHS.leftOp.pt.X < otherHS.rightOp!.pt.X;
-      }
-
-      if (!usingSideA)
-      {
-        // there isn't a horizontal overlap on the MidA
-        // side of the midA-MidZ loop around, so we'll
-        // now try for an overlap on the MidZ side ...
-        if (midZ.pt.Y != currY) return false;
-        op = midZ;
-        while (op.next!.pt.Y == currY) op = op.next;
-        if (op.pt.X == midZ.pt.X) return false;
-
-        if (op.pt.X > midZ.pt.X)
-        {
-          if (otherHS.leftToRight) return false;
-          midHS.leftOp = midZ;
-          midHS.rightOp = op;
-        }
-        else
-        {
-          if (!otherHS.leftToRight) return false;
-          midHS.leftOp = op;
-          midHS.rightOp = midZ;
-        }
-
-        if (midHS.leftOp.pt.X >= otherHS.rightOp!.pt.X ||
-          midHS.rightOp.pt.X <= otherHS.leftOp.pt.X)
-          return false;
-      }
-      CheckOutRec(midHS.leftOp);
-
-      if (othOr.frontEdge != null)
-      {
-        if (otherHS.leftToRight)
-          InsertAndSplit(otherHS, midHS);
-        else
-          InsertAndSplit(midHS, otherHS);
-      }
-      else
-        MergeMiddle(midHS, otherHS);
-      return true;
-    }
-
-    private static bool IsValidHorzSeg(HorzSegment hs)
-    {
-      if (hs.finished) return false;
-      bool result;
-      CheckOutRec(hs.leftOp!);
-      if (hs.rightOp != null)
-      {
-        // also make sure that leftOp and rightOp
-        // still share the same path
-        CheckOutRec(hs.rightOp);
-        result = (hs.leftOp!.horz == hs) &&
-          (hs.rightOp.outrec == hs.leftOp.outrec);
-      }
-      else
-        result = (hs.leftOp!.horz == hs);
-
-      // make sure Middles still have active edges
-      result = result &&
-        ((hs.position != HorzPosition.Middle) ||
-          hs.leftOp.outrec.frontEdge != null);
-
-      if (!result) hs.finished = true;
+        hs.rightOp = null; // (for sorting)
       return result;
     }
 
-    private void MergeHorzSegments()
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static OutPt DuplicateOp(OutPt op, bool insert_after)
+    {
+      OutPt result = new OutPt(op.pt, op.outrec);
+      if (insert_after)
+      {
+        result.next = op.next;
+        result.next!.prev = result;
+        result.prev = op;
+        op.next = result;
+      }
+      else
+      {
+        result.prev = op.prev;
+        result.prev.next = result;
+        result.next = op;
+        op.prev = result;
+      }
+      return result;
+    }
+
+    private void ConvertHorzSegsToJoins()
     {
       int k = 0;
       foreach (HorzSegment hs in _horzSegList)
-        if (UpdateHorzSegment(hs, false)) k++;
+        if (UpdateHorzSegment(hs)) k++;
       if (k < 2) return;
       _horzSegList.Sort(new HorzSegSorter());
-      _horzSegList.RemoveRange(k, _horzSegList.Count - k); // remove finished HS
 
-      // horizontal segments are separated into 3 types: bottom, middle & top.
-      //   bottom: horizontals are at the very bottom of the path. The path is just 
-      //           starting since they're constructed from bottom up (using inverted Y).
-      //   top   : the path has just finished at a top horizontal, or a portion of the 
-      //           path has finished at a horizontal local maxima (ie a 'pseudo-top').
-      //   middle: a horizontal segment that's neither bottom or top
-
-      // Only tops that aren't pseudo-tops don't have start (A) and end (Z) points
-      // that link to 'active' edges.
-
-      for (int i = 0; i < _horzSegList.Count - 1; i++)
+      for (int i = 0; i < k -1; i++)
       {
+        HorzSegment hs1 = _horzSegList[i];
         // for each HorzSegment, find others that overlap
-        for (int j = i + 1; j < _horzSegList.Count; j++)
+        for (int j = i + 1; j < k; j++)
         {
-          HorzSegment hs1 = _horzSegList[i];
-          if (!IsValidHorzSeg(hs1)) break;
           HorzSegment hs2 = _horzSegList[j];
-          if (!IsValidHorzSeg(hs2)) continue;
-
-          OutRec or1 = hs1.leftOp!.outrec;
-          OutRec or2 = hs2.leftOp!.outrec;
-
-          // when position == Middle then L-to-R orientation is
-          // contextual. This is because the horizontal contains
-          // the start(A).end(Z) path loop-around. So the path on
-          // both sides of A-Z must be checked for overlap and
-          // L-to-R orientation will differ between sides whenever
-          // A or Z are left-most or right-most in the horizontal.
-
-          if (hs1.position == HorzPosition.Middle)
+          if (hs2.leftOp!.pt.X >= hs1.rightOp!.pt.X) break;
+          if (hs2.leftToRight == hs1.leftToRight ||
+            (hs2.rightOp!.pt.X <= hs1.leftOp!.pt.X)) continue;
+          long curr_y = hs1.leftOp.pt.Y;
+          if ((hs1).leftToRight)
           {
-            if (or1 == or2)
-            {
-              if (hs2.position != HorzPosition.Top) continue;
-              if (MakeHole(hs2, _outrecList, _using_polytree))
-                UpdateHorzSegment(hs1, true);
-            }
-            else if (hs2.position != HorzPosition.Middle)
-              DoMiddle(hs1, hs2);
-
-            if (hs2.position == HorzPosition.Middle &&
-              hs2.leftOp.pt.X < hs1.leftOp.pt.X) _ = hs2; // swap hs1 & hs2
-          }
-          else if (hs2.position == HorzPosition.Middle)
-          {
-            if (or1 == or2)
-            {
-              if (hs1.position != HorzPosition.Top) continue;
-              MakeHole(hs1, _outrecList, _using_polytree);
-              hs2.finished = true;
-              break;
-            }
-            else 
-              DoMiddle(hs2, hs1);
+            while (hs1.leftOp.next!.pt.Y == curr_y &&
+              hs1.leftOp.next.pt.X <= hs2.leftOp.pt.X)
+              hs1.leftOp = hs1.leftOp.next;
+            while (hs2.leftOp.prev.pt.Y == curr_y &&
+              hs2.leftOp.prev.pt.X <= hs1.leftOp.pt.X)
+              (hs2).leftOp = (hs2).leftOp.prev;
+            HorzJoin join = new HorzJoin(
+              DuplicateOp((hs1).leftOp, true),
+              DuplicateOp((hs2).leftOp, false));
+            _horzJoinList.Add(join);
           }
           else
           {
-            // if these horz segments don't partially overlap
-            // then, because of sorting, neither will subsequent ones
-            if (hs2.leftOp.pt.X >= hs1.rightOp!.pt.X) break;
-            // only merge counter oriented paths
-            if (hs2.leftToRight == hs1.leftToRight) continue;
-
-            if (hs1.position == HorzPosition.Top)
-            {
-              if (hs2.position == HorzPosition.Top)
-              {
-                if (or1 == or2)
-                {
-                  if (or1.frontEdge != null) continue;
-                  or1.pts = hs1.rightOp;
-                  MakeHole(hs2, _outrecList, _using_polytree);
-                }
-                else if (hs1.leftToRight)
-                  MergeTops(hs1, hs2);
-                else
-                  MergeTops(hs2, hs1);
-              }
-              else if (or1.frontEdge != null)
-                DoPseudoTopAndBottom(hs1, hs2);
-              else
-                DoTopAndBottom(hs1, hs2);
-            }
-            else if (hs2.position == HorzPosition.Top)
-            {
-              if (or2.frontEdge != null )
-                DoPseudoTopAndBottom(hs2, hs1);
-              else
-                DoTopAndBottom(hs2, hs1);
-            }
+            while (hs1.leftOp.prev.pt.Y == curr_y &&
+              hs1.leftOp.prev.pt.X <= hs2.leftOp.pt.X)
+              hs1.leftOp = hs1.leftOp.prev;
+            while (hs2.leftOp.next!.pt.Y == curr_y &&
+              hs2.leftOp.next.pt.X <= (hs1).leftOp.pt.X)
+              hs2.leftOp = (hs2).leftOp.next;
+            HorzJoin join = new HorzJoin(
+              DuplicateOp((hs2).leftOp, true),
+              DuplicateOp((hs1).leftOp, false));
+            _horzJoinList.Add(join);
           }
+        }
+      } 
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static Rect64 GetBounds(OutPt op)
+    {
+      Rect64 result = new Rect64(op.pt.X, op.pt.Y, op.pt.X, op.pt.Y);
+      OutPt op2 = op.next!;
+      while (op2 != op)
+      {
+        if (op2.pt.X < result.left) result.left = op2.pt.X;
+        else if (op2.pt.X > result.right) result.right = op2.pt.X;
+        if (op2.pt.Y < result.top) result.top = op2.pt.Y;
+        else if (op2.pt.Y > result.bottom) result.bottom = op2.pt.Y;
+        op2 = op2.next!;
+      }
+      return result;
+    }
+
+    private static PointInPolygonResult PointInOpPolygon(Point64 pt, OutPt op)
+    {
+      if (op == op.next || op.prev == op.next)
+        return PointInPolygonResult.IsOutside;
+      OutPt op2 = op;
+      do
+      {
+        if (op.pt.Y != pt.Y) break;
+        op = op.next!;
+      } while (op != op2);
+      if (op == op2)  return PointInPolygonResult.IsOutside;
+
+      // must be above or below to get here
+      bool isAbove = op.pt.Y < pt.Y;
+      int val = 0;
+
+      op2 = op.next!;
+      while (op2 != op)
+      {
+        if (isAbove)
+          while (op2 != op && op2.pt.Y < pt.Y) op2 = op2.next!;
+        else
+          while (op2 != op && op2.pt.Y > pt.Y) op2 = op2.next!;
+        if (op2 == op) break;
+
+        // must have touched or crossed the pt.Y horizonal
+        // and this must happen an even number of times
+
+        if (op2.pt.Y == pt.Y) // touching the horizontal
+        {
+          if (op2.pt.X == pt.X || (op2.pt.Y == op2.prev.pt.Y &&
+            (pt.X < op2.prev.pt.X) != (pt.X < op2.pt.X)))
+            return PointInPolygonResult.IsOn;
+          op2 = op2.next!;
+          continue;
+        }
+
+        if (op2.pt.X <= pt.X || op2.prev.pt.X <= pt.X)
+        {          
+          if ((op2.prev.pt.X < pt.X && op2.pt.X < pt.X))
+            val = 1 - val; // toggle val
+          else
+          {
+            double d = InternalClipper.CrossProduct(op2.prev.pt, op2.pt, pt);
+            if (d == 0) return PointInPolygonResult.IsOn;
+            if ((d < 0) == isAbove) val = 1 - val;
+          } 
+        }
+        isAbove = !isAbove;
+        op2 = op2.next!;
+      }
+      if (val == 0) return PointInPolygonResult.IsOutside;
+      else return PointInPolygonResult.IsInside;
+    }
+
+    private static bool Path1InsidePath2(OutPt op1, OutPt op2)
+    {
+      // we need to make some accommodation for rounding errors
+      // so we won't jump if the first vertex is found outside
+      int outside_cnt = 0;
+      OutPt op = op1;
+      do
+      {
+        PointInPolygonResult result = PointInOpPolygon(op.pt, op2);
+        if (result == PointInPolygonResult.IsOutside) ++outside_cnt;
+        else if (result == PointInPolygonResult.IsInside) --outside_cnt;
+        op = op.next!;
+      } while (op != op1 && Math.Abs(outside_cnt) < 2);
+      if (Math.Abs(outside_cnt) > 1) return (outside_cnt < 0);
+      // since path1's location is still equivocal, check its midpoint
+      Point64 mp = GetBounds(op).MidPoint();
+      return PointInOpPolygon(mp, op2) == PointInPolygonResult.IsInside;
+    }
+
+    private void ProcessHorzJoins()
+    {
+      foreach (HorzJoin j in _horzJoinList)
+      {
+        OutRec or1 = GetRealOutRec(j.op1!.outrec)!;
+        OutRec or2 = GetRealOutRec(j.op2!.outrec)!;
+
+        OutPt op1b = j.op1.next!;
+        OutPt op2b = j.op2.prev!;
+        j.op1.next = j.op2;
+        j.op2.prev = j.op1;
+        op1b.prev = op2b;
+        op2b.next = op1b;
+
+        if (or1 == or2)
+        {
+          or2 = new OutRec();
+          or2.pts = op1b;
+          FixOutRecPts(or2);
+          if (or1.pts!.outrec == or2)
+          {
+            or1.pts = j.op1;
+            or1.pts.outrec = or1;
+          }
+
+          if (_using_polytree)
+          {
+            if (Path1InsidePath2(or2.pts, or1.pts))
+              SetOwner(or2, or1);
+            else if (Path1InsidePath2(or1.pts, or2.pts))
+              SetOwner(or1, or2);
+            else
+              or2.owner = or1;
+          }
+          else
+            or2.owner = or1;
+
+          _outrecList.Add(or2);
+        }
+        else
+        {
+          or2.pts = null;
+          if (_using_polytree)
+            SetOwner(or2, or1);
+          else
+            or2.owner = or1;
         }
       }
     }
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private void AddToHorzSegList(OutPt op)
-    {
-      if (op.outrec.isOpen) return;
-      _horzSegList.Add(new HorzSegment(op));
-    }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static bool PtsReallyClose(Point64 pt1, Point64 pt2)
@@ -3319,7 +3023,6 @@ namespace Clipper2Lib
             solutionOpen.Add(open_path);
           continue;
         }
-
         if (CheckBounds(outrec))
           DeepCheckOwners(outrec, polytree);
       }

@@ -1849,13 +1849,14 @@ begin
 end;
 //------------------------------------------------------------------------------
 
+{$R-}
 function PointInPolygon(const pt: TPoint64;
   const polygon: TPath64): TPointInPolygonResult;
 var
   i, len, val: Integer;
   isAbove: Boolean;
   d: Double; // used to avoid integer overflow
-  curr, prev, first, stop: PPoint64;
+  curr, prev, first, last, stop: PPoint64;
 begin
   result := pipOutside;
   len := Length(polygon);
@@ -1869,8 +1870,8 @@ begin
   isAbove := polygon[i].Y < pt.Y;
 
   Result := pipOn;
-  stop := @polygon[len -1];
-  inc(stop); // stop is just past the last point
+  last := @polygon[len-1];
+  stop := @polygon[len]; // stop is just past the last point (nb {$R-})
 
   curr := first;
   val := 0;
@@ -1887,10 +1888,12 @@ begin
       if (curr = stop) then break;
     end;
 
-    if curr = first then
-      prev := stop else
+    if curr <> first then
+    begin
       prev := curr;
-    dec(prev);
+      dec(prev);
+    end else
+      prev := last;
 
     if (curr.Y = pt.Y) then
     begin
@@ -1919,6 +1922,7 @@ begin
      result := pipInside;
 end;
 //------------------------------------------------------------------------------
+{$R+}
 
 procedure GetSinCos(angle: double; out sinA, cosA: double);
   {$IFDEF INLINE} inline; {$ENDIF}

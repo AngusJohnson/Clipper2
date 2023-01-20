@@ -2,7 +2,7 @@ unit Clipper.Engine;
 
 (*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  15 January 2023                                                 *
+* Date      :  21 January 2023                                                 *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2023                                         *
 * Purpose   :  This is the main polygon clipping module                        *
@@ -54,9 +54,10 @@ type
   end;
 
   // forward declarations
-  POutRec = ^TOutRec;
-  PHorzSegment = ^THorzSegment;
-  PActive = ^TActive;
+  POutRec       = ^TOutRec;
+  PHorzSegment  = ^THorzSegment;
+  PHorzJoin     = ^THorzJoin;
+  PActive       = ^TActive;
   TPolyPathBase = class;
   TPolyTree64   = class;
   TPolyTreeD    = class;
@@ -98,8 +99,6 @@ type
     leftOp      : POutPt;
     rightOp     : POutPt;
     leftToRight : Boolean;
-    position    : THorzPosition;
-    finished    : Boolean;
   end;
 
   THorzSegList = class(TListEx)
@@ -107,6 +106,18 @@ type
     procedure Clear; override;
     procedure Add(op: POutPt);
   end;
+
+  THorzJoin = record
+    op1: POutPt;
+    op2: POutPt;
+  end;
+
+  THorzJoinList = class(TListEx)
+  public
+    procedure Clear; override;
+    function Add(op1, op2: POutPt): PHorzJoin;
+  end;
+
 
   ///////////////////////////////////////////////////////////////////
   // Important: UP and DOWN here are premised on Y-axis positive down
@@ -183,6 +194,7 @@ type
     FOutRecList         : TOutRecList;
     FLocMinList         : TLocMinList;
     FHorzSegList        : THorzSegList;
+    FHorzJoinList       : THorzJoinList;
     FVertexArrayList    : TList;
     // FActives: see AEL above
     FActives            : PActive;
@@ -218,7 +230,8 @@ type
     procedure DeleteEdges(var e: PActive);
     procedure DeleteFromAEL(e: PActive);
     procedure AdjustCurrXAndCopyToSEL(topY: Int64);
-    procedure MergeHorzSegs;
+    procedure ConvertHorzSegsToJoins;
+    procedure ProcessHorzJoins;
     procedure DoIntersections(const topY: Int64);
     procedure DisposeIntersectNodes;
     procedure AddNewIntersectNode(e1, e2: PActive; topY: Int64);
@@ -386,7 +399,6 @@ type
 
 implementation
 
-
 //OVERFLOWCHECKS OFF is a necessary workaround for a compiler bug that very
 //occasionally reports incorrect overflow errors in Delphi versions before 10.2.
 //see https://forums.embarcadero.com/message.jspa?messageID=871444
@@ -477,11 +489,31 @@ var
 begin
   if (op.outrec.isOpen) then Exit;
   new(hs);
-  hs.finished := false;
-  hs.position := hpBottom;
   hs.leftOp := op;
-  op.horz := hs;
+  op.horz := nil;
   inherited Add(hs);
+end;
+
+//------------------------------------------------------------------------------
+// THorzJoinList
+//------------------------------------------------------------------------------
+
+procedure THorzJoinList.Clear;
+var
+  i: integer;
+begin
+  for i := 0 to Count -1 do
+    Dispose(PHorzJoin(UnsafeGet(i)));
+  inherited;
+end;
+//------------------------------------------------------------------------------
+
+function THorzJoinList.Add(op1, op2: POutPt): PHorzJoin;
+begin
+  new(Result);
+  Result.op1 := op1;
+  Result.op2 := op2;
+  inherited Add(Result);
 end;
 
 //------------------------------------------------------------------------------
@@ -528,9 +560,8 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-
-function NewOutPt(const pt: TPoint64; outrec: POutRec;
-  prev, next: POutPt): POutPt; overload;
+function NewOutPt(const pt: TPoint64;
+  outrec: POutRec; prev, next: POutPt): POutPt; overload;
  {$IFDEF INLINING} inline; {$ENDIF}
 begin
   new(Result);
@@ -551,6 +582,29 @@ begin
   Result.prev := Result;
   Result.outrec := outrec;
   Result.horz := nil;
+end;
+//------------------------------------------------------------------------------
+
+function DuplicateOp(op:POutPt; insertNext: Boolean): POutPt;
+  {$IFDEF INLINING} inline; {$ENDIF}
+begin
+  new(Result);
+  Result.pt := op.pt;
+  Result.outrec := op.outrec;
+  Result.horz := nil;
+  if insertNext then
+  begin
+    Result.next := op.next;
+    Result.next.prev := Result;
+    Result.prev := op;
+    op.next := Result;
+  end else
+  begin
+    Result.prev := op.prev;
+    Result.prev.next := Result;
+    Result.next := op;
+    op.prev := Result;
+  end;
 end;
 //------------------------------------------------------------------------------
 
@@ -1135,6 +1189,7 @@ begin
   FIntersectList    := TList.Create;
   FVertexArrayList  := TList.Create;
   FHorzSegList      := THorzSegList.Create;
+  FHorzJoinList     := THorzJoinList.Create;
   FPreserveCollinear  := true;
   FReverseSolution    := false;
 end;
@@ -1147,6 +1202,7 @@ begin
   FOutRecList.Free;
   FIntersectList.Free;
   FHorzSegList.Free;
+  FHorzJoinList.Free;
   FVertexArrayList.Free;
   inherited;
 end;
@@ -1164,6 +1220,7 @@ begin
     DisposeScanLineList;
     FOutRecList.Clear;
     FHorzSegList.Clear;
+    FHorzJoinList.Clear;
     Result := true;
   except
     Result := false;
@@ -2525,7 +2582,7 @@ begin
     while PopHorz(e) do DoHorizontal(e);
     if FHorzSegList.Count > 0 then
     begin
-      if FHorzSegList.Count > 1 then MergeHorzSegs;
+      if FHorzSegList.Count > 1 then ConvertHorzSegsToJoins;
       FHorzSegList.Clear;
     end;
     FBotY := Y;                       // FBotY == bottom of current scanbeam
@@ -2534,6 +2591,7 @@ begin
      DoTopOfScanbeam(Y);
     while PopHorz(e) do DoHorizontal(e);
   end;
+  if Succeeded then ProcessHorzJoins;  
 end;
 //------------------------------------------------------------------------------
 
@@ -2550,12 +2608,16 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-function SafeDisposeOutPt(op: POutPt): POutPt;
+procedure SetOutRecPts(op: POutPt; newOR: POutrec); overload;
   {$IFDEF INLINING} inline; {$ENDIF}
+var
+  op2: POutPt;
 begin
-  if not Assigned(op.horz) then
-    Result := DisposeOutPt(op) else
-    Result := op.next;
+  op2 := op;
+  repeat
+    op2.outrec := newOR;
+    op2 := op2.next;
+  until op2 = op;
 end;
 //------------------------------------------------------------------------------
 
@@ -2579,7 +2641,66 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-function Path1InsidePath2(const or1, or2: POutRec): Boolean;
+function PointInOpPolygon(const pt: TPoint64; op: POutPt): TPointInPolygonResult;
+var
+  i, val: Integer;
+  op2: POutPt;
+  isAbove: Boolean;
+  d: Double; // used to avoid integer overflow
+begin
+  result := pipOutside;
+  if (op = op.next) or (op.prev = op.next) then Exit;
+  op2 := op;
+  repeat
+    if (op.pt.Y <> pt.Y) then break;
+    op := op.next;
+  until op = op2;
+  if (op = op2) then Exit;
+  // must be above or below to get here
+  isAbove := op.pt.Y < pt.Y;
+  Result := pipOn;
+  val := 0;
+  op2 := op.next;
+  while (op2 <> op) do
+  begin
+    if isAbove then
+      while (op2 <> op) and (op2.pt.Y < pt.Y) do op2 := op2.next
+    else
+      while (op2 <> op) and (op2.pt.Y > pt.Y) do op2 := op2.next;
+    if (op2 = op) then break;
+
+    // must have touched or crossed the pt.Y horizonal
+    // and this must happen an even number of times
+
+    if (op2.pt.Y = pt.Y) then // touching the horizontal
+    begin
+      if (op2.pt.X = pt.X) or ((op2.pt.Y = op2.prev.pt.Y) and
+        ((pt.X < op2.prev.pt.X) <> (pt.X < op2.pt.X))) then Exit;
+      op2 := op2.next;
+      Continue;
+    end;
+
+    if (pt.X < op2.pt.X) and (pt.X < op2.prev.pt.X) then
+      // do nothing because
+      // we're only interested in edges crossing on the left
+    else if((pt.X > op2.prev.pt.X) and (pt.X > op2.pt.X)) then
+      val := 1 - val // toggle val
+    else
+    begin
+      d := CrossProduct(op2.prev.pt, op2.pt, pt);
+      if d = 0 then Exit; // ie point on path
+      if (d < 0) = isAbove then val := 1 - val;
+    end;
+    isAbove := not isAbove;
+    op2 := op2.next;
+  end;
+  if val = 0 then
+     result := pipOutside else
+     result := pipInside;
+end;
+//------------------------------------------------------------------------------
+
+function Path1InsidePath2(const or1, or2: POutRec): Boolean; overload;
 var
   op: POutPt;
   pipResult: TPointInPolygonResult;
@@ -2602,561 +2723,126 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-function UpdateHorzSegment(hs: PHorzSegment; force: Boolean): boolean;
-  {$IFDEF INLINING} inline; {$ENDIF}
+function Path1InsidePath2(const op1, op2: POutPt): Boolean; overload;
 var
-  op, op2, opA, opZ: POutPt;
-  outrec: POutrec;
-  currY: Int64;
-  isBottom: Boolean;
+  op: POutPt;
+  pipResult: TPointInPolygonResult;
+  outsideCnt: integer;
 begin
-  Result := false;
-  if hs.finished then Exit;
-  hs.finished := true; // error flag
-  op := hs.leftOp;
-  outrec := GetRealOutRec(op.outrec);
-  opA := outrec.pts;
-  opZ := opA.next;
-  op2 := op;
-
-  // nb: it's possible that both opA and opZ are below op
-  // (eg when there's been an intermediate maxima horz. join)
-  currY := op.pt.Y;
-  if Assigned(outrec.frontE) then
-  begin
-    // if a Middle then check that it still is one
-    if hs.position = hpMiddle then
-    begin
-      op := opA;
-      while (op.next <> opA) and (op.pt.Y =  currY) do
-        op := op.next;
-      if op.next <> opA then
-      begin
-        // yep, still a Middle :)
-        if opA.pt.Y = currY then
-          hs.leftOp := opA else
-          hs.leftOp := opZ;
-        hs.rightOp := nil;
-        hs.leftOp.outrec := outrec;
-        hs.leftOp.horz := hs;
-        result := true;
-        hs.finished := false;
-        Exit;
-      end;
-      // nope, is a Bottom now :)
-      op := op2;
-    end;
-
-    while (op <> opZ) and (op.prev.pt.Y = currY) do
-      op := op.prev;
-    while (op2 <> opA) and (op2.next.pt.Y = currY) do
-        op2 := op2.next;
-    if op.pt.X = op2.pt.X then
-    begin
-      if (hs.leftOp <> opA) then Exit;
-      op := opZ;
-      op2 := op;
-      while (op <> opZ) and (op.prev.pt.Y = currY) do
-        op := op.prev;
-      while (op2 <> opA) and (op2.next.pt.Y = currY) do
-          op2 := op2.next;
-      if op.pt.X = op2.pt.X then Exit;
-    end;
-    isBottom := (op = opZ) and (op2 = opA);
-  end else
-  begin
-    while (op.prev <> op2) and (op.prev.pt.Y = currY) do
-      op := op.prev;
-    while (op2.next <> op) and (op2.next.pt.Y = currY) do
-        op2 := op2.next;
-    if (op2.next = op) or // no longer a valid path
-      (op.pt.X = op2.pt.X) then Exit;
-    isBottom := false;
-  end;
-
-  if isBottom then
-  begin
-    hs.leftToRight := opZ.pt.X < opA.pt.X;
-    if hs.leftToRight then
-    begin
-      hs.leftOp := opZ;
-      hs.rightOp := opA;
-    end else
-    begin
-      hs.leftOp := opA;
-      hs.rightOp := opZ;
-    end;
-    if not force and (Assigned(hs.leftOp.horz) and
-      (hs.leftOp.horz <> hs)) then Exit;
-
-    // clean up horizontals
-    op := opZ.next;
-    while op <> opA do
-      op := SafeDisposeOutPt(op);
-    hs.position := hpBottom;
-  end
-  else // either a middle or a top
-  begin
-    if op.pt.X = op2.pt.X then Exit;
-    if op.pt.X < op2.pt.X then
-    begin
-      hs.leftOp := op;
-      hs.rightOp := op2;
-      hs.leftToRight := true;
-    end else
-    begin
-      hs.leftOp := op2;
-      hs.rightOp := op;
-      hs.leftToRight := false;
-    end;
-
-    if Assigned(outrec.frontE) then
-    begin
-      // must be a middle or pseudo-top
-      // if op2 = opA or op = opZ then this is a
-      // horizontal middle, otherwise it's a pseudo-top
-      if (op = opZ)  or (op2 = opA) then // must be a middle
-      begin
-        if not force and (Assigned(opA.horz) and
-          (opA.horz <> hs)) then Exit;
-        if opA.pt.Y = currY then
-          hs.leftOp := opA else
-          hs.leftOp := opZ;
-        hs.rightOp := nil;
-        hs.leftOp.outrec := outrec;
-        hs.leftOp.horz := hs;
-        hs.position := hpMiddle;
-        result := true;
-        hs.finished := false;
-        Exit;
-      end;
-    end;
-
-    if not force and (Assigned(hs.leftOp.horz) and
-      (hs.leftOp.horz <> hs)) then Exit;
-
-    hs.position := hpTop;
-    // cleanup horizontals
+  // we need to make some accommodation for rounding errors
+  // so we won't jump if the first vertex is found outside
+  outsideCnt := 0;
+  op := op1;
+  repeat
+    pipResult := PointInOpPolygon(op.pt, op2);
+    if pipResult = pipOutside then inc(outsideCnt)
+    else if pipResult = pipInside then dec(outsideCnt);
     op := op.next;
-    while (op <> op2) do
-      if (op = opA) then
-        op := op.next else
-        op := SafeDisposeOutPt(op);
-  end;
-  hs.leftOp.horz := hs;
-  hs.leftOp.outrec := outrec;
-  hs.finished := false;
-  Result := true;
+  until (op = op1) or (Abs(outsideCnt) = 2);
+  // if path1's location is still equivocal then check its midpoint
+  if Abs(outsideCnt) > 1 then
+    Result := outsideCnt < 0 else
+    Result := PointInOpPolygon(GetBounds(op).MidPoint, op2) = pipInside;
 end;
 //------------------------------------------------------------------------------
 
-procedure CheckOutRec(op: POutPt); {$IFDEF INLINING} inline; {$ENDIF}
+function HorzOverlapWithLRSet(const left1, right1, left2, right2: TPoint64): boolean;
+  {$IFDEF INLINING} inline; {$ENDIF}
+begin
+  Result := (left1.X < right2.X) and (right1.X > left2.X);
+end;
+//------------------------------------------------------------------------------
+
+function HorzontalsOverlap(const horz1a, horz1b, horz2a, horz2b: TPoint64): boolean;
+  {$IFDEF INLINING} inline; {$ENDIF}
+begin
+  if horz1a.X < horz1b.X then
+  begin
+    if horz2a.X < horz2b.X then
+      Result := HorzOverlapWithLRSet(horz1a, horz1b, horz2a, horz2b) else
+      Result := HorzOverlapWithLRSet(horz1a, horz1b, horz2b, horz2a);
+  end else
+  begin
+    if horz2a.X < horz2b.X then
+      Result := HorzOverlapWithLRSet(horz1b, horz1a, horz2a, horz2b) else
+      Result := HorzOverlapWithLRSet(horz1b, horz1a, horz2b, horz2a);
+  end;
+end;
+//------------------------------------------------------------------------------
+
+procedure SetRealOutRec(op: POutPt); {$IFDEF INLINING} inline; {$ENDIF}
 begin
   op.outrec := GetRealOutRec(op.outrec);
 end;
 //------------------------------------------------------------------------------
 
-procedure TransferActiveEdges(src, dst: POutRec);
+function SetHorzSegHeadingForward(hs: PHorzSegment; opP, opN: POutPt): Boolean;
   {$IFDEF INLINING} inline; {$ENDIF}
 begin
-  dst.frontE := src.frontE;
-  src.frontE := nil;
-  if Assigned(dst.frontE) then
-    dst.frontE.outrec := dst;
-  dst.backE := src.backE;
-  src.backE := nil;
-  if Assigned(dst.backE) then
-    dst.backE.outrec := dst;
-end;
-//------------------------------------------------------------------------------
-
-procedure SplitThenMergeHorz(ltorHS, rtolHS: PHorzSegment);
-  {$IFDEF INLINING} inline; {$ENDIF}
-var
-  ltorA, ltorZ, ltorR, ltorRP: POutPt;
-  rtolA, rtolZ, rtolR, rtolRN: POutPt;
-  ltorOr, rtolOr: POutRec;
-begin
-  //nb: both HorzSegs have assigned edges
-
-
-  ltorR := ltorHS.rightOp;
-  ltorOr := ltorHS.leftOp.outrec;
-  ltorA := ltorOr.pts;
-  ltorZ := ltorA.next;
-  ltorRP := ltorR.prev;
-
-  rtolR := rtolHS.rightOp;
-  rtolOr := rtolHS.leftOp.outrec;
-  rtolA := rtolOr.pts;
-  rtolZ := rtolA.next;
-  rtolRN := rtolR.next;
-
-  // insert rotated bot into mid/top just after motZ
-  ltorRP.next := rtolRN;
-  rtolRN.prev := ltorRP;
-
-  ltorR.prev := rtolR;
-  rtolR.next := ltorR;
-
-  // re-separate merged paths
-  ltorA.next := rtolZ;
-  rtolZ.prev := ltorA;
-  rtolA.next := ltorZ;
-  ltorZ.prev := rtolA;
-
-  ltorHS.leftOp := ltorA;
-  rtolHS.leftOp := rtolA;
-
-  // swap back edges
-  swap(@ltorOr.backE, @rtolOr.backE);
-  ltorOr.backE.outrec := ltorOr;
-  rtolOr.backE.outrec := rtolOr;
-
-  FixOutRecPts(ltorOr);
-  FixOutRecPts(rtolOr);
-  UpdateHorzSegment(ltorHS, true);
-  UpdateHorzSegment(rtolHS, true);
-
-end;
-//------------------------------------------------------------------------------
-
-function GetMiddleSideA(hs, compare: PHorzSegment): Boolean;
-  {$IFDEF INLINING} inline; {$ENDIF}
-var
-  op, opA, opZ: POutPt;
-  currY: Int64;
-  outrec: POutRec;
-begin
-  Result := false;
-  CheckOutRec(hs.leftOp);
-  currY := hs.leftOp.pt.Y;
-  outrec := hs.leftOp.outrec;
-  opA := outrec.pts;
-  opZ := opA.next;
-  if (opA.pt.Y <> currY) or
-    (compare.position = hpMiddle) then Exit;
-  op := opA;
-  while (op.prev <> opZ) and (op.prev.pt.Y = currY) do op := op.prev;
-  if (op.prev = opZ) or (op.pt.X = opA.pt.X) then Exit;
-  op.outrec := outrec;
-  hs.leftToRight :=  op.pt.X < opA.pt.X;
-  if hs.leftToRight = compare.leftToRight then Exit;
-
-  if hs.leftToRight then
-  begin
-    hs.leftOp := op;
-    hs.rightOp := opA;
-  end else
-  begin
-    hs.leftOp := opA;
-    hs.rightOp := op;
-  end;
-  Result := (hs.leftOp.pt.X < compare.rightOp.pt.X) and
-    (hs.rightOp.pt.X > compare.leftOp.pt.X);
-end;
-//------------------------------------------------------------------------------
-
-function GetMiddleSideZ(hs, compare: PHorzSegment): Boolean;
-  {$IFDEF INLINING} inline; {$ENDIF}
-var
-  op, opA, opZ: POutPt;
-  currY: Int64;
-  outrec: POutRec;
-begin
-  Result := false;
-  if hs.position <> hpMiddle then Exit;
-  CheckOutRec(hs.leftOp);
-  outrec := hs.leftOp.outrec;
-  opA := outrec.pts;
-  opZ := opA.next;
-  if (opZ.pt.Y > opA.pt.Y) or
-    (compare.position = hpMiddle) then Exit;
-  currY := opZ.pt.Y;
-  op := opZ;
-  while (op.next <> opA) and (op.next.pt.Y = currY) do op := op.next;
-  if (op.next = opA) or (op.pt.X = opZ.pt.X) then Exit;
-  op.outrec := outrec;
-  opZ.outrec := outrec;
-
-  hs.leftToRight := opZ.pt.X < op.pt.X;
-  if hs.leftToRight = compare.leftToRight then Exit;
-  if hs.leftToRight then
-  begin
-    hs.leftOp := opZ;
-    hs.rightOp := op;
-  end else
-  begin
-    hs.leftOp := op;
-    hs.rightOp := opZ;
-  end;
-  Result := (hs.leftOp.pt.X < compare.rightOp.pt.X) and
-    (hs.rightOp.pt.X > compare.leftOp.pt.X);
-end;
-//------------------------------------------------------------------------------
-
-function MiddleChecked(hs: PHorzSegment): Boolean;
-  {$IFDEF INLINING} inline; {$ENDIF}
-begin
-  Result := Assigned(hs.rightOp);
-end;
-//------------------------------------------------------------------------------
-
-procedure CheckMiddleSplit(hs: PHorzSegment;
-  orList: TOutRecList; usingPolytree: Boolean);
-var
-  op, op2, opA, opZ: POutPt;
-  currY: Int64;
-  outrec, newOr: POutRec;
-begin
-  // assign hs.rightOp to flag the HS has been checked.
-  // there's only value in doing this op once unless the
-  // Middle is changed and updated (ie UpdateHorzSegment).
-  hs.rightOp := hs.leftOp;
-
-  CheckOutRec(hs.leftOp);
-  outrec := hs.leftOp.outrec;
-  opA := outrec.pts;
-  opZ := opA.next;
-  if (opZ.pt.Y <> opA.pt.Y) then Exit;
-
-  currY := opA.pt.Y;
-  op := opA; op2 := opZ;
-  while (op.prev <> opA) and (op.prev.pt.Y = currY) do op := op.prev;
-  if (op.prev = opA) then
-  begin
-    // no longer a Middle
-    UpdateHorzSegment(hs, true);
-    Exit;
-  end;
-  while (op2.next.pt.Y = currY) do op2 := op2.next;
-
-  //op  >>> opA
-  //op2 <<< opZ
-  if not ((opA.pt.X < opZ.pt.X) and (op.pt.X > opZ.pt.X)) and
-    not ((opA.pt.X > opZ.pt.X) and (op.pt.X < opZ.pt.X)) then Exit;
-
-  // split into top and bottom
-
-  op2 := opZ.next;
-  op := opA.prev;
-  opZ.next := opA;
-  opA.prev := opZ;
-  op.next := op2;
-  op2.prev := op;
-
-  newOr := orList.Add;
-  newOr.pts := opA;
-  outrec.pts := op;
-  op.outrec := outrec;
-
-  FixOutRecPts(outrec);
-  FixOutRecPts(newOr);
-  TransferActiveEdges(outrec, newOr);
-
-  if usingPolytree then
-    AddSplit(outrec, newOr); //todo: better using outrec.owner
-  newOr.owner := outrec;
-
-  // re-assign hs.leftOp with a new (useable) op
-  if not Assigned(op.horz) then hs.leftOp := op
-  else if not Assigned(op2.horz) then hs.leftOp := op2
-  else hs.finished := true;
-
-  UpdateHorzSegment(hs, true);
-end;
-//------------------------------------------------------------------------------
-
-procedure SplitOrHoleHorz(hs1, hs2: PHorzSegment;
-  orList: TOutRecList; usingPolytree: Boolean);
-var
-  op1R, op2R, opA, opZ, opQ: POutPt;
-  outrec, newOr: POutRec;
-begin
-  outrec := hs1.leftOp.outrec;
-  opA := outrec.pts;
-  opZ := opA.next;
-  if opZ.pt.Y < opA.pt.Y then
-    opQ := opZ else
-    opQ := opA;
-
-  if (hs1.leftToRight) then
-  begin
-    // op1L  >>>> op1R
-    // op2L <<<< op2R
-    op1R := hs1.leftOp.next;
-    op2R := hs2.leftOp.prev;
-    op1R.prev := op2R;
-    op2R.next := op1R;
-    hs1.leftOp.next := hs2.leftOp;
-    hs2.leftOp.prev := hs1.leftOp;
-  end
-  else
-  begin
-    // op1L  <<<< op1R
-    // op2L >>>> op2R
-    op1R := hs1.leftOp.prev;
-    op2R := hs2.leftOp.next;
-    op1R.next := op2R;
-    op2R.prev := op1R;
-    hs1.leftOp.prev := hs2.leftOp;
-    hs2.leftOp.next := hs1.leftOp;
-  end;
-
-  newOr := orList.Add;
-  newOr.pts := op1R;
-  FixOutRecPts(newOr);
-
-//  if (Path1InsidePath2(newOr, outrec)) then
-//  begin
-//    newOr.owner := outrec;
-//    if usingPolytree then
-//      AddSplit(outrec, newOr);
-//  end
-//  else if (Path1InsidePath2(outrec, newOr)) then
-//  begin
-//    newOr.owner := outrec.owner;
-//    outrec.owner := newOr.owner;
-//  end
-//  else
-    newOr.owner := outrec.owner;
-
-  if (GetRealOutRec(opA.outrec) <> outrec) then
-  begin
-   // opA must now be in newOr
-    newOr.pts := opA;
-    outRec.pts := hs1.leftOp;
-    swap(@hs1.leftOp, @hs2.leftOp);
-    if hs1.position = hpMiddle then
-      hs2.leftOp := opQ;
-    hs1.leftOp.horz := hs1;
-    hs2.leftOp.horz := hs2;
-
-    if Assigned(outrec.frontE) then
-      TransferActiveEdges(outrec, newOr);
-  end;
-
-  UpdateHorzSegment(hs1, true);
-  UpdateHorzSegment(hs2, true);
-end;
-//------------------------------------------------------------------------------
-
-procedure JustMergeHorz(activeHS, inactiveHS: PHorzSegment);
-var
-  activeOr, inactiveOr: POutrec;
-  op1L,op1R, op2L,op2R: POutPt;
-begin
-  activeOr := activeHS.leftOp.outrec;
-  inactiveOr := inactiveHS.leftOp.outrec;
-
-  op1R := activeHS.rightOp;
-  op2R := inactiveHS.rightOp;
-
-  if inactiveHS.leftToRight then
-  begin
-    while op1R.next.pt.X >= op2R.pt.X do
-      op1R := op1R.next;
-    op1L := op1R.next;
-    op2L := op2R.prev;
-
-    op2L.next := op1L;
-    op1L.prev := op2L;
-    op2R.prev := op1R;
-    op1R.next := op2R;
-  end else
-  begin
-    while op1R.prev.pt.X >= op2R.pt.X do
-      op1R := op1R.prev;
-    op1L := op1R.prev;
-    op2L := op2R.next;
-    op2L.prev := op1L;
-    op1L.next := op2L;
-    op2R.next := op1R;
-    op1R.prev := op2R;
-  end;
-
-  inactiveOr.pts := nil;
-  activeOr.pts.outrec := activeOr;
-  inactiveHS.finished := true;
-  SetOwner(inactiveOr, activeOr);
-  UpdateHorzSegment(activeHS, true);
-end;
-//------------------------------------------------------------------------------
-
-procedure DoMiddle(midHS, othHS: PHorzSegment;
-  orList: TOutRecList; usingPolytree: Boolean);
-begin
-  if (midHS.leftOp.outrec = othHS.leftOp.outrec) then
-  begin
-    SplitOrHoleHorz(midHS, othHS, orList, usingPolytree);
-  end
-  else if Assigned(othHS.leftOp.outrec.frontE) then
-  begin
-    if othHS.leftToRight then
-      SplitThenMergeHorz(othHS, midHS) else
-      SplitThenMergeHorz( midHS, othHS);
-  end else
-    JustMergeHorz(midHS, othHS);
-end;
-//------------------------------------------------------------------------------
-
-function IsValidHorzSeg(hs: PHorzSegment): Boolean;
-  {$IFDEF INLINING} inline; {$ENDIF}
-var
-  currY: Int64;
-begin
-  Result := not hs.finished;
+  Result := opP.pt.X <> opN.pt.X;
   if not Result then Exit;
-  if Assigned(hs.leftOp.horz) and
-    (hs.leftOp.horz <> hs) then
+  if opP.pt.X < opN.pt.X then
   begin
-    Result := false;
-    hs.finished := true;
-    Exit;
-  end;
-  CheckOutRec(hs.leftOp);
-
-  if (hs.position <> hpTop) then Exit;
-  currY := hs.leftOp.pt.Y;
-  hs.rightOp := hs.leftOp;
-  if hs.leftToRight then
-  begin
-    while (hs.rightOp.next <> hs.leftOp) and
-      (hs.rightOp.next.pt.Y = currY) do
-        hs.rightOp := hs.rightOp.next;
-    if (hs.rightOp.next = hs.leftOp) or
-      (hs.rightOp.pt.X = hs.leftOp.pt.X) then Exit;
+    hs.leftOp := opP;
+    hs.rightOp := opN;
+    hs.leftToRight := true;
   end else
   begin
-    while (hs.rightOp.prev <> hs.leftOp) and
-      (hs.rightOp.prev.pt.Y = currY) do
-        hs.rightOp := hs.rightOp.prev;
-    if (hs.rightOp.prev = hs.leftOp) or
-      (hs.rightOp.pt.X = hs.leftOp.pt.X) then Exit;
+    hs.leftOp := opN;
+    hs.rightOp := opP;
+    hs.leftToRight := false;
   end;
-  CheckOutRec(hs.rightOp);
-
-  // make sure Middles still have active edges
-  if (hs.position = hpMiddle) and
-    not Assigned(hs.leftOp.outrec.frontE) then
-    begin
-      Result := false;
-      hs.finished := true;
-    end;
 end;
 //------------------------------------------------------------------------------
 
-procedure TClipperBase.MergeHorzSegs;
+function UpdateHorzSegment(hs: PHorzSegment): Boolean;
+  {$IFDEF INLINING} inline; {$ENDIF}
+var
+  op, opP, opN, opA, opZ: POutPt;
+  outrec: POutrec;
+  currY: Int64;
+  outrecHasEdges: Boolean;
+begin
+  op := hs.leftOp;
+  outrec := GetRealOutRec(op.outrec);
+  outrecHasEdges := Assigned(outrec.frontE);
+  // nb: it's possible that both opA and opZ are below op
+  // (eg when there's been an intermediate maxima horz. join)
+  currY := op.pt.Y;
+  opP := op; opN := op;
+  if outrecHasEdges then
+  begin
+    opA := outrec.pts;
+    opZ := opA.next;
+    while (opP <> opZ) and (opP.prev.pt.Y = currY) do
+      opP := opP.prev;
+    while (opN <> opA) and (opN.next.pt.Y = currY) do
+      opN := opN.next;
+  end else
+  begin
+    while (opP.prev <> opN) and (opP.prev.pt.Y = currY) do
+      opP := opP.prev;
+    while (opN.next <> opP) and (opN.next.pt.Y = currY) do
+      opN := opN.next;
+  end;
+  Result := SetHorzSegHeadingForward(hs, opP, opN) and
+    not Assigned(hs.leftOp.horz);
+  if Result then hs.leftOp.horz := hs;
+end;
+//------------------------------------------------------------------------------
+
+procedure TClipperBase.ConvertHorzSegsToJoins;
 var
   i, j: integer;
+  currY: Int64;
   hs1, hs2: PHorzSegment;
-  or1, or2: POutrec;
+  join: PHorzJoin;
 begin
   j := 0;
   for i := 0 to FHorzSegList.Count -1 do
   begin
     hs1 := FHorzSegList.UnsafeGet(i);
-    if UpdateHorzSegment(hs1, false) then
+    if UpdateHorzSegment(hs1) then
     begin
       if (j < i) then
         FHorzSegList.UnsafeSet(j, hs1);
@@ -3168,84 +2854,95 @@ begin
   if j < 2 then Exit;
   FHorzSegList.Sort(HorzSegListSort);
 
-  // horizontal segments are separated into 3 types: bottom, middle & top.
-  // bottom: the horizontals are at the very bottom of the path. The path is
-  // just starting since they're constructed from bottom up (with inverted Y).
-  // top   : the path has just finished at a top horizontal, or a portion of
-  // the path has just finished at a horizontal (ie a 'pseudo-top').
-  // middle: a horizontal that's neither bottom or top
-  // Only tops that aren't pseudo-tops don't have start (A) and end (Z) points
-  // that link to 'active' edges.
-
-  // for each HorzSegment, find others that overlap
+  // find overlaps
   for i := 0 to FHorzSegList.Count -2 do
   begin
     hs1 := FHorzSegList.UnsafeGet(i);
-    for j := i + 1 to FHorzSegList.Count - 1 do
+    for j := i+1 to FHorzSegList.Count -1 do
     begin
-      if not IsValidHorzSeg(hs1) then break;
-      or1 :=  hs1.leftOp.outrec;
       hs2 := FHorzSegList.UnsafeGet(j);
-      if not IsValidHorzSeg(hs2) then Continue;
-      or2 := hs2.leftOp.outrec;
 
-      // Do CheckMiddleSplit() before the following code blocks because
-      // these HS may no longer be Middles after checks and splits
-      if (hs1.position = hpMiddle) and
-        not MiddleChecked(hs1) then
-          CheckMiddleSplit(hs1, FOutRecList, FUsingPolytree);
-      if (hs2.position = hpMiddle) and
-        not MiddleChecked(hs2) then
-          CheckMiddleSplit(hs2, FOutRecList, FUsingPolytree);
+      if hs2.leftOp.pt.X >= hs1.rightOp.pt.X then Break
+      else if (hs2.leftToRight = hs1.leftToRight) or
+        (hs2.rightOp.pt.X <= hs1.leftOp.pt.X) then Continue;
 
-      if (hs1.position = hpMiddle) then
+      currY := hs1.leftOp.pt.Y;
+      if hs1.leftToRight then
       begin
-        if (hs2.position = hpMiddle) then Continue;
-
-        if GetMiddleSideA(hs1, hs2) then
-          DoMiddle(hs1, hs2, FOutRecList, FUsingPolytree)
-        else if GetMiddleSideZ(hs1, hs2) then
-          DoMiddle(hs1, hs2, FOutRecList, FUsingPolytree);
-
-        // After DoMiddle(), hs2 may have become a Middle too.
-        // When it does, give the left most HS priority
-        if (hs2.position = hpMiddle) and
-          (hs2.leftOp.pt.X < hs1.leftOp.pt.X) then
-        begin
-          FHorzSegList.UnsafeSet(i, hs2);
-          FHorzSegList.UnsafeSet(j, hs1);
-          swap(@hs1,@hs2);
-        end;
-
-      end
-      else if (hs2.position = hpMiddle) then
+        while (hs1.leftOp.next.pt.Y = currY) and
+          (hs1.leftOp.next.pt.X <= hs2.leftOp.pt.X) do
+            hs1.leftOp := hs1.leftOp.next;
+        while (hs2.leftOp.prev.pt.Y = currY) and
+          (hs2.leftOp.prev.pt.X <= hs1.leftOp.pt.X) do
+            hs2.leftOp := hs2.leftOp.prev;
+        join := PHorzJoin(FHorzJoinList.Add(
+          DuplicateOp(hs1.leftOp, true),
+          DuplicateOp(hs2.leftOp, false)));
+      end else
       begin
-        if GetMiddleSideA(hs2, hs1) then
-          DoMiddle(hs2, hs1, FOutRecList, FUsingPolytree)
-        else if GetMiddleSideZ(hs2, hs1) then
-          DoMiddle(hs2, hs1, FOutRecList, FUsingPolytree);
-      end
-      else if (hs2.leftOp.pt.X >= hs1.rightOp.pt.X) then
-        Break
-      else if (hs2.rightOp.pt.X <= hs1.leftOp.pt.X) or
-        (hs2.leftToRight = hs1.leftToRight) then Continue
+        while (hs1.leftOp.prev.pt.Y = currY) and
+          (hs1.leftOp.prev.pt.X <= hs2.leftOp.pt.X) do
+            hs1.leftOp := hs1.leftOp.prev;
+        while (hs2.leftOp.next.pt.Y = currY) and
+          (hs2.leftOp.next.pt.X <= hs1.leftOp.pt.X) do
+            hs2.leftOp := hs2.leftOp.next;
+        join := PHorzJoin(FHorzJoinList.Add(
+          DuplicateOp(hs2.leftOp, true),
+          DuplicateOp(hs1.leftOp, false)));
+      end;
+    end;
+  end;
+end;
+//------------------------------------------------------------------------------
 
-      else if (or1 = or2) then
+procedure TClipperBase.ProcessHorzJoins;
+var
+  i: integer;
+  or1, or2: POutRec;
+  op1b, op2b: POutPt;
+begin
+  for i := 0 to FHorzJoinList.Count -1 do
+    with PHorzJoin(FHorzJoinList[i])^ do
+  begin
+    or1 := GetRealOutRec(op1.outrec);
+    or2 := GetRealOutRec(op2.outrec);
+
+    // op1 >>> op1b
+    // op2 <<< op2b
+    op1b := op1.next;
+    op2b := op2.prev;
+    op1.next := op2;
+    op2.prev := op1;
+    op1b.prev := op2b;
+    op2b.next := op1b;
+
+    if or1 = or2 then
+    begin
+      or2 := FOutRecList.Add;
+      or2.pts := op1b;
+      FixOutRecPts(or2);
+      if or1.pts.outrec = or2 then
       begin
-        if Assigned(or1.frontE) then Continue;
-        SplitOrHoleHorz(hs1, hs2, FOutRecList, FUsingPolytree);
-      end
-      else if Assigned(or1.frontE) then
+        or1.pts := op1;
+        or1.pts.outrec := or1;
+      end;
+      if FUsingPolytree then
       begin
-        if not Assigned(or2.frontE) then
-          JustMergeHorz(hs1, hs2)
-        else if hs1.leftToRight then
-          SplitThenMergeHorz(hs1, hs2)
+        if Path1InsidePath2(or2.pts, or1.pts) then
+          SetOwner(or2, or1)
+        else if Path1InsidePath2(or1.pts, or2.pts) then
+          SetOwner(or1, or2)
         else
-          SplitThenMergeHorz( hs2, hs1);
-      end
+          or2.owner := or1;
+      end else
+        or2.owner := or1;
+    end else
+    begin
+      or2.pts := nil;
+      if FUsingPolytree then
+        SetOwner(or2, or1)
       else
-        JustMergeHorz(hs2, hs1);
+        or2.owner := or1;
     end;
   end;
 end;
@@ -3524,6 +3221,18 @@ begin
 end;
 //------------------------------------------------------------------------------
 
+function GetLastOp(hotEdge: PActive): POutPt;
+  {$IFDEF INLINING} inline; {$ENDIF}
+var
+  outrec: POutRec;
+begin
+  outrec := hotEdge.outrec;
+  Result := outrec.pts;
+  if hotEdge <> outrec.frontE then
+    Result := Result.next;
+end;
+//------------------------------------------------------------------------------
+
 procedure TClipperBase.DoHorizontal(horzEdge: PActive);
 var
   maxVertex: PVertex;
@@ -3671,25 +3380,23 @@ begin
 
       if (isLeftToRight) then
       begin
-        op := IntersectEdges(horzEdge, e, pt);
-        //nb: Op.outrec will differ from horzEdge.outrec when IsOpen(e)
+        IntersectEdges(horzEdge, e, pt);
         SwapPositionsInAEL(horzEdge, e);
-        //??Join
         horzEdge.currX := e.currX;
         e := horzEdge.nextInAEL;
       end else
       begin
-        op := IntersectEdges(e, horzEdge, pt);
-        //nb: Op.outrec will differ from horzEdge.outrec when IsOpen(e)
+        IntersectEdges(e, horzEdge, pt);
         SwapPositionsInAEL(e, horzEdge);
-        //??Join
         horzEdge.currX := e.currX;
         e := horzEdge.prevInAEL;
       end;
       if IsHotEdge(horzEdge) and (horzEdge.outrec <> currOr) then
       begin
         currOr := horzEdge.outrec;
-        FHorzSegList.Add(op);
+        //nb: The outrec containining the op returned by IntersectEdges
+        //above may no longer be associated with horzEdge.
+        FHorzSegList.Add(GetLastOp(horzEdge));
       end;
     end; // we've reached the end of this horizontal
 
