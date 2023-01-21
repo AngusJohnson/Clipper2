@@ -1,8 +1,8 @@
 ﻿/*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  15 October 2022                                                 *
+* Date      :  21 January 2023                                                 *
 * Website   :  http://www.angusj.com                                           *
-* Copyright :  Angus Johnson 2010-2022                                         *
+* Copyright :  Angus Johnson 2010-2023                                         *
 * Purpose   :  Path Offset (Inflate/Shrink)                                    *
 * License   :  http://www.boost.org/LICENSE_1_0.txt                            *
 *******************************************************************************/
@@ -304,7 +304,7 @@ namespace Clipper2Lib
       PointD pt2 = new PointD(_normals[k].x * _group_delta, _normals[k].y * _group_delta);
       if (j == k) pt2.Negate();
 
-      int steps = (int) Math.Ceiling(_stepsPerRad * Math.Abs(angle));
+      int steps = (int) Math.Floor(_stepsPerRad * Math.Abs(angle));
       double stepSin = Math.Sin(angle / steps);
       double stepCos = Math.Cos(angle / steps);
 
@@ -330,7 +330,8 @@ namespace Clipper2Lib
       _normals.Add(GetUnitNormal(path[cnt - 1], path[0]));
     }
 
-    private void OffsetPoint(Group group, Path64 path, int j, ref int k)
+    private void OffsetPoint(Group group, Path64 path, 
+      int j, ref int k, bool reversing = false)
     {
       // Let A = change in angle where edges join
       // A == 0: ie no change in angle (flat join)
@@ -341,9 +342,11 @@ namespace Clipper2Lib
       double cosA = InternalClipper.DotProduct(_normals[j], _normals[k]);
       if (sinA > 1.0) sinA = 1.0;
       else if (sinA < -1.0) sinA = -1.0;
-      bool almostNoAngle = (AlmostZero(sinA) && cosA > 0); 
-      if (almostNoAngle || (sinA * _group_delta < 0))
+      bool almostNoAngle = AlmostZero(cosA - 1);
+      bool is180DegSpike = AlmostZero(cosA + 1) && reversing;
+      if (almostNoAngle || is180DegSpike || (sinA * _group_delta < 0))
       {
+        //almost no angle or concave
         group._outPath.Add(GetPerpendic(path[j], _normals[k]));
         if (!almostNoAngle) group._outPath.Add(path[j]);
         group._outPath.Add(GetPerpendic(path[j], _normals[j]));
@@ -365,7 +368,6 @@ namespace Clipper2Lib
         else
           DoSquare(group, path, j, k);
       }
-
       k = j;
     }
 
@@ -438,7 +440,7 @@ namespace Clipper2Lib
 
       // offset the left side going back
       for (int i = highI, k = 0; i > 0; i--)
-        OffsetPoint(group, path, i, ref k);
+        OffsetPoint(group, path, i, ref k, true);
 
       group._outPaths.Add(group._outPath);
     }

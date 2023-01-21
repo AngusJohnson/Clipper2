@@ -2,9 +2,9 @@ unit Clipper.Offset;
 
 (*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  15 October 2022                                                 *
+* Date      :  21 January 2023                                                 *
 * Website   :  http://www.angusj.com                                           *
-* Copyright :  Angus Johnson 2010-2022                                         *
+* Copyright :  Angus Johnson 2010-2023                                         *
 * Purpose   :  Path Offset (Inflate/Shrink)                                    *
 * License   :  http://www.boost.org/LICENSE_1_0.txt                            *
 *******************************************************************************)
@@ -60,7 +60,8 @@ type
     procedure DoSquare(j, k: Integer);
     procedure DoMiter(j, k: Integer; cosA: Double);
     procedure DoRound(j, k: integer; angle: double);
-    procedure OffsetPoint(j: Integer; var k: integer);
+    procedure OffsetPoint(j: Integer;
+      var k: integer; reversing: Boolean = false);
 
     procedure BuildNormals;
     procedure DoGroupOffset(group: TGroup; groupDelta: double);
@@ -472,7 +473,7 @@ begin
   // offset the left side going back
   k := 0;
   for i := highI downto 1 do //and stop at 1!
-    OffsetPoint(i, k);
+    OffsetPoint(i, k, true);
 end;
 //------------------------------------------------------------------------------
 
@@ -658,16 +659,16 @@ var
   i, steps: Integer;
   stepSin, stepCos: double;
   pt: TPoint64;
-   pt2: TPointD;
+  pt2: TPointD;
 begin
-	// nb: even though angle may be negative this is a convex join
+	// nb: angles may be negative but this will always be a convex join
   pt := fInPath[j];
   pt2 := PointD(fNorms[k].X * fGrpDelta, fNorms[k].Y * fGrpDelta);
   if j = k then pt2 := Negate(pt2);
-  steps := Ceil(fStepsPerRad * abs(angle));
+  steps := Floor(fStepsPerRad * abs(angle));
   GetSinCos(angle / steps, stepSin, stepCos);
   AddPoint(pt.X + pt2.X, pt.Y + pt2.Y);
-  for i := 0 to steps -1 do
+  for i := 1 to steps do
   begin
     pt2 := PointD(pt2.X * stepCos - stepSin * pt2.Y,
       pt2.X * stepSin + pt2.Y * stepCos);
@@ -677,10 +678,11 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-procedure TClipperOffset.OffsetPoint(j: Integer; var k: integer);
+procedure TClipperOffset.OffsetPoint(j: Integer;
+  var k: integer; reversing: Boolean = false);
 var
   sinA, cosA: Double;
-  almostNoAngle: Boolean;
+  almostNoAngle, is180DegSpike: Boolean;
 begin
   if PointsEqual(fInPath[j], fInPath[k]) then
   begin
@@ -699,10 +701,11 @@ begin
   else if (sinA < -1.0) then sinA := -1.0;
 
   almostNoAngle := ValueAlmostZero(cosA - 1);
+  is180DegSpike := ValueAlmostZero(cosA + 1) and reversing;
   // when there's almost no angle of deviation or it's concave
-  if almostNoAngle or (sinA * fGrpDelta < 0) then
+  if almostNoAngle or is180DegSpike or (sinA * fGrpDelta < 0) then
   begin
-    //concave
+    //almost no angle or concave
     AddPoint(GetPerpendic(fInPath[j], fNorms[k], fGrpDelta));
     // create a simple self-intersection that will be cleaned up later
     if not almostNoAngle then AddPoint(fInPath[j]);

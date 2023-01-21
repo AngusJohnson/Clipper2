@@ -1,8 +1,8 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  15 October 2022                                                 *
+* Date      :  21 January 2023                                                 *
 * Website   :  http://www.angusj.com                                           *
-* Copyright :  Angus Johnson 2010-2022                                         *
+* Copyright :  Angus Johnson 2010-2023                                         *
 * Purpose   :  Path Offset (Inflate/Shrink)                                    *
 * License   :  http://www.boost.org/LICENSE_1_0.txt                            *
 *******************************************************************************/
@@ -216,7 +216,7 @@ void ClipperOffset::DoRound(Group& group, const Path64& path, size_t j, size_t k
 {
 	//even though angle may be negative this is a convex join
 	Point64 pt = path[j];
-	int steps = static_cast<int>(std::ceil(steps_per_rad_ * std::abs(angle)));
+	int steps = static_cast<int>(std::floor(steps_per_rad_ * std::abs(angle)));
 	double step_sin = std::sin(angle / steps);
 	double step_cos = std::cos(angle / steps);
 	
@@ -224,7 +224,7 @@ void ClipperOffset::DoRound(Group& group, const Path64& path, size_t j, size_t k
 	if (j == k) pt2.Negate();
 
 	group.path_.push_back(Point64(pt.x + pt2.x, pt.y + pt2.y));
-	for (int i = 0; i < steps; i++)
+	for (int i = 0; i < steps; ++i)
 	{
 		pt2 = PointD(pt2.x * step_cos - step_sin * pt2.y,
 			pt2.x * step_sin + pt2.y * step_cos);
@@ -233,7 +233,8 @@ void ClipperOffset::DoRound(Group& group, const Path64& path, size_t j, size_t k
 	group.path_.push_back(GetPerpendic(path[j], norms[j], group_delta_));
 }
 
-void ClipperOffset::OffsetPoint(Group& group, Path64& path, size_t j, size_t& k)
+void ClipperOffset::OffsetPoint(Group& group, 
+	Path64& path, size_t j, size_t& k, bool reversing)
 {
 	// Let A = change in angle where edges join
 	// A == 0: ie no change in angle (flat join)
@@ -248,26 +249,20 @@ void ClipperOffset::OffsetPoint(Group& group, Path64& path, size_t j, size_t& k)
 	if (sin_a > 1.0) sin_a = 1.0;
 	else if (sin_a < -1.0) sin_a = -1.0;
 
-	bool almostNoAngle = AlmostZero(sin_a) && cos_a > 0;
+	bool almostNoAngle = AlmostZero(cos_a - 1);
+	bool is180DegSpike = AlmostZero(cos_a + 1) && reversing;
 	// when there's almost no angle of deviation or it's concave
-	if (almostNoAngle || (sin_a * group_delta_ < 0))
+	if (almostNoAngle || is180DegSpike || (sin_a * group_delta_ < 0))
 	{
-		Point64 p1 = Point64(
-			path[j].x + norms[k].x * group_delta_,
-			path[j].y + norms[k].y * group_delta_);
-		Point64 p2 = Point64(
-			path[j].x + norms[j].x * group_delta_,
-			path[j].y + norms[j].y * group_delta_);
-		group.path_.push_back(p1);
-		if (p1 != p2)
-		{
-			// when concave add an extra vertex to ensure neat clipping
-			if (!almostNoAngle) group.path_.push_back(path[j]);
-			group.path_.push_back(p2);
-		}
+    //almost no angle or concave
+		group.path_.push_back(GetPerpendic(path[j], norms[k], group_delta_));
+		// create a simple self-intersection that will be cleaned up later
+		if (!almostNoAngle) group.path_.push_back(path[j]);
+		group.path_.push_back(GetPerpendic(path[j], norms[j], group_delta_));
 	}
-	else // it's convex 
+	else 
 	{
+		// it's convex 
 		if (join_type_ == JoinType::Round)
 			DoRound(group, path, j, k, std::atan2(sin_a, cos_a));
 		else if (join_type_ == JoinType::Miter)
@@ -352,7 +347,7 @@ void ClipperOffset::OffsetOpenPath(Group& group, Path64& path, EndType end_type)
 	}
 
 	for (size_t i = highI, k = 0; i > 0; --i)
-		OffsetPoint(group, path, i, k);
+		OffsetPoint(group, path, i, k, true);
 	group.paths_out_.push_back(group.path_);
 }
 
@@ -472,7 +467,6 @@ Paths64 ClipperOffset::Execute(double delta)
 		c.PreserveCollinear = false;
 		//the solution should retain the orientation of the input
 		c.ReverseSolution = reverse_solution_ != groups_[0].is_reversed_;
-
 		c.AddSubject(solution);
 		if (groups_[0].is_reversed_)
 			c.Execute(ClipType::Union, FillRule::Negative, solution);

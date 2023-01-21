@@ -1,8 +1,8 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  15 October 2022                                                 *
+* Date      :  21 January 2023                                                 *
 * Website   :  http://www.angusj.com                                           *
-* Copyright :  Angus Johnson 2010-2022                                         *
+* Copyright :  Angus Johnson 2010-2023                                         *
 * Purpose   :  Path Offset (Inflate/Shrink)                                    *
 * License   :  http://www.boost.org/LICENSE_1_0.txt                            *
 *******************************************************************************/
@@ -60,7 +60,8 @@ private:
 	void OffsetPolygon(Group& group, Path64& path);
 	void OffsetOpenJoined(Group& group, Path64& path);
 	void OffsetOpenPath(Group& group, Path64& path, EndType endType);
-	void OffsetPoint(Group& group, Path64& path, size_t j, size_t& k);
+	void OffsetPoint(Group& group, Path64& path, 
+		size_t j, size_t& k, bool reversing = false);
 	void DoGroupOffset(Group &group, double delta);
 public:
 	explicit ClipperOffset(double miter_limit = 2.0,
