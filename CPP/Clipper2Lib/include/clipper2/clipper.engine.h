@@ -18,6 +18,7 @@ constexpr auto CLIPPER2_VERSION = "1.1.0";
 #include <vector>
 #include <functional>
 #include <numeric>
+#include <memory>
 
 #include "clipper.core.h"
 
