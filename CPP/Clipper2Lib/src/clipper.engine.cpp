@@ -1,6 +1,6 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  21 January 2023                                                 *
+* Date      :  22 January 2023                                                 *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2023                                         *
 * Purpose   :  This is the main polygon clipping module                        *
@@ -48,10 +48,10 @@ namespace Clipper2Lib {
   };
 
   struct HorzSegSorter {
-    inline bool operator()(const HorzSegment* hs1, const HorzSegment* hs2)
+    inline bool operator()(const HorzSegment& hs1, const HorzSegment& hs2)
     {
-      if (!hs1->right_op || !hs2->right_op) return (hs1->right_op);
-      return  hs2->left_op->pt.x > hs1->left_op->pt.x;
+      if (!hs1.right_op || !hs2.right_op) return (hs1.right_op);
+      return  hs2.left_op->pt.x > hs1.left_op->pt.x;
     }
   };
 
@@ -130,7 +130,6 @@ namespace Clipper2Lib {
     else
       return std::numeric_limits<double>::max();
   }
-
 
   inline int64_t TopX(const Active& ae, const int64_t currentY)
   {
@@ -513,7 +512,6 @@ namespace Clipper2Lib {
     scanline_list_ = std::priority_queue<int64_t>();
     intersect_nodes_.clear();
     DisposeAllOutRecs();
-    for (auto hs : horz_seg_list_) delete hs;
     horz_seg_list_.resize(0);
     horz_join_list_.resize(0);
   }
@@ -710,7 +708,6 @@ namespace Clipper2Lib {
     return true;
   }
 
-
   void ClipperBase::DisposeAllOutRecs()
   {
     for (auto outrec : outrec_list_)
@@ -720,13 +717,6 @@ namespace Clipper2Lib {
     }
     outrec_list_.resize(0);
   }
-
-  void ClipperBase::DisposeHorzSegs()
-  {
-    for (auto hs : horz_seg_list_) delete hs;
-    horz_seg_list_.resize(0);
-  }
-
 
   void ClipperBase::DisposeVerticesAndLocalMinima()
   {
@@ -1885,9 +1875,8 @@ namespace Clipper2Lib {
       while (PopHorz(e)) DoHorizontal(*e);
       if (horz_seg_list_.size() > 0)
       {
-        if (horz_seg_list_.size() > 1)
-          ConvertHorzSegsToJoins();
-        DisposeHorzSegs();
+        ConvertHorzSegsToJoins();
+        horz_seg_list_.clear();
       }
       bot_y_ = y;  // bot_y_ == bottom of scanbeam
       if (!PopScanline(y)) break;  // y new top of scanbeam
@@ -2016,27 +2005,27 @@ namespace Clipper2Lib {
     return  PointInPolygon(mp, or2->path) == PointInPolygonResult::IsInside;
   }
 
-  inline bool SetHorzSegHeadingForward(HorzSegment* hs, OutPt* opP, OutPt* opN)
+  inline bool SetHorzSegHeadingForward(HorzSegment& hs, OutPt* opP, OutPt* opN)
   {
     if (opP->pt.x == opN->pt.x) return false;
     if (opP->pt.x < opN->pt.x)
     {
-      hs->left_op = opP;
-      hs->right_op = opN;
-      hs->left_to_right = true;
+      hs.left_op = opP;
+      hs.right_op = opN;
+      hs.left_to_right = true;
     }
     else
     {
-      hs->left_op = opN;
-      hs->right_op = opP;
-      hs->left_to_right = false;
+      hs.left_op = opN;
+      hs.right_op = opP;
+      hs.left_to_right = false;
     }
     return true;
   }
 
-  inline bool UpdateHorzSegment(HorzSegment* hs)
+  inline bool UpdateHorzSegment(HorzSegment& hs)
   {
-    OutPt* op = hs->left_op;
+    OutPt* op = hs.left_op;
     OutRec* outrec = GetRealOutRec(op->outrec);
     bool outrecHasEdges = outrec->front_edge;
     int64_t curr_y = op->pt.y;
@@ -2058,60 +2047,59 @@ namespace Clipper2Lib {
     }
     bool result = 
       SetHorzSegHeadingForward(hs, opP, opN) &&
-      !hs->left_op->horz;
+      !hs.left_op->horz;
 
     if (result)
-      hs->left_op->horz = hs;
+      hs.left_op->horz = &hs;
     else
-      hs->right_op = nullptr; // (for sorting)
+      hs.right_op = nullptr; // (for sorting)
     return result;
   }
   
   void ClipperBase::ConvertHorzSegsToJoins()
   {
-    //todo - convert horz_seg_list_ to list of struct (not pointers)
     auto j = std::count_if(horz_seg_list_.begin(), 
       horz_seg_list_.end(),
-      [](auto& hs) { return UpdateHorzSegment(hs); });
+      [](HorzSegment& hs) { return UpdateHorzSegment(hs); });
     if (j < 2) return;
     std::sort(horz_seg_list_.begin(), horz_seg_list_.end(), HorzSegSorter());
 
-    std::vector<HorzSegment*>::iterator hs1 = horz_seg_list_.begin(), hs2;
-    std::vector<HorzSegment*>::iterator hs_end = hs1 +j;
-    std::vector<HorzSegment*>::iterator hs_end1 = hs_end - 1;
+    HorzSegmentList::iterator hs1 = horz_seg_list_.begin(), hs2;
+    HorzSegmentList::iterator hs_end = hs1 +j;
+    HorzSegmentList::iterator hs_end1 = hs_end - 1;
 
     for (; hs1 != hs_end1; ++hs1)
     {
       for (hs2 = hs1 + 1; hs2 != hs_end; ++hs2)
       {
-        if ((*hs2)->left_op->pt.x >= (*hs1)->right_op->pt.x) break;
-        if ((*hs2)->left_to_right == (*hs1)->left_to_right ||
-          ((*hs2)->right_op->pt.x <= (*hs1)->left_op->pt.x)) continue;
-        int64_t curr_y = (*hs1)->left_op->pt.y;
-        if ((*hs1)->left_to_right)
+        if (hs2->left_op->pt.x >= hs1->right_op->pt.x) break;
+        if (hs2->left_to_right == hs1->left_to_right ||
+          (hs2->right_op->pt.x <= hs1->left_op->pt.x)) continue;
+        int64_t curr_y = hs1->left_op->pt.y;
+        if (hs1->left_to_right)
         {
-          while ((*hs1)->left_op->next->pt.y == curr_y &&
-            (*hs1)->left_op->next->pt.x <= (*hs2)->left_op->pt.x)
-            (*hs1)->left_op = (*hs1)->left_op->next;
-          while ((*hs2)->left_op->prev->pt.y == curr_y &&
-            (*hs2)->left_op->prev->pt.x <= (*hs1)->left_op->pt.x)
-            (*hs2)->left_op = (*hs2)->left_op->prev;
+          while (hs1->left_op->next->pt.y == curr_y &&
+            hs1->left_op->next->pt.x <= hs2->left_op->pt.x)
+            hs1->left_op = hs1->left_op->next;
+          while (hs2->left_op->prev->pt.y == curr_y &&
+            hs2->left_op->prev->pt.x <= hs1->left_op->pt.x)
+            hs2->left_op = hs2->left_op->prev;
           HorzJoin join = HorzJoin(
-            DuplicateOp((*hs1)->left_op, true),
-            DuplicateOp((*hs2)->left_op, false));
+            DuplicateOp(hs1->left_op, true),
+            DuplicateOp(hs2->left_op, false));
           horz_join_list_.push_back(join);
         }
         else
         {
-          while ((*hs1)->left_op->prev->pt.y == curr_y &&
-            (*hs1)->left_op->prev->pt.x <= (*hs2)->left_op->pt.x)
-            (*hs1)->left_op = (*hs1)->left_op->prev;
-          while ((*hs2)->left_op->next->pt.y == curr_y &&
-            (*hs2)->left_op->next->pt.x <= (*hs1)->left_op->pt.x)
-            (*hs2)->left_op = (*hs2)->left_op->next;
+          while (hs1->left_op->prev->pt.y == curr_y &&
+            hs1->left_op->prev->pt.x <= hs2->left_op->pt.x)
+            hs1->left_op = hs1->left_op->prev;
+          while (hs2->left_op->next->pt.y == curr_y &&
+            hs2->left_op->next->pt.x <= hs1->left_op->pt.x)
+            hs2->left_op = hs2->left_op->next;
           HorzJoin join = HorzJoin(
-            DuplicateOp((*hs2)->left_op, true),
-            DuplicateOp((*hs1)->left_op, false));
+            DuplicateOp(hs2->left_op, true),
+            DuplicateOp(hs1->left_op, false));
           horz_join_list_.push_back(join);
         }
       } 
@@ -2329,7 +2317,7 @@ namespace Clipper2Lib {
   void ClipperBase::AddTrialHorzJoin(OutPt* op)
   {
     if (op->outrec->is_open) return;
-    horz_seg_list_.push_back(new HorzSegment(op));
+    horz_seg_list_.push_back(HorzSegment(op));
   }
 
   bool ClipperBase::ResetHorzDirection(const Active& horz, 
@@ -2897,16 +2885,6 @@ namespace Clipper2Lib {
 
       if (CheckBounds(outrec))
         DeepCheckOwners(outrec, &polytree);
-
-      ///////////////////////////////
-      //if (outrec && outrec->pts &&
-      //  PointInPolygon(Point64(21887, 10420), outrec->path) ==
-      //  PointInPolygonResult::IsInside);
-      ///////////////////////////////
-
-
-
-
     }
   }
 

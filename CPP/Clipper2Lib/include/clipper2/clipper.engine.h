@@ -1,6 +1,6 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  21 January 2023                                                 *
+* Date      :  22 January 2023                                                 *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2023                                         *
 * Purpose   :  This is the main polygon clipping module                        *
@@ -13,13 +13,13 @@
 constexpr auto CLIPPER2_VERSION = "1.1.0";
 
 #include <cstdlib>
+#include <iostream>
 #include <queue>
-#include <stdexcept>
 #include <vector>
 #include <functional>
-#include "clipper.core.h"
-#include <memory>
 #include <numeric>
+
+#include "clipper.core.h"
 
 namespace Clipper2Lib {
 
@@ -150,12 +150,9 @@ namespace Clipper2Lib {
 			pt(pt_), edge1(e1), edge2(e2) {}
 	};
 
-	enum class HorzPosition { Bottom, Middle, Top };
-
 	struct HorzSegment {
 		OutPt* left_op;
 		OutPt* right_op = nullptr;
-		HorzPosition position = HorzPosition::Bottom;
 		bool left_to_right = true;
 		HorzSegment() : left_op(nullptr) { }
 		explicit HorzSegment(OutPt* op) : left_op(op) { }
@@ -176,6 +173,9 @@ namespace Clipper2Lib {
 		const PointD& e2bot, const PointD& e2top, PointD& pt)> ZCallbackD;
 #endif
 
+	typedef std::vector<HorzSegment> HorzSegmentList;
+
+
 	// ClipperBase -------------------------------------------------------------
 
 	class ClipperBase {
@@ -193,14 +193,13 @@ namespace Clipper2Lib {
 		std::vector<Vertex*> vertex_lists_;
 		std::priority_queue<int64_t> scanline_list_;
 		std::vector<IntersectNode> intersect_nodes_;
-		std::vector<HorzSegment*> horz_seg_list_;
+    HorzSegmentList horz_seg_list_;
 		std::vector<HorzJoin> horz_join_list_;
 		void Reset();
 		void InsertScanline(int64_t y);
 		bool PopScanline(int64_t &y);
-		bool PopLocalMinima(int64_t y, LocalMinima *&local_minima);
+		bool PopLocalMinima(int64_t y, LocalMinima*& local_minima);
 		void DisposeAllOutRecs();
-		void DisposeHorzSegs();
 		void DisposeVerticesAndLocalMinima();
 		void DeleteEdges(Active*& e);
 		void AddLocMin(Vertex &vert, PathType polytype, bool is_open);
@@ -307,19 +306,21 @@ namespace Clipper2Lib {
 			unsigned lvl = Level();
 			//Even levels except level 0
 			return lvl && !(lvl & 1);
-		}
+		}		
 	};
+
+	typedef typename std::vector<std::unique_ptr<PolyPath64>>::const_iterator PolyPath64_itor;
+	typedef typename std::vector<std::unique_ptr<PolyPathD>>::const_iterator PolyPathD_itor;
 
 	class PolyPath64 : public PolyPath {
 	private:
 		std::vector<std::unique_ptr<PolyPath64>> childs_;
 		Path64 polygon_;
-		typedef typename std::vector<std::unique_ptr<PolyPath64>>::const_iterator pp64_itor;
 	public:
 		explicit PolyPath64(PolyPath64* parent = nullptr) : PolyPath(parent) {}
-		PolyPath64* operator [] (size_t index) { return childs_[index].get(); }
-		pp64_itor begin() const { return childs_.cbegin(); }
-		pp64_itor end() const { return childs_.cend(); }
+		PolyPath64* operator [] (size_t index) const { return childs_[index].get(); } const
+		PolyPath64_itor begin() const { return childs_.cbegin(); }
+		PolyPath64_itor end() const { return childs_.cend(); }
 
 		PolyPath64* AddChild(const Path64& path) override
 		{
@@ -348,31 +349,6 @@ namespace Clipper2Lib {
 				[](double a, const auto& child) {return a + child->Area(); });
 		}
 
-		friend std::ostream& operator << (std::ostream& outstream, const PolyPath64& polypath)
-		{
-			// returns polytree structure
-			const size_t level_indent = 2;
-			size_t level = static_cast<size_t>(polypath.Level());
-			std::string childs = polypath.Count() == 1 ? " child" : " children";
-			if (level == 0)
-			{
-				outstream << "polytree contains " << polypath.Count() << childs << std::endl;
-				for (const auto& child : polypath) outstream << *child;
-			}
-			else if (polypath.Count())
-			{
-				std::string level_padding;
-				level_padding.insert(0, level * level_indent, ' ');
-				std::string caption = polypath.IsHole() ? 
-					"including a hole with " : 
-					"including a polygon with ";
-				outstream << level_padding << caption << 
-					polypath.Count() << childs << std::endl;
-				for (const auto& child : polypath) outstream << *child;
-			}
-			return outstream;
-		}
-
 	};
 
 	class PolyPathD : public PolyPath {
@@ -380,7 +356,6 @@ namespace Clipper2Lib {
 		std::vector<std::unique_ptr<PolyPathD>> childs_;
 		double inv_scale_;
 		PathD polygon_;
-		typedef typename std::vector<std::unique_ptr<PolyPathD>>::const_iterator ppD_itor;
 	public:
 		explicit PolyPathD(PolyPathD* parent = nullptr) : PolyPath(parent)
 		{
@@ -390,8 +365,8 @@ namespace Clipper2Lib {
 		{ 
 			return childs_[index].get();
 		}
-		ppD_itor begin() const { return childs_.cbegin(); }
-		ppD_itor end() const { return childs_.cend(); }
+		PolyPathD_itor begin() const { return childs_.cbegin(); }
+		PolyPathD_itor end() const { return childs_.cend(); }
 
 		void SetInvScale(double value) { inv_scale_ = value; }
 		double InvScale() { return inv_scale_; }

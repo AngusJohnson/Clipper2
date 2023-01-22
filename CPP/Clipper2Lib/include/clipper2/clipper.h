@@ -1,8 +1,8 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  14 January 2023                                                 *
+* Date      :  22 January 2023                                                 *
 * Website   :  http://www.angusj.com                                           *
-* Copyright :  Angus Johnson 2010-2022                                         *
+* Copyright :  Angus Johnson 2010-2023                                         *
 * Purpose   :  This module provides a simple interface to the Clipper Library  *
 * License   :  http://www.boost.org/LICENSE_1_0.txt                            *
 *******************************************************************************/
@@ -536,7 +536,79 @@ namespace Clipper2Lib {
       return;
     }
 
+    static void OutlinePolyPath(std::ostream& os, 
+      bool isHole, size_t count, const std::string& preamble)
+    {
+      std::string plural = (count == 1) ? "." : "s.";
+      if (isHole)
+      {
+        if (count)
+          os << preamble << "+- Hole with " << count <<
+          " nested polygon" << plural << std::endl;
+        else
+          os << preamble << "+- Hole" << std::endl;
+      }
+      else
+      {
+        if (count)
+          os << preamble << "+- Polygon with " << count <<
+          " nested hole" << plural << std::endl;
+        else
+          os << preamble << "+- Polygon" << std::endl;
+      }
+    }
+
+    static void OutlinePolyPath64(std::ostream& os, const PolyPath64& pp,
+      std::string preamble, bool last_child)
+    {
+      OutlinePolyPath(os, pp.IsHole(), pp.Count(), preamble);
+      preamble += (!last_child) ? "|  " : "   ";
+      if (pp.Count())
+      {
+        PolyPath64_itor it = pp.begin();
+        for (; it < pp.end() - 1; ++it)
+          OutlinePolyPath64(os, **it, preamble, false);
+        OutlinePolyPath64(os, **it, preamble, true);
+      }
+    }
+
+    static void OutlinePolyPathD(std::ostream& os, const PolyPathD& pp,
+      std::string preamble, bool last_child)
+    {
+      OutlinePolyPath(os, pp.IsHole(), pp.Count(), preamble);
+      preamble += (!last_child) ? "|  " : "   ";
+      if (pp.Count())
+      {
+        PolyPathD_itor it = pp.begin();
+        for (; it < pp.end() - 1; ++it)
+          OutlinePolyPathD(os, **it, preamble, false);
+        OutlinePolyPathD(os, **it, preamble, true);
+      }
+    }
+
   } // end details namespace 
+
+  inline std::ostream& operator<< (std::ostream& os, const PolyTree64& pp)
+  {
+    PolyPath64_itor it = pp.begin();
+    for (; it < pp.end() - 1; ++it)
+      details::OutlinePolyPath64(os, **it, "   ", false);
+    details::OutlinePolyPath64(os, **it, "   ", true);
+    os << std::endl << std::endl;
+    if (!pp.Level()) os << std::endl;
+    return os;
+  }
+
+  inline std::ostream& operator<< (std::ostream& os, const PolyTreeD& pp)
+  {
+    PolyPathD_itor it = pp.begin();
+    for (; it < pp.end() - 1; ++it)
+      details::OutlinePolyPathD(os, **it, "   ", false);
+    details::OutlinePolyPathD(os, **it, "   ", true);
+    os << std::endl << std::endl;
+    if (!pp.Level()) os << std::endl;
+    return os;
+  }
 
   inline Paths64 PolyTreeToPaths64(const PolyTree64& polytree)
   {
