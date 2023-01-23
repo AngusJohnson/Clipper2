@@ -284,7 +284,7 @@ namespace Clipper2Lib {
 		PolyPath* parent_;
 	public:
 		PolyPath(PolyPath* parent = nullptr): parent_(parent){}
-		//virtual ~PolyPath() {};		
+		virtual ~PolyPath() {};
 		//https://en.cppreference.com/w/cpp/language/rule_of_three
 		PolyPath(const PolyPath&) = delete;
 		PolyPath& operator=(const PolyPath&) = delete;
