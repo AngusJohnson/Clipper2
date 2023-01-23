@@ -3363,12 +3363,15 @@ private void DoHorizontal(Active horz)
 
     };
 
-    public bool IsHole => GetIsHole();
+    public bool IsHole
+    {
+      get { return GetIsHole(); }
+    }
 
     public PolyPathBase(PolyPathBase? parent = null) { _parent = parent; }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public int Level()
+    private int GetLevel()
     {
       int result = 0;
       PolyPathBase? pp = _parent;
@@ -3376,15 +3379,22 @@ private void DoHorizontal(Active horz)
       return result;
     }
 
+    public int Level
+    {
+      get { return GetLevel(); }
+    }
+
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private bool GetIsHole()
     {
-      int lvl = Level();
+      int lvl = GetLevel();
       return lvl != 0 && (lvl & 1) == 0;
     }
 
-    public int Count => _childs.Count;
-
+    public int Count
+    {
+      get { return _childs.Count; }
+    }
     internal abstract PolyPathBase AddChild(Path64 p);
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -3409,15 +3419,23 @@ private void DoHorizontal(Active horz)
       return newChild;
     }
 
-    [IndexerName("Child")]
     public PolyPath64 this[int index]
     {
-      get {
+      get
+      {
         if (index < 0 || index >= _childs.Count)
           throw new InvalidOperationException();
-        return (PolyPath64) _childs[index]; 
+        return (PolyPath64) _childs[index];
       }
     }
+
+    public PolyPath64 Child(int index)
+    {
+      if (index < 0 || index >= _childs.Count)
+        throw new InvalidOperationException();
+      return (PolyPath64) _childs[index];
+    }
+
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public double Area()

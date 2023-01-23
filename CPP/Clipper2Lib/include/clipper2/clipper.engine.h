@@ -321,10 +321,21 @@ namespace Clipper2Lib {
 		Path64 polygon_;
 	public:
 		explicit PolyPath64(PolyPath64* parent = nullptr) : PolyPath(parent) {}
+
 		~PolyPath64() {
 			childs_.resize(0);
 		}
-		PolyPath64* operator [] (size_t index) const { return childs_[index].get(); } const
+
+		const PolyPath64* operator [] (size_t index) const
+		{ 
+			return childs_[index].get(); 
+		} 
+
+		const PolyPath64* Child(size_t index) const
+		{
+			return childs_[index].get();
+		}
+
 		PolyPath64List::const_iterator begin() const { return childs_.cbegin(); }
 		PolyPath64List::const_iterator end() const { return childs_.cend(); }
 
@@ -367,13 +378,21 @@ namespace Clipper2Lib {
 		{
 			inv_scale_ = parent ? parent->inv_scale_ : 1.0;
 		}
+
 		~PolyPathD() {
 			childs_.resize(0);
 		}
-		PolyPathD* operator [] (size_t index)
+
+		const PolyPathD* operator [] (size_t index) const
 		{ 
 			return childs_[index].get();
 		}
+
+		const PolyPathD* Child(size_t index) const
+		{
+			return childs_[index].get();
+		}
+
 		PolyPathDList::const_iterator begin() const { return childs_.cbegin(); }
 		PolyPathDList::const_iterator end() const { return childs_.cend(); }
 

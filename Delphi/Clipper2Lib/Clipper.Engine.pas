@@ -311,6 +311,7 @@ type
     FChildList  : TList;
     function    GetChildCnt: Integer;
     function    GetIsHole: Boolean;
+    function    GetLevel: Integer;
   protected
     function    GetChild(index: Integer): TPolyPathBase;
     function    AddChild(const path: TPath64): TPolyPathBase; virtual; abstract;
@@ -323,6 +324,7 @@ type
     property    IsHole: Boolean read GetIsHole;
     property    Count: Integer read GetChildCnt;
     property    Child[index: Integer]: TPolyPathBase read GetChild; default;
+    property    Level: Integer read GetLevel;
   end;
 
   TPolyPath64 = class(TPolyPathBase)
@@ -1887,6 +1889,10 @@ begin
   op2 := startOp;
   while true do
   begin
+    // trim if collinear AND one of
+    //   a duplicate point OR
+    //   not preserving collinear points OR
+    //   is a 180 degree 'spike'
     if (CrossProduct(op2.prev.pt, op2.pt, op2.next.pt) = 0) and
       (PointsEqual(op2.pt,op2.prev.pt) or
       PointsEqual(op2.pt,op2.next.pt) or
@@ -3870,18 +3876,25 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-function  TPolyPathBase.GetIsHole: Boolean;
+function TPolyPathBase.GetLevel: Integer;
 var
   pp: TPolyPathBase;
 begin
-  pp := FParent;
-  result := assigned(pp);
-  if not Result then Exit;
-  while assigned(pp) do
+  Result := 0;
+  pp := Parent;
+  while Assigned(pp) do
   begin
-    result := not result;
-    pp := pp.FParent;
+    inc(Result);
+    pp := pp.Parent;
   end;
+end;
+//------------------------------------------------------------------------------
+
+function  TPolyPathBase.GetIsHole: Boolean;
+begin
+  if not Assigned(Parent) then
+    Result := false else
+    Result := not Odd(GetLevel);
 end;
 //------------------------------------------------------------------------------
 
