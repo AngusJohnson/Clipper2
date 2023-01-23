@@ -1,6 +1,6 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  22 January 2023                                                 *
+* Date      :  23 January 2023                                                 *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2023                                         *
 * Purpose   :  This is the main polygon clipping module                        *
@@ -13,6 +13,7 @@
 #include <vector>
 #include <numeric>
 #include <algorithm>
+
 #include "clipper2/clipper.engine.h"
 
 // https://github.com/AngusJohnson/Clipper2/discussions/334
@@ -56,7 +57,8 @@ namespace Clipper2Lib {
   };
 
   struct LocMinSorter {
-    inline bool operator()(const LocalMinima* locMin1, const LocalMinima* locMin2)
+    inline bool operator()(const LocalMinima_ptr& locMin1,
+      const LocalMinima_ptr& locMin2)
     {
       if (locMin2->vertex->pt.y != locMin1->vertex->pt.y)
         return locMin2->vertex->pt.y < locMin1->vertex->pt.y;
@@ -512,8 +514,8 @@ namespace Clipper2Lib {
     scanline_list_ = std::priority_queue<int64_t>();
     intersect_nodes_.clear();
     DisposeAllOutRecs();
-    horz_seg_list_.resize(0);
-    horz_join_list_.resize(0);
+    horz_seg_list_.clear();
+    horz_join_list_.clear();
   }
 
 
@@ -534,7 +536,7 @@ namespace Clipper2Lib {
       std::sort(minima_list_.begin(), minima_list_.end(), LocMinSorter());
       minima_list_sorted_ = true;
     }
-    std::vector<LocalMinima*>::const_reverse_iterator i;
+    LocalMinimaList::const_reverse_iterator i;
     for (i = minima_list_.rbegin(); i != minima_list_.rend(); ++i)
       InsertScanline((*i)->vertex->pt.y);
 
@@ -704,7 +706,7 @@ namespace Clipper2Lib {
   bool ClipperBase::PopLocalMinima(int64_t y, LocalMinima*& local_minima)
   {
     if (current_locmin_iter_ == minima_list_.end() || (*current_locmin_iter_)->vertex->pt.y != y) return false;
-    local_minima = (*current_locmin_iter_++);
+    local_minima = (current_locmin_iter_++)->get();
     return true;
   }
 
@@ -720,7 +722,6 @@ namespace Clipper2Lib {
 
   void ClipperBase::DisposeVerticesAndLocalMinima()
   {
-    for (auto lm : minima_list_) delete lm;
     minima_list_.clear();
     for (auto v : vertex_lists_) delete[] v;
     vertex_lists_.clear();
@@ -733,7 +734,7 @@ namespace Clipper2Lib {
     if ((VertexFlags::LocalMin & vert.flags) != VertexFlags::None) return;
 
     vert.flags = (vert.flags | VertexFlags::LocalMin);
-    minima_list_.push_back(new LocalMinima(&vert, polytype, is_open));
+    minima_list_.push_back(std::make_unique <LocalMinima>(&vert, polytype, is_open));
   }
 
   bool ClipperBase::IsContributingClosed(const Active& e) const
@@ -2269,7 +2270,7 @@ namespace Clipper2Lib {
     //Now as we process these intersections, we must sometimes adjust the order
     //to ensure that intersecting edges are always adjacent ...
 
-    std::vector<IntersectNode>::iterator node_iter, node_iter2;
+    IntersectNodeList::iterator node_iter, node_iter2;
     for (node_iter = intersect_nodes_.begin();
       node_iter != intersect_nodes_.end();  ++node_iter)
     {

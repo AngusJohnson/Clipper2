@@ -1,6 +1,6 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  22 January 2023                                                 *
+* Date      :  23 January 2023                                                 *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2023                                         *
 * Purpose   :  This is the main polygon clipping module                        *
@@ -175,7 +175,9 @@ namespace Clipper2Lib {
 #endif
 
 	typedef std::vector<HorzSegment> HorzSegmentList;
-
+	typedef std::unique_ptr<LocalMinima> LocalMinima_ptr;
+	typedef std::vector<LocalMinima_ptr> LocalMinimaList;
+	typedef std::vector<IntersectNode> IntersectNodeList;
 
 	// ClipperBase -------------------------------------------------------------
 
@@ -189,11 +191,11 @@ namespace Clipper2Lib {
 		bool using_polytree_ = false;
 		Active* actives_ = nullptr;
 		Active *sel_ = nullptr;
-		std::vector<LocalMinima*> minima_list_;		//pointers in case of memory reallocs
-		std::vector<LocalMinima*>::iterator current_locmin_iter_;
+		LocalMinimaList minima_list_;		//pointers in case of memory reallocs
+		LocalMinimaList::iterator current_locmin_iter_;
 		std::vector<Vertex*> vertex_lists_;
 		std::priority_queue<int64_t> scanline_list_;
-		std::vector<IntersectNode> intersect_nodes_;
+		IntersectNodeList intersect_nodes_;
     HorzSegmentList horz_seg_list_;
 		std::vector<HorzJoin> horz_join_list_;
 		void Reset();
@@ -282,7 +284,7 @@ namespace Clipper2Lib {
 		PolyPath* parent_;
 	public:
 		PolyPath(PolyPath* parent = nullptr): parent_(parent){}
-		virtual ~PolyPath() { Clear(); };		
+		//virtual ~PolyPath() {};		
 		//https://en.cppreference.com/w/cpp/language/rule_of_three
 		PolyPath(const PolyPath&) = delete;
 		PolyPath& operator=(const PolyPath&) = delete;
@@ -297,7 +299,7 @@ namespace Clipper2Lib {
 
 		virtual PolyPath* AddChild(const Path64& path) = 0;
 
-		virtual void Clear() {};
+		virtual void Clear() = 0;
 		virtual size_t Count() const { return 0; }
 
 		const PolyPath* Parent() const { return parent_; }
@@ -310,18 +312,21 @@ namespace Clipper2Lib {
 		}		
 	};
 
-	typedef typename std::vector<std::unique_ptr<PolyPath64>>::const_iterator PolyPath64_itor;
-	typedef typename std::vector<std::unique_ptr<PolyPathD>>::const_iterator PolyPathD_itor;
+	typedef typename std::vector<std::unique_ptr<PolyPath64>> PolyPath64List;
+	typedef typename std::vector<std::unique_ptr<PolyPathD>>  PolyPathDList;
 
 	class PolyPath64 : public PolyPath {
 	private:
-		std::vector<std::unique_ptr<PolyPath64>> childs_;
+		PolyPath64List childs_;
 		Path64 polygon_;
 	public:
 		explicit PolyPath64(PolyPath64* parent = nullptr) : PolyPath(parent) {}
+		~PolyPath64() {
+			childs_.resize(0);
+		}
 		PolyPath64* operator [] (size_t index) const { return childs_[index].get(); } const
-		PolyPath64_itor begin() const { return childs_.cbegin(); }
-		PolyPath64_itor end() const { return childs_.cend(); }
+		PolyPath64List::const_iterator begin() const { return childs_.cbegin(); }
+		PolyPath64List::const_iterator end() const { return childs_.cend(); }
 
 		PolyPath64* AddChild(const Path64& path) override
 		{
@@ -354,7 +359,7 @@ namespace Clipper2Lib {
 
 	class PolyPathD : public PolyPath {
 	private:
-		std::vector<std::unique_ptr<PolyPathD>> childs_;
+		PolyPathDList childs_;
 		double inv_scale_;
 		PathD polygon_;
 	public:
@@ -362,12 +367,15 @@ namespace Clipper2Lib {
 		{
 			inv_scale_ = parent ? parent->inv_scale_ : 1.0;
 		}
-		PolyPathD* operator [] (size_t index) 
+		~PolyPathD() {
+			childs_.resize(0);
+		}
+		PolyPathD* operator [] (size_t index)
 		{ 
 			return childs_[index].get();
 		}
-		PolyPathD_itor begin() const { return childs_.cbegin(); }
-		PolyPathD_itor end() const { return childs_.cend(); }
+		PolyPathDList::const_iterator begin() const { return childs_.cbegin(); }
+		PolyPathDList::const_iterator end() const { return childs_.cend(); }
 
 		void SetInvScale(double value) { inv_scale_ = value; }
 		double InvScale() { return inv_scale_; }

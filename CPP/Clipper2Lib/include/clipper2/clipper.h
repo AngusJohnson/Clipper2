@@ -1,6 +1,6 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  22 January 2023                                                 *
+* Date      :  23 January 2023                                                 *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2023                                         *
 * Purpose   :  This module provides a simple interface to the Clipper Library  *
@@ -565,7 +565,7 @@ namespace Clipper2Lib {
       preamble += (!last_child) ? "|  " : "   ";
       if (pp.Count())
       {
-        PolyPath64_itor it = pp.begin();
+        PolyPath64List::const_iterator it = pp.begin();
         for (; it < pp.end() - 1; ++it)
           OutlinePolyPath64(os, **it, preamble, false);
         OutlinePolyPath64(os, **it, preamble, true);
@@ -579,7 +579,7 @@ namespace Clipper2Lib {
       preamble += (!last_child) ? "|  " : "   ";
       if (pp.Count())
       {
-        PolyPathD_itor it = pp.begin();
+        PolyPathDList::const_iterator it = pp.begin();
         for (; it < pp.end() - 1; ++it)
           OutlinePolyPathD(os, **it, preamble, false);
         OutlinePolyPathD(os, **it, preamble, true);
@@ -590,7 +590,7 @@ namespace Clipper2Lib {
 
   inline std::ostream& operator<< (std::ostream& os, const PolyTree64& pp)
   {
-    PolyPath64_itor it = pp.begin();
+    PolyPath64List::const_iterator it = pp.begin();
     for (; it < pp.end() - 1; ++it)
       details::OutlinePolyPath64(os, **it, "   ", false);
     details::OutlinePolyPath64(os, **it, "   ", true);
@@ -601,7 +601,7 @@ namespace Clipper2Lib {
 
   inline std::ostream& operator<< (std::ostream& os, const PolyTreeD& pp)
   {
-    PolyPathD_itor it = pp.begin();
+    PolyPathDList::const_iterator it = pp.begin();
     for (; it < pp.end() - 1; ++it)
       details::OutlinePolyPathD(os, **it, "   ", false);
     details::OutlinePolyPathD(os, **it, "   ", true);
