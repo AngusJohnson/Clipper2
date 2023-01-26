@@ -44,6 +44,9 @@ namespace Clipper2Lib
   static const int64_t MIN_COORD = -MAX_COORD;
   static const int64_t INVALID = INT64_MAX;
 
+  static const double MAX_DBL = (std::numeric_limits<double>::max)();
+  static const double MIN_DBL = (std::numeric_limits<double>::min)();
+
   //By far the most widely used filling rules for polygons are EvenOdd
   //and NonZero, sometimes called Alternate and Winding respectively.
   //https://en.wikipedia.org/wiki/Nonzero-rule
@@ -294,7 +297,7 @@ namespace Clipper2Lib
     INT64_MAX, INT64_MAX, INT64_MIN, INT64_MIN);
 
   static const RectD MaxInvalidRectD = RectD(
-    DBL_MAX, DBL_MAX, DBL_MIN, DBL_MIN);
+    MAX_DBL, MAX_DBL, MIN_DBL, MIN_DBL);
 
   inline Rect64 Bounds(const Path64& path)
   {

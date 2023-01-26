@@ -765,8 +765,8 @@ namespace Clipper2Lib {
     size_t prior = high, curr = 0, start, next, prior2, next2;
     if (isOpenPath)
     {
-      distSqr[0] = DBL_MAX;
-      distSqr[high] = DBL_MAX;
+      distSqr[0] = MAX_DBL;
+      distSqr[high] = MAX_DBL;
     }
     else 
     {
@@ -787,7 +787,7 @@ namespace Clipper2Lib {
         } while (curr != start && distSqr[curr] > epsSqr);
         if (curr == start) break;
       }
-
+      
       prior = GetPrior(curr, high, flags);
       next = GetNext(curr, high, flags);
       if (next == prior) break;
@@ -830,7 +830,6 @@ namespace Clipper2Lib {
       result.push_back(SimplifyPath(path, epsilon, isOpenPath));
     return result;
   }
-
 
   template <typename T>
   inline void RDP(const Path<T> path, std::size_t begin,
@@ -880,8 +879,6 @@ namespace Clipper2Lib {
       { return RamerDouglasPeucker<T>(path, epsilon); });
     return result;
   }
-
-
 
 }  // end Clipper2Lib namespace
 
