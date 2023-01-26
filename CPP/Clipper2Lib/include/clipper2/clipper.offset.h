@@ -49,7 +49,6 @@ private:
 	
 	double miter_limit_ = 0.0;
 	double arc_tolerance_ = 0.0;
-	bool merge_groups_ = true;
 	bool preserve_collinear_ = false;
 	bool reverse_solution_ = false;
 
