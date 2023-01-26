@@ -412,10 +412,12 @@ namespace Clipper2Lib
       !std::numeric_limits<T2>::is_integer)
     {
       RectD r = Bounds(paths);
-      if ((r.left * scale_x) < MIN_COORD ||
-        (r.right * scale_x) > MAX_COORD ||
-        (r.top * scale_y) < MIN_COORD ||
-        (r.bottom * scale_y) > MAX_COORD)
+      const double max_coord_d = static_cast<double>(MAX_COORD);
+      const double min_coord_d = static_cast<double>(MIN_COORD);
+      if ((r.left * scale_x) < min_coord_d ||
+        (r.right * scale_x) > max_coord_d ||
+        (r.top * scale_y) < min_coord_d ||
+        (r.bottom * scale_y) > max_coord_d)
 #ifdef __cpp_exceptions
         throw Clipper2Exception(range_error);
 #else
