@@ -1,6 +1,6 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  21 January 2023                                                 *
+* Date      :  25 January 2023                                                 *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2023                                         *
 * Purpose   :  Path Offset (Inflate/Shrink)                                    *
@@ -88,14 +88,6 @@ public:
 	//ArcTolerance: needed for rounded offsets (See offset_triginometry2.svg)
 	double ArcTolerance() const { return arc_tolerance_; }
 	void ArcTolerance(double arc_tolerance) { arc_tolerance_ = arc_tolerance; }
-
-	//MergeGroups: A path group is one or more paths added via the AddPath or
-	//AddPaths methods. By default these path groups will be offset
-	//independently of other groups and this may cause overlaps (intersections).
-	//However, when MergeGroups is enabled, any overlapping offsets will be
-	//merged (via a clipping union operation) to remove overlaps.
-	bool MergeGroups() const { return merge_groups_; }
-	void MergeGroups(bool merge_groups) { merge_groups_ = merge_groups; }
 
 	bool PreserveCollinear() const { return preserve_collinear_; }
 	void PreserveCollinear(bool preserve_collinear){preserve_collinear_ = preserve_collinear;}

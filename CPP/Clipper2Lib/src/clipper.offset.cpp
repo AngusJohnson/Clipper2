@@ -1,6 +1,6 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  21 January 2023                                                 *
+* Date      :  25 January 2023                                                 *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2023                                         *
 * Purpose   :  Path Offset (Inflate/Shrink)                                    *
@@ -20,20 +20,39 @@ const double floating_point_tolerance = 1e-12;
 // Miscellaneous methods
 //------------------------------------------------------------------------------
 
-Paths64::size_type GetLowestPolygonIdx(const Paths64& paths)
+void GetBoundsAndLowestPolyIdx(const Paths64& paths, Rect64& r, int & idx)
 {
-	Paths64::size_type result = 0;
-	Point64 lp = Point64(static_cast<int64_t>(0), 
-		std::numeric_limits<int64_t>::min());
-
-	for (Paths64::size_type i = 0 ; i < paths.size(); ++i)
+	idx = -1;
+	r = MaxInvalidRect64;
+	int64_t lpx = 0;
+	for (int i = 0; i < static_cast<int>(paths.size()); ++i)
 		for (const Point64& p : paths[i])
-		{ 
-			if (p.y < lp.y || (p.y == lp.y && p.x >= lp.x)) continue;
-			result = i;
-			lp = p;
-		}	
-	return result;
+		{
+			if (p.y >= r.bottom)
+			{
+				if (p.y > r.bottom || p.x < lpx)
+				{
+					idx = i;
+					lpx = p.x;
+					r.bottom = p.y;
+				}
+			}
+			else if (p.y < r.top) r.top = p.y;
+			if (p.x > r.right) r.right = p.x;
+			else if (p.x < r.left) r.left = p.x;
+		}
+	if (idx < 0) r = Rect64(0, 0, 0, 0);
+	if (r.top == INT64_MIN) r.bottom = r.top;
+	if (r.left == INT64_MIN) r.left = r.right;
+}
+
+bool IsSafeOffset(const Rect64& r, int64_t delta)
+{
+	if (delta < 0) return true;
+	return r.left > INT64_MIN + delta &&
+		r.right < INT64_MAX - delta &&
+		r.top > INT64_MIN + delta &&
+		r.bottom < INT64_MAX - delta;
 }
 
 PointD GetUnitNormal(const Point64& pt1, const Point64& pt2)
@@ -356,13 +375,17 @@ void ClipperOffset::DoGroupOffset(Group& group, double delta)
 	if (group.end_type_ != EndType::Polygon) delta = std::abs(delta) * 0.5;
 	bool isClosedPaths = IsClosedPath(group.end_type_);
 
+	//the lowermost polygon must be an outer polygon. So we can use that as the
+	//designated orientation for outer polygons (needed for tidy-up clipping)
+	Rect64 r;
+	int idx = 0;
+	GetBoundsAndLowestPolyIdx(group.paths_in_, r, idx);
+	if (!IsSafeOffset(r, static_cast<int64_t>(std::ceil(delta))))
+		throw "Range error - the offset delta is too large";
+
 	if (isClosedPaths)
 	{
-		//the lowermost polygon must be an outer polygon. So we can use that as the
-		//designated orientation for outer polygons (needed for tidy-up clipping)
-		Paths64::size_type lowestIdx = GetLowestPolygonIdx(group.paths_in_);
-    // nb: don't use the default orientation here ...
-		double area = Area(group.paths_in_[lowestIdx]);
+		double area = Area(group.paths_in_[idx]);
 		if (area == 0) return;	
 		group.is_reversed_ = (area < 0);
 		if (group.is_reversed_) delta = -delta;
@@ -403,7 +426,7 @@ void ClipperOffset::DoGroupOffset(Group& group, double delta)
 			else
 			{
 				int d = (int)std::ceil(abs_group_delta_);
-				Rect64 r = Rect64(path[0].x - d, path[0].y - d, path[0].x + d, path[0].y + d);
+				r = Rect64(path[0].x - d, path[0].y - d, path[0].x + d, path[0].y + d);
 				group.path_ = r.AsPath();
 			}
 			group.paths_out_.push_back(group.path_);
@@ -416,21 +439,6 @@ void ClipperOffset::DoGroupOffset(Group& group, double delta)
 			else OffsetOpenPath(group, path, group.end_type_);
 		}
 	}
-
-	if (!merge_groups_)
-	{
-		//clean up self-intersections ...
-		Clipper64 c;
-		c.PreserveCollinear = false;
-		//the solution should retain the orientation of the input
-		c.ReverseSolution = reverse_solution_ != group.is_reversed_;
-		c.AddSubject(group.paths_out_);
-		if (group.is_reversed_)
-			c.Execute(ClipType::Union, FillRule::Negative, group.paths_out_);
-		else
-			c.Execute(ClipType::Union, FillRule::Positive, group.paths_out_);
-	}
-
 	solution.reserve(solution.size() + group.paths_out_.size());
 	copy(group.paths_out_.begin(), group.paths_out_.end(), back_inserter(solution));
 	group.paths_out_.clear();
@@ -439,6 +447,8 @@ void ClipperOffset::DoGroupOffset(Group& group, double delta)
 Paths64 ClipperOffset::Execute(double delta)
 {
 	solution.clear();
+	if (groups_.size() == 0) return solution;
+
 	if (std::abs(delta) < default_arc_tolerance)
 	{
 		for (const Group& group : groups_)
@@ -453,26 +463,21 @@ Paths64 ClipperOffset::Execute(double delta)
 		2.0 : 
 		2.0 / (miter_limit_ * miter_limit_);
 
-	std::vector<Group>::iterator groups_iter;
-	for (groups_iter = groups_.begin(); 
-		groups_iter != groups_.end(); ++groups_iter)
-	{
-		DoGroupOffset(*groups_iter, delta);
-	}
+	std::vector<Group>::iterator git;
+	for (git = groups_.begin(); git != groups_.end(); ++git)
+		DoGroupOffset(*git, delta);
 
-	if (merge_groups_ && groups_.size() > 0)
-	{
-		//clean up self-intersections ...
-		Clipper64 c;
-		c.PreserveCollinear = false;
-		//the solution should retain the orientation of the input
-		c.ReverseSolution = reverse_solution_ != groups_[0].is_reversed_;
-		c.AddSubject(solution);
-		if (groups_[0].is_reversed_)
-			c.Execute(ClipType::Union, FillRule::Negative, solution);
-		else
-			c.Execute(ClipType::Union, FillRule::Positive, solution);
-	}
+	//clean up self-intersections ...
+	Clipper64 c;
+	c.PreserveCollinear = false;
+	//the solution should retain the orientation of the input
+	c.ReverseSolution = reverse_solution_ != groups_[0].is_reversed_;
+	c.AddSubject(solution);
+	if (groups_[0].is_reversed_)
+		c.Execute(ClipType::Union, FillRule::Negative, solution);
+	else
+		c.Execute(ClipType::Union, FillRule::Positive, solution);
+
 	return solution;
 }
 

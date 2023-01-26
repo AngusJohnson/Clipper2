@@ -2,7 +2,7 @@ unit Clipper.Engine;
 
 (*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  21 January 2023                                                 *
+* Date      :  25 January 2023                                                 *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2023                                         *
 * Purpose   :  This is the main polygon clipping module                        *
@@ -2649,7 +2649,7 @@ end;
 
 function PointInOpPolygon(const pt: TPoint64; op: POutPt): TPointInPolygonResult;
 var
-  i, val: Integer;
+  val: Integer;
   op2: POutPt;
   isAbove: Boolean;
   d: Double; // used to avoid integer overflow
@@ -2842,7 +2842,6 @@ var
   i, j: integer;
   currY: Int64;
   hs1, hs2: PHorzSegment;
-  join: PHorzJoin;
 begin
   j := 0;
   for i := 0 to FHorzSegList.Count -1 do
@@ -2881,9 +2880,9 @@ begin
         while (hs2.leftOp.prev.pt.Y = currY) and
           (hs2.leftOp.prev.pt.X <= hs1.leftOp.pt.X) do
             hs2.leftOp := hs2.leftOp.prev;
-        join := PHorzJoin(FHorzJoinList.Add(
+        FHorzJoinList.Add(
           DuplicateOp(hs1.leftOp, true),
-          DuplicateOp(hs2.leftOp, false)));
+          DuplicateOp(hs2.leftOp, false));
       end else
       begin
         while (hs1.leftOp.prev.pt.Y = currY) and
@@ -2892,9 +2891,9 @@ begin
         while (hs2.leftOp.next.pt.Y = currY) and
           (hs2.leftOp.next.pt.X <= hs1.leftOp.pt.X) do
             hs2.leftOp := hs2.leftOp.next;
-        join := PHorzJoin(FHorzJoinList.Add(
+        FHorzJoinList.Add(
           DuplicateOp(hs2.leftOp, true),
-          DuplicateOp(hs1.leftOp, false)));
+          DuplicateOp(hs1.leftOp, false));
       end;
     end;
   end;

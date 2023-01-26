@@ -2,7 +2,7 @@ unit Clipper.Offset;
 
 (*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  21 January 2023                                                 *
+* Date      :  25 January 2023                                                 *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2023                                         *
 * Purpose   :  Path Offset (Inflate/Shrink)                                    *
@@ -45,8 +45,7 @@ type
     fArcTolerance: Double;
     fStepsPerRad : Double;
     fNorms       : TPathD;
-    fInGroups    : TList;
-    fMergeGroups : Boolean;
+    fGroupList   : TListEx;
     fInPath      : TPath64;
     fOutPath     : TPath64;
     fOutPaths    : TPaths64;
@@ -85,12 +84,6 @@ type
     property MiterLimit: Double read fMiterLimit write fMiterLimit;
     // ArcTolerance: needed for rounded offsets (See offset_triginometry2.svg)
     property ArcTolerance: Double read fArcTolerance write fArcTolerance;
-    // MergeGroups: A path group is one or more paths added via the AddPath or
-    // AddPaths methods. By default these path groups will be offset
-    // independently of other groups and this may cause overlaps (intersections).
-    // However, when MergeGroups is enabled, any overlapping offsets will be
-    // merged (via a clipping union operation) to remove overlaps.
-    property MergeGroups: Boolean read fMergeGroups write fMergeGroups;
     property PreserveCollinear: Boolean
       read fPreserveCollinear write fPreserveCollinear;
     property ReverseSolution: Boolean
@@ -212,10 +205,9 @@ constructor TClipperOffset.Create(miterLimit: double;
   arcTolerance: double; PreserveCollinear: Boolean;
   ReverseSolution: Boolean);
 begin
-  fMergeGroups  := true;
   fMiterLimit   := MiterLimit;
   fArcTolerance := ArcTolerance;
-  fInGroups     := TList.Create;
+  fGroupList    := TListEx.Create;
   fPreserveCollinear := preserveCollinear;
   fReverseSolution := ReverseSolution;
 end;
@@ -224,7 +216,7 @@ end;
 destructor TClipperOffset.Destroy;
 begin
   Clear;
-  fInGroups.Free;
+  fGroupList.Free;
   inherited;
 end;
 //------------------------------------------------------------------------------
@@ -233,9 +225,9 @@ procedure TClipperOffset.Clear;
 var
   i: integer;
 begin
-  for i := 0 to fInGroups.Count -1 do
-    TGroup(UnsafeGet(fInGroups, i)).Free;
-  fInGroups.Clear;
+  for i := 0 to fGroupList.Count -1 do
+    TGroup(fGroupList[i]).Free;
+  fGroupList.Clear;
   fSolution := nil;
 end;
 //------------------------------------------------------------------------------
@@ -260,7 +252,7 @@ begin
   if Length(paths) = 0 then Exit;
   group := TGroup.Create(joinType, endType);
   AppendPaths(group.paths, paths);
-  fInGroups.Add(group);
+  fGroupList.Add(group);
 end;
 //------------------------------------------------------------------------------
 
@@ -368,23 +360,6 @@ begin
     SetLength(fOutPath, fOutPathLen);
     AppendPath(fOutPaths, fOutPath);
   end;
-
-  if not fMergeGroups then
-  begin
-    // clean up self-intersections ...
-    with TClipper64.Create do
-    try
-      PreserveCollinear := fPreserveCollinear;
-      // the solution should retain the orientation of the input
-      ReverseSolution := fReverseSolution <> group.reversed;
-      AddSubject(fOutPaths);
-      if group.reversed then
-        Execute(ctUnion, frNegative, fOutPaths) else
-        Execute(ctUnion, frPositive, fOutPaths);
-    finally
-      free;
-    end;
-  end;
   // finally copy the working 'outPaths' to the solution
   AppendPaths(fSolution, fOutPaths);
 end;
@@ -484,15 +459,15 @@ var
 begin
   fSolution := nil;
   Result := nil;
-  if fInGroups.Count = 0 then Exit;
+  if fGroupList.Count = 0 then Exit;
 
   fMinLenSqrd := 1;
   if abs(delta) < Tolerance then
   begin
     // if delta == 0, just copy paths to Result
-    for i := 0 to fInGroups.Count -1 do
+    for i := 0 to fGroupList.Count -1 do
     begin
-      group := TGroup(UnsafeGet(fInGroups, i));
+      group := TGroup(fGroupList[i]);
       AppendPaths(fSolution, group.paths);
     end;
     Result := fSolution;
@@ -505,24 +480,23 @@ begin
     fTmpLimit := 2.0;
 
   // nb: delta will depend on whether paths are polygons or open
-  for i := 0 to fInGroups.Count -1 do
+  for i := 0 to fGroupList.Count -1 do
   begin
-    group := TGroup(UnsafeGet(fInGroups, i));
+    group := TGroup(fGroupList[i]);
     DoGroupOffset(group, delta);
   end;
 
-  if fMergeGroups and (fInGroups.Count > 0) then
+  if (fGroupList.Count > 0) then
   begin
     // clean up self-intersections ...
     with TClipper64.Create do
     try
       PreserveCollinear := fPreserveCollinear;
       // the solution should retain the orientation of the input
-
       ReverseSolution :=
-        fReverseSolution <> TGroup(fInGroups[0]).reversed;
+        fReverseSolution <> TGroup(fGroupList[0]).reversed;
       AddSubject(fSolution);
-      if TGroup(UnsafeGet(fInGroups, 0)).reversed then
+      if TGroup(fGroupList[0]).reversed then
         Execute(ctUnion, frNegative, fSolution) else
         Execute(ctUnion, frPositive, fSolution);
     finally

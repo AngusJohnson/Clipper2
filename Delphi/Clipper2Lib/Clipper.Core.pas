@@ -2,8 +2,8 @@ unit Clipper.Core;
 
 (*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  17 December 2022                                                *
-* Copyright :  Angus Johnson 2010-2022                                         *
+* Date      :  21 January 2023                                                 *
+* Copyright :  Angus Johnson 2010-2023                                         *
 * Purpose   :  Core Clipper Library module                                     *
 *              Contains structures and functions used throughout the library   *
 * License   :  http://www.boost.org/LICENSE_1_0.txt                            *
@@ -106,13 +106,13 @@ type
     fCapacity : integer;
     fList     : TPointerList;
   protected
-    function Add(item: Pointer): integer;
     function UnsafeGet(idx: integer): Pointer; // no range checking
     procedure UnsafeSet(idx: integer; val: Pointer);
   public
     constructor Create(capacity: integer = 0); virtual;
     destructor Destroy; override;
     procedure Clear; virtual;
+    function Add(item: Pointer): integer;
     procedure Swap(idx1, idx2: integer);
     procedure Sort(Compare: TListSortCompare);
     procedure Resize(count: integer);

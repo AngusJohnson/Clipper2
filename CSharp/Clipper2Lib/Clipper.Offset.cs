@@ -1,6 +1,6 @@
 ﻿/*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  21 January 2023                                                 *
+* Date      :  26 January 2023                                                 *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2023                                         *
 * Purpose   :  Path Offset (Inflate/Shrink)                                    *
@@ -52,7 +52,7 @@ namespace Clipper2Lib
       }
     }
 
-    private readonly List<Group> _pathGroups = new List<Group>();
+    private readonly List<Group> _groupList = new List<Group>();
     private readonly PathD _normals = new PathD();
     private readonly Paths64 solution = new Paths64();
     private double _group_delta, _abs_group_delta, _tmpLimit, _stepsPerRad;
@@ -78,7 +78,7 @@ namespace Clipper2Lib
 
     public void Clear()
     {
-      _pathGroups.Clear();
+      _groupList.Clear();
     }
 
     public void AddPath(Path64 path, JoinType joinType, EndType endType)
@@ -93,15 +93,17 @@ namespace Clipper2Lib
     {
       int cnt = paths.Count;
       if (cnt == 0) return;
-      _pathGroups.Add(new Group(paths, joinType, endType));
+      _groupList.Add(new Group(paths, joinType, endType));
     }
 
     public Paths64 Execute(double delta)
     {
       solution.Clear();
-      if (Math.Abs(delta) < 0.5)
+      if (_groupList.Count == 0) return solution;
+
+        if (Math.Abs(delta) < 0.5)
       {
-        foreach (Group group in _pathGroups)
+        foreach (Group group in _groupList)
           foreach (Path64 path in group._inPaths)
             solution.Add(path);
         return solution;
@@ -109,24 +111,21 @@ namespace Clipper2Lib
 
       _tmpLimit = (MiterLimit <= 1 ? 2.0 : 2.0 / Clipper.Sqr(MiterLimit));
 
-      foreach (Group group in _pathGroups)
+      foreach (Group group in _groupList)
         DoGroupOffset(group, delta);
 
-      if (MergeGroups && _pathGroups.Count > 0)
+      // clean up self-intersections ...
+      Clipper64 c = new Clipper64()
       {
-        // clean up self-intersections ...
-        Clipper64 c = new Clipper64()
-        {
-          PreserveCollinear = PreserveCollinear,
-          // the solution should retain the orientation of the input
-          ReverseSolution = ReverseSolution != _pathGroups[0]._pathsReversed
-        };
-        c.AddSubject(solution);
-        if (_pathGroups[0]._pathsReversed)
-          c.Execute(ClipType.Union, FillRule.Negative, solution);
-        else
-          c.Execute(ClipType.Union, FillRule.Positive, solution);
-      }
+        PreserveCollinear = PreserveCollinear,
+        // the solution should retain the orientation of the input
+        ReverseSolution = ReverseSolution != _groupList[0]._pathsReversed
+      };
+      c.AddSubject(solution);
+      if (_groupList[0]._pathsReversed)
+        c.Execute(ClipType.Union, FillRule.Negative, solution);
+      else
+        c.Execute(ClipType.Union, FillRule.Positive, solution);
       return solution;
     }
 
@@ -518,22 +517,6 @@ namespace Clipper2Lib
           else if (group._endType == EndType.Joined) OffsetOpenJoined(group, path);
           else OffsetOpenPath(group, path, group._endType);
         }
-      }
-
-      if (!MergeGroups)
-      {
-        // clean up self-intersections
-        Clipper64 c = new Clipper64()
-        {
-          PreserveCollinear = PreserveCollinear,
-          // the solution should retain the orientation of the input
-          ReverseSolution = ReverseSolution != group._pathsReversed
-        };
-        c.AddSubject(group._outPaths);
-        if (group._pathsReversed)
-          c.Execute(ClipType.Union, FillRule.Negative, group._outPaths);
-        else
-          c.Execute(ClipType.Union, FillRule.Positive, group._outPaths);
       }
       solution.AddRange(group._outPaths);
       group._outPaths.Clear();

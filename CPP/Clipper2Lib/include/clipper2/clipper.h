@@ -21,18 +21,6 @@
 
 namespace Clipper2Lib {
 
-  static const Rect64 MaxInvalidRect64 = Rect64(
-    (std::numeric_limits<int64_t>::max)(),
-    (std::numeric_limits<int64_t>::max)(),
-    (std::numeric_limits<int64_t>::lowest)(),
-    (std::numeric_limits<int64_t>::lowest)());
-
-  static const RectD MaxInvalidRectD = RectD(
-      (std::numeric_limits<double>::max)(),
-      (std::numeric_limits<double>::max)(),
-      (std::numeric_limits<double>::lowest)(),
-      (std::numeric_limits<double>::lowest)());
-
   inline Paths64 BooleanOp(ClipType cliptype, FillRule fillrule,
     const Paths64& subjects, const Paths64& clips)
   {    
@@ -190,64 +178,6 @@ namespace Clipper2Lib {
     std::transform(paths.begin(), paths.end(), back_inserter(result),
       [dx, dy](const auto& path) { return TranslatePath(path, dx, dy); });
     return result;
-  }
-
-  inline Rect64 Bounds(const Path64& path)
-  {
-    Rect64 rec = MaxInvalidRect64;
-    for (const Point64& pt : path)
-    {
-      if (pt.x < rec.left) rec.left = pt.x;
-      if (pt.x > rec.right) rec.right = pt.x;
-      if (pt.y < rec.top) rec.top = pt.y;
-      if (pt.y > rec.bottom) rec.bottom = pt.y;
-    }
-    if (rec.IsEmpty()) return Rect64();
-    return rec;
-  }
-  
-  inline Rect64 Bounds(const Paths64& paths)
-  {
-    Rect64 rec = MaxInvalidRect64;
-    for (const Path64& path : paths)
-      for (const Point64& pt : path)
-      {
-        if (pt.x < rec.left) rec.left = pt.x;
-        if (pt.x > rec.right) rec.right = pt.x;
-        if (pt.y < rec.top) rec.top = pt.y;
-        if (pt.y > rec.bottom) rec.bottom = pt.y;
-      }
-    if (rec.IsEmpty()) return Rect64();
-    return rec;
-  }
-
-  inline RectD Bounds(const PathD& path)
-  {
-    RectD rec = MaxInvalidRectD;
-    for (const PointD& pt : path)
-    {
-      if (pt.x < rec.left) rec.left = pt.x;
-      if (pt.x > rec.right) rec.right = pt.x;
-      if (pt.y < rec.top) rec.top = pt.y;
-      if (pt.y > rec.bottom) rec.bottom = pt.y;
-    }
-    if (rec.IsEmpty()) return RectD();
-    return rec;
-  }
-
-  inline RectD Bounds(const PathsD& paths)
-  {
-    RectD rec = MaxInvalidRectD;
-    for (const PathD& path : paths)
-      for (const PointD& pt : path)
-      {
-        if (pt.x < rec.left) rec.left = pt.x;
-        if (pt.x > rec.right) rec.right = pt.x;
-        if (pt.y < rec.top) rec.top = pt.y;
-        if (pt.y > rec.bottom) rec.bottom = pt.y;
-      }
-    if (rec.IsEmpty()) return RectD();
-    return rec;
   }
 
   inline Path64 RectClip(const Rect64& rect, const Path64& path)
@@ -552,7 +482,7 @@ namespace Clipper2Lib {
       {
         if (count)
           os << preamble << "+- Polygon with " << count <<
-          " nested hole" << plural << std::endl;
+          " hole" << plural << std::endl;
         else
           os << preamble << "+- Polygon" << std::endl;
       }
@@ -799,6 +729,109 @@ namespace Clipper2Lib {
     return Sqr(a * d - c * b) / (c * c + d * d);
   }
 
+  inline size_t GetNext(size_t current, size_t high, 
+    const std::vector<bool>& flags)
+  {
+    ++current;
+    while (current <= high && flags[current]) ++current;
+    if (current <= high) return current;
+    current = 0;
+    while (flags[current]) ++current;
+    return current;
+  }
+
+  inline size_t GetPrior(size_t current, size_t high, 
+    const std::vector<bool>& flags)
+  {
+    if (current == 0) current = high;
+    else --current;
+    while (current > 0 && flags[current]) --current;
+    if (!flags[current]) return current;
+    current = high;
+    while (flags[current]) --current;
+    return current;
+  }
+
+  template <typename T>
+  inline Path<T> SimplifyPath(const Path<T> path, 
+    double epsilon, bool isOpenPath = false)
+  {
+    const size_t len = path.size(), high = len -1;
+    const double epsSqr = Sqr(epsilon);
+    if (len < 4) return Path<T>(path);
+
+    std::vector<bool> flags(len);
+    std::vector<double> distSqr(len);
+    size_t prior = high, curr = 0, start, next, prior2, next2;
+    if (isOpenPath)
+    {
+      distSqr[0] = DBL_MAX;
+      distSqr[high] = DBL_MAX;
+    }
+    else 
+    {
+      distSqr[0] = PerpendicDistFromLineSqrd(path[0], path[high], path[1]);
+      distSqr[high] = PerpendicDistFromLineSqrd(path[high], path[0], path[high - 1]);
+    }
+    for (size_t i = 1; i < high; ++i)
+      distSqr[i] = PerpendicDistFromLineSqrd(path[i], path[i - 1], path[i + 1]);
+
+    for (;;)
+    {
+      if (distSqr[curr] > epsSqr)
+      {
+        start = curr;
+        do
+        {
+          curr = GetNext(curr, high, flags);
+        } while (curr != start && distSqr[curr] > epsSqr);
+        if (curr == start) break;
+      }
+
+      prior = GetPrior(curr, high, flags);
+      next = GetNext(curr, high, flags);
+      if (next == prior) break;
+
+      if (distSqr[next] < distSqr[curr])
+      {
+        flags[next] = true;
+        next = GetNext(next, high, flags);
+        next2 = GetNext(next, high, flags);
+        distSqr[curr] = PerpendicDistFromLineSqrd(path[curr], path[prior], path[next]);
+        if (next != high || !isOpenPath)
+          distSqr[next] = PerpendicDistFromLineSqrd(path[next], path[curr], path[next2]);
+        curr = next;
+      }
+      else
+      {
+        flags[curr] = true;
+        curr = next;
+        next = GetNext(next, high, flags);
+        prior2 = GetPrior(prior, high, flags);
+        distSqr[curr] = PerpendicDistFromLineSqrd(path[curr], path[prior], path[next]);
+        if (prior != 0 || !isOpenPath)
+          distSqr[prior] = PerpendicDistFromLineSqrd(path[prior], path[prior2], path[curr]);
+      }
+    }
+    Path<T> result;
+    result.reserve(len);
+    for (typename Path<T>::size_type i = 0; i < len; ++i)
+      if (!flags[i]) result.push_back(path[i]);
+    return result;
+  }
+
+  template <typename T>
+  inline Paths<T> SimplifyPaths(const Paths<T> paths, 
+    double epsilon, bool isOpenPath = false)
+  {
+    Paths<T> result;
+    result.reserve(paths.size());
+    for (const auto& path : paths)
+      result.push_back(SimplifyPath(path, epsilon, isOpenPath));
+    return result;
+  }
+
+
   template <typename T>
   inline void RDP(const Path<T> path, std::size_t begin,
     std::size_t end, double epsSqrd, std::vector<bool>& flags)
@@ -843,10 +876,12 @@ namespace Clipper2Lib {
     Paths<T> result;
     result.reserve(paths.size());
     std::transform(paths.begin(), paths.end(), back_inserter(result),
-      [epsilon](const auto& path) 
+      [epsilon](const auto& path)
       { return RamerDouglasPeucker<T>(path, epsilon); });
     return result;
   }
+
+
 
 }  // end Clipper2Lib namespace
 

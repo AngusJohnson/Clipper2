@@ -1,6 +1,6 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  14 January 2023                                                 *
+* Date      :  26 January 2023                                                 *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2023                                         *
 * Purpose   :  Core Clipper Library structures and functions                   *
@@ -20,9 +20,23 @@
 
 namespace Clipper2Lib
 {
+
 #ifdef __cpp_exceptions
+
+  class Clipper2Exception : public std::exception {
+  public:
+    explicit Clipper2Exception(const char* description) :
+      m_descr(description) {}
+    virtual const char* what() const throw() { return m_descr.c_str(); }
+  private:
+    std::string m_descr;
+  };
+
   static const char* precision_error =
     "Precision exceeds the permitted range";
+  static const char* range_error =
+    "Values exceed permitted range";
+
 #endif
 
   static const double PI = 3.141592653589793238;
@@ -170,6 +184,177 @@ namespace Clipper2Lib
   using Paths64 = std::vector< Path64>;
   using PathsD = std::vector< PathD>;
 
+  // Rect ------------------------------------------------------------------------
+
+  template <typename T>
+  struct Rect;
+
+  using Rect64 = Rect<int64_t>;
+  using RectD = Rect<double>;
+
+  template <typename T>
+  struct Rect {
+    T left;
+    T top;
+    T right;
+    T bottom;
+
+    Rect() :
+      left(0),
+      top(0),
+      right(0),
+      bottom(0) {}
+
+    Rect(T l, T t, T r, T b) :
+      left(l),
+      top(t),
+      right(r),
+      bottom(b) {}
+
+
+    T Width() const { return right - left; }
+    T Height() const { return bottom - top; }
+    void Width(T width) { right = left + width; }
+    void Height(T height) { bottom = top + height; }
+
+    Point<T> MidPoint() const
+    {
+      return Point<T>((left + right) / 2, (top + bottom) / 2);
+    }
+
+    Path<T> AsPath() const
+    {
+      Path<T> result;
+      result.reserve(4);
+      result.push_back(Point<T>(left, top));
+      result.push_back(Point<T>(right, top));
+      result.push_back(Point<T>(right, bottom));
+      result.push_back(Point<T>(left, bottom));
+      return result;
+    }
+
+    bool Contains(const Point<T>& pt) const
+    {
+      return pt.x > left && pt.x < right&& pt.y > top && pt.y < bottom;
+    }
+
+    bool Contains(const Rect<T>& rec) const
+    {
+      return rec.left >= left && rec.right <= right &&
+        rec.top >= top && rec.bottom <= bottom;
+    }
+
+    void Scale(double scale) {
+      left *= scale;
+      top *= scale;
+      right *= scale;
+      bottom *= scale;
+    }
+
+    bool IsEmpty() const { return bottom <= top || right <= left; };
+
+    bool Intersects(const Rect<T>& rec) const
+    {
+      return ((std::max)(left, rec.left) < (std::min)(right, rec.right)) &&
+        ((std::max)(top, rec.top) < (std::min)(bottom, rec.bottom));
+    };
+
+    friend std::ostream& operator<<(std::ostream& os, const Rect<T>& rect) {
+      os << "("
+        << rect.left << "," << rect.top << "," << rect.right << "," << rect.bottom
+        << ")";
+      return os;
+    }
+  };
+
+  template <typename T1, typename T2>
+  inline Rect<T1> ScaleRect(const Rect<T2>& rect, double scale)
+  {
+    Rect<T1> result;
+
+    if constexpr (std::numeric_limits<T1>::is_integer &&
+      !std::numeric_limits<T2>::is_integer)
+    {
+      result.left = static_cast<T1>(std::round(rect.left * scale));
+      result.top = static_cast<T1>(std::round(rect.top * scale));
+      result.right = static_cast<T1>(std::round(rect.right * scale));
+      result.bottom = static_cast<T1>(std::round(rect.bottom * scale));
+    }
+    else
+    {
+      result.left = rect.left * scale;
+      result.top = rect.top * scale;
+      result.right = rect.right * scale;
+      result.bottom = rect.bottom * scale;
+    }
+    return result;
+  }
+
+  static const Rect64 MaxInvalidRect64 = Rect64(
+    INT64_MAX, INT64_MAX, INT64_MIN, INT64_MIN);
+
+  static const RectD MaxInvalidRectD = RectD(
+    DBL_MAX, DBL_MAX, DBL_MIN, DBL_MIN);
+
+  inline Rect64 Bounds(const Path64& path)
+  {
+    Rect64 rec = MaxInvalidRect64;
+    for (const Point64& pt : path)
+    {
+      if (pt.x < rec.left) rec.left = pt.x;
+      if (pt.x > rec.right) rec.right = pt.x;
+      if (pt.y < rec.top) rec.top = pt.y;
+      if (pt.y > rec.bottom) rec.bottom = pt.y;
+    }
+    if (rec.IsEmpty()) return Rect64();
+    return rec;
+  }
+
+  inline Rect64 Bounds(const Paths64& paths)
+  {
+    Rect64 rec = MaxInvalidRect64;
+    for (const Path64& path : paths)
+      for (const Point64& pt : path)
+      {
+        if (pt.x < rec.left) rec.left = pt.x;
+        if (pt.x > rec.right) rec.right = pt.x;
+        if (pt.y < rec.top) rec.top = pt.y;
+        if (pt.y > rec.bottom) rec.bottom = pt.y;
+      }
+    if (rec.IsEmpty()) return Rect64();
+    return rec;
+  }
+
+  inline RectD Bounds(const PathD& path)
+  {
+    RectD rec = MaxInvalidRectD;
+    for (const PointD& pt : path)
+    {
+      if (pt.x < rec.left) rec.left = pt.x;
+      if (pt.x > rec.right) rec.right = pt.x;
+      if (pt.y < rec.top) rec.top = pt.y;
+      if (pt.y > rec.bottom) rec.bottom = pt.y;
+    }
+    if (rec.IsEmpty()) return RectD();
+    return rec;
+  }
+
+  inline RectD Bounds(const PathsD& paths)
+  {
+    RectD rec = MaxInvalidRectD;
+    for (const PathD& path : paths)
+      for (const PointD& pt : path)
+      {
+        if (pt.x < rec.left) rec.left = pt.x;
+        if (pt.x > rec.right) rec.right = pt.x;
+        if (pt.y < rec.top) rec.top = pt.y;
+        if (pt.y > rec.bottom) rec.bottom = pt.y;
+      }
+    if (rec.IsEmpty()) return RectD();
+    return rec;
+  }
+
+
   template <typename T>
   std::ostream& operator << (std::ostream& outstream, const Path<T>& path)
   {
@@ -190,6 +375,7 @@ namespace Clipper2Lib
       outstream << p;
     return outstream;
   }
+
 
   template <typename T1, typename T2>
   inline Path<T1> ScalePath(const Path<T2>& path, double scale_x, double scale_y)
@@ -218,6 +404,22 @@ namespace Clipper2Lib
   inline Paths<T1> ScalePaths(const Paths<T2>& paths, double scale_x, double scale_y)
   {
     Paths<T1> result;
+
+    if constexpr (std::numeric_limits<T1>::is_integer &&
+      !std::numeric_limits<T2>::is_integer)
+    {
+      RectD r = Bounds(paths);
+      if ((r.left * scale_x) < MIN_COORD ||
+        (r.right * scale_x) > MAX_COORD ||
+        (r.top * scale_y) < MIN_COORD ||
+        (r.bottom * scale_y) > MAX_COORD)
+#ifdef __cpp_exceptions
+        throw Clipper2Exception(range_error);
+#else
+        return result;
+#endif
+    }
+
     result.reserve(paths.size());
     std::transform(paths.begin(), paths.end(), back_inserter(result),
       [scale_x, scale_y](const auto& path)
@@ -355,129 +557,6 @@ namespace Clipper2Lib
     }
     return result;
   }
-
-  // Rect ------------------------------------------------------------------------
-
-  template <typename T>
-  struct Rect;
-
-  using Rect64 = Rect<int64_t>;
-  using RectD = Rect<double>;
-
-  template <typename T>
-  struct Rect {
-    T left;
-    T top;
-    T right;
-    T bottom;
-
-    Rect() :
-      left(0),
-      top(0),
-      right(0),
-      bottom(0) {}
-
-    Rect(T l, T t, T r, T b) :
-      left(l),
-      top(t),
-      right(r),
-      bottom(b) {}
-
-
-    T Width() const { return right - left; }
-    T Height() const { return bottom - top; }
-    void Width(T width) { right = left + width; }
-    void Height(T height) { bottom = top + height; }
-
-    Point<T> MidPoint() const
-    {
-      return Point<T>((left + right) / 2, (top + bottom) / 2);
-    }
-
-    Path<T> AsPath() const
-    {
-      Path<T> result;
-      result.reserve(4);
-      result.push_back(Point<T>(left, top));
-      result.push_back(Point<T>(right, top));
-      result.push_back(Point<T>(right, bottom));
-      result.push_back(Point<T>(left, bottom));
-      return result;
-    }
-
-    bool Contains(const Point<T>& pt) const
-    {
-      return pt.x > left && pt.x < right&& pt.y > top && pt.y < bottom;
-    }
-
-    bool Contains(const Rect<T>& rec) const
-    {
-      return rec.left >= left && rec.right <= right &&
-        rec.top >= top && rec.bottom <= bottom;
-    }
-
-    void Scale(double scale) {
-      left *= scale;
-      top *= scale;
-      right *= scale;
-      bottom *= scale;
-    }
-
-    bool IsEmpty() const { return bottom <= top || right <= left; };
-
-    bool Intersects(const Rect<T>& rec) const
-    {
-      // nb: if you get compile errors here, then it's almost certainly
-      // due to including windows.h before including this header.
-      // To fix this, add #define NOMINMAX just above where you
-      // #include <windows.h> in you own code.
-      return (std::max(left, rec.left) < std::min(right, rec.right)) &&
-        (std::max(top, rec.top) < std::min(bottom, rec.bottom));
-    };
-
-    friend std::ostream& operator<<(std::ostream& os, const Rect<T>& rect) {
-      os << "("
-        << rect.left << "," << rect.top << "," << rect.right << "," << rect.bottom
-        << ")";
-      return os;
-    }
-  };
-
-  template <typename T1, typename T2>
-  inline Rect<T1> ScaleRect(const Rect<T2>& rect, double scale)
-  {
-    Rect<T1> result;
-
-    if constexpr (std::numeric_limits<T1>::is_integer &&
-      !std::numeric_limits<T2>::is_integer)
-    {
-      result.left = static_cast<T1>(std::round(rect.left * scale));
-      result.top = static_cast<T1>(std::round(rect.top * scale));
-      result.right = static_cast<T1>(std::round(rect.right * scale));
-      result.bottom = static_cast<T1>(std::round(rect.bottom * scale));
-    }
-    else
-    {
-      result.left = rect.left * scale;
-      result.top = rect.top * scale;
-      result.right = rect.right * scale;
-      result.bottom = rect.bottom * scale;
-    }
-    return result;
-  }
-
-  // clipper2Exception ---------------------------------------------------------
-
-#ifdef __cpp_exceptions
-  class Clipper2Exception : public std::exception {
-  public:
-    explicit Clipper2Exception(const char* description) :
-      m_descr(description) {}
-    virtual const char* what() const throw() { return m_descr.c_str(); }
-  private:
-    std::string m_descr;
-  };
-#endif
 
   // Miscellaneous ------------------------------------------------------------
 
