@@ -1,6 +1,6 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  23 January 2023                                                 *
+* Date      :  27 January 2023                                                 *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2023                                         *
 * Purpose   :  This is the main polygon clipping module                        *
@@ -2288,7 +2288,7 @@ namespace Clipper2Lib {
       node.edge1->curr_x = node.pt.x;
       node.edge2->curr_x = node.pt.x;
       CheckJoinLeft(*node.edge2, node.pt);
-      CheckJoinRight(*node.edge1, node.pt);
+      CheckJoinRight(*node.edge1, node.pt, true);
     }
   }
 
@@ -2648,42 +2648,45 @@ namespace Clipper2Lib {
 
   void ClipperBase::CheckJoinLeft(Active& e, const Point64& pt)
   {
-    if (IsOpen(e) || !IsHotEdge(e) || 
-      !e.prev_in_ael || IsOpen(*e.prev_in_ael) ||
-      !IsHotEdge(*e.prev_in_ael) || e.curr_x != e.prev_in_ael->curr_x ||
-      pt.y <= e.top.y || pt.y <= e.prev_in_ael->top.y ||
+    Active* prev = e.prev_in_ael;
+    if (IsOpen(e) || !IsHotEdge(e) || !prev || IsOpen(*prev) ||
+      !IsHotEdge(*prev) || e.curr_x != prev->curr_x ||
+      pt.y <= e.top.y || pt.y <= prev->top.y ||
       IsJoined(e) || IsOpen(e) || 
-      CrossProduct(e.top, pt, e.prev_in_ael->top)) 
+      CrossProduct(e.top, pt, prev->top))
         return;
 
-    if (e.outrec->idx == e.prev_in_ael->outrec->idx)
-      AddLocalMaxPoly(*e.prev_in_ael, e, pt);
-    else if (e.outrec->idx < e.prev_in_ael->outrec->idx)
-      JoinOutrecPaths(e, *e.prev_in_ael);
+    if (e.outrec->idx == prev->outrec->idx)
+      AddLocalMaxPoly(*prev, e, pt);
+    else if (e.outrec->idx < prev->outrec->idx)
+      JoinOutrecPaths(e, *prev);
     else
-      JoinOutrecPaths(*e.prev_in_ael, e);
-    e.prev_in_ael->join_with = JoinWith::Right;
+      JoinOutrecPaths(*prev, e);
+    prev->join_with = JoinWith::Right;
     e.join_with = JoinWith::Left;
   }
 
-  void ClipperBase::CheckJoinRight(Active& e, const Point64& pt)
+  void ClipperBase::CheckJoinRight(Active& e, 
+    const Point64& pt, bool check_curr_x)
   {
-    if (IsOpen(e) || !IsHotEdge(e) ||
-      !e.next_in_ael || IsOpen(*e.next_in_ael) ||
-      !IsHotEdge(*e.next_in_ael) || e.curr_x != e.next_in_ael->curr_x ||
-      pt.y <= e.top.y || pt.y <= e.next_in_ael->top.y ||
-      IsJoined(e) || IsOpen(e) ||
-      CrossProduct(e.top, pt, e.next_in_ael->top)) 
-        return;
+    Active* next = e.next_in_ael;
+    if (IsOpen(e) || !IsHotEdge(e) || IsJoined(e) ||
+      !next || IsOpen(*next) || !IsHotEdge(*next) ||
+      pt.y < e.top.y +2 || pt.y < next->top.y +2) // avoids trivial joins
+        return;      
 
-    if (e.outrec->idx == e.next_in_ael->outrec->idx)
-      AddLocalMaxPoly(e, *e.next_in_ael, pt);
-    else if (e.outrec->idx < e.next_in_ael->outrec->idx)
-      JoinOutrecPaths(e, *e.next_in_ael);
+    if (check_curr_x) next->curr_x = TopX(*next, pt.y);
+    if (e.curr_x != next->curr_x ||
+      CrossProduct(e.top, pt, next->top)) return;
+
+    if (e.outrec->idx == next->outrec->idx)
+      AddLocalMaxPoly(e, *next, pt);
+    else if (e.outrec->idx < next->outrec->idx)
+      JoinOutrecPaths(e, *next);
     else
-      JoinOutrecPaths(*e.next_in_ael, e);
+      JoinOutrecPaths(*next, e);
     e.join_with = JoinWith::Right;
-    e.next_in_ael->join_with = JoinWith::Left;
+    next->join_with = JoinWith::Left;
   }
 
   inline bool GetHorzExtendedHorzSeg(OutPt*& op, OutPt*& op2)

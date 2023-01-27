@@ -2,7 +2,7 @@ unit Clipper.Engine;
 
 (*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  25 January 2023                                                 *
+* Date      :  27 January 2023                                                 *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2023                                         *
 * Purpose   :  This is the main polygon clipping module                        *
@@ -242,7 +242,8 @@ type
     procedure Split(e: PActive; const currPt: TPoint64);
     procedure CheckJoinLeft(e: PActive; const currPt: TPoint64);
       {$IFDEF INLINING} inline; {$ENDIF}
-    procedure CheckJoinRight(e: PActive; const currPt: TPoint64);
+    procedure CheckJoinRight(e: PActive;
+      const currPt: TPoint64; checkNextCurrX: Boolean = false);
       {$IFDEF INLINING} inline; {$ENDIF}
     function  AddLocalMinPoly(e1, e2: PActive;
       const pt: TPoint64; IsNew: Boolean = false): POutPt;
@@ -2146,45 +2147,52 @@ end;
 //------------------------------------------------------------------------------
 
 procedure TClipperBase.CheckJoinLeft(e: PActive; const currPt: TPoint64);
+var
+  prev: PActive;
 begin
+  prev := e.prevInAEL;
   if IsOpen(e) or not IsHotEdge(e) or
-    not Assigned(e.prevInAEL) or IsOpen(e.prevInAEL) or
-    not IsHotEdge(e.prevInAEL) or (e.currX <> e.prevInAEL.currX) or
-    (currPt.Y <= e.top.Y) or (currPt.Y <= e.prevInAEL.top.Y) or
+    not Assigned(prev) or IsOpen(prev) or
+    not IsHotEdge(prev) or (e.currX <> prev.currX) or
+    (currPt.Y <= e.top.Y) or (currPt.Y <= prev.top.Y) or
     (e.joinedWith <> jwNone) or
-    (currPt.Y < e.top.Y +2) or (currPt.Y < e.prevInAEL.top.Y +2) or
-    (CrossProduct(e.top, currPt, e.prevInAEL.top) <> 0) then Exit;
+    (currPt.Y < e.top.Y +2) or (currPt.Y < prev.top.Y +2) or
+    (CrossProduct(e.top, currPt, prev.top) <> 0) then Exit;
 
-  if (e.outrec.idx = e.prevInAEL.outrec.idx) then
-    AddLocalMaxPoly(e.prevInAEL, e, currPt)
-  else if e.outrec.idx < e.prevInAEL.outrec.idx then
-    JoinOutrecPaths(e, e.prevInAEL)
+  if (e.outrec.idx = prev.outrec.idx) then
+    AddLocalMaxPoly(prev, e, currPt)
+  else if e.outrec.idx < prev.outrec.idx then
+    JoinOutrecPaths(e, prev)
   else
-    JoinOutrecPaths(e.prevInAEL, e);
-  e.prevInAEL.joinedWith := jwRight;
+    JoinOutrecPaths(prev, e);
+  prev.joinedWith := jwRight;
   e.joinedWith := jwLeft;
 end;
 //------------------------------------------------------------------------------
 
-procedure TClipperBase.CheckJoinRight(e: PActive; const currPt: TPoint64);
+procedure TClipperBase.CheckJoinRight(e: PActive;
+  const currPt: TPoint64; checkNextCurrX: Boolean);
+var
+  next: PActive;
 begin
-  if IsOpen(e) or not IsHotEdge(e) or
-    not Assigned(e.nextInAEL) or IsOpen(e.nextInAEL) or
-    not IsHotEdge(e.nextInAEL) or (e.currX <> e.nextInAEL.currX) or
-    (currPt.Y <= e.top.Y) or (currPt.Y <= e.nextInAEL.top.Y) or
-    (e.joinedWith <> jwNone) or
-    (currPt.Y < e.top.Y +2) or (currPt.Y < e.nextInAEL.top.Y +2) or
-    (CrossProduct(e.top, currPt, e.nextInAEL.top) <> 0) then Exit;
+  next := e.nextInAEL;
+  if IsOpen(e) or not IsHotEdge(e) or IsJoined(e) or
+    not Assigned(next) or IsOpen(next) or not IsHotEdge(next) or
+    (currPt.Y < e.top.Y +2) or (currPt.Y < next.top.Y +2) then Exit;
 
-  if e.outrec.idx = e.nextInAEL.outrec.idx then
-    AddLocalMaxPoly(e, e.nextInAEL, currPt)
-  else if e.outrec.idx < e.nextInAEL.outrec.idx then
-    JoinOutrecPaths(e, e.nextInAEL)
+  if (checkNextCurrX) then next.currX := TopX(next, currPt.Y);
+  if (e.currX <> next.currX) or
+    (CrossProduct(e.top, currPt, next.top) <> 0) then Exit;
+
+  if e.outrec.idx = next.outrec.idx then
+    AddLocalMaxPoly(e, next, currPt)
+  else if e.outrec.idx < next.outrec.idx then
+    JoinOutrecPaths(e, next)
   else
-    JoinOutrecPaths(e.nextInAEL, e);
+    JoinOutrecPaths(next, e);
 
   e.joinedWith := jwRight;
-  e.nextInAEL.joinedWith := jwLeft;
+  next.joinedWith := jwLeft;
 end;
 //------------------------------------------------------------------------------
 
@@ -2597,7 +2605,7 @@ begin
      DoTopOfScanbeam(Y);
     while PopHorz(e) do DoHorizontal(e);
   end;
-  if Succeeded then ProcessHorzJoins;  
+  if Succeeded then ProcessHorzJoins;
 end;
 //------------------------------------------------------------------------------
 
@@ -3166,7 +3174,7 @@ begin
       active1.currX := pt.X;
       active2.currX := pt.X;
       CheckJoinLeft(active2, pt);
-      CheckJoinRight(active1, pt);
+      CheckJoinRight(active1, pt, true);
     end;
     inc(nodeI);
   end;

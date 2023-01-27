@@ -1,6 +1,6 @@
 ﻿/*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  26 January 2023                                                 *
+* Date      :  27 January 2023                                                 *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2023                                         *
 * Purpose   :  This is the main polygon clipping module                        *
@@ -1985,7 +1985,7 @@ namespace Clipper2Lib
         node.edge1.curX = node.pt.X;
         node.edge2.curX = node.pt.X;
         CheckJoinLeft(node.edge2, node.pt);
-        CheckJoinRight(node.edge1, node.pt);
+        CheckJoinRight(node.edge1, node.pt, true);
       }
     }
 
@@ -2351,43 +2351,48 @@ private void DoHorizontal(Active horz)
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private void CheckJoinLeft(Active e, Point64 currPt)
     {
+      Active? prev = e.prevInAEL;
       if (IsOpen(e) || !IsHotEdge(e) ||
-        e.prevInAEL == null || IsOpen(e.prevInAEL) ||
-        !IsHotEdge(e.prevInAEL) || e.curX != e.prevInAEL.curX ||
-        currPt.Y <= e.top.Y || currPt.Y <= e.prevInAEL.top.Y ||
+        prev == null || IsOpen(prev) ||
+        !IsHotEdge(prev) || e.curX != prev.curX ||
+        currPt.Y <= e.top.Y || currPt.Y <= prev.top.Y ||
         IsJoined(e) || IsOpen(e) ||
-        InternalClipper.CrossProduct(e.top, currPt, e.prevInAEL.top) != 0)
+        InternalClipper.CrossProduct(e.top, currPt, prev.top) != 0)
         return;
 
-      if (e.outrec!.idx == e.prevInAEL.outrec!.idx)
-        AddLocalMaxPoly(e.prevInAEL, e, currPt);
-      else if (e.outrec.idx < e.prevInAEL.outrec.idx)
-        JoinOutrecPaths(e, e.prevInAEL);
+      if (e.outrec!.idx == prev.outrec!.idx)
+        AddLocalMaxPoly(prev, e, currPt);
+      else if (e.outrec.idx < prev.outrec.idx)
+        JoinOutrecPaths(e, prev);
       else
-        JoinOutrecPaths(e.prevInAEL, e);
-      e.prevInAEL.joinWith = JoinWith.Right;
+        JoinOutrecPaths(prev, e);
+      prev.joinWith = JoinWith.Right;
       e.joinWith = JoinWith.Left;
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private void CheckJoinRight(Active e, Point64 currPt)
+    private void CheckJoinRight(Active e, 
+      Point64 currPt, bool checkNextCurrX = false)
     {
-      if (IsOpen(e) || !IsHotEdge(e) ||
-        e.nextInAEL == null || IsOpen(e.nextInAEL) ||
-        !IsHotEdge(e.nextInAEL) || e.curX != e.nextInAEL.curX ||
-        currPt.Y <= e.top.Y || currPt.Y <= e.nextInAEL.top.Y ||
-        IsJoined(e) || IsOpen(e) ||
-        InternalClipper.CrossProduct(e.top, currPt, e.nextInAEL.top) != 0)
-        return;
+      Active? next = e.nextInAEL;
+      if (IsOpen(e) || !IsHotEdge(e) || IsJoined(e) ||
+        next == null || IsOpen(next) || !IsHotEdge(next) ||
+        currPt.Y < e.top.Y + 2 || currPt.Y < next.top.Y + 2) // avoids trivial joins
+          return;
 
-      if (e.outrec!.idx == e.nextInAEL.outrec!.idx)
-        AddLocalMaxPoly(e, e.nextInAEL, currPt);
-      else if (e.outrec.idx < e.nextInAEL.outrec.idx)
-        JoinOutrecPaths(e, e.nextInAEL);
+      if (checkNextCurrX) next.curX = TopX(next, currPt.Y);
+      if (e.curX != next.curX  ||
+        (InternalClipper.CrossProduct(e.top, currPt, next.top) != 0)) 
+          return;
+
+      if (e.outrec!.idx == next.outrec!.idx)
+        AddLocalMaxPoly(e, next, currPt);
+      else if (e.outrec.idx < next.outrec.idx)
+        JoinOutrecPaths(e, next);
       else
-        JoinOutrecPaths(e.nextInAEL, e);
+        JoinOutrecPaths(next, e);
       e.joinWith = JoinWith.Right;
-      e.nextInAEL.joinWith = JoinWith.Left;
+      next.joinWith = JoinWith.Left;
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]

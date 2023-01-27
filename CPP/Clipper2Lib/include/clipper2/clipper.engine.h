@@ -1,6 +1,6 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  23 January 2023                                                 *
+* Date      :  27 January 2023                                                 *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2023                                         *
 * Purpose   :  This is the main polygon clipping module                        *
@@ -245,7 +245,8 @@ namespace Clipper2Lib {
 
 		void Split(Active& e, const Point64& pt);
 		void CheckJoinLeft(Active& e, const Point64& pt);
-		void CheckJoinRight(Active& e, const Point64& pt);
+		void CheckJoinRight(Active& e, 
+			const Point64& pt, bool check_curr_x = false);
 	protected:
 		bool has_open_paths_ = false;
 		bool succeeded_ = true;
