@@ -1,6 +1,6 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  25 January 2023                                                 *
+* Date      :  27 January 2023                                                 *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2023                                         *
 * Purpose   :  Path Offset (Inflate/Shrink)                                    *
@@ -381,8 +381,12 @@ void ClipperOffset::DoGroupOffset(Group& group, double delta)
 	int idx = 0;
 	GetBoundsAndLowestPolyIdx(group.paths_in_, r, idx);
 	if (!IsSafeOffset(r, static_cast<int64_t>(std::ceil(delta))))
-		throw "Range error - the offset delta is too large";
-
+#if __cpp_exceptions
+	throw Clipper2Exception(range_error);
+#else
+		error_code_ |= range_error_i;
+		return;
+#endif
 	if (isClosedPaths)
 	{
 		double area = Area(group.paths_in_[idx]);
@@ -446,6 +450,7 @@ void ClipperOffset::DoGroupOffset(Group& group, double delta)
 
 Paths64 ClipperOffset::Execute(double delta)
 {
+	error_code_ = 0;
 	solution.clear();
 	if (groups_.size() == 0) return solution;
 
@@ -465,7 +470,12 @@ Paths64 ClipperOffset::Execute(double delta)
 
 	std::vector<Group>::iterator git;
 	for (git = groups_.begin(); git != groups_.end(); ++git)
+	{
 		DoGroupOffset(*git, delta);
+		if (!error_code_) continue;
+		solution.clear();
+		return solution;
+	}
 
 	//clean up self-intersections ...
 	Clipper64 c;

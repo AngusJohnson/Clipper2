@@ -1,6 +1,6 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  25 January 2023                                                 *
+* Date      :  27 January 2023                                                 *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2023                                         *
 * Purpose   :  Path Offset (Inflate/Shrink)                                    *
@@ -38,6 +38,7 @@ private:
 			paths_in_(paths), join_type_(join_type), end_type_(end_type) {}
 	};
 
+	int   error_code_ = 0;
 	double group_delta_ = 0.0;
 	double abs_group_delta_ = 0.0;
 	double temp_lim_ = 0.0;
@@ -73,6 +74,7 @@ public:
 
 	~ClipperOffset() { Clear(); };
 
+	int ErrorCode() { return error_code_; };
 	void AddPath(const Path64& path, JoinType jt_, EndType et_);
 	void AddPaths(const Paths64& paths, JoinType jt_, EndType et_);
 	void AddPath(const PathD &p, JoinType jt_, EndType et_);

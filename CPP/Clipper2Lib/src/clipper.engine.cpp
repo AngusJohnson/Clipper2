@@ -686,7 +686,7 @@ namespace Clipper2Lib {
   } // end AddPaths
 
 
-  inline void ClipperBase::InsertScanline(int64_t y)
+  void ClipperBase::InsertScanline(int64_t y)
   {
     scanline_list_.push(y);
   }
@@ -2646,14 +2646,16 @@ namespace Clipper2Lib {
     }
   }
 
-  void ClipperBase::CheckJoinLeft(Active& e, const Point64& pt)
+  void ClipperBase::CheckJoinLeft(Active& e, 
+    const Point64& pt, bool check_curr_x)
   {
     Active* prev = e.prev_in_ael;
-    if (IsOpen(e) || !IsHotEdge(e) || !prev || IsOpen(*prev) ||
-      !IsHotEdge(*prev) || e.curr_x != prev->curr_x ||
-      pt.y <= e.top.y || pt.y <= prev->top.y ||
-      IsJoined(e) || IsOpen(e) || 
-      CrossProduct(e.top, pt, prev->top))
+    if (IsOpen(e) || !IsHotEdge(e) || !prev || 
+      IsOpen(*prev) || !IsHotEdge(*prev) ||
+      pt.y < e.top.y + 2 || pt.y < prev->top.y + 2) // avoid trivial joins
+        return;
+    if (check_curr_x) prev->curr_x = TopX(*prev, pt.y);
+    if (e.curr_x != prev->curr_x || CrossProduct(e.top, pt, prev->top))
         return;
 
     if (e.outrec->idx == prev->outrec->idx)
@@ -2670,7 +2672,7 @@ namespace Clipper2Lib {
     const Point64& pt, bool check_curr_x)
   {
     Active* next = e.next_in_ael;
-    if (IsOpen(e) || !IsHotEdge(e) || IsJoined(e) ||
+    if (IsOpen(e) || !IsHotEdge(e) || 
       !next || IsOpen(*next) || !IsHotEdge(*next) ||
       pt.y < e.top.y +2 || pt.y < next->top.y +2) // avoids trivial joins
         return;      

@@ -1,6 +1,6 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  27 January 2023                                                 *
+* Date      :  28 January 2023                                                 *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2023                                         *
 * Purpose   :  This is the main polygon clipping module                        *
@@ -199,13 +199,13 @@ namespace Clipper2Lib {
     HorzSegmentList horz_seg_list_;
 		std::vector<HorzJoin> horz_join_list_;
 		void Reset();
-		void InsertScanline(int64_t y);
-		bool PopScanline(int64_t &y);
-		bool PopLocalMinima(int64_t y, LocalMinima*& local_minima);
+		inline void InsertScanline(int64_t y);
+		inline bool PopScanline(int64_t &y);
+		inline bool PopLocalMinima(int64_t y, LocalMinima*& local_minima);
 		void DisposeAllOutRecs();
 		void DisposeVerticesAndLocalMinima();
 		void DeleteEdges(Active*& e);
-		void AddLocMin(Vertex &vert, PathType polytype, bool is_open);
+		inline void AddLocMin(Vertex &vert, PathType polytype, bool is_open);
 		bool IsContributingClosed(const Active &e) const;
 		inline bool IsContributingOpen(const Active &e) const;
 		void SetWindCountForClosedPathEdge(Active &edge);
@@ -239,15 +239,17 @@ namespace Clipper2Lib {
 		void FixSelfIntersects(OutRec* outrec);
 		void DoSplitOp(OutRec* outRec, OutPt* splitOp);
 		
-		void AddTrialHorzJoin(OutPt* op);
+		inline void AddTrialHorzJoin(OutPt* op);
 		void ConvertHorzSegsToJoins();
 		void ProcessHorzJoins();
 
 		void Split(Active& e, const Point64& pt);
-		void CheckJoinLeft(Active& e, const Point64& pt);
-		void CheckJoinRight(Active& e, 
+		inline void CheckJoinLeft(Active& e, 
+			const Point64& pt, bool check_curr_x = false);
+		inline void CheckJoinRight(Active& e,
 			const Point64& pt, bool check_curr_x = false);
 	protected:
+		int error_code_ = 0;
 		bool has_open_paths_ = false;
 		bool succeeded_ = true;
 		OutRecList outrec_list_; //pointers in case list memory reallocated
@@ -265,6 +267,7 @@ namespace Clipper2Lib {
 		void AddPaths(const Paths64& paths, PathType polytype, bool is_open);
 	public:
 		virtual ~ClipperBase();
+		int ErrorCode() { return error_code_; };
 		bool PreserveCollinear = true;
 		bool ReverseSolution = false;
 		void Clear();
@@ -401,9 +404,10 @@ namespace Clipper2Lib {
 		double InvScale() { return inv_scale_; }
 		PolyPathD* AddChild(const Path64& path) override
 		{
+			int error_code = 0;
 			auto p = std::make_unique<PolyPathD>(this);
 			PolyPathD* result = childs_.emplace_back(std::move(p)).get();
-			result->polygon_ = ScalePath<double, int64_t>(path, inv_scale_);
+			result->polygon_ = ScalePath<double, int64_t>(path, inv_scale_, error_code);
 			return result;
 		}
 
@@ -499,7 +503,7 @@ namespace Clipper2Lib {
 	public:
 		explicit ClipperD(int precision = 2) : ClipperBase()
 		{
-			CheckPrecision(precision);
+			CheckPrecision(precision, error_code_);
 			// to optimize scaling / descaling precision
 			// set the scale to a power of double's radix (2) (#25)
 			scale_ = std::pow(std::numeric_limits<double>::radix,
@@ -543,17 +547,17 @@ namespace Clipper2Lib {
 
 		void AddSubject(const PathsD& subjects)
 		{
-			AddPaths(ScalePaths<int64_t, double>(subjects, scale_), PathType::Subject, false);
+			AddPaths(ScalePaths<int64_t, double>(subjects, scale_, error_code_), PathType::Subject, false);
 		}
 
 		void AddOpenSubject(const PathsD& open_subjects)
 		{
-			AddPaths(ScalePaths<int64_t, double>(open_subjects, scale_), PathType::Subject, true);
+			AddPaths(ScalePaths<int64_t, double>(open_subjects, scale_, error_code_), PathType::Subject, true);
 		}
 
 		void AddClip(const PathsD& clips)
 		{
-			AddPaths(ScalePaths<int64_t, double>(clips, scale_), PathType::Clip, false);
+			AddPaths(ScalePaths<int64_t, double>(clips, scale_, error_code_), PathType::Clip, false);
 		}
 
 		bool Execute(ClipType clip_type, FillRule fill_rule, PathsD& closed_paths)

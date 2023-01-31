@@ -1984,7 +1984,7 @@ namespace Clipper2Lib
 
         node.edge1.curX = node.pt.X;
         node.edge2.curX = node.pt.X;
-        CheckJoinLeft(node.edge2, node.pt);
+        CheckJoinLeft(node.edge2, node.pt, true);
         CheckJoinRight(node.edge1, node.pt, true);
       }
     }
@@ -2349,19 +2349,20 @@ private void DoHorizontal(Active horz)
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private void CheckJoinLeft(Active e, Point64 currPt)
+    private void CheckJoinLeft(Active e,
+      Point64 pt, bool checkCurrX = false)
     {
       Active? prev = e.prevInAEL;
-      if (IsOpen(e) || !IsHotEdge(e) ||
-        prev == null || IsOpen(prev) ||
-        !IsHotEdge(prev) || e.curX != prev.curX ||
-        currPt.Y <= e.top.Y || currPt.Y <= prev.top.Y ||
-        IsJoined(e) || IsOpen(e) ||
-        InternalClipper.CrossProduct(e.top, currPt, prev.top) != 0)
-        return;
+      if (prev == null || IsOpen(e) || IsOpen(prev) ||
+        !IsHotEdge(e) || !IsHotEdge(prev) ||
+        pt.Y < e.top.Y + 2 || pt.Y < prev.top.Y + 2) return;
+      if (checkCurrX) prev.curX = TopX(prev, pt.Y);
+      if (e.curX != prev.curX ||        
+        InternalClipper.CrossProduct(e.top, pt, prev.top) != 0)
+          return;
 
       if (e.outrec!.idx == prev.outrec!.idx)
-        AddLocalMaxPoly(prev, e, currPt);
+        AddLocalMaxPoly(prev, e, pt);
       else if (e.outrec.idx < prev.outrec.idx)
         JoinOutrecPaths(e, prev);
       else
@@ -2372,21 +2373,21 @@ private void DoHorizontal(Active horz)
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private void CheckJoinRight(Active e, 
-      Point64 currPt, bool checkNextCurrX = false)
+      Point64 pt, bool checkCurrX = false)
     {
       Active? next = e.nextInAEL;
       if (IsOpen(e) || !IsHotEdge(e) || IsJoined(e) ||
         next == null || IsOpen(next) || !IsHotEdge(next) ||
-        currPt.Y < e.top.Y + 2 || currPt.Y < next.top.Y + 2) // avoids trivial joins
+        pt.Y < e.top.Y + 2 || pt.Y < next.top.Y + 2) // avoids trivial joins
           return;
 
-      if (checkNextCurrX) next.curX = TopX(next, currPt.Y);
+      if (checkCurrX) next.curX = TopX(next, pt.Y);
       if (e.curX != next.curX  ||
-        (InternalClipper.CrossProduct(e.top, currPt, next.top) != 0)) 
+        (InternalClipper.CrossProduct(e.top, pt, next.top) != 0)) 
           return;
 
       if (e.outrec!.idx == next.outrec!.idx)
-        AddLocalMaxPoly(e, next, currPt);
+        AddLocalMaxPoly(e, next, pt);
       else if (e.outrec.idx < next.outrec.idx)
         JoinOutrecPaths(e, next);
       else

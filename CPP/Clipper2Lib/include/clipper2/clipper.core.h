@@ -1,6 +1,6 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  26 January 2023                                                 *
+* Date      :  28 January 2023                                                 *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2023                                         *
 * Purpose   :  Core Clipper Library structures and functions                   *
@@ -21,7 +21,7 @@
 namespace Clipper2Lib
 {
 
-#ifdef __cpp_exceptions
+#if __cpp_exceptions
 
   class Clipper2Exception : public std::exception {
   public:
@@ -36,8 +36,11 @@ namespace Clipper2Lib
     "Precision exceeds the permitted range";
   static const char* range_error =
     "Values exceed permitted range";
-
 #endif
+
+  // error codes (2^n)
+  const int precision_error_i = 1; // non-fatal
+  const int range_error_i     = 2;
 
   static const double PI = 3.141592653589793238;
   static const int64_t MAX_COORD = INT64_MAX >> 2;
@@ -404,7 +407,8 @@ namespace Clipper2Lib
   }
 
   template <typename T1, typename T2>
-  inline Paths<T1> ScalePaths(const Paths<T2>& paths, double scale_x, double scale_y)
+  inline Paths<T1> ScalePaths(const Paths<T2>& paths, 
+    double scale_x, double scale_y, int& error_code)
   {
     Paths<T1> result;
 
@@ -418,11 +422,15 @@ namespace Clipper2Lib
         (r.right * scale_x) > max_coord_d ||
         (r.top * scale_y) < min_coord_d ||
         (r.bottom * scale_y) > max_coord_d)
-#ifdef __cpp_exceptions
+      { 
+        error_code |= range_error_i;
+#if __cpp_exceptions
         throw Clipper2Exception(range_error);
 #else
-        return result;
+        // error_code = range_error_i; // compiler complains if here
+        return result; // empty 
 #endif
+      }
     }
 
     result.reserve(paths.size());
@@ -433,9 +441,10 @@ namespace Clipper2Lib
   }
 
   template <typename T1, typename T2>
-  inline Paths<T1> ScalePaths(const Paths<T2>& paths, double scale)
+  inline Paths<T1> ScalePaths(const Paths<T2>& paths, 
+    double scale, int& error_code)
   {
-    return ScalePaths<T1, T2>(paths, scale, scale);
+    return ScalePaths<T1, T2>(paths, scale, scale, error_code);
   }
 
   template <typename T1, typename T2>
@@ -565,14 +574,21 @@ namespace Clipper2Lib
 
   // Miscellaneous ------------------------------------------------------------
 
-  inline void CheckPrecision(int& precision)
+  inline void CheckPrecision(int& precision, int& error_code)
   {
     if (precision >= -8 && precision <= 8) return;
-#ifdef __cpp_exceptions
+    error_code |= precision_error_i; // non-fatal error
+#if __cpp_exceptions
     throw Clipper2Exception(precision_error);
 #else
     precision = precision > 8 ? 8 : -8;
 #endif
+  }
+
+  inline void CheckPrecision(int& precision)
+  {
+    int error_code = 0;
+    CheckPrecision(precision, error_code);
   }
 
   template <typename T>

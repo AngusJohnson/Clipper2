@@ -1,8 +1,8 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  23 July 2022                                                    *
+* Date      :  28 January 2023                                                 *
 * Website   :  http://www.angusj.com                                           *
-* Copyright :  Angus Johnson 2010-2022                                         *
+* Copyright :  Angus Johnson 2010-2023                                         *
 * License   :  http://www.boost.org/LICENSE_1_0.txt                            *
 *******************************************************************************/
 
@@ -43,7 +43,7 @@ namespace Clipper2Lib {
 
   inline float GetAlphaAsFrac(unsigned int clr)
   {
-    return ((clr >> 24) / 255.0f);
+    return ((float)(clr >> 24) / 255.0f);
   }
   //------------------------------------------------------------------------------
 
@@ -85,8 +85,10 @@ namespace Clipper2Lib {
   void SvgWriter::AddPaths(const Paths64& paths, bool is_open, FillRule fillrule,
     unsigned brush_color, unsigned pen_color, double pen_width, bool show_coords)
   {
+    int error_code = 0;
     if (paths.size() == 0) return;
-    PathsD tmp = ScalePaths<double, int64_t>(paths, scale_);
+    PathsD tmp = ScalePaths<double, int64_t>(paths, scale_, error_code);
+    if (error_code) return;
     PathInfo* pi = new PathInfo(tmp, is_open, fillrule,
       brush_color, pen_color, pen_width, show_coords);
     path_infos.push_back(pi);
@@ -165,8 +167,9 @@ namespace Clipper2Lib {
         (pi->fillrule_ != FillRule::Positive && pi->fillrule_ != FillRule::Negative))
           continue;
 
-      PathsD ppp = pi->fillrule_ == 
-        FillRule::Positive ? SimulatePositiveFill(pi->paths_) : SimulateNegativeFill(pi->paths_);
+      PathsD ppp = pi->fillrule_ == FillRule::Positive ? 
+        SimulatePositiveFill(pi->paths_) : 
+        SimulateNegativeFill(pi->paths_);
 
       file << "  <path d=\"";
       for (PathD& path : ppp)
@@ -207,15 +210,15 @@ namespace Clipper2Lib {
       }
 
       file << svg_xml_0 << ColorToHtml(brushColor) <<
-        svg_xml_1 << GetAlphaAsFrac(brushColor) <<
+        svg_xml_1 << std::setprecision(2) << GetAlphaAsFrac(brushColor) <<
         svg_xml_2 << (pi->fillrule_ == FillRule::NonZero ? "nonzero" : "evenodd") <<
         svg_xml_3 << ColorToHtml(pi->pen_color_) <<
         svg_xml_4 << GetAlphaAsFrac(pi->pen_color_) <<
         svg_xml_5 << pi->pen_width_ << svg_xml_6;
 
       if (pi->show_coords_) {
-        file << std::setprecision(0) 
-          << "  <g font-family=\"" << coords_style.font_name << "\" font-size=\"" <<
+        file << std::setprecision(0)  << 
+          "  <g font-family=\"" << coords_style.font_name << "\" font-size=\"" <<
           coords_style.font_size  << "\" fill=\""<< ColorToHtml(coords_style.font_color) << 
           "\" fill-opacity=\"" << GetAlphaAsFrac(coords_style.font_color) << "\">\n";
         for (PathD& path : pi->paths_)

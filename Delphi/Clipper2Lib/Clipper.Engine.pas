@@ -240,10 +240,11 @@ type
     procedure SwapPositionsInAEL(e1, e2: PActive);
     function  AddOutPt(e: PActive; const pt: TPoint64): POutPt;
     procedure Split(e: PActive; const currPt: TPoint64);
-    procedure CheckJoinLeft(e: PActive; const currPt: TPoint64);
+    procedure CheckJoinLeft(e: PActive;
+      const pt: TPoint64; checkCurrX: Boolean = false);
       {$IFDEF INLINING} inline; {$ENDIF}
     procedure CheckJoinRight(e: PActive;
-      const currPt: TPoint64; checkNextCurrX: Boolean = false);
+      const pt: TPoint64; checkCurrX: Boolean = false);
       {$IFDEF INLINING} inline; {$ENDIF}
     function  AddLocalMinPoly(e1, e2: PActive;
       const pt: TPoint64; IsNew: Boolean = false): POutPt;
@@ -2146,21 +2147,21 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-procedure TClipperBase.CheckJoinLeft(e: PActive; const currPt: TPoint64);
+procedure TClipperBase.CheckJoinLeft(e: PActive;
+  const pt: TPoint64; checkCurrX: Boolean);
 var
   prev: PActive;
 begin
   prev := e.prevInAEL;
-  if IsOpen(e) or not IsHotEdge(e) or
-    not Assigned(prev) or IsOpen(prev) or
-    not IsHotEdge(prev) or (e.currX <> prev.currX) or
-    (currPt.Y <= e.top.Y) or (currPt.Y <= prev.top.Y) or
-    (e.joinedWith <> jwNone) or
-    (currPt.Y < e.top.Y +2) or (currPt.Y < prev.top.Y +2) or
-    (CrossProduct(e.top, currPt, prev.top) <> 0) then Exit;
+  if IsOpen(e) or not IsHotEdge(e) or not Assigned(prev) or
+    IsOpen(prev) or not IsHotEdge(prev) or
+    (pt.Y < e.top.Y +2) or (pt.Y < prev.top.Y +2) then Exit;
+  if checkCurrX then prev.currX := TopX(prev, pt.Y);
+  if (e.currX <> prev.currX) or
+    (CrossProduct(e.top, pt, prev.top) <> 0) then Exit;
 
   if (e.outrec.idx = prev.outrec.idx) then
-    AddLocalMaxPoly(prev, e, currPt)
+    AddLocalMaxPoly(prev, e, pt)
   else if e.outrec.idx < prev.outrec.idx then
     JoinOutrecPaths(e, prev)
   else
@@ -2171,21 +2172,21 @@ end;
 //------------------------------------------------------------------------------
 
 procedure TClipperBase.CheckJoinRight(e: PActive;
-  const currPt: TPoint64; checkNextCurrX: Boolean);
+  const pt: TPoint64; checkCurrX: Boolean);
 var
   next: PActive;
 begin
   next := e.nextInAEL;
-  if IsOpen(e) or not IsHotEdge(e) or IsJoined(e) or
-    not Assigned(next) or IsOpen(next) or not IsHotEdge(next) or
-    (currPt.Y < e.top.Y +2) or (currPt.Y < next.top.Y +2) then Exit;
+  if IsOpen(e) or not IsHotEdge(e) or not Assigned(next) or
+    IsOpen(next) or not IsHotEdge(next) or
+    (pt.Y < e.top.Y +2) or (pt.Y < next.top.Y +2) then Exit;
 
-  if (checkNextCurrX) then next.currX := TopX(next, currPt.Y);
+  if (checkCurrX) then next.currX := TopX(next, pt.Y);
   if (e.currX <> next.currX) or
-    (CrossProduct(e.top, currPt, next.top) <> 0) then Exit;
+    (CrossProduct(e.top, pt, next.top) <> 0) then Exit;
 
   if e.outrec.idx = next.outrec.idx then
-    AddLocalMaxPoly(e, next, currPt)
+    AddLocalMaxPoly(e, next, pt)
   else if e.outrec.idx < next.outrec.idx then
     JoinOutrecPaths(e, next)
   else
@@ -3173,7 +3174,7 @@ begin
       SwapPositionsInAEL(active1, active2);
       active1.currX := pt.X;
       active2.currX := pt.X;
-      CheckJoinLeft(active2, pt);
+      CheckJoinLeft(active2, pt, true);
       CheckJoinRight(active1, pt, true);
     end;
     inc(nodeI);
