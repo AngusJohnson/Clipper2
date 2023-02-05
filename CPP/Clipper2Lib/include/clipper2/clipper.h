@@ -11,6 +11,7 @@
 #define CLIPPER_H
 
 #include <cstdlib>
+#include <type_traits>
 #include <vector>
 
 #include "clipper.core.h"
@@ -588,6 +589,19 @@ namespace Clipper2Lib {
     return true;
   }
 
+  template<typename T, std::size_t N,
+           typename std::enable_if<std::is_integral<T>::value &&
+                                   !std::is_same<char, T>::value, bool
+                                   >::type = true>
+  inline Path64 MakePath(const T(&list)[N])
+  {
+    static_assert(N % 2 == 0, "MakePath requires an even number of arguments");
+    Path64 result(N / 2);
+    for (size_t i = 0; i < N; ++i)
+      result[i / 2] = Point64{list[i], list[++i]};
+    return result;
+  }
+
   inline Path64 MakePath(const std::string& s)
   {
     const std::string skip_chars = " ,(){}[]";
@@ -605,7 +619,20 @@ namespace Clipper2Lib {
     }
     return result;
   }
-  
+
+  template<typename T, std::size_t N,
+           typename std::enable_if<std::is_arithmetic<T>::value &&
+                                   !std::is_same<char, T>::value, bool
+                                   >::type = true>
+  inline PathD MakePathD(const T(&list)[N])
+  {
+    static_assert(N % 2 == 0, "MakePathD requires an even number of arguments");
+    PathD result(N / 2);
+    for (size_t i = 0; i < N; ++i)
+      result[i / 2] = PointD{list[i], list[++i]};
+    return result;
+  }
+
   inline PathD MakePathD(const std::string& s)
   {
     const std::string skip_chars = " ,(){}[]";

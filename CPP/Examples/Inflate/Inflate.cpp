@@ -25,7 +25,7 @@ void DoSimpleShapes()
 
   FillRule fr2 = FillRule::EvenOdd;
   SvgWriter svg2;
-  op1.push_back(MakePath("80,60, 20,20 180,20 180,80, 20,180 180,180"));
+  op1.push_back(MakePath({80,60, 20,20, 180,20, 180,80, 20,180, 180,180}));
   op2 = InflatePaths(op1, 20, JoinType::Square, EndType::Butt);
   SvgAddOpenSubject(svg2, op1, fr2, false);
   SvgAddSolution(svg2, Paths64ToPathsD(op2), fr2, false);
@@ -48,7 +48,7 @@ void DoSimpleShapes()
 
   //triangle offset - with large miter
   Paths64 p, pp;
-  p.push_back(MakePath("30, 150, 60, 350, 0, 350"));
+  p.push_back(MakePath({30, 150, 60, 350, 0, 350}));
   pp.insert(pp.end(), p.begin(), p.end());
 
   for (int i = 0; i < 5; ++i)
@@ -61,7 +61,7 @@ void DoSimpleShapes()
 
   //rectangle offset - both squared and rounded
   p.clear();
-  p.push_back(MakePath("100,30, 340,30, 340,230, 100,230"));
+  p.push_back(MakePath({100,30, 340,30, 340,230, 100,230}));
   pp.insert(pp.end(), p.begin(), p.end());
   //nb: using the ClipperOffest class directly here to control 
   //different join types within the same offset operation
