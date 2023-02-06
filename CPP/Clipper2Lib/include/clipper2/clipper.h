@@ -503,6 +503,37 @@ namespace Clipper2Lib {
     return true;
   }
 
+  namespace details {
+
+    template<typename T, typename U>
+    inline constexpr void MakePathGeneric(const T list, size_t size,
+      std::vector<U>& result)
+    {
+      for (size_t i = 0; i < size; ++i)
+#ifdef USINGZ
+        result[i / 2] = U{list[i], list[++i], 0};
+#else
+        result[i / 2] = U{list[i], list[++i]};
+#endif
+    }
+
+  } // end details namespace
+
+  template<typename T,
+    typename std::enable_if<
+      std::is_integral<T>::value &&
+      !std::is_same<char, T>::value, bool
+    >::type = true>
+  inline Path64 MakePath(const std::vector<T>& list)
+  {
+    const auto size = list.size() - list.size() % 2;
+    if (list.size() != size)
+      DoError(non_pair_error_i);  // non-fatal without exception handling
+    Path64 result(size / 2);      // else ignores unpaired value
+    details::MakePathGeneric(list, size, result);
+    return result;
+  }
+
   template<typename T, std::size_t N,
     typename std::enable_if<
       std::is_integral<T>::value &&
@@ -510,37 +541,39 @@ namespace Clipper2Lib {
     >::type = true>
   inline Path64 MakePath(const T(&list)[N])
   {
-    if (N % 2 != 0)
-      DoError(non_pair_error_i);  // non-fatal without exception handling
-    Path64 result;                 // else ignores unpaired value
-    result.reserve(N / 2);
-#ifdef USINGZ
-    for (size_t i = 0; i < N; ++i)
-      result.emplace_back(Point64{ list[i], list[++i], 0 });
-#else
-    for (size_t i = 0; i < N; ++i)
-      result.emplace_back(Point64{ list[i], list[++i] });
-#endif
+    // Make the compiler error on unpaired value (i.e. no runtime effects).
+    static_assert(N % 2 == 0, "MakePath requires an even number of arguments");
+    Path64 result(N / 2);
+    details::MakePathGeneric(list, N, result);
     return result;
   }
-  
+
+  template<typename T,
+    typename std::enable_if<
+      std::is_arithmetic<T>::value &&
+      !std::is_same<char, T>::value, bool
+    >::type = true>
+  inline PathD MakePathD(const std::vector<T>& list)
+  {
+    const auto size = list.size() - list.size() % 2;
+    if (list.size() != size)
+      DoError(non_pair_error_i);  // non-fatal without exception handling
+    PathD result(size / 2);       // else ignores unpaired value
+    details::MakePathGeneric(list, size, result);
+    return result;
+  }
+
   template<typename T, std::size_t N,
-    typename std::enable_if<std::is_arithmetic<T>::value &&
-    !std::is_same<char, T>::value, bool
-  >::type = true>
+    typename std::enable_if<
+      std::is_arithmetic<T>::value &&
+      !std::is_same<char, T>::value, bool
+    >::type = true>
   inline PathD MakePathD(const T(&list)[N])
   {
-    if (N % 2 != 0)
-      DoError(non_pair_error_i);  // non-fatal without exception handling
-    PathD result;                 // else ignores unpaired value
-    result.reserve(N / 2);
-#ifdef USINGZ
-    for (size_t i = 0; i < N; ++i)
-      result.emplace_back(PointD{ list[i], list[++i], 0 });
-#else
-    for (size_t i = 0; i < N; ++i)
-      result.emplace_back(PointD{ list[i], list[++i] });
-#endif
+    // Make the compiler error on unpaired value (i.e. no runtime effects).
+    static_assert(N % 2 == 0, "MakePath requires an even number of arguments");
+    PathD result(N / 2);
+    details::MakePathGeneric(list, N, result);
     return result;
   }
 
