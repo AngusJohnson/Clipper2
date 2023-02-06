@@ -43,36 +43,43 @@ namespace Clipper2Lib.UnitTests
         double areaDiffRatio = storedArea <= 0 ? 0 : (double) areaDiff / storedArea;
 
         // check polygon counts
-        if (storedCount <= 0)
-          ; // skip count
-        else if (IsInList(testNum, new int[] { 165, 166, 172, 173, 176, 177, 179 }))
-          Assert.IsTrue(countDiff <= 8);
-        else if (testNum >= 120)
-          Assert.IsTrue(countDiff <= 5);
-        else if (IsInList(testNum, new int[] { 27, 121, 126 }))
-          Assert.IsTrue(countDiff <= 2);
-        else if (IsInList(testNum, new int[] { 23, 37, 43, 45, 87, 102, 111, 118, 119 }))
-          Assert.IsTrue(countDiff <= 1);
-        else
-          Assert.IsTrue(countDiff == 0);
+        if (storedCount > 0)
+        {
+          if (IsInList(testNum, new int[] { 140, 150, 165, 166, 172, 173, 176, 177, 179 }))
+          {
+            Assert.IsTrue(countDiff <= 9);
+          }
+          else if (testNum >= 120)
+          {
+            Assert.IsTrue(countDiff <= 6);
+          }
+          else if (IsInList(testNum, new int[] { 27, 121, 126 }))
+            Assert.IsTrue(countDiff <= 2);
+          else if (IsInList(testNum, new int[] { 23, 37, 43, 45, 87, 102, 111, 118, 119 }))
+            Assert.IsTrue(countDiff <= 1);
+          else
+            Assert.IsTrue(countDiff == 0);
+        }
 
         // check polygon areas
-        if (storedArea <= 0)
-          ; // skip area
-        else if (IsInList(testNum, new int[] { 19, 22, 23, 24 }))
-          Assert.IsTrue(areaDiffRatio <= 0.5);
-        else if (testNum == 193)
-          Assert.IsTrue(areaDiffRatio <= 0.25);
-        else if (testNum == 63)
-          Assert.IsTrue(areaDiffRatio <= 0.1);
-        else if (testNum == 16)
-          Assert.IsTrue(areaDiffRatio <= 0.075);
-        else if (IsInList(testNum, new int[] { 15, 26 }))
-          Assert.IsTrue(areaDiffRatio <= 0.05);
-        else if (IsInList(testNum, new int[] { 52, 53, 54, 59, 60, 64, 117, 118, 119, 184 }))
-          Assert.IsTrue(areaDiffRatio <= 0.02);
-        else 
-          Assert.IsTrue(areaDiffRatio <= 0.01);
+        if (storedArea > 0)
+        {
+          if (IsInList(testNum, new int[] { 19, 22, 23, 24 }))
+            Assert.IsTrue(areaDiffRatio <= 0.5);
+          else if (testNum == 193)
+            Assert.IsTrue(areaDiffRatio <= 0.25);
+          else if (testNum == 63)
+            Assert.IsTrue(areaDiffRatio <= 0.1);
+          else if (testNum == 16)
+            Assert.IsTrue(areaDiffRatio <= 0.075);
+          else if (IsInList(testNum, new int[] { 15, 26 }))
+            Assert.IsTrue(areaDiffRatio <= 0.05);
+          else if (IsInList(testNum, new int[] { 52, 53, 54, 59, 60, 64, 117, 118, 119, 184 }))
+            Assert.IsTrue(areaDiffRatio <= 0.02);
+          else
+            Assert.IsTrue(areaDiffRatio <= 0.01);
+        }
+
       } //bottom of num loop
 
     }

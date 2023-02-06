@@ -367,49 +367,28 @@ end;
 //------------------------------------------------------------------------------
 
 function RectClip(const rect: TRect64; const path: TPath64): TPath64;
+var
+  paths: TPaths64;
 begin
-  Result := nil;
-  if rect.IsEmpty or (Length(path) = 0) or
-    not rect.Intersects(GetBounds(path)) then Exit;
-  with TRectClip.Create(rect) do
-  try
-    Result := Execute(path);
-  finally
-    Free;
-  end;
+  SetLength(paths, 1);
+  paths[0] := path;
+  paths := RectClip(rect, paths);
+  if Assigned(paths) then
+    Result := paths[0] else
+    Result := nil;
 end;
 //------------------------------------------------------------------------------
 
 function RectClip(const rect: TRect64; const paths: TPaths64): TPaths64;
-var
-  i,j, len: integer;
-  pathRec: TRect64;
 begin
   Result := nil;
-  len := Length(paths);
-  if rect.IsEmpty or (len = 0) then Exit;
-  SetLength(Result, len);
-  j := 0;
+  if rect.IsEmpty then Exit;
   with TRectClip.Create(rect) do
   try
-    for i := 0 to len -1 do
-    begin
-      pathRec := GetBounds(paths[i]);
-      if not rect.Intersects(pathRec) then
-        Continue
-      else if rect.Contains(pathRec) then
-        Result[j] := Copy(paths[i], 0, MaxInt)
-      else
-      begin
-        Result[j] := Execute(paths[i]);
-        if Result[j] = nil then Continue;
-      end;
-      inc(j);
-    end;
+    Result := Execute(paths);
   finally
     Free;
   end;
-  SetLength(Result, j);
 end;
 //------------------------------------------------------------------------------
 
@@ -434,53 +413,35 @@ end;
 function RectClip(const rect: TRectD;
   const paths: TPathsD; precision: integer): TPathsD;
 var
-  i,j, len: integer;
   scale: double;
-  tmpPath: TPath64;
+  tmpPaths: TPaths64;
   rec: TRect64;
-  pathRec: TRectD;
 begin
   CheckPrecisionRange(precision);
   scale := Math.Power(10, precision);
   rec := Rect64(ScaleRect(rect, scale));
 
-  j := 0;
-  len := Length(paths);
-  SetLength(Result, len);
-
+  tmpPaths := ScalePaths(paths, scale);
   with TRectClip.Create(rec) do
   try
-    for i := 0 to len -1 do
-    begin
-      pathRec := GetBounds(paths[i]);
-      if not rect.Intersects(pathRec) then
-        Continue
-      else if rect.Contains(pathRec) then
-        Result[j] := Copy(paths[i], 0, MaxInt)
-      else
-      begin
-        tmpPath := ScalePath(paths[i], scale);
-        tmpPath := Execute(tmpPath);
-        if tmpPath = nil then Continue;
-        Result[j] := ScalePathD(tmpPath, 1/scale);
-      end;
-      inc(j);
-    end;
+    tmpPaths := Execute(tmpPaths);
   finally
     Free;
   end;
-  SetLength(Result, j);
+  Result := ScalePathsD(tmpPaths, 1/scale);
 end;
 //------------------------------------------------------------------------------
 
 function RectClipLines(const rect: TRect64; const path: TPath64): TPaths64; overload;
+var
+  tmp: TPaths64;
 begin
   Result := nil;
-  if rect.IsEmpty or (Length(path) = 0) or
-    not rect.Intersects(GetBounds(path)) then Exit;
+  SetLength(tmp, 1);
+  tmp[0] := path;
   with TRectClipLines.Create(rect) do
   try
-    Result := Execute(path);
+    Result := Execute(tmp);
   finally
     Free;
   end;
@@ -488,30 +449,12 @@ end;
 //------------------------------------------------------------------------------
 
 function RectClipLines(const rect: TRect64; const paths: TPaths64): TPaths64; overload;
-var
-  i,len: integer;
-  pathRec: TRect64;
-  tmp: TPaths64;
 begin
   Result := nil;
-  len := Length(paths);
-  if rect.IsEmpty or (len = 0) then Exit;
-  SetLength(Result, len);
+  if rect.IsEmpty then Exit;
   with TRectClipLines.Create(rect) do
   try
-    for i := 0 to len -1 do
-    begin
-      pathRec := GetBounds(paths[i]);
-      if not rect.Intersects(pathRec) then
-        Continue
-      else if rect.Contains(pathRec) then
-        AppendPath(Result, paths[i])
-      else
-      begin
-        tmp := Execute(paths[i]);
-        AppendPaths(Result, tmp);
-      end;
-    end;
+    Result := Execute(paths);
   finally
     Free;
   end;
@@ -540,39 +483,23 @@ end;
 function RectClipLines(const rect: TRectD; const paths: TPathsD;
   precision: integer = 2): TPathsD;
 var
-  i: integer;
   scale: double;
-  tmpPath: TPath64;
   tmpPaths: TPaths64;
   rec: TRect64;
-  pathRec: TRectD;
 begin
   Result := nil;
   if rect.IsEmpty then Exit;
   CheckPrecisionRange(precision);
   scale := Math.Power(10, precision);
   rec := Rect64(ScaleRect(rect, scale));
-
+  tmpPaths := ScalePaths(paths, scale);
   with TRectClipLines.Create(rec) do
   try
-    for i := 0 to High(paths) do
-    begin
-      pathRec := GetBounds(paths[i]);
-      if not rect.Intersects(pathRec) then
-        Continue
-      else if rect.Contains(pathRec) then
-        AppendPath(Result, paths[i])
-      else
-      begin
-        tmpPath := ScalePath(paths[i], scale);
-        tmpPaths := Execute(tmpPath);
-        if tmpPaths = nil then Continue;
-        AppendPaths(Result, ScalePathsD(tmpPaths, 1/scale));
-      end;
-    end;
+    tmpPaths := Execute(tmpPaths);
   finally
     Free;
   end;
+  Result := ScalePathsD(tmpPaths, 1/scale);
 end;
 //------------------------------------------------------------------------------
 

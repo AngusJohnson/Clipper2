@@ -96,13 +96,13 @@ namespace Clipper2Lib {
   }
 
 
-  inline void SvgAddSolution(SvgWriter& svg, const PathsD& path, FillRule fillrule, bool show_coords)
+  inline void SvgAddSolution(SvgWriter& svg, const PathsD &path, FillRule fillrule, bool show_coords)
   {
     svg.AddPaths(path, false, fillrule, solution_brush_clr, 0xFF003300, 1.2, show_coords);
   }
 
 
-  inline void SvgAddSolution(SvgWriter& svg, const Paths64& path, FillRule fillrule, bool show_coords)
+  inline void SvgAddSolution(SvgWriter& svg, const Paths64 &path, FillRule fillrule, bool show_coords)
   {
     svg.AddPaths(TransformPaths<double, int64_t>(path),
       false, fillrule, solution_brush_clr, 0xFF003300, 1.2, show_coords);
@@ -129,7 +129,7 @@ namespace Clipper2Lib {
     int max_width = 0, int max_height = 0, int margin = 0)
   {
     if (FileExists(filename)) remove(filename.c_str());
-    svg.SetCoordsStyle("Verdana", 0xFF0000AA, 9);
+    svg.SetCoordsStyle("Verdana", 0xFF0000AA, 7);
     svg.SaveToFile(filename, max_width, max_height, margin);
   }
 }

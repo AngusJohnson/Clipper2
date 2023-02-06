@@ -34,7 +34,7 @@ public:
 
 int main(int argc, char* argv[])
 {
-  TestingZ_Int64();
+  //TestingZ_Int64();
   TestingZ_Double();
 }
 
@@ -45,7 +45,7 @@ void TestingZ_Int64()
   MyClass mc;
   Clipper64 c64;
 
-  subject.push_back(MakePath("100, 50, 10, 79, 65, 2, 65, 98, 10, 21 "));
+  subject.push_back(MakePath({ 100, 50, 10, 79, 65, 2, 65, 98, 10, 21 }));
   c64.AddSubject(subject);
   c64.SetZCallback(
     std::bind(&MyClass::myZCB, mc, std::placeholders::_1,
@@ -76,7 +76,7 @@ void TestingZ_Double()
   MyClass mc;
   ClipperD c;
 
-  subject.push_back(MakePathD("100, 50, 10, 79, 65, 2, 65, 98, 10, 21 "));
+  subject.push_back(MakePathD({ 100, 50, 10, 79, 65, 2, 65, 98, 10, 21 }));
   c.AddSubject(subject);
   c.SetZCallback(
     std::bind(&MyClass::myZCBD, mc, std::placeholders::_1,

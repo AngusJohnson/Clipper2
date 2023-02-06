@@ -2156,9 +2156,12 @@ begin
   if IsOpen(e) or not IsHotEdge(e) or not Assigned(prev) or
     IsOpen(prev) or not IsHotEdge(prev) or
     (pt.Y < e.top.Y +2) or (pt.Y < prev.top.Y +2) then Exit;
-  if checkCurrX then prev.currX := TopX(prev, pt.Y);
-  if (e.currX <> prev.currX) or
-    (CrossProduct(e.top, pt, prev.top) <> 0) then Exit;
+  if checkCurrX then
+  begin
+    if DistanceFromLineSqrd(pt, prev.bot, prev.top) > 0.25 then Exit
+  end else if (e.currX <> prev.currX) then Exit;
+
+  if (CrossProduct(e.top, pt, prev.top) <> 0) then Exit;
 
   if (e.outrec.idx = prev.outrec.idx) then
     AddLocalMaxPoly(prev, e, pt)
@@ -2181,10 +2184,13 @@ begin
     IsOpen(next) or not IsHotEdge(next) or
     (pt.Y < e.top.Y +2) or (pt.Y < next.top.Y +2) then Exit;
 
-  if (checkCurrX) then next.currX := TopX(next, pt.Y);
-  if (e.currX <> next.currX) or
-    (CrossProduct(e.top, pt, next.top) <> 0) then Exit;
+  if (checkCurrX) then
+  begin
+    if DistanceFromLineSqrd(pt, next.bot, next.top) > 0.25 then Exit
+  end
+  else if (e.currX <> next.currX) then Exit;
 
+  if (CrossProduct(e.top, pt, next.top) <> 0) then Exit;
   if e.outrec.idx = next.outrec.idx then
     AddLocalMaxPoly(e, next, pt)
   else if e.outrec.idx < next.outrec.idx then

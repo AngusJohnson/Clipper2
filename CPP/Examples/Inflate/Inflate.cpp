@@ -14,8 +14,10 @@ void System(const std::string& filename);
 
 int main(int argc, char* argv[])
 {
-  DoSimpleShapes();
+  //DoSimpleShapes();
   DoRabbit();
+
+  std::getchar();
 }
 
 void DoSimpleShapes() 
@@ -25,7 +27,7 @@ void DoSimpleShapes()
 
   FillRule fr2 = FillRule::EvenOdd;
   SvgWriter svg2;
-  op1.push_back(MakePath("80,60, 20,20 180,20 180,80, 20,180 180,180"));
+  op1.push_back(MakePath({ 80,60, 20,20, 180,20, 180,80, 20,180, 180,180 }));
   op2 = InflatePaths(op1, 20, JoinType::Square, EndType::Butt);
   SvgAddOpenSubject(svg2, op1, fr2, false);
   SvgAddSolution(svg2, Paths64ToPathsD(op2), fr2, false);
@@ -48,7 +50,7 @@ void DoSimpleShapes()
 
   //triangle offset - with large miter
   Paths64 p, pp;
-  p.push_back(MakePath("30, 150, 60, 350, 0, 350"));
+  p.push_back(MakePath({ 30, 150, 60, 350, 0, 350 }));
   pp.insert(pp.end(), p.begin(), p.end());
 
   for (int i = 0; i < 5; ++i)
@@ -61,7 +63,7 @@ void DoSimpleShapes()
 
   //rectangle offset - both squared and rounded
   p.clear();
-  p.push_back(MakePath("100,30, 340,30, 340,230, 100,230"));
+  p.push_back(MakePath({ 100,30, 340,30, 340,230, 100,230 }));
   pp.insert(pp.end(), p.begin(), p.end());
   //nb: using the ClipperOffest class directly here to control 
   //different join types within the same offset operation
@@ -91,11 +93,13 @@ void DoRabbit()
 
   while (p.size())
   {
-    //nb: don't forget to scale the delta offset too!
+    // nb: don't forget to scale the delta offset too!
     p = InflatePaths(p, -2.5, jt, EndType::Polygon);
-    //RamerDouglasPeucker - not essential but
-    //speeds up the loop and also tidies up the result
-    p = RamerDouglasPeucker(p, 0.025);
+    // SimplifyPaths (or RamerDouglasPeucker) is not 
+    // essential but is highly recommended because it 
+    // speeds up the loop and also tidies up the result
+    p = SimplifyPaths(p, 0.25); // preferred over RDP()
+    //p = RamerDouglasPeucker(p, 0.25);
     solution.reserve(solution.size() + p.size());
     copy(p.begin(), p.end(), back_inserter(solution));
   }

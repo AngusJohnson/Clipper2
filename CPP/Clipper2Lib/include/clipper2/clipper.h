@@ -11,6 +11,7 @@
 #define CLIPPER_H
 
 #include <cstdlib>
+#include <type_traits>
 #include <vector>
 
 #include "clipper.core.h"
@@ -134,6 +135,7 @@ namespace Clipper2Lib {
   inline Paths64 InflatePaths(const Paths64& paths, double delta,
     JoinType jt, EndType et, double miter_limit = 2.0)
   {
+    if (!delta) return paths;
     ClipperOffset clip_offset(miter_limit);
     clip_offset.AddPaths(paths, jt, et);
     return clip_offset.Execute(delta);
@@ -144,6 +146,7 @@ namespace Clipper2Lib {
   {
     int error_code = 0;
     CheckPrecision(precision, error_code);
+    if (!delta) return paths;
     if (error_code) return PathsD();
     const double scale = std::pow(10, precision);
     ClipperOffset clip_offset(miter_limit);
@@ -401,94 +404,6 @@ namespace Clipper2Lib {
       return true;
     }
 
-    inline bool GetInt(std::string::const_iterator& iter, const
-      std::string::const_iterator& end_iter, int64_t& val)
-    {
-      val = 0;
-      bool is_neg = *iter == '-';
-      if (is_neg) ++iter;
-      std::string::const_iterator start_iter = iter;
-      while (iter != end_iter &&
-        ((*iter >= '0') && (*iter <= '9')))
-      {
-        val = val * 10 + (static_cast<int64_t>(*iter++) - '0');
-      }
-      if (is_neg) val = -val;
-      return (iter != start_iter);
-    }
-
-    inline bool GetFloat(std::string::const_iterator& iter, const 
-      std::string::const_iterator& end_iter, double& val)
-    {
-      val = 0;
-      bool is_neg = *iter == '-';
-      if (is_neg) ++iter;
-      int dec_pos = 1;
-      const std::string::const_iterator start_iter = iter;
-      while (iter != end_iter && (*iter == '.' ||
-        ((*iter >= '0') && (*iter <= '9'))))
-      {
-        if (*iter == '.')
-        {
-          if (dec_pos != 1) break;
-          dec_pos = 0;
-          ++iter;
-          continue;
-        }
-        if (dec_pos != 1) --dec_pos;
-        val = val * 10 + ((int64_t)(*iter++) - '0');
-      }
-      if (iter == start_iter || dec_pos == 0) return false;
-      if (dec_pos < 0)
-        val *= std::pow(10, dec_pos);
-      if (is_neg)
-        val *= -1;
-      return true;
-    }
-
-    inline void SkipWhiteSpace(std::string::const_iterator& iter, 
-      const std::string::const_iterator& end_iter)
-    {
-      while (iter != end_iter && *iter <= ' ') ++iter;
-    }
-
-    inline void SkipSpacesWithOptionalComma(std::string::const_iterator& iter, 
-      const std::string::const_iterator& end_iter)
-    {
-      bool comma_seen = false;
-      while (iter != end_iter)
-      {
-        if (*iter == ' ') ++iter;
-        else if (*iter == ',')
-        {
-          if (comma_seen) return; // don't skip 2 commas!
-          comma_seen = true;
-          ++iter;
-        }
-        else return;                
-      }
-    }
-
-    inline bool has_one_match(const char c, char* chrs)
-    {
-      while (*chrs > 0 && c != *chrs) ++chrs;
-      if (!*chrs) return false;
-      *chrs = ' '; // only match once per char
-      return true;
-    }
-
-
-    inline void SkipUserDefinedChars(std::string::const_iterator& iter,
-      const std::string::const_iterator& end_iter, const std::string& skip_chars)
-    {
-      const size_t MAX_CHARS = 16;
-      char buff[MAX_CHARS] = {0};
-      std::copy(skip_chars.cbegin(), skip_chars.cend(), &buff[0]);
-      while (iter != end_iter && 
-        (*iter <= ' ' || has_one_match(*iter, buff))) ++iter;
-      return;
-    }
-
     static void OutlinePolyPath(std::ostream& os, 
       bool isHole, size_t count, const std::string& preamble)
     {
@@ -588,39 +503,44 @@ namespace Clipper2Lib {
     return true;
   }
 
-  inline Path64 MakePath(const std::string& s)
+  template<typename T, std::size_t N,
+    typename std::enable_if<
+      std::is_integral<T>::value &&
+      !std::is_same<char, T>::value, bool
+    >::type = true>
+  inline Path64 MakePath(const T(&list)[N])
   {
-    const std::string skip_chars = " ,(){}[]";
-    Path64 result;
-    std::string::const_iterator s_iter = s.cbegin();
-    details::SkipUserDefinedChars(s_iter, s.cend(), skip_chars);
-    while (s_iter != s.cend())
-    {
-      int64_t y = 0, x = 0;
-      if (!details::GetInt(s_iter, s.cend(), x)) break;
-      details::SkipSpacesWithOptionalComma(s_iter, s.cend());
-      if (!details::GetInt(s_iter, s.cend(), y)) break;
-      result.push_back(Point64(x, y));
-      details::SkipUserDefinedChars(s_iter, s.cend(), skip_chars);
-    }
+    if (N % 2 != 0)
+      DoError(non_pair_error_i);  // non-fatal without exception handling
+    Path64 result;                 // else ignores unpaired value
+    result.reserve(N / 2);
+#ifdef USINGZ
+    for (size_t i = 0; i < N; ++i)
+      result.emplace_back(Point64{ list[i], list[++i], 0 });
+#else
+    for (size_t i = 0; i < N; ++i)
+      result.emplace_back(Point64{ list[i], list[++i] });
+#endif
     return result;
   }
   
-  inline PathD MakePathD(const std::string& s)
+  template<typename T, std::size_t N,
+    typename std::enable_if<std::is_arithmetic<T>::value &&
+    !std::is_same<char, T>::value, bool
+  >::type = true>
+  inline PathD MakePathD(const T(&list)[N])
   {
-    const std::string skip_chars = " ,(){}[]";
-    PathD result;
-    std::string::const_iterator s_iter = s.cbegin();
-    details::SkipUserDefinedChars(s_iter, s.cend(), skip_chars);
-    while (s_iter != s.cend())
-    {
-      double y = 0, x = 0;
-      if (!details::GetFloat(s_iter, s.cend(), x)) break;
-      details::SkipSpacesWithOptionalComma(s_iter, s.cend());
-      if (!details::GetFloat(s_iter, s.cend(), y)) break;
-      result.push_back(PointD(x, y));
-      details::SkipUserDefinedChars(s_iter, s.cend(), skip_chars);
-    }
+    if (N % 2 != 0)
+      DoError(non_pair_error_i);  // non-fatal without exception handling
+    PathD result;                 // else ignores unpaired value
+    result.reserve(N / 2);
+#ifdef USINGZ
+    for (size_t i = 0; i < N; ++i)
+      result.emplace_back(PointD{ list[i], list[++i], 0 });
+#else
+    for (size_t i = 0; i < N; ++i)
+      result.emplace_back(PointD{ list[i], list[++i] });
+#endif
     return result;
   }
 

@@ -36,19 +36,44 @@ namespace Clipper2Lib
     "Precision exceeds the permitted range";
   static const char* range_error =
     "Values exceed permitted range";
+  static const char* scale_error =
+    "Invalid scale (either 0 or too large)";
+  static const char* non_pair_error =
+    "There must be 2 values for each coordinate";
 #endif
 
   // error codes (2^n)
-  const int precision_error_i = 1; // non-fatal
-  const int range_error_i     = 2;
+  const int precision_error_i   = 1; // non-fatal
+  const int scale_error_i       = 2; // non-fatal 
+  const int non_pair_error_i    = 4; // non-fatal 
+  const int range_error_i = 64;
 
   static const double PI = 3.141592653589793238;
   static const int64_t MAX_COORD = INT64_MAX >> 2;
   static const int64_t MIN_COORD = -MAX_COORD;
   static const int64_t INVALID = INT64_MAX;
+  const double max_coord = static_cast<double>(MAX_COORD);
+  const double min_coord = static_cast<double>(MIN_COORD);
 
   static const double MAX_DBL = (std::numeric_limits<double>::max)();
   static const double MIN_DBL = (std::numeric_limits<double>::min)();
+
+  static void DoError(int error_code)
+  {
+#if __cpp_exceptions
+    switch (error_code)
+    {
+    case precision_error_i:
+      throw Clipper2Exception(precision_error);
+    case scale_error_i:
+      throw Clipper2Exception(scale_error);
+    case non_pair_error_i:
+      throw Clipper2Exception(non_pair_error);
+    case range_error_i:
+      throw Clipper2Exception(range_error);
+    }
+#endif     
+  }
 
   //By far the most widely used filling rules for polygons are EvenOdd
   //and NonZero, sometimes called Alternate and Winding respectively.
@@ -384,9 +409,19 @@ namespace Clipper2Lib
 
 
   template <typename T1, typename T2>
-  inline Path<T1> ScalePath(const Path<T2>& path, double scale_x, double scale_y)
+  inline Path<T1> ScalePath(const Path<T2>& path, 
+    double scale_x, double scale_y, int& error_code)
   {
     Path<T1> result;
+    if (scale_x == 0 || scale_y == 0)
+    {
+      error_code |= scale_error_i;
+      DoError(scale_error_i);
+      // if no exception, treat as non-fatal error
+      if (scale_x == 0) scale_x = 1.0;
+      if (scale_y == 0) scale_y = 1.0;
+    }
+
     result.reserve(path.size());
 #ifdef USINGZ
     std::transform(path.begin(), path.end(), back_inserter(result),
@@ -401,9 +436,10 @@ namespace Clipper2Lib
   }
 
   template <typename T1, typename T2>
-  inline Path<T1> ScalePath(const Path<T2>& path, double scale)
+  inline Path<T1> ScalePath(const Path<T2>& path, 
+    double scale, int& error_code)
   {
-    return ScalePath<T1, T2>(path, scale, scale);
+    return ScalePath<T1, T2>(path, scale, scale, error_code);
   }
 
   template <typename T1, typename T2>
@@ -416,27 +452,21 @@ namespace Clipper2Lib
       !std::numeric_limits<T2>::is_integer)
     {
       RectD r = Bounds(paths);
-      const double max_coord_d = static_cast<double>(MAX_COORD);
-      const double min_coord_d = static_cast<double>(MIN_COORD);
-      if ((r.left * scale_x) < min_coord_d ||
-        (r.right * scale_x) > max_coord_d ||
-        (r.top * scale_y) < min_coord_d ||
-        (r.bottom * scale_y) > max_coord_d)
+      if ((r.left * scale_x) < min_coord ||
+        (r.right * scale_x) > max_coord ||
+        (r.top * scale_y) < min_coord ||
+        (r.bottom * scale_y) > max_coord)
       { 
         error_code |= range_error_i;
-#if __cpp_exceptions
-        throw Clipper2Exception(range_error);
-#else
-        // error_code = range_error_i; // compiler complains if here
-        return result; // empty 
-#endif
+        DoError(range_error_i);
+        return result; // empty path
       }
     }
 
     result.reserve(paths.size());
     std::transform(paths.begin(), paths.end(), back_inserter(result),
-      [scale_x, scale_y](const auto& path)
-      { return ScalePath<T1, T2>(path, scale_x, scale_y); });
+      [=, &error_code](const auto& path)
+      { return ScalePath<T1, T2>(path, scale_x, scale_y, error_code); });
     return result;
   }
 
@@ -578,11 +608,8 @@ namespace Clipper2Lib
   {
     if (precision >= -8 && precision <= 8) return;
     error_code |= precision_error_i; // non-fatal error
-#if __cpp_exceptions
-    throw Clipper2Exception(precision_error);
-#else
+    DoError(precision_error_i);      // unless exceptions enabled
     precision = precision > 8 ? 8 : -8;
-#endif
   }
 
   inline void CheckPrecision(int& precision)
@@ -674,9 +701,6 @@ namespace Clipper2Lib
     //nb: This statement is premised on using Cartesian coordinates
     return Area<T>(poly) >= 0;
   }
-
-  static const double max_coord = static_cast<double>(MAX_COORD);
-  static const double min_coord = static_cast<double>(MIN_COORD);
 
   inline int64_t CheckCastInt64(double val)
   {

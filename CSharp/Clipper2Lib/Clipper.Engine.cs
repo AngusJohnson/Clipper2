@@ -1,6 +1,6 @@
 ﻿/*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  27 January 2023                                                 *
+* Date      :  6 February 2023                                                 *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2023                                         *
 * Purpose   :  This is the main polygon clipping module                        *
@@ -14,7 +14,6 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
-using System.Runtime.ConstrainedExecution;
 using Clipper2Lib;
 
 namespace Clipper2Lib
@@ -2356,10 +2355,13 @@ private void DoHorizontal(Active horz)
       if (prev == null || IsOpen(e) || IsOpen(prev) ||
         !IsHotEdge(e) || !IsHotEdge(prev) ||
         pt.Y < e.top.Y + 2 || pt.Y < prev.top.Y + 2) return;
-      if (checkCurrX) prev.curX = TopX(prev, pt.Y);
-      if (e.curX != prev.curX ||        
-        InternalClipper.CrossProduct(e.top, pt, prev.top) != 0)
-          return;
+ 
+      if (checkCurrX)
+      {
+        if (Clipper.PerpendicDistFromLineSqrd(pt, prev.bot, prev.top) > 0.25) return;
+      }
+      else if (e.curX != prev.curX) return;
+      if (InternalClipper.CrossProduct(e.top, pt, prev.top) != 0) return;
 
       if (e.outrec!.idx == prev.outrec!.idx)
         AddLocalMaxPoly(prev, e, pt);
@@ -2381,9 +2383,12 @@ private void DoHorizontal(Active horz)
         pt.Y < e.top.Y + 2 || pt.Y < next.top.Y + 2) // avoids trivial joins
           return;
 
-      if (checkCurrX) next.curX = TopX(next, pt.Y);
-      if (e.curX != next.curX  ||
-        (InternalClipper.CrossProduct(e.top, pt, next.top) != 0)) 
+      if (checkCurrX)
+      {
+        if (Clipper.PerpendicDistFromLineSqrd(pt, next.bot, next.top) > 0.25) return;
+      }
+      else if (e.curX != next.curX) return;
+      if (InternalClipper.CrossProduct(e.top, pt, next.top) != 0)
           return;
 
       if (e.outrec!.idx == next.outrec!.idx)

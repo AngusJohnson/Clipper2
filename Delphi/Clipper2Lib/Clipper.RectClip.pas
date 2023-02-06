@@ -2,9 +2,9 @@ unit Clipper.RectClip;
 
 (*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  9 November 2022                                                 *
+* Date      :  6 February 2023                                                 *
 * Website   :  http://www.angusj.com                                           *
-* Copyright :  Angus Johnson 2010-2022                                         *
+* Copyright :  Angus Johnson 2010-2023                                         *
 * Purpose   :  FAST rectangular clipping                                       *
 * License   :  http://www.boost.org/LICENSE_1_0.txt                            *
 *******************************************************************************)
@@ -19,18 +19,36 @@ uses
 type
   TLocation = (locLeft, locTop, locRight, locBottom, locInside);
 
+  POutPt2 = ^TOutPt2;
+  POutPtArray = ^TOutPtArray;
+  TOutPtArray  = array of POutPt2;
+  TOutPtArrayArray = array of TOutPtArray;
+
+  TOutPt2 = record
+    ownerIdx: Cardinal;
+    edge: POutPtArray;
+    pt: TPoint64;
+    next: POutPt2;
+    prev: POutPt2;
+  end;
+
   TRectClip = class
   protected
-    fResultCnt      : integer;
-    fCapacity       : integer;
+    fResults        : TList;
     fRect           : TRect64;
     fRectPath       : TPath64;
     fRectMidPt      : TPoint64;
     fFirstCrossLoc  : TLocation;
-    fResult         : TPath64;
+    fEdges          : TOutPtArrayArray;
     fStartLocs      : TList;
-    procedure Reset;
-    procedure Add(const pt: TPoint64);
+    function  GetPrevOp: POutPt2;
+      {$IFDEF INLINING} inline; {$ENDIF}
+    function SafeDisposeOp(op: POutPt2): POutPt2;
+      {$IFDEF INLINING} inline; {$ENDIF}
+    procedure DisposeResults;
+    procedure CheckEdges;
+    procedure MergeEdges(idx: integer);
+    function Add(const pt: TPoint64): POutPt2;
       {$IFDEF INLINING} inline; {$ENDIF}
     procedure AddCorner(prev, curr: TLocation); overload;
       {$IFDEF INLINING} inline; {$ENDIF}
@@ -38,20 +56,26 @@ type
       {$IFDEF INLINING} inline; {$ENDIF}
     procedure GetNextLocation(const path: TPath64;
       var loc: TLocation; var i: integer; highI: integer);
+    procedure ExecuteInternal(const path: TPath64); virtual;
+    function GetPath(resultIdx: integer): TPath64;
   public
     constructor Create(const rect: TRect64);
     destructor Destroy; override;
-    function Execute(const path: TPath64): TPath64;
+    //function Execute(const path: TPath64): TPaths64;
+    function Execute(const paths: TPaths64): TPaths64;
   end;
 
   TRectClipLines = class(TRectClip)
   private
-    function GetCurrentPath: TPath64;
-  public
-    function Execute(const path: TPath64): TPaths64;
+    //function GetCurrentPath: TPath64;
+  protected
+    procedure ExecuteInternal(const path: TPath64); override;
   end;
 
 implementation
+
+type
+  PPath64 = ^TPath64;
 
 //------------------------------------------------------------------------------
 // Miscellaneous functions
@@ -225,6 +249,65 @@ begin
     Result := CrossProduct(prevPt, rectMidPt, currPt) < 0 else
     Result := HeadingClockwise(prev, curr);
 end;
+//------------------------------------------------------------------------------
+
+function CountOp(op: POutPt2): integer;
+var
+  op2: POutPt2;
+begin
+  if not Assigned(op) then
+  begin
+    Result := 0;
+    Exit;
+  end;
+  Result := 1;
+  op2 := op;
+  while op2.next <> op do
+  begin
+    inc(Result);
+    op2 := op2.next;
+  end;
+end;
+//------------------------------------------------------------------------------
+
+procedure SetNewOwner(op: POutPt2; newIdx: integer);
+var
+  op2: POutPt2;
+begin
+  op2 := op;
+  op.ownerIdx := newIdx;
+  while op2.next <> op do
+  begin
+    op2 := op2.next;
+    op2.ownerIdx := newIdx;
+  end;
+end;
+//------------------------------------------------------------------------------
+
+procedure AddToEdge(edge: POutPtArray; const op: POutPt2);
+var
+  len: integer;
+begin
+  if Assigned(op.edge) then Exit;
+  op.edge := edge;
+  len := Length(edge^);
+  SetLength(edge^, len+1);
+  edge^[len] := op;
+end;
+//------------------------------------------------------------------------------
+
+function HasHorzOverlap(const left1, right1, left2, right2: TPoint64): boolean;
+  {$IFDEF INLINING} inline; {$ENDIF}
+begin
+  Result := (left1.X < right2.X) and (right1.X > left2.X);
+end;
+//------------------------------------------------------------------------------
+
+function HasVertOverlap(const top1, bottom1, top2, bottom2: TPoint64): boolean;
+  {$IFDEF INLINING} inline; {$ENDIF}
+begin
+  Result := (top1.Y < bottom2.Y) and (bottom1.Y > top2.Y);
+end;
 
 //------------------------------------------------------------------------------
 // TRectClip class
@@ -232,44 +315,153 @@ end;
 
 constructor TRectClip.Create(const rect: TRect64);
 begin
+  fResults := TList.Create;
+
   fRect := rect;
   fRectPath := fRect.AsPath;
   fRectMidPt := rect.MidPoint;
   fStartLocs := TList.Create;
+  SetLength(fEdges, 8);
 end;
 //------------------------------------------------------------------------------
 
 destructor TRectClip.Destroy;
 begin
   fStartLocs.Free;
+  fResults.Free;
 end;
 //------------------------------------------------------------------------------
 
-procedure TRectClip.Reset;
+function TRectClip.GetPrevOp: POutPt2;
 begin
-  fResultCnt := 0;
-  fCapacity := 0;
-  fResult := nil;
+  if fResults.Count = 0 then
+    Result := nil else
+    Result := fResults[0];
 end;
 //------------------------------------------------------------------------------
 
-procedure TRectClip.Add(const pt: TPoint64);
+procedure UncoupleEdge(op: POutPt2); {$IFDEF INLINING} inline; {$ENDIF}
+var
+  i: integer;
 begin
-  if fResultCnt = fCapacity then
+  if not Assigned(op.edge) then Exit;
+  for i := 0 to High(POutPtArray(op.edge)^) do
+    if POutPtArray(op.edge)^[i] = op then
+    begin
+      POutPtArray(op.edge)^[i] := nil;
+      Break;
+    end;
+  op.edge := nil;
+end;
+//------------------------------------------------------------------------------
+
+function DisposeOp(op: POutPt2): POutPt2;
+begin
+  if op.next = op then
+    Result := nil else
+    Result := op.next;
+  op.prev.next := op.next;
+  op.next.prev := op.prev;
+  Dispose(op);
+end;
+//------------------------------------------------------------------------------
+
+function DisposeOpP(op: POutPt2): POutPt2;
+begin
+  if op.prev = op then
+    Result := nil else
+    Result := op.prev;
+  op.prev.next := op.next;
+  op.next.prev := op.prev;
+  Dispose(op);
+end;
+//------------------------------------------------------------------------------
+
+function TRectClip.SafeDisposeOp(op: POutPt2): POutPt2;
+begin
+  if fResults[op.ownerIdx] = op then
   begin
-    inc(fCapacity, 32);
-    SetLength(fResult, fCapacity);
+    if op.next = op then
+      fResults[op.ownerIdx] := nil else
+      fResults[op.ownerIdx] := op.next;
   end;
-  fResult[fResultCnt] := pt;
-  inc(fResultCnt);
+
+  if Assigned(op.edge) then
+  begin
+    op.next.edge := nil;
+    AddToEdge(POutPtArray(op.edge), op.next);
+    UncoupleEdge(op);
+  end;
+  Result := DisposeOp(op);
+end;
+//------------------------------------------------------------------------------
+
+procedure DisposeOps(op: POutPt2);
+var
+  tmp: POutPt2;
+begin
+  if not Assigned(op) then Exit;
+  op.prev.next := nil;
+  while assigned(op) do
+  begin
+    tmp := op;
+    op := op.next;
+    Dispose(tmp);
+  end;
+end;
+//------------------------------------------------------------------------------
+
+procedure TRectClip.DisposeResults;
+var
+  i: integer;
+begin
+  for i := 0 to fResults.Count -1 do
+    DisposeOps(fResults[i]);
+  fResults.Clear;
+end;
+//------------------------------------------------------------------------------
+
+function TRectClip.Add(const pt: TPoint64): POutPt2;
+var
+  prevOp: POutPt2;
+begin
+
+  prevOp := GetPrevOp;
+  if Assigned(prevOp) and PointsEqual(prevOp.pt, pt) then
+  begin
+    Result := prevOp;
+    Exit;
+  end;
+
+  new(Result);
+  Result.pt := pt;
+  Result.edge := nil;
+  if not Assigned(prevOp) then
+  begin
+    Result.ownerIdx := fResults.Add(Result);
+    Result.next := Result;
+    Result.prev := Result;
+  end else
+  begin
+    Result.ownerIdx := 0;
+    Result.next := prevOp.next;
+    prevOp.next.prev := Result;
+    prevOp.next := Result;
+    Result.prev := prevOp;
+    fResults[0] := Result;
+  end;
 end;
 //------------------------------------------------------------------------------
 
 procedure TRectClip.AddCorner(prev, curr: TLocation);
+var
+  cnrIdx: integer;
 begin
+  if prev = curr then Exit;
   if (HeadingClockwise(prev, curr)) then
-    Add(fRectPath[Ord(prev)]) else
-    Add(fRectPath[Ord(curr)]);
+    cnrIdx := Ord(prev) else
+    cnrIdx := Ord(curr);
+  Add(fRectPath[cnrIdx]);
 end;
 //------------------------------------------------------------------------------
 
@@ -283,6 +475,276 @@ begin
   begin
     loc := GetAdjacentLocation(loc, false);
     Add(fRectPath[Ord(loc)]);
+  end;
+end;
+//------------------------------------------------------------------------------
+
+function GetEdgesForPt(const pt: TPoint64; const rec: TRect64): cardinal;
+begin
+  if pt.X = rec.Left then
+    Result := 1
+  else if pt.X = rec.Right then
+    Result := 4
+  else
+    Result := 0;
+
+  if pt.Y = rec.Top then
+    inc(Result, 2)
+  else if pt.Y = rec.Bottom then
+    inc(Result, 8);
+end;
+//------------------------------------------------------------------------------
+
+function IsHeadingClockwise(const pt1, pt2: TPoint64;
+  edgeIdx: integer): Boolean;
+begin
+  case edgeIdx of
+    0: Result := pt2.Y < pt1.Y;
+    1: Result := pt2.X > pt1.X;
+    2: Result := pt2.Y > pt1.Y;
+    else Result := pt2.X < pt1.X;
+  end;
+end;
+//------------------------------------------------------------------------------
+
+procedure TRectClip.CheckEdges;
+var
+  i,j: integer;
+  edgeSet1, edgeSet2, combinedSet: Cardinal;
+  op, op2: POutPt2;
+begin
+  for i := 0 to fResults.Count -1 do
+  begin
+    op := fResults[i];
+    if not assigned(op) then Continue;
+
+    op2 := op;
+    repeat
+      if (CrossProduct(op2.prev.pt, op2.pt, op2.next.pt) = 0) then
+      begin
+        op2 := DisposeOpP(op2);
+        if not assigned(op2) then break;
+        op := op2.prev;
+      end else
+        op2 := op2.next;
+    until (op2 = op);
+
+    if not assigned(op2) then
+    begin
+      fResults[i] := nil;
+      Continue;
+    end;
+    fResults[i] := op;
+
+    edgeSet1 := GetEdgesForPt(op.prev.pt, fRect);
+    op2 := op;
+    repeat
+      edgeSet2 := GetEdgesForPt(op2.pt, fRect);
+      combinedSet := edgeSet1 and edgeSet2;
+      for j := 0 to 3 do
+        if combinedSet and (1 shl j) <> 0 then
+        begin
+          if IsHeadingClockwise(op2.prev.pt, op2.pt, j) then
+            AddToEdge(@fEdges[j*2], op2)
+          else
+            AddToEdge(@fEdges[j*2+1], op2);
+        end;
+      edgeSet1 := edgeSet2;
+      op2 := op2.next;
+    until op2 = op;
+  end;
+end;
+//------------------------------------------------------------------------------
+
+procedure TRectClip.MergeEdges(idx: integer);
+var
+  cw, ccw: POutPtArray;
+  isHorz, cwIsTowardLarger: Boolean;
+  edgeSetCurrent, edgeSet2, edgeSet3: Cardinal;
+  i, j, highJ, newIdx: integer;
+  op, op2, p1, p2, p1a, p2a: POutPt2;
+  isRejoining, opIsLarger, op2IsLarger: Boolean;
+begin
+  cw := @fEdges[idx *2];
+  ccw := @fEdges[idx *2 +1];
+  if not Assigned(ccw) then Exit;
+  edgeSetCurrent := 1 shl idx;
+  isHorz := idx in [1,3];
+  cwIsTowardLarger := idx in [1,2];
+  i := 0; j := 0;
+  while (i <= High(cw^)) do
+  begin
+
+    p1 := cw^[i];
+    if not Assigned(p1) then
+    begin
+      inc(i);
+      Continue;
+    end;
+
+    highJ := high(ccw^);
+    while (j <= highJ) and not Assigned(ccw^[j]) do inc(j);
+
+    if (j > highJ) then
+    begin
+      j := 0;
+      inc(i);
+      Continue;
+    end;
+
+    if cwIsTowardLarger then
+    begin
+      // p1 >>>> p1a;
+      // p2 <<<< p2a;
+      p1  := cw^[i].prev;
+      p1a := cw^[i];
+      p2  := ccw^[j];
+      p2a := ccw^[j].prev;
+    end else
+    begin
+      // p1 <<<< p1a;
+      // p2 >>>> p2a;
+      p1  := cw^[i];
+      p1a := cw^[i].prev;
+      p2  := ccw^[j].prev;
+      p2a := ccw^[j];
+    end;
+
+    if (p1.next = p1.prev) then
+    begin
+      cw^[i].edge := nil;
+      inc(i);
+      Continue;
+    end;
+
+    if (p2.next = p2.prev) then
+    begin
+      ccw^[j].edge := nil;
+      ccw^[j] := nil;
+      inc(j);
+      Continue;
+    end;
+
+    if (isHorz and not HasHorzOverlap(p1.pt, p1a.pt, p2.pt, p2a.pt)) or
+      (not isHorz and not HasVertOverlap(p1.pt, p1a.pt, p2.pt, p2a.pt)) then
+    begin
+      inc(j);
+      Continue;
+    end;
+
+    // we're either splitting or rejoining the path to get here
+    isRejoining := cw^[i].ownerIdx <> ccw^[j].ownerIdx;
+
+    if isRejoining then
+    begin
+      fResults[p2.ownerIdx] := nil;
+      SetNewOwner(p2, p1.ownerIdx);
+    end;
+
+    if cwIsTowardLarger then
+    begin
+      // p1 >> | >> p1a;
+      // p2 << | << p2a;
+      p1.next := p2;
+      p2.prev := p1;
+      p1a.prev := p2a;
+      p2a.next := p1a;
+    end else
+    begin
+      // p1 << | << p1a;
+      // p2 >> | >> p2a;
+      p1.prev := p2;
+      p2.next := p1;
+      p1a.next := p2a;
+      p2a.prev := p1a;
+    end;
+
+    if not isRejoining then
+    begin
+      NewIdx := fResults.Add(p1a);
+      SetNewOwner(p1a, newIdx);
+    end;
+
+    if cwIsTowardLarger then
+    begin
+      op := p2;
+      op2 := p1a;
+    end else
+    begin
+      op := p1;
+      op2 := p2a;
+    end;
+
+    fResults[op.ownerIdx] := op;
+    fResults[op2.ownerIdx] := op2;
+
+    if isHorz then // X
+    begin
+      opIsLarger := op.pt.X > op.prev.pt.X;
+      op2IsLarger := op2.pt.X > op2.prev.pt.X;
+    end else       // Y
+    begin
+      opIsLarger := op.pt.Y > op.prev.pt.Y;
+      op2IsLarger := op2.pt.Y > op2.prev.pt.Y;
+    end;
+
+    if (op.next = op.prev) or
+      PointsEqual(op.pt, op.prev.pt) then
+    begin
+      if op2IsLarger = cwIsTowardLarger then
+      begin
+        cw^[i] := op2;
+        ccw^[j] := nil;
+        inc(j);
+      end else
+      begin
+        ccw^[j] := op2;
+        cw^[i] := nil;
+        inc(i);
+      end;
+    end
+    else if (op2.next = op2.prev) or
+      PointsEqual(op2.pt, op2.prev.pt) then
+    begin
+      if opIsLarger = cwIsTowardLarger then
+      begin
+        cw^[i] := op;
+        ccw^[j] := nil;
+        inc(j);
+      end else
+      begin
+        ccw^[j] := op;
+        cw^[i] := nil;
+        inc(i);
+      end;
+    end
+    else if opIsLarger = op2IsLarger then
+    begin
+      if opIsLarger = cwIsTowardLarger then
+      begin
+        cw^[i] := op;
+        UncoupleEdge(op2);
+        AddToEdge(cw, op2);
+        ccw^[j] := nil;
+        inc(j);
+      end else
+      begin
+        cw^[i] := nil;
+        ccw^[j] := op2;
+        UncoupleEdge(op);
+        AddToEdge(ccw, op);
+        inc(i);
+        j := 0;
+      end;
+    end else
+    begin
+      if opIsLarger = cwIsTowardLarger then
+        cw^[i] := op else
+        ccw^[j] := op;
+      if op2IsLarger = cwIsTowardLarger then
+        cw^[i] := op2 else
+        ccw^[j] := op2;
+    end;
   end;
 end;
 //------------------------------------------------------------------------------
@@ -356,22 +818,53 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-function TRectClip.Execute(const path: TPath64): TPath64;
+function TRectClip.Execute(const paths: TPaths64): TPaths64;
 var
-  i,k, highI    : integer;
+  i,j, len: integer;
+  pathrec: TRect64;
+begin
+  result := nil;
+
+  len:= Length(paths);
+  for i := 0 to len -1 do
+  begin
+    pathrec := GetBounds(paths[i]);
+    if not fRect.Intersects(pathRec) then Continue;
+
+    if fRect.Contains(pathRec) then
+    begin
+      if (Length(paths[i]) > 2) then AppendPath(Result, paths[i]);
+      Continue;
+    end;
+
+    ExecuteInternal(paths[i]);
+
+    CheckEdges;
+    for j := 0 to 3 do
+      MergeEdges(j); // 0 == left ... 3 == bottom;
+
+    for j := 0 to fResults.Count -1 do
+      AppendPath(Result, GetPath(j));
+    DisposeResults;
+    fEdges := nil;
+    SetLength(fEdges, 8);
+  end;
+end;
+//------------------------------------------------------------------------------
+
+procedure TRectClip.ExecuteInternal(const path: TPath64);
+var
+  i,j, highI  : integer;
   prevPt,ip,ip2 : TPoint64;
-  loc, prev     : TLocation;
+  loc, prevLoc  : TLocation;
   loc2          : TLocation;
   startingLoc   : TLocation;
   crossingLoc   : TLocation;
   prevCrossLoc  : TLocation;
   tmpRect       : TRect64;
-  isClockw      : Boolean;
+  isCw          : Boolean;
 begin
-  Result := nil;
-  if (Length(path) < 3) or fRect.IsEmpty then Exit;
-  Reset;
-
+  if (Length(path) < 3) then Exit;
   i := 0;
   fStartLocs.Clear;
   highI := Length(path) -1;
@@ -382,14 +875,15 @@ begin
   begin
     i := highI - 1;
     while (i >= 0) and
-      not GetLocation(fRect, path[i], prev) do
+      not GetLocation(fRect, path[i], prevLoc) do
         dec(i);
     if (i < 0) then
     begin
-      Result := path;
+      // all of path inside fRect
+      for j := 0 to highI do Add(path[j]);
       Exit;
     end;
-    if (prev = locInside) then
+    if (prevLoc = locInside) then
       loc := locInside;
     i := 0;
   end;
@@ -398,7 +892,7 @@ begin
   ///////////////////////////////////////////////////
   while i <= highI do
   begin
-    prev := loc;
+    prevLoc := loc;
     prevCrossLoc := crossingLoc;
     GetNextLocation(path, loc, i, highI);
     if i > highI then Break;
@@ -412,19 +906,19 @@ begin
       // ie remains outside (and crossingLoc still == loc)
       if (prevCrossLoc = locInside) then //ie rect still uncrossed
       begin
-        isClockw := IsClockwise(prev, loc, prevPt, path[i], fRectMidPt);
+        isCw := IsClockwise(prevLoc, loc, prevPt, path[i], fRectMidPt);
         repeat
-          fStartLocs.Add(Pointer(prev));
-          prev := GetAdjacentLocation(prev, isClockw);
-        until prev = loc;
+          fStartLocs.Add(Pointer(prevLoc));
+          prevLoc := GetAdjacentLocation(prevLoc, isCw);
+        until prevLoc = loc;
         crossingLoc := prevCrossLoc; // because still not crossed
       end
-      else if (prev <> locInside) and (prev <> loc) then
+      else if (prevLoc <> locInside) and (prevLoc <> loc) then
       begin
-        isClockw := IsClockwise(prev, loc, prevPt, path[i], fRectMidPt);
+        isCw := IsClockwise(prevLoc, loc, prevPt, path[i], fRectMidPt);
         repeat
-          AddCorner(prev, isClockw);
-        until prev = loc;
+          AddCorner(prevLoc, isCw);
+        until prevLoc = loc;
       end;
       inc(i);
       Continue;
@@ -439,21 +933,21 @@ begin
       if (fFirstCrossLoc = locInside) then
       begin
         fFirstCrossLoc := crossingLoc;
-        fStartLocs.Add(Pointer(prev));
+        fStartLocs.Add(Pointer(prevLoc));
       end
-      else if (prev <> crossingLoc) then
+      else if (prevLoc <> crossingLoc) then
       begin
-        isClockw := IsClockwise(prev, crossingLoc, prevPt, path[i], fRectMidPt);
+        isCw := IsClockwise(prevLoc, crossingLoc, prevPt, path[i], fRectMidPt);
         repeat
-          AddCorner(prev, isClockw);
-        until prev = crossingLoc;
+          AddCorner(prevLoc, isCw);
+        until prevLoc = crossingLoc;
       end;
     end
-    else if (prev <> locInside) then
+    else if (prevLoc <> locInside) then
     begin
       // passing right through rect. 'ip' here will be the second
       // intersect pt but we'll also need the first intersect pt (ip2)
-      loc := prev;
+      loc := prevLoc;
       GetIntersection(fRectPath, prevPt, path[i], loc, ip2);
       if (prevCrossLoc <> locInside) then
         AddCorner(prevCrossLoc, loc);
@@ -461,11 +955,14 @@ begin
       if (fFirstCrossLoc = locInside) then
       begin
         fFirstCrossLoc := loc;
-        fStartLocs.Add(Pointer(prev));
+        fStartLocs.Add(Pointer(prevLoc));
       end;
 
-      loc := crossingLoc;
+      ////////////////////////////////
       Add(ip2);
+      ////////////////////////////////
+
+      loc := crossingLoc;
       if PointsEqual(ip, ip2) then
       begin
         // it's very likely that path[i] is on rect
@@ -480,6 +977,7 @@ begin
       if (fFirstCrossLoc = locInside) then
         fFirstCrossLoc := crossingLoc;
     end;
+
     Add(ip);
   end; //while i <= highI
   ///////////////////////////////////////////////////
@@ -494,12 +992,16 @@ begin
       tmpRect := GetBounds(path);
       if tmpRect.Contains(fRect) and
         (Path1ContainsPath2(path, fRectPath) <> pipOutside) then
-          Result := fRectPath
-      else
-        result := nil;
-    end
-    else Result := path;
-
+      begin
+        for i := 0 to 3 do
+        begin
+          Add(fRectPath[i]);
+          AddToEdge(@fEdges[i*2], fResults[0]);
+        end;
+      end;
+    end else
+      // path is inside rect
+      for i := 0 to high(path) do Add(path[i]);
     Exit;
   end;
 
@@ -508,72 +1010,74 @@ begin
   begin
     if (fStartLocs.Count > 0) then
     begin
-      prev := loc;
+      prevLoc := loc;
       for i := 0 to fStartLocs.Count -1 do
       begin
         loc2 := TLocation(fStartLocs[i]);
-        if (prev = loc2) then Continue;
-        AddCorner(prev, HeadingClockwise(prev, loc2));
-        prev := loc2;
+        if (prevLoc = loc2) then Continue;
+        AddCorner(prevLoc, HeadingClockwise(prevLoc, loc2));
+        prevLoc := loc2;
       end;
-      loc := prev;
+      loc := prevLoc;
     end;
     if (loc <> fFirstCrossLoc) then
       AddCorner(loc, HeadingClockwise(loc, fFirstCrossLoc));
   end;
+end;
+//------------------------------------------------------------------------------
 
-  if fResultCnt < 3 then Exit;
+function TRectClip.GetPath(resultIdx: integer): TPath64;
+var
+  j, len: integer;
+  op, op2: POutPt2;
+begin
+  result := nil;
+  op := fResults[resultIdx];
+  if not Assigned(op) then Exit;
 
-  // tidy up duplicates and collinear segments
-  SetLength(Result, fResultCnt);
-  k := 0;
-  prevPt := fResult[fResultCnt -1];
-  Result[0] := fResult[0];
-  for i := 1 to fResultCnt -1 do
-    if CrossProduct(prevPt, Result[k], fResult[i]) = 0 then
+  len := CountOp(op);
+  while (op.next <> op.prev) and
+    (CrossProduct(op.prev.pt, op.pt, op.next.pt) = 0) do
+      op := DisposeOp(op);
+  // this must be incremented and repeated to be sure
+  // that all collinear edges have been removed.
+  op := op.next;
+  while (op.next <> op.prev) and
+    (CrossProduct(op.prev.pt, op.pt, op.next.pt) = 0) do
+      op := DisposeOp(op);
+  fResults[resultIdx] := op; //just incase it was deleted
+
+  if (op.next = op.prev) then Exit;
+  SetLength(result, len);
+  Result[0] := op.pt;
+  op2 := op.next;
+  j := 0;
+  while op2 <> op do
+  begin
+    if (CrossProduct(Result[j], op2.pt, op2.next.pt) <> 0) then
     begin
-      Result[k] := fResult[i];
-    end else
-    begin
-      prevPt := Result[k];
-      inc(k);
-      Result[k] := fResult[i];
+      inc(j);
+      Result[j] := op2.pt;
     end;
-
-  if k < 2 then
-    Result := nil
-  // and a final check for collinearity
-  else if CrossProduct(Result[0], Result[k-1], Result[k]) = 0 then
-    SetLength(Result, k)
-  else
-    SetLength(Result, k +1);
+    op2 := op2.next;
+  end;
+  if (CrossProduct(Result[0],Result[j],Result[j-1]) = 0) then Dec(j);
+  SetLength(result, j+1);
 end;
 
 //------------------------------------------------------------------------------
 // TRectClipLines
 //------------------------------------------------------------------------------
 
-function TRectClipLines.GetCurrentPath: TPath64;
-begin
-  SetLength(fResult, fResultCnt);
-  Result := fResult;
-  Reset;
-end;
-//------------------------------------------------------------------------------
-
-function TRectClipLines.Execute(const path: TPath64): TPaths64;
+procedure TRectClipLines.ExecuteInternal(const path: TPath64);
 var
   i, highI      : integer;
-  resCnt        : integer;
   prevPt,ip,ip2 : TPoint64;
   loc, prev     : TLocation;
   crossingLoc   : TLocation;
 begin
-  resCnt := 0;
-  Result := nil;
   if (Length(path) < 2) or fRect.IsEmpty then Exit;
 
-  Reset;
   i := 1;
   highI := Length(path) -1;
 
@@ -584,8 +1088,7 @@ begin
         inc(i);
     if (i > highI) then
     begin
-      SetLength(Result, 1);
-      Result[0] := path;
+      for i := 0 to High(path) do Add(path[i]);
       Exit;
     end;
     if (prev = locInside) then
@@ -626,27 +1129,10 @@ begin
 
       Add(ip2);
       Add(ip);
-      inc(resCnt);
-      SetLength(Result, resCnt);
-      Result[resCnt -1] := GetCurrentPath;
     end else // path must be exiting rect
-    begin
       Add(ip);
-      inc(resCnt);
-      SetLength(Result, resCnt);
-      Result[resCnt -1] := GetCurrentPath;
-    end;
-
   end; //while i <= highI
   ///////////////////////////////////////////////////
-
-  if fResultCnt > 1 then
-  begin
-    inc(resCnt);
-    SetLength(Result, resCnt);
-    Result[resCnt -1] := GetCurrentPath;
-  end;
-  SetLength(Result, resCnt);
 end;
 
 //------------------------------------------------------------------------------

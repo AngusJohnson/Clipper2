@@ -681,9 +681,12 @@ begin
   begin
     //almost no angle or concave
     AddPoint(GetPerpendic(fInPath[j], fNorms[k], fGrpDelta));
-    // create a simple self-intersection that will be cleaned up later
-    if not almostNoAngle then AddPoint(fInPath[j]);
-    AddPoint(GetPerpendic(fInPath[j], fNorms[j], fGrpDelta));
+    if not almostNoAngle then
+    begin
+      // create a simple self-intersection that will be cleaned up later
+      //AddPoint(fInPath[j]); // todo: check, as may not be needed
+      AddPoint(GetPerpendic(fInPath[j], fNorms[j], fGrpDelta));
+    end;
   end
   else // convex offset
   begin

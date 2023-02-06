@@ -1828,7 +1828,6 @@ namespace Clipper2Lib {
     return resultOp;
   }
 
-
   inline void ClipperBase::DeleteFromAEL(Active& e)
   {
     Active* prev = e.prev_in_ael;
@@ -2654,9 +2653,13 @@ namespace Clipper2Lib {
       IsOpen(*prev) || !IsHotEdge(*prev) ||
       pt.y < e.top.y + 2 || pt.y < prev->top.y + 2) // avoid trivial joins
         return;
-    if (check_curr_x) prev->curr_x = TopX(*prev, pt.y);
-    if (e.curr_x != prev->curr_x || CrossProduct(e.top, pt, prev->top))
-        return;
+
+    if (check_curr_x)
+    {
+      if (DistanceFromLineSqrd(pt, prev->bot, prev->top) > 0.35) return;
+    }
+    else if (e.curr_x != prev->curr_x) return;
+    if (CrossProduct(e.top, pt, prev->top)) return;
 
     if (e.outrec->idx == prev->outrec->idx)
       AddLocalMaxPoly(*prev, e, pt);
@@ -2677,10 +2680,13 @@ namespace Clipper2Lib {
       pt.y < e.top.y +2 || pt.y < next->top.y +2) // avoids trivial joins
         return;      
 
-    if (check_curr_x) next->curr_x = TopX(*next, pt.y);
-    if (e.curr_x != next->curr_x ||
-      CrossProduct(e.top, pt, next->top)) return;
-
+    if (check_curr_x)
+    {
+      if (DistanceFromLineSqrd(pt, next->bot, next->top) > 0.35) return;
+    }
+    else if (e.curr_x != next->curr_x) return;
+    if (CrossProduct(e.top, pt, next->top)) return;
+      
     if (e.outrec->idx == next->outrec->idx)
       AddLocalMaxPoly(e, *next, pt);
     else if (e.outrec->idx < next->outrec->idx)

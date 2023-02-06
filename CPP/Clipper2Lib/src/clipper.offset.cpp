@@ -275,9 +275,12 @@ void ClipperOffset::OffsetPoint(Group& group,
 	{
     //almost no angle or concave
 		group.path_.push_back(GetPerpendic(path[j], norms[k], group_delta_));
-		// create a simple self-intersection that will be cleaned up later
-		if (!almostNoAngle) group.path_.push_back(path[j]);
-		group.path_.push_back(GetPerpendic(path[j], norms[j], group_delta_));
+		if (!almostNoAngle)
+		{
+			// create a simple self-intersection that will be cleaned up later
+			//group.path_.push_back(path[j]);
+			group.path_.push_back(GetPerpendic(path[j], norms[j], group_delta_));
+		}
 	}
 	else 
 	{
@@ -381,12 +384,12 @@ void ClipperOffset::DoGroupOffset(Group& group, double delta)
 	int idx = 0;
 	GetBoundsAndLowestPolyIdx(group.paths_in_, r, idx);
 	if (!IsSafeOffset(r, static_cast<int64_t>(std::ceil(delta))))
-#if __cpp_exceptions
-	throw Clipper2Exception(range_error);
-#else
+	{
+		DoError(range_error_i);
 		error_code_ |= range_error_i;
 		return;
-#endif
+	}
+
 	if (isClosedPaths)
 	{
 		double area = Area(group.paths_in_[idx]);

@@ -2,7 +2,8 @@ unit Clipper.Core;
 
 (*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  21 January 2023                                                 *
+* Date      :  2 February 2023                                                 *
+* Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2023                                         *
 * Purpose   :  Core Clipper Library module                                     *
 *              Contains structures and functions used throughout the library   *
@@ -252,8 +253,10 @@ function ScalePathsD(const paths: TPathsD; scale: double): TPathsD; overload;
 
 function Path64(const pathD: TPathD): TPath64;
 function PathD(const path: TPath64): TPathD;
-function Paths64(const pathsD: TPathsD): TPaths64;
-function PathsD(const paths: TPaths64): TPathsD;
+function Paths64(const path: TPath64): TPaths64; overload;
+function Paths64(const pathsD: TPathsD): TPaths64; overload;
+function PathsD(const paths: TPaths64): TPathsD; overload;
+function PathsD(const path: TPathD): TPathsD; overload;
 
 function StripDuplicates(const path: TPath64; isClosedPath: Boolean = false): TPath64;
 function StripNearDuplicates(const path: TPathD;
@@ -1021,6 +1024,13 @@ begin
 end;
 //------------------------------------------------------------------------------
 
+function Paths64(const path: TPath64): TPaths64;
+begin
+  setLength(Result, 1);
+  Result[0] := path;
+end;
+//------------------------------------------------------------------------------
+
 function Paths64(const pathsD: TPathsD): TPaths64;
 var
   i, len: integer;
@@ -1042,6 +1052,14 @@ begin
     Result[i] := PathD(paths[i]);
 end;
 //------------------------------------------------------------------------------
+
+function PathsD(const path: TPathD): TPathsD;
+begin
+  setLength(Result, 1);
+  Result[0] := path;
+end;
+//------------------------------------------------------------------------------
+
 
 function ReversePath(const path: TPath64): TPath64;
 var
@@ -1135,6 +1153,7 @@ procedure AppendPath(var paths: TPaths64; const extra: TPath64);
 var
   len: Integer;
 begin
+  if not Assigned(extra) then Exit;
   len := length(paths);
   SetLength(paths, len +1);
   paths[len] := extra;
@@ -1145,6 +1164,7 @@ procedure AppendPath(var paths: TPathsD; const extra: TPathD);
 var
   len: Integer;
 begin
+  if not Assigned(extra) then Exit;
   len := length(paths);
   SetLength(paths, len +1);
   paths[len] := extra;

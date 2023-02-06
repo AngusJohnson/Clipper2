@@ -8,10 +8,10 @@ TEST(Clipper2Tests, TestPolyTreeIntersection)
     Clipper64 clipper;
 
     Paths64 subject; 
-    subject.push_back( MakePath("0,0  0,5  5,5  5,0") );
+    subject.push_back(MakePath({ 0,0, 0,5, 5,5, 5,0 }));
     clipper.AddSubject(subject);
     Paths64 clip;
-    clip.push_back( MakePath("1,1  1,6  6,6  6,1") );
+    clip.push_back(MakePath({ 1,1,  1,6,  6,6,  6,1 }));
     clipper.AddClip (clip);
 
     PolyTree64 solution;
