@@ -1,6 +1,6 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  14 January 2023                                                 *
+* Date      :  6 February 2023                                                 *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  FAST rectangular clipping                                       *
@@ -386,7 +386,7 @@ namespace Clipper2Lib {
     if (first_cross_ == Location::Inside)
     {
       if (starting_loc == Location::Inside) return path;
-      Rect64 tmp_rect = Bounds(path);
+      Rect64 tmp_rect = GetBounds(path);
       if (tmp_rect.Contains(rect_) &&
         Path1ContainsPath2(path, rectPath_) !=
         PointInPolygonResult::IsOutside) return rectPath_;

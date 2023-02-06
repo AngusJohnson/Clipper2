@@ -41,13 +41,11 @@ type
     fFirstCrossLoc  : TLocation;
     fEdges          : TOutPtArrayArray;
     fStartLocs      : TList;
-    function  GetPrevOp: POutPt2;
-      {$IFDEF INLINING} inline; {$ENDIF}
-    function SafeDisposeOp(op: POutPt2): POutPt2;
+    function  GetLastOp: POutPt2;
       {$IFDEF INLINING} inline; {$ENDIF}
     procedure DisposeResults;
     procedure CheckEdges;
-    procedure MergeEdges(idx: integer);
+    procedure TidyEdges(idx: integer; var cw, ccw: TOutPtArray);
     function Add(const pt: TPoint64): POutPt2;
       {$IFDEF INLINING} inline; {$ENDIF}
     procedure AddCorner(prev, curr: TLocation); overload;
@@ -216,23 +214,22 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-
 function AreOpposites(prev, curr: TLocation): Boolean;
-{$IFDEF INLINING} inline; {$ENDIF}
+  {$IFDEF INLINING} inline; {$ENDIF}
 begin
   Result := Abs(Ord(prev) - Ord(curr)) = 2;
 end;
 //------------------------------------------------------------------------------
 
 function HeadingClockwise(prev, curr: TLocation): Boolean;
-{$IFDEF INLINING} inline; {$ENDIF}
+  {$IFDEF INLINING} inline; {$ENDIF}
 begin
   Result := (Ord(prev) + 1) mod 4 = Ord(curr);
 end;
 //------------------------------------------------------------------------------
 
 function GetAdjacentLocation(loc: TLocation; isClockwise: Boolean): TLocation;
-{$IFDEF INLINING} inline; {$ENDIF}
+  {$IFDEF INLINING} inline; {$ENDIF}
 var
   delta: integer;
 begin
@@ -243,7 +240,7 @@ end;
 
 function IsClockwise(prev, curr: TLocation;
   const prevPt, currPt, rectMidPt: TPoint64): Boolean;
-{$IFDEF INLINING} inline; {$ENDIF}
+  {$IFDEF INLINING} inline; {$ENDIF}
 begin
   if AreOpposites(prev, curr) then
     Result := CrossProduct(prevPt, rectMidPt, currPt) < 0 else
@@ -252,6 +249,7 @@ end;
 //------------------------------------------------------------------------------
 
 function CountOp(op: POutPt2): integer;
+  {$IFDEF INLINING} inline; {$ENDIF}
 var
   op2: POutPt2;
 begin
@@ -271,6 +269,7 @@ end;
 //------------------------------------------------------------------------------
 
 procedure SetNewOwner(op: POutPt2; newIdx: integer);
+  {$IFDEF INLINING} inline; {$ENDIF}
 var
   op2: POutPt2;
 begin
@@ -284,15 +283,16 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-procedure AddToEdge(edge: POutPtArray; const op: POutPt2);
+procedure AddToEdge(var edge: TOutPtArray; const op: POutPt2);
+  {$IFDEF INLINING} inline; {$ENDIF}
 var
   len: integer;
 begin
   if Assigned(op.edge) then Exit;
-  op.edge := edge;
-  len := Length(edge^);
-  SetLength(edge^, len+1);
-  edge^[len] := op;
+  op.edge := @edge;
+  len := Length(edge);
+  SetLength(edge, len+1);
+  edge[len] := op;
 end;
 //------------------------------------------------------------------------------
 
@@ -307,6 +307,74 @@ function HasVertOverlap(const top1, bottom1, top2, bottom2: TPoint64): boolean;
   {$IFDEF INLINING} inline; {$ENDIF}
 begin
   Result := (top1.Y < bottom2.Y) and (bottom1.Y > top2.Y);
+end;
+//------------------------------------------------------------------------------
+
+procedure UncoupleEdge(op: POutPt2); {$IFDEF INLINING} inline; {$ENDIF}
+var
+  i: integer;
+begin
+  if not Assigned(op.edge) then Exit;
+  for i := 0 to High(POutPtArray(op.edge)^) do
+    if POutPtArray(op.edge)^[i] = op then
+    begin
+      POutPtArray(op.edge)^[i] := nil;
+      Break;
+    end;
+  op.edge := nil;
+end;
+//------------------------------------------------------------------------------
+
+function DisposeOp(op: POutPt2): POutPt2;
+  {$IFDEF INLINING} inline; {$ENDIF}
+begin
+  if op.next = op then
+    Result := nil else
+    Result := op.next;
+  op.prev.next := op.next;
+  op.next.prev := op.prev;
+  Dispose(op);
+end;
+//------------------------------------------------------------------------------
+
+function DisposeOpBack(op: POutPt2): POutPt2;
+  {$IFDEF INLINING} inline; {$ENDIF}
+begin
+  if op.prev = op then
+    Result := nil else
+    Result := op.prev;
+  op.prev.next := op.next;
+  op.next.prev := op.prev;
+  Dispose(op);
+end;
+//------------------------------------------------------------------------------
+
+function GetEdgesForPt(const pt: TPoint64; const rec: TRect64): cardinal;
+  {$IFDEF INLINING} inline; {$ENDIF}
+begin
+  if pt.X = rec.Left then
+    Result := 1
+  else if pt.X = rec.Right then
+    Result := 4
+  else
+    Result := 0;
+
+  if pt.Y = rec.Top then
+    inc(Result, 2)
+  else if pt.Y = rec.Bottom then
+    inc(Result, 8);
+end;
+//------------------------------------------------------------------------------
+
+function IsHeadingClockwise(const pt1, pt2: TPoint64; edgeIdx: integer): Boolean;
+  {$IFDEF INLINING} inline; {$ENDIF}
+begin
+  case edgeIdx of
+    0: Result := pt2.Y < pt1.Y;
+    1: Result := pt2.X > pt1.X;
+    2: Result := pt2.Y > pt1.Y;
+    else Result := pt2.X < pt1.X;
+  end;
 end;
 
 //------------------------------------------------------------------------------
@@ -332,67 +400,11 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-function TRectClip.GetPrevOp: POutPt2;
+function TRectClip.GetLastOp: POutPt2;
 begin
   if fResults.Count = 0 then
     Result := nil else
     Result := fResults[0];
-end;
-//------------------------------------------------------------------------------
-
-procedure UncoupleEdge(op: POutPt2); {$IFDEF INLINING} inline; {$ENDIF}
-var
-  i: integer;
-begin
-  if not Assigned(op.edge) then Exit;
-  for i := 0 to High(POutPtArray(op.edge)^) do
-    if POutPtArray(op.edge)^[i] = op then
-    begin
-      POutPtArray(op.edge)^[i] := nil;
-      Break;
-    end;
-  op.edge := nil;
-end;
-//------------------------------------------------------------------------------
-
-function DisposeOp(op: POutPt2): POutPt2;
-begin
-  if op.next = op then
-    Result := nil else
-    Result := op.next;
-  op.prev.next := op.next;
-  op.next.prev := op.prev;
-  Dispose(op);
-end;
-//------------------------------------------------------------------------------
-
-function DisposeOpP(op: POutPt2): POutPt2;
-begin
-  if op.prev = op then
-    Result := nil else
-    Result := op.prev;
-  op.prev.next := op.next;
-  op.next.prev := op.prev;
-  Dispose(op);
-end;
-//------------------------------------------------------------------------------
-
-function TRectClip.SafeDisposeOp(op: POutPt2): POutPt2;
-begin
-  if fResults[op.ownerIdx] = op then
-  begin
-    if op.next = op then
-      fResults[op.ownerIdx] := nil else
-      fResults[op.ownerIdx] := op.next;
-  end;
-
-  if Assigned(op.edge) then
-  begin
-    op.next.edge := nil;
-    AddToEdge(POutPtArray(op.edge), op.next);
-    UncoupleEdge(op);
-  end;
-  Result := DisposeOp(op);
 end;
 //------------------------------------------------------------------------------
 
@@ -425,8 +437,7 @@ function TRectClip.Add(const pt: TPoint64): POutPt2;
 var
   prevOp: POutPt2;
 begin
-
-  prevOp := GetPrevOp;
+  prevOp := GetLastOp;
   if Assigned(prevOp) and PointsEqual(prevOp.pt, pt) then
   begin
     Result := prevOp;
@@ -475,276 +486,6 @@ begin
   begin
     loc := GetAdjacentLocation(loc, false);
     Add(fRectPath[Ord(loc)]);
-  end;
-end;
-//------------------------------------------------------------------------------
-
-function GetEdgesForPt(const pt: TPoint64; const rec: TRect64): cardinal;
-begin
-  if pt.X = rec.Left then
-    Result := 1
-  else if pt.X = rec.Right then
-    Result := 4
-  else
-    Result := 0;
-
-  if pt.Y = rec.Top then
-    inc(Result, 2)
-  else if pt.Y = rec.Bottom then
-    inc(Result, 8);
-end;
-//------------------------------------------------------------------------------
-
-function IsHeadingClockwise(const pt1, pt2: TPoint64;
-  edgeIdx: integer): Boolean;
-begin
-  case edgeIdx of
-    0: Result := pt2.Y < pt1.Y;
-    1: Result := pt2.X > pt1.X;
-    2: Result := pt2.Y > pt1.Y;
-    else Result := pt2.X < pt1.X;
-  end;
-end;
-//------------------------------------------------------------------------------
-
-procedure TRectClip.CheckEdges;
-var
-  i,j: integer;
-  edgeSet1, edgeSet2, combinedSet: Cardinal;
-  op, op2: POutPt2;
-begin
-  for i := 0 to fResults.Count -1 do
-  begin
-    op := fResults[i];
-    if not assigned(op) then Continue;
-
-    op2 := op;
-    repeat
-      if (CrossProduct(op2.prev.pt, op2.pt, op2.next.pt) = 0) then
-      begin
-        op2 := DisposeOpP(op2);
-        if not assigned(op2) then break;
-        op := op2.prev;
-      end else
-        op2 := op2.next;
-    until (op2 = op);
-
-    if not assigned(op2) then
-    begin
-      fResults[i] := nil;
-      Continue;
-    end;
-    fResults[i] := op;
-
-    edgeSet1 := GetEdgesForPt(op.prev.pt, fRect);
-    op2 := op;
-    repeat
-      edgeSet2 := GetEdgesForPt(op2.pt, fRect);
-      combinedSet := edgeSet1 and edgeSet2;
-      for j := 0 to 3 do
-        if combinedSet and (1 shl j) <> 0 then
-        begin
-          if IsHeadingClockwise(op2.prev.pt, op2.pt, j) then
-            AddToEdge(@fEdges[j*2], op2)
-          else
-            AddToEdge(@fEdges[j*2+1], op2);
-        end;
-      edgeSet1 := edgeSet2;
-      op2 := op2.next;
-    until op2 = op;
-  end;
-end;
-//------------------------------------------------------------------------------
-
-procedure TRectClip.MergeEdges(idx: integer);
-var
-  cw, ccw: POutPtArray;
-  isHorz, cwIsTowardLarger: Boolean;
-  edgeSetCurrent, edgeSet2, edgeSet3: Cardinal;
-  i, j, highJ, newIdx: integer;
-  op, op2, p1, p2, p1a, p2a: POutPt2;
-  isRejoining, opIsLarger, op2IsLarger: Boolean;
-begin
-  cw := @fEdges[idx *2];
-  ccw := @fEdges[idx *2 +1];
-  if not Assigned(ccw) then Exit;
-  edgeSetCurrent := 1 shl idx;
-  isHorz := idx in [1,3];
-  cwIsTowardLarger := idx in [1,2];
-  i := 0; j := 0;
-  while (i <= High(cw^)) do
-  begin
-
-    p1 := cw^[i];
-    if not Assigned(p1) then
-    begin
-      inc(i);
-      Continue;
-    end;
-
-    highJ := high(ccw^);
-    while (j <= highJ) and not Assigned(ccw^[j]) do inc(j);
-
-    if (j > highJ) then
-    begin
-      j := 0;
-      inc(i);
-      Continue;
-    end;
-
-    if cwIsTowardLarger then
-    begin
-      // p1 >>>> p1a;
-      // p2 <<<< p2a;
-      p1  := cw^[i].prev;
-      p1a := cw^[i];
-      p2  := ccw^[j];
-      p2a := ccw^[j].prev;
-    end else
-    begin
-      // p1 <<<< p1a;
-      // p2 >>>> p2a;
-      p1  := cw^[i];
-      p1a := cw^[i].prev;
-      p2  := ccw^[j].prev;
-      p2a := ccw^[j];
-    end;
-
-    if (p1.next = p1.prev) then
-    begin
-      cw^[i].edge := nil;
-      inc(i);
-      Continue;
-    end;
-
-    if (p2.next = p2.prev) then
-    begin
-      ccw^[j].edge := nil;
-      ccw^[j] := nil;
-      inc(j);
-      Continue;
-    end;
-
-    if (isHorz and not HasHorzOverlap(p1.pt, p1a.pt, p2.pt, p2a.pt)) or
-      (not isHorz and not HasVertOverlap(p1.pt, p1a.pt, p2.pt, p2a.pt)) then
-    begin
-      inc(j);
-      Continue;
-    end;
-
-    // we're either splitting or rejoining the path to get here
-    isRejoining := cw^[i].ownerIdx <> ccw^[j].ownerIdx;
-
-    if isRejoining then
-    begin
-      fResults[p2.ownerIdx] := nil;
-      SetNewOwner(p2, p1.ownerIdx);
-    end;
-
-    if cwIsTowardLarger then
-    begin
-      // p1 >> | >> p1a;
-      // p2 << | << p2a;
-      p1.next := p2;
-      p2.prev := p1;
-      p1a.prev := p2a;
-      p2a.next := p1a;
-    end else
-    begin
-      // p1 << | << p1a;
-      // p2 >> | >> p2a;
-      p1.prev := p2;
-      p2.next := p1;
-      p1a.next := p2a;
-      p2a.prev := p1a;
-    end;
-
-    if not isRejoining then
-    begin
-      NewIdx := fResults.Add(p1a);
-      SetNewOwner(p1a, newIdx);
-    end;
-
-    if cwIsTowardLarger then
-    begin
-      op := p2;
-      op2 := p1a;
-    end else
-    begin
-      op := p1;
-      op2 := p2a;
-    end;
-
-    fResults[op.ownerIdx] := op;
-    fResults[op2.ownerIdx] := op2;
-
-    if isHorz then // X
-    begin
-      opIsLarger := op.pt.X > op.prev.pt.X;
-      op2IsLarger := op2.pt.X > op2.prev.pt.X;
-    end else       // Y
-    begin
-      opIsLarger := op.pt.Y > op.prev.pt.Y;
-      op2IsLarger := op2.pt.Y > op2.prev.pt.Y;
-    end;
-
-    if (op.next = op.prev) or
-      PointsEqual(op.pt, op.prev.pt) then
-    begin
-      if op2IsLarger = cwIsTowardLarger then
-      begin
-        cw^[i] := op2;
-        ccw^[j] := nil;
-        inc(j);
-      end else
-      begin
-        ccw^[j] := op2;
-        cw^[i] := nil;
-        inc(i);
-      end;
-    end
-    else if (op2.next = op2.prev) or
-      PointsEqual(op2.pt, op2.prev.pt) then
-    begin
-      if opIsLarger = cwIsTowardLarger then
-      begin
-        cw^[i] := op;
-        ccw^[j] := nil;
-        inc(j);
-      end else
-      begin
-        ccw^[j] := op;
-        cw^[i] := nil;
-        inc(i);
-      end;
-    end
-    else if opIsLarger = op2IsLarger then
-    begin
-      if opIsLarger = cwIsTowardLarger then
-      begin
-        cw^[i] := op;
-        UncoupleEdge(op2);
-        AddToEdge(cw, op2);
-        ccw^[j] := nil;
-        inc(j);
-      end else
-      begin
-        cw^[i] := nil;
-        ccw^[j] := op2;
-        UncoupleEdge(op);
-        AddToEdge(ccw, op);
-        inc(i);
-        j := 0;
-      end;
-    end else
-    begin
-      if opIsLarger = cwIsTowardLarger then
-        cw^[i] := op else
-        ccw^[j] := op;
-      if op2IsLarger = cwIsTowardLarger then
-        cw^[i] := op2 else
-        ccw^[j] := op2;
-    end;
   end;
 end;
 //------------------------------------------------------------------------------
@@ -841,7 +582,7 @@ begin
 
     CheckEdges;
     for j := 0 to 3 do
-      MergeEdges(j); // 0 == left ... 3 == bottom;
+      TidyEdges(j, fEdges[j*2], fEdges[j*2 +1]);
 
     for j := 0 to fResults.Count -1 do
       AppendPath(Result, GetPath(j));
@@ -978,7 +719,10 @@ begin
         fFirstCrossLoc := crossingLoc;
     end;
 
+    ////////////////////////////////
     Add(ip);
+    ////////////////////////////////
+
   end; //while i <= highI
   ///////////////////////////////////////////////////
 
@@ -996,7 +740,7 @@ begin
         for i := 0 to 3 do
         begin
           Add(fRectPath[i]);
-          AddToEdge(@fEdges[i*2], fResults[0]);
+          AddToEdge(fEdges[i*2], fResults[0]);
         end;
       end;
     end else
@@ -1026,43 +770,273 @@ begin
 end;
 //------------------------------------------------------------------------------
 
+procedure TRectClip.CheckEdges;
+var
+  i,j: integer;
+  edgeSet1, edgeSet2, combinedSet: Cardinal;
+  op, op2: POutPt2;
+begin
+  for i := 0 to fResults.Count -1 do
+  begin
+    op := fResults[i];
+    if not assigned(op) then Continue;
+
+    op2 := op;
+    repeat
+      if (CrossProduct(op2.prev.pt, op2.pt, op2.next.pt) = 0) then
+      begin
+        op2 := DisposeOpBack(op2);
+        if not assigned(op2) then break;
+        op := op2.prev;
+      end else
+        op2 := op2.next;
+    until (op2 = op);
+
+    if not assigned(op2) then
+    begin
+      fResults[i] := nil;
+      Continue;
+    end;
+    fResults[i] := op;
+
+    edgeSet1 := GetEdgesForPt(op.prev.pt, fRect);
+    op2 := op;
+    repeat
+      edgeSet2 := GetEdgesForPt(op2.pt, fRect);
+      if (edgeSet2 <> 0) and not Assigned(op2.edge) then
+      begin
+        combinedSet := edgeSet1 and edgeSet2;
+        for j := 0 to 3 do
+          if combinedSet and (1 shl j) <> 0 then
+          begin
+            if IsHeadingClockwise(op2.prev.pt, op2.pt, j) then
+              AddToEdge(fEdges[j*2], op2)
+            else
+              AddToEdge(fEdges[j*2+1], op2);
+          end;
+      end;
+      edgeSet1 := edgeSet2;
+      op2 := op2.next;
+    until op2 = op;
+  end;
+end;
+//------------------------------------------------------------------------------
+
+procedure TRectClip.TidyEdges(idx: integer; var cw, ccw: TOutPtArray);
+var
+  isHorz, cwIsTowardLarger: Boolean;
+  edgeSetCurrent, edgeSet2, edgeSet3: Cardinal;
+  i, j, highJ, newIdx: integer;
+  op, op2, p1, p2, p1a, p2a: POutPt2;
+  isRejoining, opIsLarger, op2IsLarger: Boolean;
+begin
+  // cw and ccw must be passed as var params
+  // otherwise they'll only be local copies.
+  // Alternatively cw and ccw could be POutPtArray locals,
+  // but these require lots of dereferencing.
+  if not Assigned(ccw) then Exit;
+  edgeSetCurrent := 1 shl idx;
+  isHorz := idx in [1,3];
+  cwIsTowardLarger := idx in [1,2];
+  i := 0; j := 0;
+  while (i <= High(cw)) do
+  begin
+
+    p1 := cw[i];
+    if not Assigned(p1) or (p1.next = p1.prev) then
+    begin
+      cw[i].edge := nil;
+      inc(i);
+      j := 0;
+      Continue;
+    end;
+
+    highJ := high(ccw);
+    while (j <= highJ) and
+      (not Assigned(ccw[j]) or (ccw[j].next = ccw[j].prev)) do
+        inc(j);
+
+    if (j > highJ) then
+    begin
+      inc(i);
+      j := 0;
+      Continue;
+    end;
+
+    if cwIsTowardLarger then
+    begin
+      // p1 >>>> p1a;
+      // p2 <<<< p2a;
+      p1  := cw[i].prev;
+      p1a := cw[i];
+      p2  := ccw[j];
+      p2a := ccw[j].prev;
+    end else
+    begin
+      // p1 <<<< p1a;
+      // p2 >>>> p2a;
+      p1  := cw[i];
+      p1a := cw[i].prev;
+      p2  := ccw[j].prev;
+      p2a := ccw[j];
+    end;
+
+    if (isHorz and not HasHorzOverlap(p1.pt, p1a.pt, p2.pt, p2a.pt)) or
+      (not isHorz and not HasVertOverlap(p1.pt, p1a.pt, p2.pt, p2a.pt)) then
+    begin
+      inc(j);
+      Continue;
+    end;
+
+    // to get here we're either splitting or rejoining
+    isRejoining := cw[i].ownerIdx <> ccw[j].ownerIdx;
+
+    if isRejoining then
+    begin
+      fResults[p2.ownerIdx] := nil;
+      SetNewOwner(p2, p1.ownerIdx);
+    end;
+
+    // do the split or re-join
+    if cwIsTowardLarger then
+    begin
+      // p1 >> | >> p1a;
+      // p2 << | << p2a;
+      p1.next := p2;
+      p2.prev := p1;
+      p1a.prev := p2a;
+      p2a.next := p1a;
+    end else
+    begin
+      // p1 << | << p1a;
+      // p2 >> | >> p2a;
+      p1.prev := p2;
+      p2.next := p1;
+      p1a.next := p2a;
+      p2a.prev := p1a;
+    end;
+
+    if not isRejoining then
+    begin
+      NewIdx := fResults.Add(p1a);
+      SetNewOwner(p1a, newIdx);
+    end;
+
+    if cwIsTowardLarger then
+    begin
+      op := p2;
+      op2 := p1a;
+    end else
+    begin
+      op := p1;
+      op2 := p2a;
+    end;
+
+    fResults[op.ownerIdx] := op;
+    fResults[op2.ownerIdx] := op2;
+
+    // and now lots of work to get ready for the next loop
+
+    if isHorz then // X
+    begin
+      opIsLarger := op.pt.X > op.prev.pt.X;
+      op2IsLarger := op2.pt.X > op2.prev.pt.X;
+    end else       // Y
+    begin
+      opIsLarger := op.pt.Y > op.prev.pt.Y;
+      op2IsLarger := op2.pt.Y > op2.prev.pt.Y;
+    end;
+
+    if (op.next = op.prev) or
+      PointsEqual(op.pt, op.prev.pt) then
+    begin
+      if op2IsLarger = cwIsTowardLarger then
+      begin
+        cw[i] := op2;
+        ccw[j] := nil;
+        inc(j);
+      end else
+      begin
+        ccw[j] := op2;
+        cw[i] := nil;
+        inc(i);
+      end;
+    end
+    else if (op2.next = op2.prev) or
+      PointsEqual(op2.pt, op2.prev.pt) then
+    begin
+      if opIsLarger = cwIsTowardLarger then
+      begin
+        cw[i] := op;
+        ccw[j] := nil;
+        inc(j);
+      end else
+      begin
+        ccw[j] := op;
+        cw[i] := nil;
+        inc(i);
+      end;
+    end
+    else if opIsLarger = op2IsLarger then
+    begin
+      if opIsLarger = cwIsTowardLarger then
+      begin
+        cw[i] := op;
+        UncoupleEdge(op2);
+        AddToEdge(cw, op2);
+        ccw[j] := nil;
+        inc(j);
+      end else
+      begin
+        cw[i] := nil;
+        ccw[j] := op2;
+        UncoupleEdge(op);
+        AddToEdge(ccw, op);
+        inc(i);
+        j := 0;
+      end;
+    end else
+    begin
+      if opIsLarger = cwIsTowardLarger then
+        cw[i] := op else
+        ccw[j] := op;
+      if op2IsLarger = cwIsTowardLarger then
+        cw[i] := op2 else
+        ccw[j] := op2;
+    end;
+  end;
+end;
+//------------------------------------------------------------------------------
+
 function TRectClip.GetPath(resultIdx: integer): TPath64;
 var
-  j, len: integer;
+  i, len: integer;
   op, op2: POutPt2;
 begin
   result := nil;
   op := fResults[resultIdx];
-  if not Assigned(op) then Exit;
+  if not Assigned(op) or (op.next = op.prev) then Exit;
+
+  op2 := op.next;
+  while Assigned(op2) and (op2 <> op) do
+  begin
+    if (CrossProduct(op2.prev.pt, op2.pt, op2.next.pt) = 0) then
+    begin
+      op := op2.prev;
+      op2 := DisposeOp(op2);
+    end else
+      op2 := op2.next;
+  end;
+  fResults[resultIdx] := op2; // needed for op cleanup
+  if not Assigned(op2) then Exit;
 
   len := CountOp(op);
-  while (op.next <> op.prev) and
-    (CrossProduct(op.prev.pt, op.pt, op.next.pt) = 0) do
-      op := DisposeOp(op);
-  // this must be incremented and repeated to be sure
-  // that all collinear edges have been removed.
-  op := op.next;
-  while (op.next <> op.prev) and
-    (CrossProduct(op.prev.pt, op.pt, op.next.pt) = 0) do
-      op := DisposeOp(op);
-  fResults[resultIdx] := op; //just incase it was deleted
-
-  if (op.next = op.prev) then Exit;
   SetLength(result, len);
-  Result[0] := op.pt;
-  op2 := op.next;
-  j := 0;
-  while op2 <> op do
+  for i := 0 to len -1 do
   begin
-    if (CrossProduct(Result[j], op2.pt, op2.next.pt) <> 0) then
-    begin
-      inc(j);
-      Result[j] := op2.pt;
-    end;
-    op2 := op2.next;
+    Result[i] := op.pt;
+    op := op.next;
   end;
-  if (CrossProduct(Result[0],Result[j],Result[j-1]) = 0) then Dec(j);
-  SetLength(result, j+1);
 end;
 
 //------------------------------------------------------------------------------

@@ -1,8 +1,8 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  11 December 2022                                                *
+* Date      :  6 February 2023                                                 *
 * Website   :  http://www.angusj.com                                           *
-* Copyright :  Angus Johnson 2010-2022                                         *
+* Copyright :  Angus Johnson 2010-2023                                         *
 * Purpose   :  This module exports the Clipper2 Library (ie DLL/so)            *
 * License   :  http://www.boost.org/LICENSE_1_0.txt                            *
 *******************************************************************************/
@@ -390,7 +390,7 @@ EXTERN_DLL_EXPORT CPaths64 RectClip64(const CRect64& rect,
   result.reserve(pp.size());
   for (const Path64& p : pp)
   {
-    Rect64 pathRec = Bounds(p);
+    Rect64 pathRec = GetBounds(p);
     if (!r64.Intersects(pathRec)) continue;
     
     if (r64.Contains(pathRec))
@@ -417,7 +417,7 @@ EXTERN_DLL_EXPORT CPathsD RectClipD(const CRectD& rect,
   result.reserve(pp.size());
   for (const Path64& p : pp)
   {
-    Rect64 pathRec = Bounds(p);
+    Rect64 pathRec = GetBounds(p);
     if (!r.Intersects(pathRec)) continue;
     
     if (r.Contains(pathRec))
@@ -443,7 +443,7 @@ EXTERN_DLL_EXPORT CPaths64 RectClipLines64(const CRect64& rect,
 
   for (const Path64& p : pp)
   {
-    Rect64 pathRec = Bounds(p);
+    Rect64 pathRec = GetBounds(p);
     if (!r.Intersects(pathRec)) continue;
     
     if (r.Contains(pathRec))
@@ -472,7 +472,7 @@ EXTERN_DLL_EXPORT CPathsD RectClipLinesD(const CRectD& rect,
   result.reserve(pp.size());
   for (const Path64& p : pp)
   {
-    Rect64 pathRec = Bounds(p);
+    Rect64 pathRec = GetBounds(p);
     if (!r.Intersects(pathRec)) continue;
     
     if (r.Contains(pathRec))

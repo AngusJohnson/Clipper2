@@ -57,7 +57,7 @@ TEST(Clipper2Tests, TestRectClip)
     234,332, 233,262, 243,140, 215,126, 40,172 }));
   rect = Rect64(237, 164, 322, 248);
   sol = RectClip(rect, sub);
-  const auto solBounds = Bounds(sol);
+  const auto solBounds = GetBounds(sol);
   EXPECT_EQ(solBounds.Width(), rect.Width());
   EXPECT_EQ(solBounds.Height(), rect.Height());
 

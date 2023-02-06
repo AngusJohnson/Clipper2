@@ -1,6 +1,6 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  28 January 2023                                                 *
+* Date      :  6 February 2023                                                 *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2023                                         *
 * Purpose   :  Core Clipper Library structures and functions                   *
@@ -327,7 +327,7 @@ namespace Clipper2Lib
   static const RectD MaxInvalidRectD = RectD(
     MAX_DBL, MAX_DBL, MIN_DBL, MIN_DBL);
 
-  inline Rect64 Bounds(const Path64& path)
+  inline Rect64 GetBounds(const Path64& path)
   {
     Rect64 rec = MaxInvalidRect64;
     for (const Point64& pt : path)
@@ -341,7 +341,7 @@ namespace Clipper2Lib
     return rec;
   }
 
-  inline Rect64 Bounds(const Paths64& paths)
+  inline Rect64 GetBounds(const Paths64& paths)
   {
     Rect64 rec = MaxInvalidRect64;
     for (const Path64& path : paths)
@@ -356,7 +356,7 @@ namespace Clipper2Lib
     return rec;
   }
 
-  inline RectD Bounds(const PathD& path)
+  inline RectD GetBounds(const PathD& path)
   {
     RectD rec = MaxInvalidRectD;
     for (const PointD& pt : path)
@@ -370,7 +370,7 @@ namespace Clipper2Lib
     return rec;
   }
 
-  inline RectD Bounds(const PathsD& paths)
+  inline RectD GetBounds(const PathsD& paths)
   {
     RectD rec = MaxInvalidRectD;
     for (const PathD& path : paths)
@@ -451,7 +451,7 @@ namespace Clipper2Lib
     if constexpr (std::numeric_limits<T1>::is_integer &&
       !std::numeric_limits<T2>::is_integer)
     {
-      RectD r = Bounds(paths);
+      RectD r = GetBounds(paths);
       if ((r.left * scale_x) < min_coord ||
         (r.right * scale_x) > max_coord ||
         (r.top * scale_y) < min_coord ||

@@ -1,6 +1,6 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  27 January 2023                                                 *
+* Date      :  6 February 2023                                                 *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2023                                         *
 * Purpose   :  This is the main polygon clipping module                        *
@@ -2717,20 +2717,6 @@ namespace Clipper2Lib {
         op2 = op2->next;
       return op2 != op && op2->next != op;
     }
-  }
-
-  inline Rect64 GetBounds(const Path64& path)
-  {
-    if (path.empty()) return Rect64();
-    Rect64 result = invalid_rect;
-    for (const Point64& pt : path)
-    {
-      if (pt.x < result.left) result.left = pt.x;
-      if (pt.x > result.right) result.right = pt.x;
-      if (pt.y < result.top) result.top = pt.y;
-      if (pt.y > result.bottom) result.bottom = pt.y;
-    }
-    return result;
   }
 
   bool BuildPath64(OutPt* op, bool reverse, bool isOpen, Path64& path)

@@ -1,6 +1,6 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  28 January 2023                                                 *
+* Date      :  6 February 2023                                                 *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2023                                         *
 * Purpose   :  This module provides a simple interface to the Clipper Library  *
@@ -195,7 +195,7 @@ namespace Clipper2Lib {
   inline Path64 RectClip(const Rect64& rect, const Path64& path)
   {
     if (rect.IsEmpty() || path.empty()) return Path64();
-    Rect64 pathRec = Bounds(path);
+    Rect64 pathRec = GetBounds(path);
     if (!rect.Intersects(pathRec)) return Path64();
     if (rect.Contains(pathRec)) return path;
     class RectClip rc(rect);
@@ -211,7 +211,7 @@ namespace Clipper2Lib {
 
     for (const Path64& p : paths)
     {
-      Rect64 pathRec = Bounds(p);
+      Rect64 pathRec = GetBounds(p);
       if (!rect.Intersects(pathRec)) 
         continue;
       else if (rect.Contains(pathRec))
@@ -228,7 +228,7 @@ namespace Clipper2Lib {
   inline PathD RectClip(const RectD& rect, const PathD& path, int precision = 2)
   {
     if (rect.IsEmpty() || path.empty() ||
-      !rect.Contains(Bounds(path))) return PathD();
+      !rect.Contains(GetBounds(path))) return PathD();
     int error_code = 0;
     CheckPrecision(precision, error_code);
     if (error_code) return PathD();
@@ -253,7 +253,7 @@ namespace Clipper2Lib {
     result.reserve(paths.size());
     for (const PathD& path : paths) 
     {
-      RectD pathRec = Bounds(path);
+      RectD pathRec = GetBounds(path);
       if (!rect.Intersects(pathRec))
         continue;
       else if (rect.Contains(pathRec))
@@ -275,7 +275,7 @@ namespace Clipper2Lib {
   {
     Paths64 result;
     if (rect.IsEmpty() || path.empty()) return result;
-    Rect64 pathRec = Bounds(path);
+    Rect64 pathRec = GetBounds(path);
     if (!rect.Intersects(pathRec)) return result;
     if (rect.Contains(pathRec)) 
     {
@@ -293,7 +293,7 @@ namespace Clipper2Lib {
     class RectClipLines rcl(rect);
     for (const Path64& p : paths)
     {
-      Rect64 pathRec = Bounds(p);
+      Rect64 pathRec = GetBounds(p);
       if (!rect.Intersects(pathRec))
         continue;
       else if (rect.Contains(pathRec))
@@ -311,7 +311,7 @@ namespace Clipper2Lib {
   inline PathsD RectClipLines(const RectD& rect, const PathD& path, int precision = 2)
   {
     if (rect.IsEmpty() || path.empty() ||
-      !rect.Contains(Bounds(path))) return PathsD();
+      !rect.Contains(GetBounds(path))) return PathsD();
     int error_code = 0;
     CheckPrecision(precision, error_code);
     if (error_code) return PathsD();
@@ -336,7 +336,7 @@ namespace Clipper2Lib {
     result.reserve(paths.size());
     for (const PathD& path : paths)
     {
-      RectD pathRec = Bounds(path);
+      RectD pathRec = GetBounds(path);
       if (!rect.Intersects(pathRec))
         continue;
       else if (rect.Contains(pathRec))
