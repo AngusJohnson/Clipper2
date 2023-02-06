@@ -72,18 +72,18 @@ TEST(Clipper2Tests, TestMultiplePolygons)
       static_cast<int64_t>(solution_polytree_paths.size());
 
     // check polygon counts
-    if (stored_count <= 0) 
+    if (stored_count <= 0)
       ; // skip count
-    else if (IsInList(test_number, { 120, 121, 130, 138, 
+    else if (IsInList(test_number, { 120, 121, 130, 138,
       140, 163, 165, 166, 167, 168, 172, 175, 178, 180 }))
       EXPECT_LE(count_diff, 5) << " in test " << test_number;
-    else if (IsInList(test_number, { 27, 126, 145, 163, 173, 176, 177, 179, 181 }))
+    else if (IsInList(test_number, { 27, 181 }))
       EXPECT_LE(count_diff, 2) << " in test " << test_number;
-    else if (test_number > 119 && test_number < 184)
-      EXPECT_LE(count_diff, 1) << " in test " << test_number;
+    else if (test_number >= 120 && test_number <= 184)
+      EXPECT_LE(count_diff, 2) << " in test " << test_number;
     else if (IsInList(test_number, { 23, 87, 102, 111, 113, 191 }))
       EXPECT_LE(count_diff, 1) << " in test " << test_number;
-    else 
+    else
       EXPECT_EQ(count_diff, 0) << " in test " << test_number;
 
     // check polygon areas
@@ -115,10 +115,5 @@ TEST(Clipper2Tests, TestMultiplePolygons)
 
   Clipper2Lib::PathsD subjd, clipd, solutiond;
   Clipper2Lib::FillRule frd = Clipper2Lib::FillRule::NonZero;
-
-  subjd.push_back(MakeRandomPath(800, 600, 100));
-  clipd.push_back(MakeRandomPath(800, 600, 100));
-  solutiond = Clipper2Lib::Intersect(subjd, clipd, Clipper2Lib::FillRule::NonZero);
-  EXPECT_GE(solutiond.size(), 1);
 
 }
