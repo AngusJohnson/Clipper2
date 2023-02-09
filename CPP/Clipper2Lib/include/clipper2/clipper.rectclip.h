@@ -1,8 +1,8 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  26 October 2022                                                 *
+* Date      :  9 February 2023                                                 *
 * Website   :  http://www.angusj.com                                           *
-* Copyright :  Angus Johnson 2010-2022                                         *
+* Copyright :  Angus Johnson 2010-2023                                         *
 * Purpose   :  FAST rectangular clipping                                       *
 * License   :  http://www.boost.org/LICENSE_1_0.txt                            *
 *******************************************************************************/
@@ -60,8 +60,8 @@ namespace Clipper2Lib
   public:
     explicit RectClip(const Rect64& rect) :
       rect_(rect),
-      mp_(rect.MidPoint()),
-      rectPath_(rect.AsPath()) {}
+      rectPath_(rect.AsPath()),
+    mp_(rect.MidPoint()) {}
     Paths64 Execute(const Paths64& paths, bool convex_only = false);
   };
 
