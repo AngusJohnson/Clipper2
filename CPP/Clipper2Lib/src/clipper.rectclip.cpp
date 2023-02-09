@@ -613,7 +613,7 @@ namespace Clipper2Lib {
     if (ccw.empty()) return;
     bool isHorz = ((idx == 1) || (idx == 3));
     bool cwIsTowardLarger = ((idx == 1) || (idx == 2));
-    int i = 0, j = 0;
+    size_t i = 0, j = 0;
     OutPt2* p1, * p2, * p1a, * p2a, * op, * op2;
 
     while (i < cw.size()) 
