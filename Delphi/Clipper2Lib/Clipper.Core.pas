@@ -2,7 +2,7 @@ unit Clipper.Core;
 
 (*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  2 February 2023                                                 *
+* Date      :  9 February 2023                                                 *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2023                                         *
 * Purpose   :  Core Clipper Library module                                     *
@@ -18,6 +18,7 @@ uses
   SysUtils, Classes, Math;
 
 type
+
   PPoint64  = ^TPoint64;
   TPoint64  = record
     X, Y: Int64;
@@ -123,9 +124,14 @@ type
 
   TClipType = (ctNone, ctIntersection, ctUnion, ctDifference, ctXor);
 
-  TPointInPolygonResult = (pipInside, pipOutside, pipOn);
+  TPointInPolygonResult = (pipOn, pipInside, pipOutside);
 
   EClipper2LibException = class(Exception);
+
+{$IF CompilerVersion <= 15}
+  TPointerList = array of Pointer;
+  TListSortCompareFunc = function (Item1, Item2: Pointer): Integer;
+{$IFEND}
 
 function Area(const path: TPath64): Double; overload;
 function Area(const paths: TPaths64): Double; overload;
@@ -182,7 +188,9 @@ function Point64(const X, Y: Double): TPoint64; overload; {$IFDEF INLINING} inli
 function PointD(const X, Y: Double): TPointD; overload; {$IFDEF INLINING} inline; {$ENDIF}
 {$ENDIF}
 
-function Negate(const pt: TPointD): TPointD; {$IFDEF INLINING} inline; {$ENDIF}
+function Negate(const pt: TPoint64): TPoint64; overload; {$IFDEF INLINING} inline; {$ENDIF}
+function Negate(const pt: TPointD): TPointD; overload; {$IFDEF INLINING} inline; {$ENDIF}
+function NegatePath(const path: TPathD): TPathD; overload; {$IFDEF INLINING} inline; {$ENDIF}
 
 function Point64(const pt: TPointD): TPoint64; overload; {$IFDEF INLINING} inline; {$ENDIF}
 function PointD(const pt: TPoint64): TPointD; overload;
@@ -228,7 +236,9 @@ function ScaleRect(const rec: TRect64; scale: double): TRect64; overload;
 function ScaleRect(const rec: TRectD; scale: double): TRectD; overload;
   {$IFDEF INLINING} inline; {$ENDIF}
 
-function ScalePoint(const pt: TPoint64; scale: double): TPointD;
+function ScalePoint(const pt: TPoint64; scale: double): TPointD; overload;
+  {$IFDEF INLINING} inline; {$ENDIF}
+function ScalePoint(const pt: TPointD; scale: double): TPointD; overload;
   {$IFDEF INLINING} inline; {$ENDIF}
 
 function ScalePath(const path: TPath64; sx, sy: double): TPath64; overload;
@@ -273,6 +283,11 @@ function ReversePath(const path: TPathD): TPathD; overload;
 function ReversePaths(const paths: TPaths64): TPaths64; overload;
   {$IFDEF INLINING} inline; {$ENDIF}
 function ReversePaths(const paths: TPathsD): TPathsD; overload;
+  {$IFDEF INLINING} inline; {$ENDIF}
+
+function ShiftPath(const path: TPath64; shift: integer): TPath64; overload;
+  {$IFDEF INLINING} inline; {$ENDIF}
+function ShiftPath(const path: TPathD; shift: integer): TPathD; overload;
   {$IFDEF INLINING} inline; {$ENDIF}
 
 procedure AppendPoint(var path: TPath64; const pt: TPoint64); overload;
@@ -720,6 +735,16 @@ begin
 end;
 //------------------------------------------------------------------------------
 
+function ScalePoint(const pt: TPointD; scale: double): TPointD;
+begin
+  Result.X := pt.X * scale;
+  Result.Y := pt.Y * scale;
+{$IFDEF USINGZ}
+  Result.Z := pt.Z;
+{$ENDIF}
+end;
+//------------------------------------------------------------------------------
+
 function ScalePath(const path: TPath64; sx, sy: double): TPath64;
 var
   i,len: integer;
@@ -1115,6 +1140,41 @@ begin
 end;
 //------------------------------------------------------------------------------
 
+function ShiftPath(const path: TPath64; shift: integer): TPath64;
+var
+  diff, len: Integer;
+begin
+  Result := nil;
+  len := Length(path);
+  if len = 0 then Exit;
+  Result := Copy(path, 0, len);
+  shift := shift mod len;
+  if shift = 0 then Exit;
+  if shift < 0 then shift := len + shift;
+  diff := len - shift;
+  Move(path[shift], Result[0], diff *SizeOf(TPoint64));
+  Move(path[0], Result[diff], shift *SizeOf(TPoint64));
+end;
+//------------------------------------------------------------------------------
+
+function ShiftPath(const path: TPathD; shift: integer): TPathD;
+var
+  diff, len: Integer;
+begin
+  Result := nil;
+  len := Length(path);
+  if len = 0 then Exit;
+  Result := Copy(path, 0, len);
+  shift := shift mod len;
+  if shift = 0 then Exit;
+  if shift < 0 then shift := len + shift;
+  diff := len - shift;
+  Move(path[shift], Result[0], diff *SizeOf(TPointD));
+  Move(path[0], Result[diff], shift *SizeOf(TPointD));
+end;
+//------------------------------------------------------------------------------
+
+
 procedure AppendPoint(var path: TPath64; const pt: TPoint64);
 var
   len: Integer;
@@ -1293,10 +1353,31 @@ end;
 //------------------------------------------------------------------------------
 {$ENDIF}
 
+function Negate(const pt: TPoint64): TPoint64;
+begin
+  Result.X := -pt.X;
+  Result.Y := -pt.Y;
+end;
+//------------------------------------------------------------------------------
+
 function Negate(const pt: TPointD): TPointD;
 begin
   Result.X := -pt.X;
   Result.Y := -pt.Y;
+end;
+//------------------------------------------------------------------------------
+
+function NegatePath(const path: TPathD): TPathD;
+var
+  i: Integer;
+begin
+  Result := path;
+  for i := 0 to High(Result) do
+    with Result[i] do
+    begin
+      X := -X;
+      Y := -Y;
+    end;
 end;
 //------------------------------------------------------------------------------
 

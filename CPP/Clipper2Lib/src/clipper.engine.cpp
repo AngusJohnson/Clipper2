@@ -2791,7 +2791,7 @@ namespace Clipper2Lib {
         outrec->owner = outrec->owner->owner;
 
     if (outrec->owner)
-      outrec->polypath = outrec->owner->polypath->AddChild(outrec->path); 
+      outrec->polypath = outrec->owner->polypath->AddChild(outrec->path);
     else
       outrec->polypath = polypath->AddChild(outrec->path);
   }

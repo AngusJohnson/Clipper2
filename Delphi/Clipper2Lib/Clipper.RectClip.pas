@@ -2,7 +2,7 @@ unit Clipper.RectClip;
 
 (*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  6 February 2023                                                 *
+* Date      :  8 February 2023                                                 *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2023                                         *
 * Purpose   :  FAST rectangular clipping                                       *
@@ -33,20 +33,21 @@ type
   end;
 
   TRectClip = class
+    procedure ExecuteInternal(const path: TPath64);
+    function GetPath(resultIdx: integer): TPath64;
   protected
     fResults        : TList;
     fRect           : TRect64;
+    fPathRect       : TRect64;
     fRectPath       : TPath64;
     fRectMidPt      : TPoint64;
     fFirstCrossLoc  : TLocation;
     fEdges          : TOutPtArrayArray;
     fStartLocs      : TList;
-    function  GetLastOp: POutPt2;
-      {$IFDEF INLINING} inline; {$ENDIF}
     procedure DisposeResults;
     procedure CheckEdges;
     procedure TidyEdges(idx: integer; var cw, ccw: TOutPtArray);
-    function Add(const pt: TPoint64): POutPt2;
+    function Add(const pt: TPoint64; startNewPath: Boolean = false): POutPt2;
       {$IFDEF INLINING} inline; {$ENDIF}
     procedure AddCorner(prev, curr: TLocation); overload;
       {$IFDEF INLINING} inline; {$ENDIF}
@@ -54,20 +55,19 @@ type
       {$IFDEF INLINING} inline; {$ENDIF}
     procedure GetNextLocation(const path: TPath64;
       var loc: TLocation; var i: integer; highI: integer);
-    procedure ExecuteInternal(const path: TPath64); virtual;
-    function GetPath(resultIdx: integer): TPath64;
   public
     constructor Create(const rect: TRect64);
     destructor Destroy; override;
-    //function Execute(const path: TPath64): TPaths64;
-    function Execute(const paths: TPaths64): TPaths64;
+    function Execute(const paths: TPaths64;
+      convexOnly: Boolean = false): TPaths64;
   end;
 
   TRectClipLines = class(TRectClip)
   private
-    //function GetCurrentPath: TPath64;
-  protected
-    procedure ExecuteInternal(const path: TPath64); override;
+    procedure ExecuteInternal(const path: TPath64);
+    function GetPath(resultIdx: integer): TPath64;
+  public
+    function Execute(const paths: TPaths64): TPaths64;
   end;
 
 implementation
@@ -273,17 +273,17 @@ procedure SetNewOwner(op: POutPt2; newIdx: integer);
 var
   op2: POutPt2;
 begin
-  op2 := op;
   op.ownerIdx := newIdx;
-  while op2.next <> op do
+  op2 := op.next;
+  while op2 <> op do
   begin
-    op2 := op2.next;
     op2.ownerIdx := newIdx;
+    op2 := op2.next;
   end;
 end;
 //------------------------------------------------------------------------------
 
-procedure AddToEdge(var edge: TOutPtArray; const op: POutPt2);
+procedure AddToEdge(var edge: TOutPtArray; op: POutPt2);
   {$IFDEF INLINING} inline; {$ENDIF}
 var
   len: integer;
@@ -400,14 +400,6 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-function TRectClip.GetLastOp: POutPt2;
-begin
-  if fResults.Count = 0 then
-    Result := nil else
-    Result := fResults[0];
-end;
-//------------------------------------------------------------------------------
-
 procedure DisposeOps(op: POutPt2);
 var
   tmp: POutPt2;
@@ -433,33 +425,40 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-function TRectClip.Add(const pt: TPoint64): POutPt2;
+function TRectClip.Add(const pt: TPoint64; startNewPath: Boolean): POutPt2;
 var
+  currIdx: integer;
   prevOp: POutPt2;
 begin
-  prevOp := GetLastOp;
-  if Assigned(prevOp) and PointsEqual(prevOp.pt, pt) then
+  // this method is only called by InternalExecute.
+  // Later splitting and rejoining won't create additional op's,
+  // though they will change the (non-storage) fResults count.
+  currIdx := fResults.Count -1;
+  if (currIdx < 0) or startNewPath then
   begin
-    Result := prevOp;
-    Exit;
-  end;
-
-  new(Result);
-  Result.pt := pt;
-  Result.edge := nil;
-  if not Assigned(prevOp) then
-  begin
+    new(Result);
+    Result.pt := pt;
+    Result.edge := nil;
     Result.ownerIdx := fResults.Add(Result);
     Result.next := Result;
     Result.prev := Result;
   end else
   begin
-    Result.ownerIdx := 0;
+    prevOp := fResults[currIdx];
+    if PointsEqual(prevOp.pt, pt) then
+    begin
+      Result := prevOp;
+      Exit;
+    end;
+    new(Result);
+    Result.pt := pt;
+    Result.edge := nil;
+    Result.ownerIdx := currIdx;
     Result.next := prevOp.next;
     prevOp.next.prev := Result;
     prevOp.next := Result;
     Result.prev := prevOp;
-    fResults[0] := Result;
+    fResults[currIdx] := Result;
   end;
 end;
 //------------------------------------------------------------------------------
@@ -546,46 +545,54 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-function Path1ContainsPath2(const path1, path2: TPath64): TPointInPolygonResult;
+function Path1ContainsPath2(const path1, path2: TPath64): Boolean;
 var
-  i: integer;
+  i, ioCount: integer;
+  pip: TPointInPolygonResult;
 begin
-  Result := pipOutside;
+  ioCount := 0;
   for i := 0 to High(path2) do
   begin
-    Result := PointInPolygon(path2[i], path1);
-    if Result <> pipOn then break;
+    pip := PointInPolygon(path2[i], path1);
+    case pip of
+      pipOn: Continue;
+      pipInside: dec(ioCount);
+      pipOutside: inc(ioCount);
+    end;
+    if abs(ioCount) > 1 then break;
   end;
+  Result := ioCount <= 0;
 end;
 //------------------------------------------------------------------------------
 
-function TRectClip.Execute(const paths: TPaths64): TPaths64;
+function TRectClip.Execute(const paths: TPaths64; convexOnly: Boolean): TPaths64;
 var
   i,j, len: integer;
-  pathrec: TRect64;
+  path: TPath64;
 begin
   result := nil;
-
   len:= Length(paths);
   for i := 0 to len -1 do
   begin
-    pathrec := GetBounds(paths[i]);
-    if not fRect.Intersects(pathRec) then Continue;
+    path := paths[i];
+    if (Length(path) < 3) then Continue;
 
-    if fRect.Contains(pathRec) then
-    begin
-      if (Length(paths[i]) > 2) then AppendPath(Result, paths[i]);
-      Continue;
-    end;
+    fPathRect := GetBounds(path);
+    if not fRect.Intersects(fPathRect) then
+      Continue; // the path must be completely outside fRect
+    // Apart from that, we can't be sure whether the path
+    // is completely outside or completed inside or intersects
+    // fRect, simply by comparing path bounds with fRect.
 
-    ExecuteInternal(paths[i]);
-
+    ExecuteInternal(path);
     CheckEdges;
     for j := 0 to 3 do
       TidyEdges(j, fEdges[j*2], fEdges[j*2 +1]);
 
     for j := 0 to fResults.Count -1 do
       AppendPath(Result, GetPath(j));
+
+    //clean up after every loop
     DisposeResults;
     fEdges := nil;
     SetLength(fEdges, 8);
@@ -595,14 +602,13 @@ end;
 
 procedure TRectClip.ExecuteInternal(const path: TPath64);
 var
-  i,j, highI  : integer;
+  i,highI     : integer;
   prevPt,ip,ip2 : TPoint64;
   loc, prevLoc  : TLocation;
   loc2          : TLocation;
   startingLoc   : TLocation;
   crossingLoc   : TLocation;
   prevCrossLoc  : TLocation;
-  tmpRect       : TRect64;
   isCw          : Boolean;
 begin
   if (Length(path) < 3) then Exit;
@@ -618,19 +624,21 @@ begin
     while (i >= 0) and
       not GetLocation(fRect, path[i], prevLoc) do
         dec(i);
+
     if (i < 0) then
     begin
-      // all of path inside fRect
-      for j := 0 to highI do Add(path[j]);
+      // all of path must be inside fRect
+      for i := 0 to highI do Add(path[i]);
       Exit;
     end;
+
     if (prevLoc = locInside) then
       loc := locInside;
-    i := 0;
   end;
   startingLoc := loc;
 
   ///////////////////////////////////////////////////
+  i := 0;
   while i <= highI do
   begin
     prevLoc := loc;
@@ -728,29 +736,30 @@ begin
 
   if (fFirstCrossLoc = locInside) then
   begin
-    // path never intersects with rect
-
-    if startingLoc <> locInside then
+    // path never intersects
+    if startingLoc = locInside then
     begin
-      // path is outside rect but may or may not contain rect
-      tmpRect := GetBounds(path);
-      if tmpRect.Contains(fRect) and
-        (Path1ContainsPath2(path, fRectPath) <> pipOutside) then
+      // path is completely inside rect
+    end else
+    begin
+      // path is outside rect
+      // but being outside, it still may not contain rect
+      if fPathRect.Contains(fRect) and
+        Path1ContainsPath2(path, fRectPath) then
       begin
+        // yep, the path does fully contain rect
+        // so add rect to the solution
         for i := 0 to 3 do
         begin
           Add(fRectPath[i]);
           AddToEdge(fEdges[i*2], fResults[0]);
         end;
       end;
-    end else
-      // path is inside rect
-      for i := 0 to high(path) do Add(path[i]);
-    Exit;
-  end;
-
-  if (loc <> locInside) and
-    ((loc <> fFirstCrossLoc) or (fStartLocs.Count > 2)) then
+    end;
+  end
+  else if (loc <> locInside) and
+    ((loc <> fFirstCrossLoc) or
+    (fStartLocs.Count > 2)) then
   begin
     if (fStartLocs.Count > 0) then
     begin
@@ -785,9 +794,16 @@ begin
     repeat
       if (CrossProduct(op2.prev.pt, op2.pt, op2.next.pt) = 0) then
       begin
-        op2 := DisposeOpBack(op2);
-        if not assigned(op2) then break;
-        op := op2.prev;
+        if op2 = op then
+        begin
+          op2 := DisposeOpBack(op2);
+          if not assigned(op2) then break;
+          op := op2.prev;
+        end else
+        begin
+          op2 := DisposeOpBack(op2);
+          if not assigned(op2) then break;
+        end;
       end else
         op2 := op2.next;
     until (op2 = op);
@@ -797,7 +813,7 @@ begin
       fResults[i] := nil;
       Continue;
     end;
-    fResults[i] := op;
+    fResults[i] := op; // safety first
 
     edgeSet1 := GetEdgesForPt(op.prev.pt, fRect);
     op2 := op;
@@ -825,7 +841,6 @@ end;
 procedure TRectClip.TidyEdges(idx: integer; var cw, ccw: TOutPtArray);
 var
   isHorz, cwIsTowardLarger: Boolean;
-  edgeSetCurrent, edgeSet2, edgeSet3: Cardinal;
   i, j, highJ, newIdx: integer;
   op, op2, p1, p2, p1a, p2a: POutPt2;
   isRejoining, opIsLarger, op2IsLarger: Boolean;
@@ -835,7 +850,6 @@ begin
   // Alternatively cw and ccw could be POutPtArray locals,
   // but these require lots of dereferencing.
   if not Assigned(ccw) then Exit;
-  edgeSetCurrent := 1 shl idx;
   isHorz := idx in [1,3];
   cwIsTowardLarger := idx in [1,2];
   i := 0; j := 0;
@@ -1043,6 +1057,35 @@ end;
 // TRectClipLines
 //------------------------------------------------------------------------------
 
+function TRectClipLines.Execute(const paths: TPaths64): TPaths64;
+var
+  i,j, len: integer;
+  pathrec: TRect64;
+begin
+  result := nil;
+
+  len:= Length(paths);
+  for i := 0 to len -1 do
+  begin
+    pathrec := GetBounds(paths[i]);
+
+    if not fRect.Intersects(pathRec) then
+      Continue; // the path must be completely outside fRect
+    // Apart from that, we can't be sure whether the path
+    // is completely outside or completed inside or intersects
+    // fRect, simply by comparing path bounds with fRect.
+
+    ExecuteInternal(paths[i]);
+
+    for j := 0 to fResults.Count -1 do
+      AppendPath(Result, GetPath(j));
+    DisposeResults;
+    fEdges := nil;
+    SetLength(fEdges, 8);
+  end;
+end;
+//------------------------------------------------------------------------------
+
 procedure TRectClipLines.ExecuteInternal(const path: TPath64);
 var
   i, highI      : integer;
@@ -1069,8 +1112,8 @@ begin
       loc := locInside;
     i := 1;
   end;
-
   if loc = locInside then Add(path[0]);
+
   ///////////////////////////////////////////////////
   while i <= highI do
   begin
@@ -1092,7 +1135,7 @@ begin
 
     if (loc = locInside) then // path must be entering rect
     begin
-      Add(ip);
+      Add(ip, true);
     end
     else if (prev <> locInside) then
     begin
@@ -1100,13 +1143,31 @@ begin
       // intersect pt but we'll also need the first intersect pt (ip2)
       crossingLoc := prev;
       GetIntersection(fRectPath, prevPt, path[i], crossingLoc, ip2);
-
-      Add(ip2);
+      Add(ip2, true);
       Add(ip);
     end else // path must be exiting rect
       Add(ip);
   end; //while i <= highI
   ///////////////////////////////////////////////////
+end;
+//------------------------------------------------------------------------------
+
+function TRectClipLines.GetPath(resultIdx: integer): TPath64;
+var
+  i, len: integer;
+  op: POutPt2;
+begin
+  result := nil;
+  op := fResults[resultIdx];
+  if not Assigned(op) or (op = op.prev) then Exit;
+  len := CountOp(op);
+  op := op.next; // ie start at first not last
+  SetLength(result, len);
+  for i := 0 to len -1 do
+  begin
+    Result[i] := op.pt;
+    op := op.next;
+  end;
 end;
 
 //------------------------------------------------------------------------------

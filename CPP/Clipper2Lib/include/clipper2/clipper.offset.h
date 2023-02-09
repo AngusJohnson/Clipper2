@@ -39,6 +39,7 @@ private:
 	};
 
 	int   error_code_ = 0;
+	double delta_ = 0.0;
 	double group_delta_ = 0.0;
 	double abs_group_delta_ = 0.0;
 	double temp_lim_ = 0.0;
@@ -62,7 +63,7 @@ private:
 	void OffsetOpenPath(Group& group, Path64& path, EndType endType);
 	void OffsetPoint(Group& group, Path64& path, 
 		size_t j, size_t& k, bool reversing = false);
-	void DoGroupOffset(Group &group, double delta);
+	void DoGroupOffset(Group &group);
 public:
 	explicit ClipperOffset(double miter_limit = 2.0,
 		double arc_tolerance = 0.0,

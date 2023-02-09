@@ -1,6 +1,6 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  6 February 2023                                                 *
+* Date      :  9 February 2023                                                 *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2023                                         *
 * Purpose   :  This module provides a simple interface to the Clipper Library  *
@@ -133,23 +133,25 @@ namespace Clipper2Lib {
   }
 
   inline Paths64 InflatePaths(const Paths64& paths, double delta,
-    JoinType jt, EndType et, double miter_limit = 2.0)
+    JoinType jt, EndType et, double miter_limit = 2.0,
+    double arc_tolerance = 0.0)
   {
     if (!delta) return paths;
-    ClipperOffset clip_offset(miter_limit);
+    ClipperOffset clip_offset(miter_limit, arc_tolerance);
     clip_offset.AddPaths(paths, jt, et);
     return clip_offset.Execute(delta);
   }
 
   inline PathsD InflatePaths(const PathsD& paths, double delta,
-    JoinType jt, EndType et, double miter_limit = 2.0, int precision = 2)
+    JoinType jt, EndType et, double miter_limit = 2.0, 
+    int precision = 2, double arc_tolerance = 0.0)
   {
     int error_code = 0;
     CheckPrecision(precision, error_code);
     if (!delta) return paths;
     if (error_code) return PathsD();
     const double scale = std::pow(10, precision);
-    ClipperOffset clip_offset(miter_limit);
+    ClipperOffset clip_offset(miter_limit, arc_tolerance);
     clip_offset.AddPaths(ScalePaths<int64_t,double>(paths, scale, error_code), jt, et);
     if (error_code) return PathsD();
     Paths64 tmp = clip_offset.Execute(delta * scale);
@@ -192,55 +194,26 @@ namespace Clipper2Lib {
     return result;
   }
 
-  inline Path64 RectClip(const Rect64& rect, const Path64& path)
-  {
-    if (rect.IsEmpty() || path.empty()) return Path64();
-    Rect64 pathRec = GetBounds(path);
-    if (!rect.Intersects(pathRec)) return Path64();
-    if (rect.Contains(pathRec)) return path;
-    class RectClip rc(rect);
-    return rc.Execute(path);
-  }
-  
-  inline Paths64 RectClip(const Rect64& rect, const Paths64& paths)
+  inline Paths64 RectClip(const Rect64& rect, 
+    const Paths64& paths, bool convex_only = false)
   {
     if (rect.IsEmpty() || paths.empty()) return Paths64();
     class RectClip rc(rect);
-    Paths64 result;
-    result.reserve(paths.size());
-
-    for (const Path64& p : paths)
-    {
-      Rect64 pathRec = GetBounds(p);
-      if (!rect.Intersects(pathRec)) 
-        continue;
-      else if (rect.Contains(pathRec))
-        result.push_back(p);
-      else
-      {
-        Path64 p2 = rc.Execute(p);
-        if (!p2.empty()) result.push_back(std::move(p2));
-      }
-    }
-    return result;
+    return rc.Execute(paths, convex_only);
   }
 
-  inline PathD RectClip(const RectD& rect, const PathD& path, int precision = 2)
+  inline Paths64 RectClip(const Rect64& rect, 
+    const Path64& path, bool convex_only = false)
   {
-    if (rect.IsEmpty() || path.empty() ||
-      !rect.Contains(GetBounds(path))) return PathD();
-    int error_code = 0;
-    CheckPrecision(precision, error_code);
-    if (error_code) return PathD();
-    const double scale = std::pow(10, precision);
-    Rect64 r = ScaleRect<int64_t, double>(rect, scale);
-    class RectClip rc(r);
-    Path64 p = ScalePath<int64_t, double>(path, scale, error_code);
-    if (error_code) return PathD();
-    return ScalePath<double, int64_t>(rc.Execute(p), 1 / scale, error_code);
+    if (rect.IsEmpty() || path.empty()) return Paths64();
+    class RectClip rc(rect);
+    Paths64 tmp;
+    tmp.push_back(path);
+    return rc.Execute(tmp, convex_only);
   }
 
-  inline PathsD RectClip(const RectD& rect, const PathsD& paths, int precision = 2)
+  inline PathsD RectClip(const RectD& rect, 
+    const PathsD& paths, bool convex_only = false, int precision = 2)
   {
     if (rect.IsEmpty() || paths.empty()) return PathsD();
     int error_code = 0;
@@ -249,110 +222,54 @@ namespace Clipper2Lib {
     const double scale = std::pow(10, precision);
     Rect64 r = ScaleRect<int64_t, double>(rect, scale);
     class RectClip rc(r);
-    PathsD result;
-    result.reserve(paths.size());
-    for (const PathD& path : paths) 
-    {
-      RectD pathRec = GetBounds(path);
-      if (!rect.Intersects(pathRec))
-        continue;
-      else if (rect.Contains(pathRec))
-        result.push_back(path);
-      else
-      {
-        Path64 p = ScalePath<int64_t, double>(path, scale, error_code);
-        if (error_code) return PathsD();
-        p = rc.Execute(p);
-        if (p.empty()) continue;
-        result.push_back(ScalePath<double, int64_t>(p, 1/scale, error_code));
-        if (error_code) return PathsD();
-      }
-    }
-    return result;
+    Paths64 pp = ScalePaths<int64_t, double>(paths, scale, error_code);
+    if (error_code) return PathsD(); // ie: error_code result is lost 
+    return ScalePaths<double, int64_t>(
+      rc.Execute(pp, convex_only), 1 / scale, error_code);
   }
 
-  inline Paths64 RectClipLines(const Rect64& rect, const Path64& path)
+  inline PathsD RectClip(const RectD& rect, 
+    const PathD& path, bool convex_only = false, int precision = 2)
   {
-    Paths64 result;
-    if (rect.IsEmpty() || path.empty()) return result;
-    Rect64 pathRec = GetBounds(path);
-    if (!rect.Intersects(pathRec)) return result;
-    if (rect.Contains(pathRec)) 
-    {
-      result.push_back(path);
-      return result;
-    }
+    PathsD tmp;
+    tmp.push_back(path);
+    return RectClip(rect, tmp, convex_only, precision);
+  }
+
+  inline Paths64 RectClipLines(const Rect64& rect, const Paths64& lines)
+  {
+    if (rect.IsEmpty() || lines.empty()) return Paths64();
     class RectClipLines rcl(rect);
-    return rcl.Execute(path);
+    return rcl.Execute(lines);
   }
 
-  inline Paths64 RectClipLines(const Rect64& rect, const Paths64& paths)
+  inline Paths64 RectClipLines(const Rect64& rect, const Path64& line)
   {
-    Paths64 result;
-    if (rect.IsEmpty() || paths.empty()) return result;
-    class RectClipLines rcl(rect);
-    for (const Path64& p : paths)
-    {
-      Rect64 pathRec = GetBounds(p);
-      if (!rect.Intersects(pathRec))
-        continue;
-      else if (rect.Contains(pathRec))
-        result.push_back(p);
-      else
-      {
-        Paths64 pp = rcl.Execute(p);
-        if (!pp.empty()) 
-          result.insert(result.end(), pp.begin(), pp.end());
-      }
-    }
-    return result;
+    Paths64 tmp;
+    tmp.push_back(line);
+    return RectClipLines(rect, tmp);
   }
 
-  inline PathsD RectClipLines(const RectD& rect, const PathD& path, int precision = 2)
+  inline PathsD RectClipLines(const RectD& rect, const PathD& line, int precision = 2)
   {
-    if (rect.IsEmpty() || path.empty() ||
-      !rect.Contains(GetBounds(path))) return PathsD();
+    PathsD tmp;
+    tmp.push_back(line);
+    return RectClip(rect, tmp, precision);
+  }
+
+  inline PathsD RectClipLines(const RectD& rect, const PathsD& lines, int precision = 2)
+  {
+    if (rect.IsEmpty() || lines.empty()) return PathsD();
     int error_code = 0;
     CheckPrecision(precision, error_code);
     if (error_code) return PathsD();
     const double scale = std::pow(10, precision);
     Rect64 r = ScaleRect<int64_t, double>(rect, scale);
     class RectClipLines rcl(r);
-    Path64 p = ScalePath<int64_t, double>(path, scale, error_code);
+    Paths64 p = ScalePaths<int64_t, double>(lines, scale, error_code);
     if (error_code) return PathsD();
-    return ScalePaths<double, int64_t>(rcl.Execute(p), 1 / scale, error_code);
-  }
-
-  inline PathsD RectClipLines(const RectD& rect, const PathsD& paths, int precision = 2)
-  {
-    PathsD result;
-    if (rect.IsEmpty() || paths.empty()) return result;
-    int error_code = 0;
-    CheckPrecision(precision, error_code);
-    if (error_code) return PathsD();
-    const double scale = std::pow(10, precision);
-    Rect64 r = ScaleRect<int64_t, double>(rect, scale);
-    class RectClipLines rcl(r);
-    result.reserve(paths.size());
-    for (const PathD& path : paths)
-    {
-      RectD pathRec = GetBounds(path);
-      if (!rect.Intersects(pathRec))
-        continue;
-      else if (rect.Contains(pathRec))
-        result.push_back(path);
-      else
-      {
-        Path64 p = ScalePath<int64_t, double>(path, scale, error_code);
-        if (error_code) return PathsD();
-        Paths64 pp = rcl.Execute(p);
-        if (pp.empty()) continue;
-        PathsD ppd = ScalePaths<double, int64_t>(pp, 1 / scale, error_code);
-        if (error_code) return PathsD();
-        result.insert(result.end(), ppd.begin(), ppd.end());
-      }
-    }
-    return result;
+    p = rcl.Execute(p);
+    return ScalePaths<double, int64_t>(p, 1 / scale, error_code);
   }
 
   namespace details
