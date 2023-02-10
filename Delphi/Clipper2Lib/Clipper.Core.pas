@@ -102,10 +102,15 @@ type
     property MidPoint: TPointD read GetMidPoint;
   end;
 
-{$IF CompilerVersion <= 15}
+{$IFDEF FPC}
+  TPointerList = array of Pointer;
+  TListSortCompareFunc = function (Item1, Item2: Pointer): Integer;
+{$ELSE}
+{$IF COMPILERVERSION < 23} //PRIOR DELPHI XE2
   TPointerList = array of Pointer;
   TListSortCompareFunc = function (Item1, Item2: Pointer): Integer;
 {$IFEND}
+{$ENDIF}
 
   TListEx = class
   private
