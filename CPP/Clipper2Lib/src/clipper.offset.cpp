@@ -1,6 +1,6 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  9 February 2023                                                 *
+* Date      :  10 February 2023                                                *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2023                                         *
 * Purpose   :  Path Offset (Inflate/Shrink)                                    *
@@ -288,7 +288,7 @@ void ClipperOffset::OffsetPoint(Group& group,
 		if (!almostNoAngle)
 		{
 			// create a simple self-intersection that will be cleaned up later
-			//group.path_.push_back(path[j]);
+			group.path_.push_back(path[j]); // definitely needed (#405)
 			group.path_.push_back(GetPerpendic(path[j], norms[j], group_delta_));
 		}
 	}

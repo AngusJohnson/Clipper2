@@ -22,10 +22,18 @@ TEST(Clipper2Tests, TestOffsets) {
         co.AddPaths(subject, Clipper2Lib::JoinType::Round, Clipper2Lib::EndType::Polygon);
         const auto outputs = co.Execute(1);
 
+        // is the sum total area of the solution is positive
+        const auto outer_is_positive = Clipper2Lib::Area(outputs) > 0;
+
         // there should be exactly one exterior path
-        const auto is_hole = Clipper2Lib::IsPositive<int64_t>;
-        const auto hole_count = std::count_if(outputs.begin(), outputs.end(), is_hole);
-        const auto exterior_count = outputs.size() - hole_count;
-        EXPECT_EQ(exterior_count, 1);
+        const auto is_positive_func = Clipper2Lib::IsPositive<int64_t>;
+        const auto is_positive_count = std::count_if(
+          outputs.begin(), outputs.end(), is_positive_func);
+        const auto is_negative_count = 
+          outputs.size() - is_positive_count;
+        if (outer_is_positive)
+          EXPECT_EQ(is_positive_count, 1);
+        else
+          EXPECT_EQ(is_negative_count, 1);
     }
 }

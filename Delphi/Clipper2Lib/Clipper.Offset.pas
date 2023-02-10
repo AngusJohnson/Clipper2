@@ -2,7 +2,7 @@ unit Clipper.Offset;
 
 (*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  9 February 2023                                                 *
+* Date      :  10 February 2023                                                *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2023                                         *
 * Purpose   :  Path Offset (Inflate/Shrink)                                    *
@@ -299,14 +299,12 @@ begin
       group.reversed := (area < 0);
     if group.reversed then fGroupDelta := -fDelta
     else fGroupDelta := fDelta;
-    fAbsGrpDelta := Abs(fGroupDelta);
   end else
   begin
     group.reversed := false;
     fGroupDelta := Abs(fDelta) * 0.5;
-    fAbsGrpDelta := fGroupDelta;
   end;
-
+  fAbsGrpDelta := Abs(fGroupDelta);
   fJoinType := group.joinType;
   if fArcTolerance > 0 then
     arcTol := Min(fAbsGrpDelta, fArcTolerance) else
@@ -697,8 +695,8 @@ begin
     AddPoint(GetPerpendic(fInPath[j], fNorms[k], fGroupDelta));
     if not almostNoAngle then
     begin
-      // create a simple self-intersection that will be cleaned up later
-      //AddPoint(fInPath[j]); // todo: check, as may not be needed
+      // ensure a clean self-intersection ...
+      AddPoint(fInPath[j]); // definitely needed  (#405)
       AddPoint(GetPerpendic(fInPath[j], fNorms[j], fGroupDelta));
     end;
   end

@@ -2,7 +2,7 @@ unit Clipper.Core;
 
 (*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  9 February 2023                                                 *
+* Date      :  10 February 2023                                                *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2023                                         *
 * Purpose   :  Core Clipper Library module                                     *
@@ -102,6 +102,11 @@ type
     property MidPoint: TPointD read GetMidPoint;
   end;
 
+{$IF CompilerVersion <= 15}
+  TPointerList = array of Pointer;
+  TListSortCompareFunc = function (Item1, Item2: Pointer): Integer;
+{$IFEND}
+
   TListEx = class
   private
     fCount    : integer;
@@ -127,11 +132,6 @@ type
   TPointInPolygonResult = (pipOn, pipInside, pipOutside);
 
   EClipper2LibException = class(Exception);
-
-{$IF CompilerVersion <= 15}
-  TPointerList = array of Pointer;
-  TListSortCompareFunc = function (Item1, Item2: Pointer): Integer;
-{$IFEND}
 
 function Area(const path: TPath64): Double; overload;
 function Area(const paths: TPaths64): Double; overload;
