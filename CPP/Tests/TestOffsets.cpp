@@ -13,9 +13,9 @@ TEST(Clipper2Tests, TestOffsets) {
 
         Clipper2Lib::Paths64 subject, subject_open, clip;
         Clipper2Lib::Paths64 solution, solution_open;
-        Clipper2Lib::ClipType ct;
-        Clipper2Lib::FillRule fr;
-        int64_t stored_area, stored_count;
+        Clipper2Lib::ClipType ct = Clipper2Lib::ClipType::None;
+        Clipper2Lib::FillRule fr = Clipper2Lib::FillRule::NonZero;
+        int64_t stored_area = 0, stored_count = 0;
 
         ASSERT_TRUE(LoadTestNum(ifs, test_number, subject, subject_open, clip, stored_area, stored_count, ct, fr));
 

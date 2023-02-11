@@ -38,10 +38,9 @@ type
   protected
     fResults        : TList;
     fRect           : TRect64;
-    fPathRect       : TRect64;
+    fPathBounds     : TRect64;
     fRectPath       : TPath64;
     fRectMidPt      : TPoint64;
-    fFirstCrossLoc  : TLocation;
     fEdges          : TOutPtArrayArray;
     fStartLocs      : TList;
     procedure DisposeResults;
@@ -577,8 +576,8 @@ begin
     path := paths[i];
     if (Length(path) < 3) then Continue;
 
-    fPathRect := GetBounds(path);
-    if not fRect.Intersects(fPathRect) then
+    fPathBounds := GetBounds(path);
+    if not fRect.Intersects(fPathBounds) then
       Continue; // the path must be completely outside fRect
     // Apart from that, we can't be sure whether the path
     // is completely outside or completed inside or intersects
@@ -607,17 +606,18 @@ var
   loc, prevLoc  : TLocation;
   loc2          : TLocation;
   startingLoc   : TLocation;
+  firstCrossLoc : TLocation;
   crossingLoc   : TLocation;
   prevCrossLoc  : TLocation;
   isCw          : Boolean;
 begin
   if (Length(path) < 3) then Exit;
-  i := 0;
   fStartLocs.Clear;
-  highI := Length(path) -1;
   crossingLoc     := locInside;
-  fFirstCrossLoc   := locInside;
+  firstCrossLoc   := locInside;
+  prevLoc         := locInside;
 
+  highI := Length(path) -1;
   if not GetLocation(fRect, path[highI], loc) then
   begin
     i := highI - 1;
@@ -679,9 +679,9 @@ begin
 
     if (loc = locInside) then // path must be entering rect
     begin
-      if (fFirstCrossLoc = locInside) then
+      if (firstCrossLoc = locInside) then
       begin
-        fFirstCrossLoc := crossingLoc;
+        firstCrossLoc := crossingLoc;
         fStartLocs.Add(Pointer(prevLoc));
       end
       else if (prevLoc <> crossingLoc) then
@@ -701,9 +701,9 @@ begin
       if (prevCrossLoc <> locInside) then
         AddCorner(prevCrossLoc, loc);
 
-      if (fFirstCrossLoc = locInside) then
+      if (firstCrossLoc = locInside) then
       begin
-        fFirstCrossLoc := loc;
+        firstCrossLoc := loc;
         fStartLocs.Add(Pointer(prevLoc));
       end;
 
@@ -723,8 +723,8 @@ begin
     end else // path must be exiting rect
     begin
       loc := crossingLoc;
-      if (fFirstCrossLoc = locInside) then
-        fFirstCrossLoc := crossingLoc;
+      if (firstCrossLoc = locInside) then
+        firstCrossLoc := crossingLoc;
     end;
 
     ////////////////////////////////
@@ -734,17 +734,14 @@ begin
   end; //while i <= highI
   ///////////////////////////////////////////////////
 
-  if (fFirstCrossLoc = locInside) then
+  if (firstCrossLoc = locInside) then
   begin
     // path never intersects
-    if startingLoc = locInside then
-    begin
-      // path is completely inside rect
-    end else
+    if startingLoc <> locInside then
     begin
       // path is outside rect
       // but being outside, it still may not contain rect
-      if fPathRect.Contains(fRect) and
+      if fPathBounds.Contains(fRect) and
         Path1ContainsPath2(path, fRectPath) then
       begin
         // yep, the path does fully contain rect
@@ -758,7 +755,7 @@ begin
     end;
   end
   else if (loc <> locInside) and
-    ((loc <> fFirstCrossLoc) or
+    ((loc <> firstCrossLoc) or
     (fStartLocs.Count > 2)) then
   begin
     if (fStartLocs.Count > 0) then
@@ -773,8 +770,8 @@ begin
       end;
       loc := prevLoc;
     end;
-    if (loc <> fFirstCrossLoc) then
-      AddCorner(loc, HeadingClockwise(loc, fFirstCrossLoc));
+    if (loc <> firstCrossLoc) then
+      AddCorner(loc, HeadingClockwise(loc, firstCrossLoc));
   end;
 end;
 //------------------------------------------------------------------------------

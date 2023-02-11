@@ -1,8 +1,8 @@
 ﻿/*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  16 September 2022                                               *
+* Date      :  11 February 2023                                                *
 * Website   :  http://www.angusj.com                                           *
-* Copyright :  Angus Johnson 2010-2022                                         *
+* Copyright :  Angus Johnson 2010-2023                                         *
 * License   :  http://www.boost.org/LICENSE_1_0.txt                            *
 *******************************************************************************/
 
@@ -14,65 +14,86 @@ namespace ClipperDemo1
 {
   public class Application
   {
+    ////////////////////
+    public const int edgeCount      = 19;
+    public const int displayWidth   = 500;
+    public const int displayHeight  = 500;
+    public const int rectInsetDist  = 200;
+    ////////////////////
 
     public static void Main()
     {
-      DoRandomPoly(true);
+      DoRandomPoly(/* true to repeat last random */);
     }
 
-    public static void DoRandomPoly(bool makeNewPoly)
+    public static void DoRandomPoly(bool loadPrevious = false)
     {
       Random rand = new();
-      Paths64 subjOpen, clip, solOpen;
+      Paths64 sub, clp, sol;
       Rect64 rec;
 
-      if (makeNewPoly)
+      if (loadPrevious && File.Exists(".\\store.txt"))
       {
-        ////////////////////
-        const int count = 75;
-        ////////////////////
+        StreamReader reader;
+        try
+        { reader = new StreamReader(".\\store.txt"); }
+        catch { return; }
+        string s = reader.ReadLine();
+        sub = ClipperFileIO.PathFromStr(s);
+        s = reader.ReadLine();
+        clp = ClipperFileIO.PathFromStr(s);
+        rec = Clipper.GetBounds(clp);
+      }
+      else
+      {
+        rec = new(
+          rectInsetDist, 
+          rectInsetDist, 
+          displayWidth - rectInsetDist, 
+          displayHeight - rectInsetDist);
 
-        rec = new(100, 100, 700, 500);
-        clip = new() { rec.AsPath() };
-        subjOpen = new() { MakeRandomPath(800, 600, count, rand) };
+        clp = new() { rec.AsPath() };
+        sub = new() { MakeRandomPath(displayWidth, displayHeight, edgeCount, rand) };
 
         // save - useful when debugging 
         StreamWriter writer;
         try
         { writer = new StreamWriter(".\\store.txt", false); }
         catch { return; }
-        foreach (Point64 pt in subjOpen[0])
+
+        foreach (Point64 pt in sub[0])
           writer.Write("{0},{1} ", pt.X, pt.Y);
         writer.Write("\r\n");
-        foreach (Point64 pt in clip[0])
+        foreach (Point64 pt in clp[0])
           writer.Write("{0},{1} ", pt.X, pt.Y);
         writer.Write("\r\n");
         writer.Close();
       }
-      else
-      {
-        if (!File.Exists(".\\store.txt")) return;
 
-        StreamReader reader;
-        try
-        { reader = new StreamReader(".\\store.txt"); }
-        catch { return; }
-        string s = reader.ReadLine();
-        subjOpen = ClipperFileIO.PathFromStr(s);
-        s = reader.ReadLine();
-        clip = ClipperFileIO.PathFromStr(s);
-        rec = Clipper.GetBounds(clip);
+      /////////////////////////////////////////////////
+      sol = Clipper.RectClip(rec, sub);
+      /////////////////////////////////////////////////
+
+      SvgWriter svg = new (FillRule.NonZero);
+      SvgUtils.AddSubject(svg, sub);
+      SvgUtils.AddClip(svg, clp);
+
+      //SvgUtils.AddSolution(svg, sol, false);
+      if (sol.Count > 0)
+      {
+        double frac = 1.0 / sol.Count;
+        double cumFrac = frac;
+        foreach (Path64 path in sol)
+        {
+          Colors.Color32 c = Colors.Rainbow(cumFrac, 64);
+          cumFrac += frac;
+          Colors.Color32 c2 = new Colors.Color32(
+            (c.color & 0xFFFFFF) | 0x20000000);
+          svg.AddPath(path, false, c2.color, c.color, 1.2, false);
+        }
       }
 
-      /////////////////////////////////////////////////
-      solOpen = Clipper.RectClipLines(rec, subjOpen);
-      /////////////////////////////////////////////////
-
-      SvgWriter svg = new ();
-      SvgUtils.AddSubject(svg, subjOpen, false);
-      SvgUtils.AddClip(svg, clip);
-      SvgUtils.AddSolution(svg, solOpen, false, false, false);
-      SvgUtils.SaveToFile(svg, "../../../rectclip.svg", FillRule.EvenOdd, 800, 600, 20);
+      svg.SaveToFile("../../../rectclip.svg", 800, 600, 20);
       ClipperFileIO.OpenFileWithDefaultApp("../../../rectclip.svg");
     }
 
@@ -104,7 +125,6 @@ namespace ClipperDemo1
         result.Add(MakeRandomPtD(width, height, rand));
       return result;
     }
-
 
   } //end Application
 

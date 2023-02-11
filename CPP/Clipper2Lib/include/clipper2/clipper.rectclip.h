@@ -40,12 +40,12 @@ namespace Clipper2Lib
   class RectClip {
   private:
     void ExecuteInternal(const Path64& path);
-    Path64 GetPath(size_t idx);
+    Path64 GetPath(OutPt2*& op);
   protected:
     const Rect64 rect_;
-    const Path64 rectPath_;
-    const Point64 mp_;
-    Rect64 pathRect_;
+    const Path64 rect_as_path_;
+    const Point64 rect_mp_;
+    Rect64 path_bounds_;
     std::deque<OutPt2> op_container_;
     OutPt2List results_;  // each path can be broken into multiples
     OutPt2List edges_[8]; // clockwise and counter-clockwise
@@ -60,8 +60,8 @@ namespace Clipper2Lib
   public:
     explicit RectClip(const Rect64& rect) :
       rect_(rect),
-      rectPath_(rect.AsPath()),
-    mp_(rect.MidPoint()) {}
+      rect_as_path_(rect.AsPath()),
+      rect_mp_(rect.MidPoint()) {}
     Paths64 Execute(const Paths64& paths, bool convex_only = false);
   };
 
@@ -72,7 +72,7 @@ namespace Clipper2Lib
   class RectClipLines : public RectClip {
   private:
     void ExecuteInternal(const Path64& path);
-    virtual Path64 GetPath(size_t idx);
+    Path64 GetPath(OutPt2*& op);
   public:
     explicit RectClipLines(const Rect64& rect) : RectClip(rect) {};
     Paths64 Execute(const Paths64& paths);

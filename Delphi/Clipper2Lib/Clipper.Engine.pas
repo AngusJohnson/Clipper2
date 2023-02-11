@@ -2727,6 +2727,7 @@ var
   pipResult: TPointInPolygonResult;
   outsideCnt: integer;
 begin
+  // precondition - the twi paths or1 & pr2 don't intersect
   // we need to make some accommodation for rounding errors
   // so we won't jump if the first vertex is found outside
   outsideCnt := 0;
@@ -2750,6 +2751,7 @@ var
   pipResult: TPointInPolygonResult;
   outsideCnt: integer;
 begin
+  // precondition - the twi paths or1 & pr2 don't intersect
   // we need to make some accommodation for rounding errors
   // so we won't jump if the first vertex is found outside
   outsideCnt := 0;

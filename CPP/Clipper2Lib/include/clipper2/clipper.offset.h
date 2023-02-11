@@ -1,6 +1,6 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  27 January 2023                                                 *
+* Date      :  11 February 2023                                                *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2023                                         *
 * Purpose   :  Path Offset (Inflate/Shrink)                                    *
@@ -28,14 +28,14 @@ private:
 
 	class Group {
 	public:
-		Paths64 paths_in_;
-		Paths64 paths_out_;
-		Path64 path_;
-		bool is_reversed_ = false;
-		JoinType join_type_;
-		EndType end_type_;
+		Paths64 paths_in;
+		Paths64 paths_out;
+		Path64 path;
+		bool is_reversed = false;
+		JoinType join_type;
+		EndType end_type;
 		Group(const Paths64& paths, JoinType join_type, EndType end_type) :
-			paths_in_(paths), join_type_(join_type), end_type_(end_type) {}
+			paths_in(paths), join_type(join_type), end_type(end_type) {}
 	};
 
 	int   error_code_ = 0;
@@ -48,7 +48,8 @@ private:
 	Paths64 solution;
 	std::vector<Group> groups_;
 	JoinType join_type_ = JoinType::Square;
-	
+	EndType end_type_ = EndType::Polygon;
+
 	double miter_limit_ = 0.0;
 	double arc_tolerance_ = 0.0;
 	bool preserve_collinear_ = false;
@@ -60,7 +61,7 @@ private:
 	void BuildNormals(const Path64& path);
 	void OffsetPolygon(Group& group, Path64& path);
 	void OffsetOpenJoined(Group& group, Path64& path);
-	void OffsetOpenPath(Group& group, Path64& path, EndType endType);
+	void OffsetOpenPath(Group& group, Path64& path);
 	void OffsetPoint(Group& group, Path64& path, 
 		size_t j, size_t& k, bool reversing = false);
 	void DoGroupOffset(Group &group);

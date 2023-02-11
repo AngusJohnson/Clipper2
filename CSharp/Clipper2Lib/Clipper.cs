@@ -1,6 +1,6 @@
 ﻿/*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  26 January 2023                                                 *
+* Date      :  11 February 2023                                                *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2023                                         *
 * Purpose   :  This module contains simple functions that will likely cover    *
@@ -161,136 +161,79 @@ namespace Clipper2Lib
       return ScalePathsD(tmp, 1 / scale);
     }
 
-    public static Path64 RectClip(Rect64 rect, Path64 path)
-    {
-      if (rect.IsEmpty() || path.Count == 0) return new Path64();
-      RectClip rc = new RectClip(rect);
-      return rc.ExecuteInternal(path);
-    }
-
-    public static Paths64 RectClip(Rect64 rect, Paths64 paths)
+    public static Paths64 RectClip(Rect64 rect, 
+      Paths64 paths, bool convexOnly = false)
     {
       if (rect.IsEmpty() || paths.Count == 0) return new Paths64();
-
-      Paths64 result = new Paths64(paths.Count);
       RectClip rc = new RectClip(rect);
-      foreach(Path64 path in paths)
-      {
-        Rect64 pathRec = Clipper.GetBounds(path);
-        if (!rect.Intersects(pathRec))
-          continue;
-        else if (rect.Contains(pathRec))
-          result.Add(path);
-        else
-        {
-          Path64 p = rc.ExecuteInternal(path);
-          if (p.Count > 0) result.Add(p);
-        }
-      }
-      return result;
+      return rc.Execute(paths, convexOnly);
     }
 
-    public static PathD RectClip(RectD rect, PathD path, int precision = 2)
+    public static Paths64 RectClip(Rect64 rect, 
+      Path64 path, bool convexOnly = false)
     {
-      InternalClipper.CheckPrecision(precision);
-      if (rect.IsEmpty() || path.Count == 0) return new PathD();
-      double scale = Math.Pow(10, precision);
-      Rect64 r = ScaleRect(rect, scale);
-      Path64 tmpPath = ScalePath64(path, scale);
-      RectClip rc = new RectClip(r);
-      tmpPath = rc.ExecuteInternal(tmpPath);
-      return ScalePathD(tmpPath, 1 / scale);
+      if (rect.IsEmpty() || path.Count == 0) return new Paths64();
+      Paths64 tmp = new Paths64();
+      tmp.Add(path);
+      return RectClip(rect, tmp, convexOnly);
     }
-
-    public static PathsD RectClip(RectD rect, PathsD paths, int precision = 2)
+    
+    public static PathsD RectClip(RectD rect, PathsD paths, 
+      int precision = 2, bool convexOnly = false)
     {
       InternalClipper.CheckPrecision(precision);
       if (rect.IsEmpty() || paths.Count == 0) return new PathsD();
       double scale = Math.Pow(10, precision);
       Rect64 r = ScaleRect(rect, scale);
+      Paths64 tmpPath = ScalePaths64(paths, scale);
       RectClip rc = new RectClip(r);
-      PathsD result = new PathsD(paths.Count);
-      foreach (PathD p in paths)
-      {
-        RectD pathRec = Clipper.GetBounds(p);
-        if (!rect.Intersects(pathRec))
-          continue;
-        else if (rect.Contains(pathRec))
-          result.Add(p);
-        else
-        {
-          Path64 p64 = ScalePath64(p, scale);
-          p64 = rc.ExecuteInternal(p64);
-          if (p64.Count > 0)
-            result.Add(ScalePathD(p64, 1 / scale));
-        }
-      }
-      return result;
+      tmpPath = rc.Execute(tmpPath, convexOnly);
+      return ScalePathsD(tmpPath, 1 / scale);
     }
+
+    public static PathsD RectClip(RectD rect, PathD path, 
+      int precision = 2, bool convexOnly = false)
+    {
+      if (rect.IsEmpty() || path.Count == 0) return new PathsD();
+      PathsD tmp = new PathsD();
+      tmp.Add(path);
+      return RectClip(rect, tmp, precision, convexOnly);
+    }
+    public static Paths64 RectClipLines(Rect64 rect, 
+      Paths64 paths, bool convexOnly = false)
+    {
+      if (rect.IsEmpty() || paths.Count == 0) return new Paths64();
+      RectClip rc = new RectClipLines(rect);
+      return rc.Execute(paths, convexOnly);
+    }
+
     public static Paths64 RectClipLines(Rect64 rect, Path64 path)
     {
       if (rect.IsEmpty() || path.Count == 0) return new Paths64();
-      RectClipLines rco = new RectClipLines(rect);
-      return rco.ExecuteInternal(path);
+      Paths64 tmp = new Paths64();
+      tmp.Add(path);
+      return RectClipLines(rect, tmp);
     }
 
-    public static Paths64 RectClipLines(Rect64 rect, Paths64 paths)
-    {
-      Paths64 result = new Paths64(paths.Count);
-      if (rect.IsEmpty() || paths.Count == 0) return result;
-      RectClipLines rco = new RectClipLines(rect);
-      foreach (Path64 path in paths)
-      {
-        Rect64 pathRec = Clipper.GetBounds(path);
-        if (!rect.Intersects(pathRec))
-          continue;
-        else if (rect.Contains(pathRec))
-          result.Add(path);
-        else
-        {
-          Paths64 pp = rco.ExecuteInternal(path);
-          if (pp.Count > 0) result.AddRange(pp);
-        }
-      }
-      return result;
-    }
-
-    public static PathsD RectClipLines(RectD rect, PathD path, int precision = 2)
+    public static PathsD RectClipLines(RectD rect, 
+      PathsD paths, int precision = 2, bool convexOnly = false)
     {
       InternalClipper.CheckPrecision(precision);
+      if (rect.IsEmpty() || paths.Count == 0) return new PathsD();
+      double scale = Math.Pow(10, precision);
+      Rect64 r = ScaleRect(rect, scale);
+      Paths64 tmpPath = ScalePaths64(paths, scale);
+      RectClip rc = new RectClipLines(r);
+      tmpPath = rc.Execute(tmpPath, convexOnly);
+      return ScalePathsD(tmpPath, 1 / scale);
+    }
+    public static PathsD RectClipLines(RectD rect, PathD path, 
+      int precision = 2, bool convexOnly = false)
+    {
       if (rect.IsEmpty() || path.Count == 0) return new PathsD();
-      double scale = Math.Pow(10, precision);
-      Rect64 r = ScaleRect(rect, scale);
-      Path64 tmpPath = ScalePath64(path, scale);
-      RectClipLines rco = new RectClipLines(r);
-      Paths64 tmpPaths = rco.ExecuteInternal(tmpPath);
-      return ScalePathsD(tmpPaths, 1 / scale);
-    }
-    public static PathsD RectClipLines(RectD rect, PathsD paths, int precision = 2)
-    {
-      InternalClipper.CheckPrecision(precision);
-      PathsD result = new PathsD(paths.Count);
-      if (rect.IsEmpty() || paths.Count == 0) return result;
-      double scale = Math.Pow(10, precision);
-      Rect64 r = ScaleRect(rect, scale);
-      RectClipLines rco = new RectClipLines(r);
-      foreach (PathD p in paths)
-      {
-        RectD pathRec = Clipper.GetBounds(p);
-        if (!rect.Intersects(pathRec))
-          continue;
-        else if (rect.Contains(pathRec))
-          result.Add(p);
-        else
-        {
-          Path64 p64 = ScalePath64(p, scale);
-          Paths64 pp64 = rco.ExecuteInternal(p64);
-          if (pp64.Count == 0) continue;
-          PathsD ppd = ScalePathsD(pp64, 1 / scale);
-          result.AddRange(ppd);
-        }
-      }
-      return result;
+      PathsD tmp = new PathsD();
+      tmp.Add(path);
+      return RectClipLines(rect, tmp, precision, convexOnly);
     }
     public static Paths64 MinkowskiSum(Path64 pattern, Path64 path, bool isClosed)
     {

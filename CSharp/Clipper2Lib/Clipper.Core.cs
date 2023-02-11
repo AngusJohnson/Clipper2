@@ -1,6 +1,6 @@
 ﻿/*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  5 January 2023                                                  *
+* Date      :  11 February 2023                                                *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2023                                         *
 * Purpose   :  Core structures and functions for the Clipper Library           *
@@ -300,6 +300,19 @@ namespace Clipper2Lib
       bottom = b;
     }
 
+    public Rect64(bool isValid)
+    {
+      if (isValid)
+      {
+        left = 0; top = 0; right = 0; bottom = 0;
+      }
+      else
+      {
+        left = long.MaxValue; top = long.MaxValue; 
+        right = long.MinValue; bottom = long.MinValue;
+      }
+    }
+
     public Rect64(Rect64 rec)
     {
       left = rec.left;
@@ -537,6 +550,7 @@ namespace Clipper2Lib
     internal const double min_coord = -MaxCoord;
     internal const long Invalid64 = MaxInt64;
 
+    internal const double defaultArcTolerance = 0.25;
     internal const double floatingPointTolerance = 1E-12;
     internal const double defaultMinimumEdgeLength = 0.1;
 

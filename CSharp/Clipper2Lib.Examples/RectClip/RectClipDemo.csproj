@@ -33,6 +33,7 @@
   <ItemGroup>
     <ProjectReference Include="..\..\Clipper2Lib\Clipper2Lib.csproj" />
     <ProjectReference Include="..\..\Utils\ClipFileIO\Clipper.FileIO.csproj" />
+    <ProjectReference Include="..\..\Utils\Colors\Clipper.Colors.csproj" />
     <ProjectReference Include="..\..\Utils\SVG\Clipper2.SVG.csproj" />
   </ItemGroup>
 

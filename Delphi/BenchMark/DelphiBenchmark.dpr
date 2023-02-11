@@ -8,29 +8,31 @@ uses
   ShellAPI,
   SysUtils,
   Classes,
+  Clipper.Core in '..\Clipper2Lib\Clipper.Core.pas',
+  Clipper.Engine in '..\Clipper2Lib\Clipper.Engine.pas',
   Clipper in '..\Clipper2Lib\Clipper.pas',
   Clipper.SVG in '..\Utils\Clipper.SVG.pas',
   ClipMisc in '..\Utils\ClipMisc.pas',
   Timer in '..\Utils\Timer.pas';
 
 var
-  s         : string;
-  i,j       : integer;
-  subj,clip : TPaths64;
-  solution  : TPaths64;
-  edgeCount : integer;
-  timerResult   : double;
+  s           : string;
+  i,j         : integer;
+  subj,clip   : TPaths64;
+  solution    : TPaths64;
+  edgeCount   : integer;
+  timerResult : double;
   timeTotal   : double;
   /////////////////////////////
-  maxWidth  : integer   = 800;
-  maxHeight : integer   = 600;
-  minEdges  : integer   = 1000;
-  maxEdges  : integer   = 5000;
-  loopCount : integer   = 2;
+  maxWidth    : integer   = 800;
+  maxHeight   : integer   = 600;
+  minEdgeCnt  : integer   = 1000;
+  maxEdgeCnt  : integer   = 8000;
+  loopCount   : integer   = 2;
   /////////////////////////////
 begin
   Randomize;
-  for j := (minEdges div 1000) to (maxEdges div 1000) do
+  for j := (minEdgeCnt div 1000) to (maxEdgeCnt div 1000) do
   begin
     timeTotal := 0;
     edgeCount := j * 1000;

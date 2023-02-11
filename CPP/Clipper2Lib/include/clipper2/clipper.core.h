@@ -72,7 +72,9 @@ namespace Clipper2Lib
     case range_error_i:
       throw Clipper2Exception(range_error);
     }
-#endif     
+#else
+    ++error_code; // only to stop compiler warning
+#endif
   }
 
   //By far the most widely used filling rules for polygons are EvenOdd

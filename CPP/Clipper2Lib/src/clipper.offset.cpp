@@ -1,6 +1,6 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  10 February 2023                                                *
+* Date      :  11 February 2023                                                *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2023                                         *
 * Purpose   :  Path Offset (Inflate/Shrink)                                    *
@@ -41,9 +41,9 @@ void GetBoundsAndLowestPolyIdx(const Paths64& paths, Rect64& r, int & idx)
 			if (p.x > r.right) r.right = p.x;
 			else if (p.x < r.left) r.left = p.x;
 		}
-	if (idx < 0) r = Rect64(0, 0, 0, 0);
-	if (r.top == INT64_MIN) r.bottom = r.top;
-	if (r.left == INT64_MIN) r.left = r.right;
+	//if (idx < 0) r = Rect64(0, 0, 0, 0);
+	//if (r.top == INT64_MIN) r.bottom = r.top;
+	//if (r.left == INT64_MIN) r.left = r.right;
 }
 
 bool IsSafeOffset(const Rect64& r, int64_t delta)
@@ -219,23 +219,23 @@ void ClipperOffset::DoSquare(Group& group, const Path64& path, size_t j, size_t 
 		PointD pt4 = PointD(pt3.x + vec.x * group_delta_, pt3.y + vec.y * group_delta_);
 		PointD pt = IntersectPoint(pt1, pt2, pt3, pt4);
 		//get the second intersect point through reflecion
-		group.path_.push_back(Point64(ReflectPoint(pt, ptQ)));
-		group.path_.push_back(Point64(pt));
+		group.path.push_back(Point64(ReflectPoint(pt, ptQ)));
+		group.path.push_back(Point64(pt));
 	}
 	else
 	{
 		PointD pt4 = GetPerpendicD(path[j], norms[k], group_delta_);
 		PointD pt = IntersectPoint(pt1, pt2, pt3, pt4);
-		group.path_.push_back(Point64(pt));
+		group.path.push_back(Point64(pt));
 		//get the second intersect point through reflecion
-		group.path_.push_back(Point64(ReflectPoint(pt, ptQ)));
+		group.path.push_back(Point64(ReflectPoint(pt, ptQ)));
 	}
 }
 
 void ClipperOffset::DoMiter(Group& group, const Path64& path, size_t j, size_t k, double cos_a)
 {
 	double q = group_delta_ / (cos_a + 1);
-	group.path_.push_back(Point64(
+	group.path.push_back(Point64(
 		path[j].x + (norms[k].x + norms[j].x) * q,
 		path[j].y + (norms[k].y + norms[j].y) * q));
 }
@@ -246,7 +246,7 @@ void ClipperOffset::DoRound(Group& group, const Path64& path, size_t j, size_t k
 	Point64 pt = path[j];
 	PointD offDist = PointD(norms[k].x * group_delta_, norms[k].y * group_delta_);
 	if (j == k) offDist.Negate();
-	group.path_.push_back(Point64(pt.x + offDist.x, pt.y + offDist.y));
+	group.path.push_back(Point64(pt.x + offDist.x, pt.y + offDist.y));
 
 	int steps = std::max(2, static_cast<int>(
 		std::floor(steps_per_rad_ * std::abs(angle))));
@@ -257,9 +257,9 @@ void ClipperOffset::DoRound(Group& group, const Path64& path, size_t j, size_t k
 	{
 		offDist = PointD(offDist.x * step_cos - step_sin * offDist.y,
 			offDist.x * step_sin + offDist.y * step_cos);
-		group.path_.push_back(Point64(pt.x + offDist.x, pt.y + offDist.y));
+		group.path.push_back(Point64(pt.x + offDist.x, pt.y + offDist.y));
 	}
-	group.path_.push_back(GetPerpendic(path[j], norms[j], group_delta_));
+	group.path.push_back(GetPerpendic(path[j], norms[j], group_delta_));
 }
 
 void ClipperOffset::OffsetPoint(Group& group, 
@@ -284,12 +284,12 @@ void ClipperOffset::OffsetPoint(Group& group,
 	if (almostNoAngle || is180DegSpike || (sin_a * group_delta_ < 0))
 	{
     //almost no angle or concave
-		group.path_.push_back(GetPerpendic(path[j], norms[k], group_delta_));
+		group.path.push_back(GetPerpendic(path[j], norms[k], group_delta_));
 		if (!almostNoAngle)
 		{
 			// create a simple self-intersection that will be cleaned up later
-			group.path_.push_back(path[j]); // definitely needed (#405)
-			group.path_.push_back(GetPerpendic(path[j], norms[j], group_delta_));
+			group.path.push_back(path[j]); // definitely needed (#405)
+			group.path.push_back(GetPerpendic(path[j], norms[j], group_delta_));
 		}
 	}
 	else 
@@ -315,10 +315,10 @@ void ClipperOffset::OffsetPoint(Group& group,
 
 void ClipperOffset::OffsetPolygon(Group& group, Path64& path)
 {
-	group.path_.clear();
+	group.path.clear();
 	for (Path64::size_type i = 0, j = path.size() -1; i < path.size(); j = i, ++i)
 		OffsetPoint(group, path, i, j);
-	group.paths_out_.push_back(group.path_);
+	group.paths_out.push_back(group.path);
 }
 
 void ClipperOffset::OffsetOpenJoined(Group& group, Path64& path)
@@ -335,18 +335,18 @@ void ClipperOffset::OffsetOpenJoined(Group& group, Path64& path)
 	OffsetPolygon(group, path);
 }
 
-void ClipperOffset::OffsetOpenPath(Group& group, Path64& path, EndType end_type)
+void ClipperOffset::OffsetOpenPath(Group& group, Path64& path)
 {
-	group.path_.clear();
+	group.path.clear();
 
 	// do the line start cap
-	switch (end_type)
+	switch (end_type_)
 	{
 	case EndType::Butt:
-		group.path_.push_back(Point64(
+		group.path.push_back(Point64(
 			path[0].x - norms[0].x * group_delta_,
 			path[0].y - norms[0].y * group_delta_));
-		group.path_.push_back(GetPerpendic(path[0], norms[0], group_delta_));
+		group.path.push_back(GetPerpendic(path[0], norms[0], group_delta_));
 		break;
 	case EndType::Round:
 		DoRound(group, path, 0,0, PI);
@@ -368,13 +368,13 @@ void ClipperOffset::OffsetOpenPath(Group& group, Path64& path, EndType end_type)
 	norms[0] = norms[highI];
 
 	// do the line end cap
-	switch (end_type)
+	switch (end_type_)
 	{
 	case EndType::Butt:
-		group.path_.push_back(Point64(
+		group.path.push_back(Point64(
 			path[highI].x - norms[highI].x * group_delta_,
 			path[highI].y - norms[highI].y * group_delta_));
-		group.path_.push_back(GetPerpendic(path[highI], norms[highI], group_delta_));
+		group.path.push_back(GetPerpendic(path[highI], norms[highI], group_delta_));
 		break;
 	case EndType::Round:
 		DoRound(group, path, highI, highI, PI);
@@ -386,34 +386,35 @@ void ClipperOffset::OffsetOpenPath(Group& group, Path64& path, EndType end_type)
 
 	for (size_t i = highI, k = 0; i > 0; --i)
 		OffsetPoint(group, path, i, k, true);
-	group.paths_out_.push_back(group.path_);
+	group.paths_out.push_back(group.path);
 }
 
 void ClipperOffset::DoGroupOffset(Group& group)
 {
 
-	bool isClosedPath = IsClosedPath(group.end_type_);
+	bool isClosedPath = IsClosedPath(group.end_type);
 	if (isClosedPath)
 	{
 		//the lowermost polygon must be an outer polygon. So we can use that as the
 		//designated orientation for outer polygons (needed for tidy-up clipping)
 		Rect64 r;
-		int idx = 0;
-		GetBoundsAndLowestPolyIdx(group.paths_in_, r, idx);
-		double area = Area(group.paths_in_[idx]);
+		int idx = -1;
+		GetBoundsAndLowestPolyIdx(group.paths_in, r, idx);
+		if (idx < 0) return;
+		double area = Area(group.paths_in[idx]);
 		if (area == 0)
 		{
-			if (group.end_type_ == EndType::Polygon) return;
-			group.is_reversed_ = false;
+			if (group.end_type == EndType::Polygon) return;
+			group.is_reversed = false;
 			isClosedPath = false;
-			if (group.join_type_ == JoinType::Round)
-				group.end_type_ = EndType::Round; else
-				group.end_type_ = EndType::Square;
+			if (group.join_type == JoinType::Round)
+				group.end_type = EndType::Round; else
+				group.end_type = EndType::Square;
 			group_delta_ = std::fabs(delta_) * 0.5;
 		}
 		else
-			group.is_reversed_ = (area < 0);
-		if (group.is_reversed_) group_delta_ = -delta_;
+			group.is_reversed = (area < 0);
+		if (group.is_reversed) group_delta_ = -delta_;
 		else group_delta_ = delta_;
 
 		if (!IsSafeOffset(r, static_cast<int64_t>(std::ceil(group_delta_))))
@@ -425,22 +426,24 @@ void ClipperOffset::DoGroupOffset(Group& group)
 	} 
 	else
 	{
-		group.is_reversed_ = false;
+		group.is_reversed = false;
 		group_delta_ = std::abs(delta_) * 0.5;
 	}
 
 	abs_group_delta_ = std::abs(group_delta_);
-	join_type_ = group.join_type_;
+	join_type_	= group.join_type;
+	end_type_ = group.end_type;
+
 	double arcTol = (arc_tolerance_ > floating_point_tolerance ? 
 		std::min(abs_group_delta_, arc_tolerance_) :
 		std::log10(2 + abs_group_delta_) * default_arc_tolerance); // empirically derived
 
 	//calculate a sensible number of steps (for 360 deg for the given offset
-	if (group.join_type_ == JoinType::Round || group.end_type_ == EndType::Round)
+	if (group.join_type == JoinType::Round || group.end_type == EndType::Round)
 		steps_per_rad_ = 0.5 / std::acos(1 - arcTol / abs_group_delta_);
 
 	Paths64::const_iterator path_iter;
-	for(path_iter = group.paths_in_.cbegin(); path_iter != group.paths_in_.cend(); ++path_iter)
+	for(path_iter = group.paths_in.cbegin(); path_iter != group.paths_in.cend(); ++path_iter)
 	{
 		Path64 path = StripDuplicates(*path_iter, isClosedPath);
 		Path64::size_type cnt = path.size();
@@ -448,32 +451,41 @@ void ClipperOffset::DoGroupOffset(Group& group)
 
 		if (cnt == 1) // single point - only valid with open paths
 		{
-			group.path_ = Path64();
+			group.path = Path64();
 			//single vertex so build a circle or square ...
-			if (group.join_type_ == JoinType::Round)
+			if (group.join_type == JoinType::Round)
 			{
 				double radius = abs_group_delta_;
-				group.path_ = Ellipse(path[0], radius, radius);
+				group.path = Ellipse(path[0], radius, radius);
 			}
 			else
 			{
 				int d = (int)std::ceil(abs_group_delta_);
 				Rect64 r = Rect64(path[0].x - d, path[0].y - d, path[0].x + d, path[0].y + d);
-				group.path_ = r.AsPath();
+				group.path = r.AsPath();
 			}
-			group.paths_out_.push_back(group.path_);
+			group.paths_out.push_back(group.path);
 		}
 		else
 		{
+
+			if (cnt == 2 && group.end_type == EndType::Joined)
+			{
+				if (group.join_type == JoinType::Round)
+					end_type_ = EndType::Round;
+				else
+					end_type_ = EndType::Square;
+			}
+
 			BuildNormals(path);
-			if (group.end_type_ == EndType::Polygon) OffsetPolygon(group, path);
-			else if (group.end_type_ == EndType::Joined) OffsetOpenJoined(group, path);
-			else OffsetOpenPath(group, path, group.end_type_);
+			if (end_type_ == EndType::Polygon) OffsetPolygon(group, path);
+			else if (end_type_ == EndType::Joined) OffsetOpenJoined(group, path);
+			else OffsetOpenPath(group, path);
 		}
 	}
-	solution.reserve(solution.size() + group.paths_out_.size());
-	copy(group.paths_out_.begin(), group.paths_out_.end(), back_inserter(solution));
-	group.paths_out_.clear();
+	solution.reserve(solution.size() + group.paths_out.size());
+	copy(group.paths_out.begin(), group.paths_out.end(), back_inserter(solution));
+	group.paths_out.clear();
 }
 
 Paths64 ClipperOffset::Execute(double delta)
@@ -482,12 +494,12 @@ Paths64 ClipperOffset::Execute(double delta)
 	solution.clear();
 	if (groups_.size() == 0) return solution;
 
-	if (std::abs(delta) < default_arc_tolerance)
+	if (std::abs(delta) < 0.5)
 	{
 		for (const Group& group : groups_)
 		{
-			solution.reserve(solution.size() + group.paths_in_.size());
-			copy(group.paths_in_.begin(), group.paths_in_.end(), back_inserter(solution));
+			solution.reserve(solution.size() + group.paths_in.size());
+			copy(group.paths_in.begin(), group.paths_in.end(), back_inserter(solution));
 		}
 		return solution;
 	}
@@ -510,9 +522,9 @@ Paths64 ClipperOffset::Execute(double delta)
 	Clipper64 c;
 	c.PreserveCollinear = false;
 	//the solution should retain the orientation of the input
-	c.ReverseSolution = reverse_solution_ != groups_[0].is_reversed_;
+	c.ReverseSolution = reverse_solution_ != groups_[0].is_reversed;
 	c.AddSubject(solution);
-	if (groups_[0].is_reversed_)
+	if (groups_[0].is_reversed)
 		c.Execute(ClipType::Union, FillRule::Negative, solution);
 	else
 		c.Execute(ClipType::Union, FillRule::Positive, solution);
