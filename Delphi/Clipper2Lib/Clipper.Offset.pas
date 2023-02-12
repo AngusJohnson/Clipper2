@@ -2,7 +2,7 @@ unit Clipper.Offset;
 
 (*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  10 February 2023                                                *
+* Date      :  12 February 2023                                                *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2023                                         *
 * Purpose   :  Path Offset (Inflate/Shrink)                                    *
@@ -41,6 +41,7 @@ type
     fAbsGrpDelta  : Double;
     fMinLenSqrd   : double;
     fJoinType     : TJoinType;
+    fEndType      : TEndType;
     fTmpLimit     : Double;
     fMiterLimit   : Double;
     fArcTolerance : Double;
@@ -67,7 +68,7 @@ type
     procedure DoGroupOffset(group: TGroup);
     procedure OffsetPolygon;
     procedure OffsetOpenJoined;
-    procedure OffsetOpenPath(endType: TEndType);
+    procedure OffsetOpenPath;
   public
     constructor Create(miterLimit: double = 2.0;
       arcTolerance: double = 0.0;
@@ -273,12 +274,12 @@ end;
 
 procedure TClipperOffset.DoGroupOffset(group: TGroup);
 var
-  i, len, lowestIdx: Integer;
+  i,j, len, lowestIdx: Integer;
   r, arcTol, area: Double;
-  IsClosedPaths: Boolean;
+  rec: TRect64;
+  isJoined: Boolean;
 begin
-  IsClosedPaths := (group.endType in [etPolygon, etJoined]);
-  if IsClosedPaths then
+  if group.endType = etPolygon then
   begin
     // the lowermost polygon must be an outer polygon. So we can use that as the
     // designated orientation for outer polygons (needed for tidy-up clipping)
@@ -286,17 +287,8 @@ begin
     if lowestIdx < 0 then Exit;
     // nb: don't use the default orientation here ...
     area := Clipper.Core.Area(group.paths[lowestIdx]);
-    if area = 0 then
-    begin
-      if group.endType = etPolygon then Exit;
-      group.reversed := false;
-      IsClosedPaths := false;
-      if group.joinType = jtRound then
-        group.endType := etRound else
-        group.endType := etSquare;
-      fGroupDelta := Abs(fDelta) * 0.5;
-    end else
-      group.reversed := (area < 0);
+    if area = 0 then Exit;
+    group.reversed := (area < 0);
     if group.reversed then fGroupDelta := -fDelta
     else fGroupDelta := fDelta;
   end else
@@ -306,26 +298,29 @@ begin
   end;
   fAbsGrpDelta := Abs(fGroupDelta);
   fJoinType := group.joinType;
-  if fArcTolerance > 0 then
-    arcTol := Min(fAbsGrpDelta, fArcTolerance) else
-    arcTol := Log10(2 + fAbsGrpDelta) * 0.25; // empirically derived
+  fEndType := group.endType;
 
   // calculate a sensible number of steps (for 360 deg for the given offset
   if (group.joinType = jtRound) or (group.endType = etRound) then
   begin
-    // get steps per 180 degrees (see offset_triginometry2.svg)
-    //steps := PI / ArcCos(1 - arcTol / fAbsGrpDelta);
-    //fStepsPerRad := steps  * InvTwoPi;
+		// arcTol - when fArcTolerance is undefined (0), the amount of
+		// curve imprecision that's allowed is based on the size of the
+		// offset (delta). Obviously very large offsets will almost always
+		// require much less precision. See also offset_triginometry2.svg
+    if fArcTolerance > 0.01 then
+      arcTol := Min(fAbsGrpDelta, fArcTolerance) else
+      arcTol := Log10(2 + fAbsGrpDelta) * 0.25; // empirically derived
     fStepsPerRad := 0.5 / ArcCos(1 - arcTol / fAbsGrpDelta);
   end;
 
   fOutPaths := nil;
+  isJoined := fEndType in [etPolygon, etJoined];
   for i := 0 to High(group.paths) do
   begin
-    fInPath := StripDuplicates(group.paths[i], IsClosedPaths);
+    fInPath := StripDuplicates(group.paths[i], IsJoined);
     len := Length(fInPath);
-    if (fInPath = nil) or
-      ((group.endType in [etPolygon, etJoined]) and (len < 3)) then Continue;
+    if (len = 0) or ((len < 3) and (fEndType = etPolygon)) then
+      Continue;
 
     fNorms := nil;
     fOutPath := nil;
@@ -334,35 +329,34 @@ begin
 		//if a single vertex then build a circle or a square ...
     if len = 1 then
     begin
+      if fGroupDelta < 1 then Continue;
       if (group.endType = etRound) then
       begin
         r := fAbsGrpDelta;
-				if (group.endType = etPolygon) then
-          r := r * 0.5;
         with fInPath[0] do
           fOutPath := Path64(Ellipse(RectD(X-r, Y-r, X+r, Y+r)));
       end else
       begin
-        SetLength(fOutPath, 4);
+        j := Round(fGroupDelta);
         with fInPath[0] do
-        begin
-          fOutPath[0] := Point64(X-fGroupDelta,Y-fGroupDelta);
-          fOutPath[1] := Point64(X+fGroupDelta,Y-fGroupDelta);
-          fOutPath[2] := Point64(X+fGroupDelta,Y+fGroupDelta);
-          fOutPath[3] := Point64(X-fGroupDelta,Y+fGroupDelta);
-        end;
+          rec := Rect64(X -j, Y -j, X+j, Y+j);
+        fOutPath := rec.AsPath;
       end;
       AppendPath(fOutPaths, fOutPath);
       Continue;
     end else
     begin
+      if (len = 2) and (group.endType = etJoined) then
+      begin
+        if fJoinType = jtRound then
+          fEndType := etRound else
+          fEndType := etSquare;
+      end;
+
       BuildNormals;
-      if group.endType = etPolygon then
-        OffsetPolygon
-      else if group.endType = etJoined then
-        OffsetOpenJoined
-      else
-        OffsetOpenPath(group.endType);
+      if fEndType = etPolygon then OffsetPolygon
+      else if fEndType = etJoined then OffsetOpenJoined
+      else OffsetOpenPath;
     end;
 
     if fOutPathLen = 0 then Continue;
@@ -414,14 +408,14 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-procedure TClipperOffset.OffsetOpenPath(endType: TEndType);
+procedure TClipperOffset.OffsetOpenPath;
 var
   i, k, highI: integer;
 begin
   highI := high(fInPath);
 
  // do the line start cap
-  case endType of
+  case fEndType of
     etButt:
       begin
         with fInPath[0] do AddPoint(Point64(
@@ -447,7 +441,7 @@ begin
   fNorms[0] := fNorms[highI];
 
  // do the line end cap
-  case endType of
+  case fEndType of
     etButt:
       begin
         with fInPath[highI] do AddPoint(Point64(
@@ -668,7 +662,6 @@ procedure TClipperOffset.OffsetPoint(j: Integer;
   var k: integer; reversing: Boolean = false);
 var
   sinA, cosA: Double;
-  almostNoAngle, is180DegSpike: Boolean;
 begin
   if PointsEqual(fInPath[j], fInPath[k]) then
   begin
@@ -686,37 +679,35 @@ begin
   if (sinA > 1.0) then sinA := 1.0
   else if (sinA < -1.0) then sinA := -1.0;
 
-  almostNoAngle := ValueAlmostZero(cosA - 1);
-  is180DegSpike := ValueAlmostZero(cosA + 1) and reversing;
-  // when there's almost no angle of deviation or it's concave
-  if almostNoAngle or is180DegSpike or (sinA * fGroupDelta < 0) then
+  if ValueAlmostZero(cosA - 1, 0.01) then // almost straight
   begin
-    //almost no angle or concave
     AddPoint(GetPerpendic(fInPath[j], fNorms[k], fGroupDelta));
-    if not almostNoAngle then
-    begin
-      // ensure a clean self-intersection ...
-      AddPoint(fInPath[j]); // definitely needed  (#405)
-      AddPoint(GetPerpendic(fInPath[j], fNorms[j], fGroupDelta));
-    end;
   end
-  else // convex offset
+  else if (reversing and ValueAlmostZero(cosA + 1, 0.01)) or
+    (sinA * fGroupDelta < 0) then // is concave
   begin
-    if (fJoinType = jtRound) then
-      DoRound(j, k, ArcTan2(sinA, cosA))
-    else if (fJoinType = jtMiter) then
-    begin
-			// miter unless the angle is so acute the miter would exceeds ML
-      if (cosA > fTmpLimit -1) then DoMiter(j, k, cosA)
-      else DoSquare(j, k);
-    end
-    // don't bother squaring angles that deviate < ~20 degrees because
-    // squaring will be indistinguishable from mitering and just be a lot slower
-    else if (cosA > 0.9) then
-      DoMiter(j, k, cosA)
-    else
-      DoSquare(j, k);
-  end;
+    AddPoint(GetPerpendic(fInPath[j], fNorms[k], fGroupDelta));
+    // this extra point is the only (simple) way to ensure that
+    // path reversals are fully cleaned with the trailing clipper
+    AddPoint(fInPath[j]); // (#405)
+    AddPoint(GetPerpendic(fInPath[j], fNorms[j], fGroupDelta));
+  end
+  //else convex of one sort or another
+  else if (fJoinType = jtRound) then
+    DoRound(j, k, ArcTan2(sinA, cosA))
+  else if (fJoinType = jtMiter) then
+  begin
+    // miter unless the angle is so acute the miter would exceeds ML
+    if (cosA > fTmpLimit -1) then DoMiter(j, k, cosA)
+    else DoSquare(j, k);
+  end
+  // don't bother squaring angles that deviate < ~20 degrees because
+  // squaring will be indistinguishable from mitering and just be a lot slower
+  else if (cosA > 0.9) then
+    DoMiter(j, k, cosA)
+  else
+    DoSquare(j, k);
+
   k := j;
 end;
 //------------------------------------------------------------------------------

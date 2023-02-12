@@ -1,6 +1,6 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  11 February 2023                                                *
+* Date      :  12 February 2023                                                *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2023                                         *
 * Purpose   :  Path Offset (Inflate/Shrink)                                    *
@@ -278,44 +278,39 @@ void ClipperOffset::OffsetPoint(Group& group,
 	if (sin_a > 1.0) sin_a = 1.0;
 	else if (sin_a < -1.0) sin_a = -1.0;
 
-	bool almostNoAngle = AlmostZero(cos_a - 1);
-	bool is180DegSpike = AlmostZero(cos_a + 1) && reversing;
-	// when there's almost no angle of deviation or it's concave
-	if (almostNoAngle || is180DegSpike || (sin_a * group_delta_ < 0))
+	if (AlmostZero(cos_a - 1, 0.01)) // almost straight
 	{
-    //almost no angle or concave
 		group.path.push_back(GetPerpendic(path[j], norms[k], group_delta_));
-		if (!almostNoAngle)
-		{
-			// create a simple self-intersection that will be cleaned up later
-			group.path.push_back(path[j]); // definitely needed (#405)
-			group.path.push_back(GetPerpendic(path[j], norms[j], group_delta_));
-		}
 	}
-	else 
+	else if (reversing && (AlmostZero(cos_a + 1, 0.01)) ||
+		(sin_a * group_delta_ < 0)) // is concave
 	{
-		// it's convex 
-		if (join_type_ == JoinType::Round)
-			DoRound(group, path, j, k, std::atan2(sin_a, cos_a));
-		else if (join_type_ == JoinType::Miter)
-		{
-			// miter unless the angle is so acute the miter would exceeds ML
-			if (cos_a > temp_lim_ - 1) DoMiter(group, path, j, k, cos_a);
-			else DoSquare(group, path, j, k);
-		}
-		// don't bother squaring angles that deviate < ~20 degrees because
-		// squaring will be indistinguishable from mitering and just be a lot slower
-		else if (cos_a > 0.9)
-			DoMiter(group, path, j, k, cos_a);			
-		else
-			DoSquare(group, path, j, k);			
+		group.path.push_back(GetPerpendic(path[j], norms[k], group_delta_));
+		// this extra point is the only (simple) way to ensure that
+		// path reversals are fully cleaned with the trailing clipper
+		group.path.push_back(path[j]); // (#405)
+		group.path.push_back(GetPerpendic(path[j], norms[j], group_delta_));
+	}	
+	else if (join_type_ == JoinType::Round)
+		DoRound(group, path, j, k, std::atan2(sin_a, cos_a));
+	else if (join_type_ == JoinType::Miter)
+	{
+		// miter unless the angle is so acute the miter would exceeds ML
+		if (cos_a > temp_lim_ - 1) DoMiter(group, path, j, k, cos_a);
+		else DoSquare(group, path, j, k);
 	}
+	// don't bother squaring angles that deviate < ~20 degrees because
+	// squaring will be indistinguishable from mitering and just be a lot slower
+	else if (cos_a > 0.9)
+		DoMiter(group, path, j, k, cos_a);
+	else
+		DoSquare(group, path, j, k);
+
 	k = j;
 }
 
 void ClipperOffset::OffsetPolygon(Group& group, Path64& path)
 {
-	group.path.clear();
 	for (Path64::size_type i = 0, j = path.size() -1; i < path.size(); j = i, ++i)
 		OffsetPoint(group, path, i, j);
 	group.paths_out.push_back(group.path);
@@ -332,13 +327,12 @@ void ClipperOffset::OffsetOpenJoined(Group& group, Path64& path)
 	norms.erase(norms.begin());
 	NegatePath(norms);
 
+	group.path.clear();
 	OffsetPolygon(group, path);
 }
 
 void ClipperOffset::OffsetOpenPath(Group& group, Path64& path)
 {
-	group.path.clear();
-
 	// do the line start cap
 	switch (end_type_)
 	{
@@ -392,8 +386,7 @@ void ClipperOffset::OffsetOpenPath(Group& group, Path64& path)
 void ClipperOffset::DoGroupOffset(Group& group)
 {
 
-	bool isClosedPath = IsClosedPath(group.end_type);
-	if (isClosedPath)
+	if (group.end_type == EndType::Polygon)
 	{
 		//the lowermost polygon must be an outer polygon. So we can use that as the
 		//designated orientation for outer polygons (needed for tidy-up clipping)
@@ -402,18 +395,8 @@ void ClipperOffset::DoGroupOffset(Group& group)
 		GetBoundsAndLowestPolyIdx(group.paths_in, r, idx);
 		if (idx < 0) return;
 		double area = Area(group.paths_in[idx]);
-		if (area == 0)
-		{
-			if (group.end_type == EndType::Polygon) return;
-			group.is_reversed = false;
-			isClosedPath = false;
-			if (group.join_type == JoinType::Round)
-				group.end_type = EndType::Round; else
-				group.end_type = EndType::Square;
-			group_delta_ = std::fabs(delta_) * 0.5;
-		}
-		else
-			group.is_reversed = (area < 0);
+		if (area == 0) return;
+		group.is_reversed = (area < 0);
 		if (group.is_reversed) group_delta_ = -delta_;
 		else group_delta_ = delta_;
 
@@ -434,24 +417,34 @@ void ClipperOffset::DoGroupOffset(Group& group)
 	join_type_	= group.join_type;
 	end_type_ = group.end_type;
 
-	double arcTol = (arc_tolerance_ > floating_point_tolerance ? 
-		std::min(abs_group_delta_, arc_tolerance_) :
-		std::log10(2 + abs_group_delta_) * default_arc_tolerance); // empirically derived
-
 	//calculate a sensible number of steps (for 360 deg for the given offset
 	if (group.join_type == JoinType::Round || group.end_type == EndType::Round)
+	{
+		// arcTol - when arc_tolerance_ is undefined (0), the amount of 
+		// curve imprecision that's allowed is based on the size of the 
+		// offset (delta). Obviously very large offsets will almost always 
+		// require much less precision. See also offset_triginometry2.svg
+		double arcTol = (arc_tolerance_ > floating_point_tolerance ?
+			std::min(abs_group_delta_, arc_tolerance_) :
+			std::log10(2 + abs_group_delta_) * default_arc_tolerance); 
 		steps_per_rad_ = 0.5 / std::acos(1 - arcTol / abs_group_delta_);
+	}
 
+	bool is_joined =
+		(end_type_ == EndType::Polygon) ||
+		(end_type_ == EndType::Joined);
 	Paths64::const_iterator path_iter;
 	for(path_iter = group.paths_in.cbegin(); path_iter != group.paths_in.cend(); ++path_iter)
 	{
-		Path64 path = StripDuplicates(*path_iter, isClosedPath);
+		Path64 path = StripDuplicates(*path_iter, is_joined);
 		Path64::size_type cnt = path.size();
-		if (cnt == 0) continue;
+		if (cnt == 0 || ((cnt < 3) && group.end_type == EndType::Polygon)) 
+			continue;
 
+		group.path.clear();
 		if (cnt == 1) // single point - only valid with open paths
 		{
-			group.path = Path64();
+			if (group_delta_ < 1) continue;
 			//single vertex so build a circle or square ...
 			if (group.join_type == JoinType::Round)
 			{
@@ -468,8 +461,7 @@ void ClipperOffset::DoGroupOffset(Group& group)
 		}
 		else
 		{
-
-			if (cnt == 2 && group.end_type == EndType::Joined)
+			if ((cnt == 2) && (group.end_type == EndType::Joined))
 			{
 				if (group.join_type == JoinType::Round)
 					end_type_ = EndType::Round;
