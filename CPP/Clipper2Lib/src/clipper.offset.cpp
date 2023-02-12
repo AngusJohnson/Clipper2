@@ -282,7 +282,7 @@ void ClipperOffset::OffsetPoint(Group& group,
 	{
 		group.path.push_back(GetPerpendic(path[j], norms[k], group_delta_));
 	}
-	else if (reversing && (AlmostZero(cos_a + 1, 0.01)) ||
+	else if ((reversing && AlmostZero(cos_a + 1, 0.01)) ||
 		(sin_a * group_delta_ < 0)) // is concave
 	{
 		group.path.push_back(GetPerpendic(path[j], norms[k], group_delta_));
