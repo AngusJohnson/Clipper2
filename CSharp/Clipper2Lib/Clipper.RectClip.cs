@@ -7,6 +7,7 @@
 * License   :  http://www.boost.org/LICENSE_1_0.txt                            *
 *******************************************************************************/
 
+#nullable enable
 using System;
 using System.Collections.Generic;
 using System.Linq;

@@ -156,8 +156,12 @@ namespace Clipper2Lib
 
   internal struct HorzSegSorter : IComparer<HorzSegment>
   {
-    public int Compare(HorzSegment hs1, HorzSegment hs2)
+    public int Compare(HorzSegment? hs1, HorzSegment? hs2)
     {
+      if (hs1 == null || hs2 == null)
+      {
+        return 0;
+      }
       if (hs1.rightOp == null)
       {
         return hs2.rightOp == null ? 0 : 1;
