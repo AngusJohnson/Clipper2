@@ -400,8 +400,8 @@ end;
 
 function TRect64.Intersects(const rec: TRect64): Boolean;
 begin
-  Result := (Max(Left, rec.Left) < Min(Right, rec.Right)) and
-    (Max(Top, rec.Top) < Min(Bottom, rec.Bottom));
+  Result := (Max(Left, rec.Left) <= Min(Right, rec.Right)) and
+    (Max(Top, rec.Top) <= Min(Bottom, rec.Bottom));
 end;
 //------------------------------------------------------------------------------
 
@@ -468,8 +468,8 @@ end;
 
 function TRectD.Intersects(const rec: TRectD): Boolean;
 begin
-  Result := (Max(Left, rec.Left) < Min(Right, rec.Right)) and
-    (Max(Top, rec.Top) < Min(Bottom, rec.Bottom));
+  Result := (Max(Left, rec.Left) <= Min(Right, rec.Right)) and
+    (Max(Top, rec.Top) <= Min(Bottom, rec.Bottom));
 end;
 //------------------------------------------------------------------------------
 
@@ -1465,7 +1465,7 @@ begin
         inc(p);
       end;
     end;
-  if Result.Left > Result.Right then Result := NullRect64;
+  if Result.Left = MaxInt64 then Result := NullRect64;
 end;
 //------------------------------------------------------------------------------
 
@@ -1488,7 +1488,7 @@ begin
         inc(p);
       end;
     end;
-  if Result.Left >= Result.Right then Result := nullRectD;
+  if Result.Left = MaxDouble then Result := NullRectD;
 end;
 //------------------------------------------------------------------------------
 

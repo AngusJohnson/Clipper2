@@ -1,6 +1,6 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  6 February 2023                                                 *
+* Date      :  12 February 2023                                                *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2023                                         *
 * Purpose   :  This module exports the Clipper2 Library (ie DLL/so)            *
@@ -159,9 +159,9 @@ EXTERN_DLL_EXPORT CPathsD InflatePathsD(const CPathsD paths,
 
 // RectClip & RectClipLines:
 EXTERN_DLL_EXPORT CPaths64 RectClip64(const CRect64& rect,
-  const CPaths64 paths);
+  const CPaths64 paths, bool convex_only = false);
 EXTERN_DLL_EXPORT CPathsD RectClipD(const CRectD& rect,
-  const CPathsD paths, int precision = 2);
+  const CPathsD paths, int precision = 2, bool convex_only = false);
 EXTERN_DLL_EXPORT CPaths64 RectClipLines64(const CRect64& rect,
   const CPaths64 paths);
 EXTERN_DLL_EXPORT CPathsD RectClipLinesD(const CRectD& rect,
@@ -380,54 +380,28 @@ EXTERN_DLL_EXPORT CPathsD InflatePathsD(const CPathsD paths,
 }
 
 EXTERN_DLL_EXPORT CPaths64 RectClip64(const CRect64& rect,
-  const CPaths64 paths)
+  const CPaths64 paths, bool convex_only)
 {
   if (CRectIsEmpty(rect) || !paths) return nullptr;
   Rect64 r64 = CRectToRect(rect);
   class RectClip rc(r64);
   Paths64 pp = ConvertCPaths64(paths);
-  Paths64 result;
-  result.reserve(pp.size());
-  for (const Path64& p : pp)
-  {
-    Rect64 pathRec = GetBounds(p);
-    if (!r64.Intersects(pathRec)) continue;
-    
-    if (r64.Contains(pathRec))
-      result.push_back(p);
-    else
-    {
-      Path64 p2 = rc.Execute(p);
-      if (!p2.empty()) result.push_back(std::move(p2));
-    }
-  }
+  Paths64 result = rc.Execute(pp, convex_only);
   return CreateCPaths64(result);
 }
 
 EXTERN_DLL_EXPORT CPathsD RectClipD(const CRectD& rect,
-  const CPathsD paths, int precision)
+  const CPathsD paths, int precision, bool convex_only)
 {
   if (CRectIsEmpty(rect) || !paths) return nullptr;
   if (precision < -8 || precision > 8) return nullptr;
   const double scale = std::pow(10, precision);
-  Rect64 r = ScaleRect<int64_t, double>(CRectToRect(rect), scale);
+
+  RectD r = CRectToRect(rect);
+  Rect64 rec = ScaleRect<int64_t, double>(r, scale);
   Paths64 pp = ConvertCPathsD(paths, scale);
-  class RectClip rc(r);
-  Paths64 result;
-  result.reserve(pp.size());
-  for (const Path64& p : pp)
-  {
-    Rect64 pathRec = GetBounds(p);
-    if (!r.Intersects(pathRec)) continue;
-    
-    if (r.Contains(pathRec))
-      result.push_back(p);
-    else
-    {
-      Path64 p2 = rc.Execute(p);
-      if (!p2.empty()) result.push_back(std::move(p2));
-    }
-  }
+  class RectClip rc(rec);
+  Paths64 result = rc.Execute(pp, convex_only);
   return CreateCPathsD(result, 1/scale);
 }
 
@@ -438,52 +412,20 @@ EXTERN_DLL_EXPORT CPaths64 RectClipLines64(const CRect64& rect,
   Rect64 r = CRectToRect(rect);
   class RectClipLines rcl (r);
   Paths64 pp = ConvertCPaths64(paths);
-  Paths64 result;
-  result.reserve(pp.size());
-
-  for (const Path64& p : pp)
-  {
-    Rect64 pathRec = GetBounds(p);
-    if (!r.Intersects(pathRec)) continue;
-    
-    if (r.Contains(pathRec))
-      result.push_back(p);
-    else
-    {
-      Paths64 pp2 = rcl.Execute(p);
-      if (!pp2.empty())
-        result.insert(result.end(), pp2.begin(), pp2.end());
-    }
-  }
+  Paths64 result = rcl.Execute(pp);
   return CreateCPaths64(result);
 }
 
 EXTERN_DLL_EXPORT CPathsD RectClipLinesD(const CRectD& rect, 
   const CPathsD paths, int precision)
 {
-  Paths64 result;
   if (CRectIsEmpty(rect) || !paths) return nullptr;
   if (precision < -8 || precision > 8) return nullptr;
   const double scale = std::pow(10, precision);
   Rect64 r = ScaleRect<int64_t, double>(CRectToRect(rect), scale);
   class RectClipLines rcl(r);
   Paths64 pp = ConvertCPathsD(paths, scale);
-
-  result.reserve(pp.size());
-  for (const Path64& p : pp)
-  {
-    Rect64 pathRec = GetBounds(p);
-    if (!r.Intersects(pathRec)) continue;
-    
-    if (r.Contains(pathRec))
-      result.push_back(p);
-    else
-    {
-      Paths64 pp2 = rcl.Execute(p);
-      if (pp2.empty()) continue;
-      result.insert(result.end(), pp2.begin(), pp2.end());
-    }
-  }
+  Paths64 result = rcl.Execute(pp);
   return CreateCPathsD(result, 1/scale);
 }
 

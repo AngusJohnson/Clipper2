@@ -2,7 +2,7 @@ unit Clipper.RectClip;
 
 (*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  8 February 2023                                                 *
+* Date      :  13 February 2023                                                *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2023                                         *
 * Purpose   :  FAST rectangular clipping                                       *
@@ -45,7 +45,7 @@ type
     fStartLocs      : TList;
     procedure DisposeResults;
     procedure CheckEdges;
-    procedure TidyEdges(idx: integer; var cw, ccw: TOutPtArray);
+    procedure TidyEdgePair(idx: integer; var cw, ccw: TOutPtArray);
     function Add(const pt: TPoint64; startNewPath: Boolean = false): POutPt2;
       {$IFDEF INLINING} inline; {$ENDIF}
     procedure AddCorner(prev, curr: TLocation); overload;
@@ -578,15 +578,21 @@ begin
 
     fPathBounds := GetBounds(path);
     if not fRect.Intersects(fPathBounds) then
-      Continue; // the path must be completely outside fRect
-    // Apart from that, we can't be sure whether the path
-    // is completely outside or completed inside or intersects
-    // fRect, simply by comparing path bounds with fRect.
+      Continue // the path must be completely outside fRect
+    else if fRect.Contains(fPathBounds) then
+    begin
+      // the path must be completely inside fRect
+      AppendPath(Result, path);
+      Continue;
+    end;
 
     ExecuteInternal(path);
-    CheckEdges;
-    for j := 0 to 3 do
-      TidyEdges(j, fEdges[j*2], fEdges[j*2 +1]);
+    if not convexOnly then
+    begin
+      CheckEdges;
+      for j := 0 to 3 do
+        TidyEdgePair(j, fEdges[j*2], fEdges[j*2 +1]);
+    end;
 
     for j := 0 to fResults.Count -1 do
       AppendPath(Result, GetPath(j));
@@ -835,7 +841,7 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-procedure TRectClip.TidyEdges(idx: integer; var cw, ccw: TOutPtArray);
+procedure TRectClip.TidyEdgePair(idx: integer; var cw, ccw: TOutPtArray);
 var
   isHorz, cwIsTowardLarger: Boolean;
   i, j, highJ, newIdx: integer;

@@ -357,8 +357,8 @@ namespace Clipper2Lib
 
     public bool Intersects(Rect64 rec)
     {
-      return (Math.Max(left, rec.left) < Math.Min(right, rec.right)) &&
-        (Math.Max(top, rec.top) < Math.Min(bottom, rec.bottom));
+      return (Math.Max(left, rec.left) <= Math.Min(right, rec.right)) &&
+        (Math.Max(top, rec.top) <= Math.Min(bottom, rec.bottom));
     }
 
     public Path64 AsPath()

@@ -20,7 +20,7 @@ void System(const std::string &filename);
 
 int main()
 {  
-  bool test_polytree = false;
+  bool test_polytree = false;//true;// 
   srand((unsigned)time(0));
   DoBenchmark(1000, 7000, 1000, test_polytree);
   //RecheckLastBenchmark(test_polytree);
@@ -36,8 +36,8 @@ int main()
 
 void RecheckLastBenchmark(bool use_polytree)
 {
-  ClipType ct = ClipType::Intersection;
-  FillRule fr = FillRule::NonZero;//EvenOdd;//Positive;//
+  ClipType ct;
+  FillRule fr;
 
   Paths64 subject, subj_open, clip, solution;
   int64_t area, count;

@@ -1,12 +1,13 @@
 ﻿/*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  10 February 2023                                                *
+* Date      :  16 February 2023                                                *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2023                                         *
 * Purpose   :  FAST rectangular clipping                                       *
 * License   :  http://www.boost.org/LICENSE_1_0.txt                            *
 *******************************************************************************/
 
+#nullable enable
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -620,15 +621,18 @@ namespace Clipper2Lib
         pathBounds_ = Clipper.GetBounds(path);
         if (!rect_.Intersects(pathBounds_))
           continue; // the path must be completely outside fRect
-        // Apart from that, we can't be sure whether the path
-        // is completely outside or completed inside or intersects
-        // fRect, simply by comparing path bounds with fRect.
+        else if (rect_.Contains(pathBounds_))
+        {
+          // the path must be completely inside rect_
+          result.Add(path);
+          continue;
+        }
         ExecuteInternal(path);
         if (!convexOnly)
         {
           CheckEdges();
           for (int i = 0; i < 4; ++i)
-            TidyEdges(i, edges_[i * 2], edges_[i * 2 + 1]);
+            TidyEdgePair(i, edges_[i * 2], edges_[i * 2 + 1]);
         }
 
         foreach (OutPt2? op in results_)
@@ -704,7 +708,7 @@ namespace Clipper2Lib
       }
     }
 
-    private void TidyEdges(int idx, List<OutPt2?> cw, List<OutPt2?> ccw)
+    private void TidyEdgePair(int idx, List<OutPt2?> cw, List<OutPt2?> ccw)
     {
       if (ccw.Count == 0) return;
       bool isHorz = ((idx == 1) || (idx == 3));
@@ -922,7 +926,7 @@ namespace Clipper2Lib
       if (rect_.IsEmpty()) return result;
       foreach (Path64 path in paths)
       {
-        if (path.Count < 3) continue;
+        if (path.Count < 2) continue;
         pathBounds_ = Clipper.GetBounds(path);
         if (!rect_.Intersects(pathBounds_))
           continue; // the path must be completely outside fRect

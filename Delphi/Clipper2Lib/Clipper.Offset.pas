@@ -2,7 +2,7 @@ unit Clipper.Offset;
 
 (*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  12 February 2023                                                *
+* Date      :  15 February 2023                                                *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2023                                         *
 * Purpose   :  Path Offset (Inflate/Shrink)                                    *
@@ -61,8 +61,7 @@ type
     procedure DoSquare(j, k: Integer);
     procedure DoMiter(j, k: Integer; cosA: Double);
     procedure DoRound(j, k: integer; angle: double);
-    procedure OffsetPoint(j: Integer;
-      var k: integer; reversing: Boolean = false);
+    procedure OffsetPoint(j: Integer; var k: integer);
 
     procedure BuildNormals;
     procedure DoGroupOffset(group: TGroup);
@@ -456,7 +455,7 @@ begin
   // offset the left side going back
   k := 0;
   for i := highI downto 1 do //and stop at 1!
-    OffsetPoint(i, k, true);
+    OffsetPoint(i, k);
 end;
 //------------------------------------------------------------------------------
 
@@ -658,8 +657,7 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-procedure TClipperOffset.OffsetPoint(j: Integer;
-  var k: integer; reversing: Boolean = false);
+procedure TClipperOffset.OffsetPoint(j: Integer; var k: integer);
 var
   sinA, cosA: Double;
 begin
@@ -679,11 +677,12 @@ begin
   if (sinA > 1.0) then sinA := 1.0
   else if (sinA < -1.0) then sinA := -1.0;
 
+
   if ValueAlmostZero(cosA - 1, 0.01) then // almost straight
   begin
     AddPoint(GetPerpendic(fInPath[j], fNorms[k], fGroupDelta));
   end
-  else if (reversing and ValueAlmostZero(cosA + 1, 0.01)) or
+  else if not ValueAlmostZero(cosA + 1, 0.01) and
     (sinA * fGroupDelta < 0) then // is concave
   begin
     AddPoint(GetPerpendic(fInPath[j], fNorms[k], fGroupDelta));

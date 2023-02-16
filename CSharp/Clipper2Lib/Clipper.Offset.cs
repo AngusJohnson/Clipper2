@@ -1,6 +1,6 @@
 ﻿/*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  12 February 2023                                                *
+* Date      :  15 February 2023                                                *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2023                                         *
 * Purpose   :  Path Offset (Inflate/Shrink)                                    *
@@ -314,21 +314,21 @@ namespace Clipper2Lib
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private void DoRound(Group group, Path64 path, int j, int k, double angle)
     {
-      // even though angle may be negative this is a convex join
       Point64 pt = path[j];
-      PointD offDist = new PointD(_normals[k].x * _group_delta, _normals[k].y * _group_delta);
-      if (j == k) offDist.Negate();
-      group.outPath.Add(new Point64(pt.X + offDist.x, pt.Y + offDist.y));
-
-      int steps = Math.Max(2, (int) Math.Floor(_stepsPerRad * Math.Abs(angle)));
-      double stepSin = Math.Sin(angle / steps);
-      double stepCos = Math.Cos(angle / steps);
-
-      for (int i = 1; i < steps; i++) // ie 1 less than steps
+      PointD offsetVec = new PointD(_normals[k].x * _group_delta, _normals[k].y * _group_delta);
+      if (j == k) offsetVec.Negate();
+      group.outPath.Add(new Point64(pt.X + offsetVec.x, pt.Y + offsetVec.y));
+      if (angle > -Math.PI + 0.01) // avoid 180deg concave
       {
-        offDist = new PointD(offDist.x * stepCos - stepSin * offDist.y,
-            offDist.x * stepSin + offDist.y * stepCos);
-        group.outPath.Add(new Point64(pt.X + offDist.x, pt.Y + offDist.y));
+        int steps = Math.Max(2, (int) Math.Floor(_stepsPerRad * Math.Abs(angle)));
+        double stepSin = Math.Sin(angle / steps);
+        double stepCos = Math.Cos(angle / steps);
+        for (int i = 1; i < steps; i++) // ie 1 less than steps
+        {
+          offsetVec = new PointD(offsetVec.x * stepCos - stepSin * offsetVec.y,
+              offsetVec.x * stepSin + offsetVec.y * stepCos);
+          group.outPath.Add(new Point64(pt.X + offsetVec.x, pt.Y + offsetVec.y));
+        }
       }
       group.outPath.Add(GetPerpendic(pt, _normals[j]));
     }
@@ -362,7 +362,7 @@ namespace Clipper2Lib
       {
         group.outPath.Add(GetPerpendic(path[j], _normals[k]));
       }
-      else if ((AlmostZero(cosA + 1, 0.01) && reversing) ||
+      else if (!AlmostZero(cosA + 1, 0.01) && 
         (sinA * _group_delta < 0)) // is concave
       {
         group.outPath.Add(GetPerpendic(path[j], _normals[k]));

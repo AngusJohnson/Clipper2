@@ -6,17 +6,20 @@ program Test_DLL;
 {$APPTYPE CONSOLE}
 {$R *.res}
 
+{$DEFINE USING_CLIPPER2_SRC}
+
 uses
   Windows,
   ShellApi,
   SysUtils,
-{$IFDEF USING_CLIPPER2_SRC}
-  Clipper.Core in '..\..\Delphi\Clipper2Lib\Clipper.Core.pas',
-  Clipper.Engine in '..\..\Delphi\Clipper2Lib\Clipper.Engine.pas',
+  {$IFDEF USING_CLIPPER2_SRC}
   Clipper in '..\..\Delphi\Clipper2Lib\Clipper.pas',
-{$ENDIF}
-  SvgWriter in 'SvgWriter.pas',
-  Timer in 'Timer.pas';
+  Clipper.Core in '..\..\Delphi\Clipper2Lib\Clipper.Core.pas',
+  {$ENDIF }
+  Colors in 'Colors.pas',
+  Timer in 'Timer.pas',
+  Clipper.SVG in 'Clipper.SVG.pas';
+
 type
 
   ////////////////////////////////////////////////////////
@@ -28,11 +31,10 @@ type
   TJoinType = (jtSquare, jtRound, jtMiter);
   TEndType  = (etPolygon, etJoined, etButt, etSquare, etRound);
   //TFillRule = (frEvenOdd, frNonZero, frPositive, frNegative); // see SvgWriter
-
-//  TPoint64 = record X,Y: Int64; end;    // see SvgWriter
-//  TPath64 = array of TPoint64;          // see SvgWriter
-//  TPaths64 = array of TPath64;          // see SvgWriter
-//  TRect64 = record l,t,r,b: Int64; end; // see SvgWriter
+  //TPoint64 = record X,Y: Int64; end;    // see SvgWriter
+  //TPath64 = array of TPoint64;          // see SvgWriter
+  //TPaths64 = array of TPath64;          // see SvgWriter
+  //TRect64 = record l,t,r,b: Int64; end; // see SvgWriter
 {$ENDIF}
 
   CInt64arr = array[0..$FFFF] of Int64;
@@ -139,11 +141,11 @@ function InflatePathsD(const paths: CPathsD;
   reverse_solution: Boolean = false): CPathsD; cdecl;
   external CLIPPER2_DLL name 'InflatePathsD';
 
-function RectClip64(const rect: TRect64;
-  const paths: CPaths64): CPaths64; cdecl;
+function RectClip64(const rect: TRect64; const paths: CPaths64;
+  convexOnly: Boolean = false): CPaths64; cdecl;
   external CLIPPER2_DLL name 'RectClip64';
-function RectClipD(const rect: TRectD;
-  const paths: CPathsD; precision: integer = 2): CPathsD; cdecl;
+function RectClipD(const rect: TRectD; const paths: CPathsD;
+  precision: integer = 2; convexOnly: Boolean = false): CPathsD; cdecl;
   external CLIPPER2_DLL name 'RectClipD';
 function RectClipLines64(const rect: TRect64;
   const paths: CPaths64): CPaths64; cdecl;
@@ -495,6 +497,16 @@ begin
   WriteLn(s);
 end;
 
+procedure WriteCPaths64(p: CPaths64);
+var
+  i, len: integer;
+begin
+  len := p[0][1];
+  for i := 1 to len do
+    WriteCPath64(p[i]);
+  WriteLn('');
+end;
+
 procedure WritePath64(p: TPath64);
 var
   i,len: integer;
@@ -824,12 +836,18 @@ end;
 
 procedure Test_RectClip64(edgeCnt: integer);
 var
-  sub, clp: TPaths64;
+  i, sol2_len, rec_margin: Integer;
+  sub, clp, sol1, sol2: TPaths64;
   csub_local: CPaths64;
   csol_extern: CPaths64;
+  penClr, fillClr: TColor32;
+  frac: Double;
   rec: TRect64;
+  fillrule: TFillRule;
   svg: TSvgWriter;
 begin
+    fillrule := frEvenOdd;
+
     // setup
     WriteLn(#10'Testing RectClip64:');
     SetLength(sub, 1);
@@ -837,29 +855,78 @@ begin
     sub[0] := MakeRandomPath(displayWidth, displayHeight, edgeCnt);
     csub_local := TPaths64ToCPaths64(sub);
 
-    rec.Left := 80;
-    rec.Top := 80;
-    rec.Right := displayWidth - 80;
-    rec.Bottom := displayHeight -80;
+    rec_margin := displayHeight div 3;
+    rec.Left := rec_margin;
+    rec.Top := rec_margin;
+    rec.Right := displayWidth - rec_margin;
+    rec.Bottom := displayHeight -rec_margin;
 
-    // do the DLL operation
-    csol_extern := RectClip64(rec, csub_local);
+    // display 'sub' and 'rec' on the console
+    WriteLn(#10'  subject:');
+    WritePath64(sub[0]);
 
-    // optionally display result on the console
-    //WriteCPaths64(csol_extern);
+    // display 'rec' on the console
+    WriteLn(#10'  rect path:');
+    WritePath64(rec.AsPath);
 
-    // finally, display and clean up
+    // do the DLL operation (twice :))
+    csol_extern := RectClip64(rec, csub_local, true);
+    sol1 := CPaths64ToPaths64(csol_extern);
+    DisposeExportedCPaths64(csol_extern);
+
+    csol_extern := RectClip64(rec, csub_local, false);
+    sol2 := CPaths64ToPaths64(csol_extern);
+
+    // display result on the console
+    WriteLn(#10'  solution:');
+    WriteCPaths64(csol_extern);
+
+    // display and clean up
+
+    sol2_len := Length(sol2);
+    if sol2_len = 0 then
+      frac := 0 else
+      frac := 1/sol2_len;
+
+    penClr := RainbowColor(frac, 92);
+    fillClr := (penClr and $FFFFFF) or $20000000;
 
     SetLength(clp, 1);
     clp[0] := RectToPath64(rec);
 
-    svg := TSvgWriter.Create(frNonZero);
+    svg := TSvgWriter.Create(fillrule);
     try
       AddSubject(svg, sub);
       AddClip(svg, clp);
-      AddSolution(svg, CPaths64ToPaths64(csol_extern));
-      SaveSvg(svg, 'RectClip64.svg', displayWidth, displayHeight);
-      ShowSvgImage('RectClip64.svg');
+
+      // display the unclipped paths
+      SaveSvg(svg, 'RectClip64_1.svg', displayWidth, displayHeight);
+      ShowSvgImage('RectClip64_1.svg');
+
+      // display the first RectClip operation (ignores concavity)
+      AddSolution(svg, sol1);
+      SaveSvg(svg, 'RectClip64_2.svg', displayWidth, displayHeight);
+      ShowSvgImage('RectClip64_2.svg');
+
+      svg.ClearPaths;
+      // display the second RectClip operation (manages convexity)
+      AddSubject(svg, sub);
+      AddClip(svg, clp);
+      AddSolution(svg, sol2);
+      SaveSvg(svg, 'RectClip64_3.svg', displayWidth, displayHeight);
+      ShowSvgImage('RectClip64_3.svg');
+
+      svg.ClearPaths;
+      // display the second RectClip operation (manages convexity)
+      // but this time showing solutions with multi-colored paths
+      AddSubject(svg, sub);
+      AddClip(svg, clp);
+      for i := 0 to sol2_len -1 do
+        svg.AddPath(sol2[i], false, fillClr, penClr, 1.5, false);
+
+      SaveSvg(svg, 'RectClip64_4.svg', displayWidth, displayHeight);
+      ShowSvgImage('RectClip64_4.svg');
+
     finally
       svg.Free;
     end;
@@ -989,12 +1056,12 @@ var
 begin
   Randomize;
   Test_Version();
-  Test_BooleanOp64(50);
-  Test_BooleanOpD(75);
-  Test_BooleanOpPtD(20);
-  Test_InflatePaths64(-10);
+//  Test_BooleanOp64(50);
+//  Test_BooleanOpD(75);
+//  Test_BooleanOpPtD(20);
+//  Test_InflatePaths64(-10);
   Test_RectClip64(25);
-  Test_RectClipLines64(25);
+//  Test_RectClipLines64(25);
   //Test_Performance(1, 5); // 1000 t0 5000
   //Test_MegaStress(10000);
 

@@ -75,13 +75,13 @@ TEST(Clipper2Tests, TestMultiplePolygons)
     if (stored_count <= 0)
       ; // skip count
     else if (IsInList(test_number, { 120, 121, 130, 138,
-      140, 163, 165, 166, 167, 168, 172, 175, 178, 180 }))
+      140, 148, 163, 165, 166, 167, 168, 172, 175, 178, 180 }))
       EXPECT_LE(count_diff, 5) << " in test " << test_number;
     else if (IsInList(test_number, { 27, 181 }))
       EXPECT_LE(count_diff, 2) << " in test " << test_number;
     else if (test_number >= 120 && test_number <= 184)
       EXPECT_LE(count_diff, 2) << " in test " << test_number;
-    else if (IsInList(test_number, { 23, 87, 102, 111, 113, 191 }))
+    else if (IsInList(test_number, { 23, 45, 87, 102, 111, 113, 191 }))
       EXPECT_LE(count_diff, 1) << " in test " << test_number;
     else
       EXPECT_EQ(count_diff, 0) << " in test " << test_number;

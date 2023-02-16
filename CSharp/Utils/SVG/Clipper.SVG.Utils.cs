@@ -6,63 +6,68 @@
 * License   :  http://www.boost.org/LICENSE_1_0.txt                            *
 *******************************************************************************/
 
+using System;
 using System.IO;
+using System.Runtime.InteropServices;
 
 namespace Clipper2Lib
 {
-
   public static class SvgUtils
   {
-
     public static void AddCaption(SvgWriter svg, string caption, int x, int y)
     {
       svg.AddText(caption, x, y, 14);
     }
 
-    public static void AddSubject(SvgWriter svg, Paths64 paths,
-      bool is_closed = true, bool is_joined = true)
+    public static void AddSubject(SvgWriter svg, Paths64 paths)
     {
-      if (!is_closed)
-        svg.AddPaths(paths, !is_joined, 0x0, 0xCCB3B3DA, 0.8);
-      else
-        svg.AddPaths(paths, false, 0x1800009C, 0xCCB3B3DA, 0.8);
+        svg.AddClosedPaths(paths, 0x1800009C, 0xAAB3B3DA, 0.8);
     }
 
-    public static void AddSubject(SvgWriter svg, PathsD paths,
-      bool is_closed = true, bool is_joined = true)
+    public static void AddOpenSubject(SvgWriter svg, Paths64 paths)
     {
-      if (!is_closed)
-        svg.AddPaths(paths, !is_joined, 0x0, 0xCCB3B3DA, 0.8);
-      else
-        svg.AddPaths(paths, false, 0x1800009C, 0xCCB3B3DA, 0.8);
+        svg.AddOpenPaths(paths, 0xAAB3B3DA, 0.8);
+    }
+
+    public static void AddSubject(SvgWriter svg, PathsD paths)
+    {
+        svg.AddClosedPaths(paths, 0x1800009C, 0xAAB3B3DA, 0.8);
+    }
+
+    public static void AddOpenSubject(SvgWriter svg, PathsD paths)
+    {
+        svg.AddOpenPaths(paths, 0xAAB3B3DA, 1.2);
     }
 
     public static void AddClip(SvgWriter svg, Paths64 paths)
     {
-      svg.AddPaths(paths, false, 0x129C0000, 0xCCFFA07A, 0.8);
+      svg.AddClosedPaths(paths, 0x129C0000, 0xCCFFA07A, 0.8);
     }
 
     public static void AddClip(SvgWriter svg, PathsD paths)
     {
-      svg.AddPaths(paths, false, 0x129C0000, 0xCCFFA07A, 0.8);
+      svg.AddClosedPaths(paths, 0x129C0000, 0xCCFFA07A, 0.8);
     }
 
     public static void AddSolution(SvgWriter svg, Paths64 paths,
       bool show_coords, bool is_closed = true, bool is_joined = true)
     {
-      if (!is_closed)
-        svg.AddPaths(paths, !is_joined, 0x0, 0xFF003300,2.2, show_coords);
-      else
-        svg.AddPaths(paths, false, 0x4080ff9C, 0xFF003300, 0.8, show_coords);
+        svg.AddClosedPaths(paths, 0x4080ff9C, 0xFF003300, 1.5, show_coords);
     }
 
-    public static void AddSolution(SvgWriter svg, PathsD paths,
-      bool show_coords, bool is_closed = true, bool is_joined = true)
+    public static void AddOpenSolution(SvgWriter svg, Paths64 paths, bool show_coords)
     {
-      if (!is_closed)
-        svg.AddPaths(paths, !is_joined, 0x0, 0xFF003300, 0.8, show_coords);
-      else
-        svg.AddPaths(paths, false, 0x8080ff9C, 0xFF003300, 0.8, show_coords);
+        svg.AddOpenPaths(paths, 0xFF003300, 2.2, show_coords);
+    }
+
+    public static void AddSolution(SvgWriter svg, PathsD paths, bool show_coords)
+    {
+        svg.AddClosedPaths(paths, 0x4080ff9C, 0xFF003300, 1.5, show_coords);
+    }
+
+    public static void AddOpenSolution(SvgWriter svg, PathsD paths, bool show_coords)
+    {
+        svg.AddOpenPaths(paths, 0xFF003300, 2.2, show_coords);
     }
 
     public static void SaveToFile(SvgWriter svg,

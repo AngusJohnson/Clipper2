@@ -10,7 +10,7 @@
 #ifndef CLIPPER_ENGINE_H
 #define CLIPPER_ENGINE_H
 
-constexpr auto CLIPPER2_VERSION = "1.1.0";
+constexpr auto CLIPPER2_VERSION = "1.1.1";
 
 #include <cstdlib>
 #include <iostream>

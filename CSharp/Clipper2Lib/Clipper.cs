@@ -199,12 +199,11 @@ namespace Clipper2Lib
       tmp.Add(path);
       return RectClip(rect, tmp, precision, convexOnly);
     }
-    public static Paths64 RectClipLines(Rect64 rect, 
-      Paths64 paths, bool convexOnly = false)
+    public static Paths64 RectClipLines(Rect64 rect, Paths64 paths)
     {
       if (rect.IsEmpty() || paths.Count == 0) return new Paths64();
-      RectClip rc = new RectClipLines(rect);
-      return rc.Execute(paths, convexOnly);
+      RectClipLines rc = new RectClipLines(rect);
+      return rc.Execute(paths);
     }
 
     public static Paths64 RectClipLines(Rect64 rect, Path64 path)
@@ -216,24 +215,23 @@ namespace Clipper2Lib
     }
 
     public static PathsD RectClipLines(RectD rect, 
-      PathsD paths, int precision = 2, bool convexOnly = false)
+      PathsD paths, int precision = 2)
     {
       InternalClipper.CheckPrecision(precision);
       if (rect.IsEmpty() || paths.Count == 0) return new PathsD();
       double scale = Math.Pow(10, precision);
       Rect64 r = ScaleRect(rect, scale);
       Paths64 tmpPath = ScalePaths64(paths, scale);
-      RectClip rc = new RectClipLines(r);
-      tmpPath = rc.Execute(tmpPath, convexOnly);
+      RectClipLines rc = new RectClipLines(r);
+      tmpPath = rc.Execute(tmpPath);
       return ScalePathsD(tmpPath, 1 / scale);
     }
-    public static PathsD RectClipLines(RectD rect, PathD path, 
-      int precision = 2, bool convexOnly = false)
+    public static PathsD RectClipLines(RectD rect, PathD path, int precision = 2)
     {
       if (rect.IsEmpty() || path.Count == 0) return new PathsD();
       PathsD tmp = new PathsD();
       tmp.Add(path);
-      return RectClipLines(rect, tmp, precision, convexOnly);
+      return RectClipLines(rect, tmp, precision);
     }
     public static Paths64 MinkowskiSum(Path64 pattern, Path64 path, bool isClosed)
     {
@@ -564,7 +562,7 @@ namespace Clipper2Lib
         if (pt.Y < result.top) result.top = pt.Y;
         if (pt.Y > result.bottom) result.bottom = pt.Y;
       }
-      return result.IsEmpty() ? new Rect64() : result;
+      return result.left == long.MaxValue ? new Rect64() : result;
     }
 
     public static Rect64 GetBounds(Paths64 paths)
@@ -578,7 +576,7 @@ namespace Clipper2Lib
           if (pt.Y < result.top) result.top = pt.Y;
           if (pt.Y > result.bottom) result.bottom = pt.Y;
         }
-      return result.IsEmpty() ? new Rect64() : result;
+      return result.left == long.MaxValue ? new Rect64() : result;
     }
 
     public static RectD GetBounds(PathD path)
@@ -591,7 +589,7 @@ namespace Clipper2Lib
         if (pt.y < result.top) result.top = pt.y;
         if (pt.y > result.bottom) result.bottom = pt.y;
       }
-      return result.IsEmpty() ? new RectD() : result;
+      return result.left == double.MaxValue ? new RectD() : result;
     }
 
     public static RectD GetBounds(PathsD paths)
@@ -605,7 +603,7 @@ namespace Clipper2Lib
           if (pt.y < result.top) result.top = pt.y;
           if (pt.y > result.bottom) result.bottom = pt.y;
         }
-      return result.IsEmpty() ? new RectD() : result;
+      return result.left == double.MaxValue ? new RectD() : result;
     }
 
     public static Path64 MakePath(int[] arr)

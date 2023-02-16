@@ -1,6 +1,6 @@
 ﻿/*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  6 February 2023                                                 *
+* Date      :  17 February 2023                                                *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2023                                         *
 * Purpose   :  This is the main polygon clipping module                        *
@@ -156,8 +156,9 @@ namespace Clipper2Lib
 
   internal struct HorzSegSorter : IComparer<HorzSegment>
   {
-    public int Compare(HorzSegment hs1, HorzSegment hs2)
+    public int Compare(HorzSegment? hs1, HorzSegment? hs2)
     {
+      if (hs1 == null || hs2 == null) return 0;
       if (hs1.rightOp == null)
       {
         return hs2.rightOp == null ? 0 : 1;
@@ -1435,13 +1436,11 @@ namespace Clipper2Lib
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private OutRec NewOutRec()
     {
-      OutRec result = new OutRec();
-      result.idx = _outrecList.Count;
+      OutRec result = new OutRec
+      {
+        idx = _outrecList.Count
+      };
       _outrecList.Add(result);
-      //result.pts = null;
-      //result.owner = null;
-      //result.polypath = null;
-      //result.isOpen = false;
       return result;
     }
 
@@ -2641,8 +2640,10 @@ private void DoHorizontal(Active horz)
 
         if (or1 == or2)
         {
-          or2 = new OutRec();
-          or2.pts = op1b;
+          or2 = new OutRec
+          {
+            pts = op1b
+          };
           FixOutRecPts(or2);
           if (or1.pts!.outrec == or2)
           {
@@ -2811,7 +2812,7 @@ private void DoHorizontal(Active horz)
 
         if (_using_polytree)
         {
-          if (outrec.splits == null) outrec.splits = new List<int>();
+          outrec.splits ??= new List<int>();
           outrec.splits.Add(newOutRec.idx);
         }
 
@@ -3374,10 +3375,7 @@ private void DoHorizontal(Active horz)
 
     };
 
-    public bool IsHole
-    {
-      get { return GetIsHole(); }
-    }
+    public bool IsHole => GetIsHole();
 
     public PolyPathBase(PolyPathBase? parent = null) { _parent = parent; }
 
@@ -3390,10 +3388,7 @@ private void DoHorizontal(Active horz)
       return result;
     }
 
-    public int Level
-    {
-      get { return GetLevel(); }
-    }
+    public int Level => GetLevel();
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private bool GetIsHole()
@@ -3402,10 +3397,7 @@ private void DoHorizontal(Active horz)
       return lvl != 0 && (lvl & 1) == 0;
     }
 
-    public int Count
-    {
-      get { return _childs.Count; }
-    }
+    public int Count => _childs.Count;
     internal abstract PolyPathBase AddChild(Path64 p);
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]

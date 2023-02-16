@@ -1,6 +1,6 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  12 February 2023                                                *
+* Date      :  15 February 2023                                                *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2023                                         *
 * Purpose   :  Path Offset (Inflate/Shrink)                                    *
@@ -242,28 +242,28 @@ void ClipperOffset::DoMiter(Group& group, const Path64& path, size_t j, size_t k
 
 void ClipperOffset::DoRound(Group& group, const Path64& path, size_t j, size_t k, double angle)
 {
-	//even though angle may be negative this is a convex join
 	Point64 pt = path[j];
 	PointD offDist = PointD(norms[k].x * group_delta_, norms[k].y * group_delta_);
 	if (j == k) offDist.Negate();
 	group.path.push_back(Point64(pt.x + offDist.x, pt.y + offDist.y));
 
-	int steps = std::max(2, static_cast<int>(
-		std::floor(steps_per_rad_ * std::abs(angle))));
-	double step_sin = std::sin(angle / steps);
-	double step_cos = std::cos(angle / steps);
-	
-	for (int i = 1; i < steps; ++i) // ie 1 less than steps
+	if (angle > 0.01 - PI)
 	{
-		offDist = PointD(offDist.x * step_cos - step_sin * offDist.y,
-			offDist.x * step_sin + offDist.y * step_cos);
-		group.path.push_back(Point64(pt.x + offDist.x, pt.y + offDist.y));
+		int steps = std::max(2, static_cast<int>(
+			std::floor(steps_per_rad_ * std::abs(angle))));
+		double step_sin = std::sin(angle / steps);
+		double step_cos = std::cos(angle / steps);
+		for (int i = 1; i < steps; ++i) // ie 1 less than steps
+		{
+			offDist = PointD(offDist.x * step_cos - step_sin * offDist.y,
+				offDist.x * step_sin + offDist.y * step_cos);
+			group.path.push_back(Point64(pt.x + offDist.x, pt.y + offDist.y));
+		}
 	}
 	group.path.push_back(GetPerpendic(path[j], norms[j], group_delta_));
 }
 
-void ClipperOffset::OffsetPoint(Group& group, 
-	Path64& path, size_t j, size_t& k, bool reversing)
+void ClipperOffset::OffsetPoint(Group& group, Path64& path, size_t j, size_t& k)
 {
 	// Let A = change in angle where edges join
 	// A == 0: ie no change in angle (flat join)
@@ -282,9 +282,9 @@ void ClipperOffset::OffsetPoint(Group& group,
 	{
 		group.path.push_back(GetPerpendic(path[j], norms[k], group_delta_));
 	}
-	else if ((reversing && AlmostZero(cos_a + 1, 0.01)) ||
-		(sin_a * group_delta_ < 0)) // is concave
+	else if (!AlmostZero(cos_a + 1, 0.01) && (sin_a * group_delta_ < 0)) 
 	{
+		// is concave
 		group.path.push_back(GetPerpendic(path[j], norms[k], group_delta_));
 		// this extra point is the only (simple) way to ensure that
 		// path reversals are fully cleaned with the trailing clipper
@@ -379,7 +379,7 @@ void ClipperOffset::OffsetOpenPath(Group& group, Path64& path)
 	}
 
 	for (size_t i = highI, k = 0; i > 0; --i)
-		OffsetPoint(group, path, i, k, true);
+		OffsetPoint(group, path, i, k);
 	group.paths_out.push_back(group.path);
 }
 

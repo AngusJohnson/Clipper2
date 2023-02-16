@@ -8,6 +8,7 @@
 
 using System;
 using System.IO;
+using System.Reflection.Metadata.Ecma335;
 using Clipper2Lib;
 
 namespace ClipperDemo1
@@ -23,51 +24,63 @@ namespace ClipperDemo1
 
     public static void Main()
     {
-      DoRandomPoly(/* true to repeat last random */);
+      // although RectClip isn't really designed for 
+      // complex  self-intersecting polygons, it still 
+      // handles them pretty well.
+      DoRandomPoly(/* true == repeat last random */);
     }
 
-    public static void DoRandomPoly(bool loadPrevious = false)
+    public static bool SaveBackup(string filename, Paths64 sub, Paths64 clp)
     {
-      Random rand = new();
-      Paths64 sub, clp, sol;
-      Rect64 rec;
+      StreamWriter writer;
+      try
+      { writer = new StreamWriter(filename, false); }
+      catch { return false; }
 
-      if (loadPrevious && File.Exists(".\\store.txt"))
+      foreach (Point64 pt in sub[0])
+        writer.Write("{0},{1} ", pt.X, pt.Y);
+      writer.Write("\r\n");
+      foreach (Point64 pt in clp[0])
+        writer.Write("{0},{1} ", pt.X, pt.Y);
+      writer.Write("\r\n");
+      writer.Close();
+      return true; 
+    }
+
+    public static bool RestoreBackup(string filename, out Paths64 sub, out Paths64 clp)
+    {
+      sub = null;
+      clp = null;
+      if (!File.Exists(filename)) return false;
+      try
       {
-        StreamReader reader;
-        try
-        { reader = new StreamReader(".\\store.txt"); }
-        catch { return; }
+        StreamReader reader = new StreamReader(filename);
         string s = reader.ReadLine();
         sub = ClipperFileIO.PathFromStr(s);
         s = reader.ReadLine();
         clp = ClipperFileIO.PathFromStr(s);
+      }
+      catch { return false; }
+      return true;
+    }
+
+      public static void DoRandomPoly(bool loadPrevious = false)
+    {
+      Random rand = new();
+      Paths64 sub = new Paths64(), clp = new Paths64(), sol;
+      Rect64 rec = new(rectInsetDist, rectInsetDist,
+        displayWidth - rectInsetDist, displayHeight - rectInsetDist);
+
+      if (loadPrevious)
+      {
+        if (!RestoreBackup(".\\backup.txt", out sub, out clp)) return;
         rec = Clipper.GetBounds(clp);
       }
-      else
+      else      
       {
-        rec = new(
-          rectInsetDist, 
-          rectInsetDist, 
-          displayWidth - rectInsetDist, 
-          displayHeight - rectInsetDist);
-
-        clp = new() { rec.AsPath() };
-        sub = new() { MakeRandomPath(displayWidth, displayHeight, edgeCount, rand) };
-
-        // save - useful when debugging 
-        StreamWriter writer;
-        try
-        { writer = new StreamWriter(".\\store.txt", false); }
-        catch { return; }
-
-        foreach (Point64 pt in sub[0])
-          writer.Write("{0},{1} ", pt.X, pt.Y);
-        writer.Write("\r\n");
-        foreach (Point64 pt in clp[0])
-          writer.Write("{0},{1} ", pt.X, pt.Y);
-        writer.Write("\r\n");
-        writer.Close();
+        clp.Add(rec.AsPath());
+        sub.Add(MakeRandomPath(displayWidth, displayHeight, edgeCount, rand));
+        if (!SaveBackup(".\\backup.txt", sub, clp)) return;
       }
 
       /////////////////////////////////////////////////
@@ -89,10 +102,9 @@ namespace ClipperDemo1
           cumFrac += frac;
           Colors.Color32 c2 = new Colors.Color32(
             (c.color & 0xFFFFFF) | 0x20000000);
-          svg.AddPath(path, false, c2.color, c.color, 1.2, false);
+          svg.AddClosedPath(path, c2.color, c.color, 1.2);
         }
       }
-
       svg.SaveToFile("../../../rectclip.svg", 800, 600, 20);
       ClipperFileIO.OpenFileWithDefaultApp("../../../rectclip.svg");
     }
@@ -103,26 +115,12 @@ namespace ClipperDemo1
       long y = rand.Next(maxHeight);
       return new Point64(x, y);
     }
-    private static PointD MakeRandomPtD(int maxWidth, int maxHeight, Random rand)
-    {
-      double x = rand.Next(maxWidth);
-      double y = rand.Next(maxHeight);
-      return new PointD(x, y);
-    }
 
     public static Path64 MakeRandomPath(int width, int height, int count, Random rand)
     {
       Path64 result = new(count);
       for (int i = 0; i < count; ++i)
         result.Add(MakeRandomPt(width, height, rand));
-      return result;
-    }
-
-    public static PathD MakeRandomPathD(int width, int height, int count, Random rand)
-    {
-      PathD result = new(count);
-      for (int i = 0; i < count; ++i)
-        result.Add(MakeRandomPtD(width, height, rand));
       return result;
     }
 

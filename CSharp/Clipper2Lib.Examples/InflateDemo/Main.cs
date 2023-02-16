@@ -6,9 +6,11 @@
 * License   :  http://www.boost.org/LICENSE_1_0.txt                            *
 *******************************************************************************/
 
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Reflection;
+using System.Runtime.CompilerServices;
 using Clipper2Lib;
 
 namespace ClipperDemo1
@@ -64,11 +66,11 @@ namespace ClipperDemo1
       PathsD solution = new (pd);
       while (pd.Count > 0)
       {
-        //don't forget to scale the delta offset
+        // and don't forget to scale the delta offset
         pd = Clipper.InflatePaths(pd, -2.5, JoinType.Round, EndType.Polygon);
-        //RamerDouglasPeucker - not essential but not only 
-        //speeds up the loop but also tidies the result
-        pd = Clipper.RamerDouglasPeucker(pd, 0.025);
+        // SimplifyPaths - is not essential but it not only 
+        // speeds up the loop but it also tidies the result
+        pd = Clipper.SimplifyPaths(pd, 0.2);
         solution.AddRange(pd);
       }
 

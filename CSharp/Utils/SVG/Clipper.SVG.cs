@@ -126,24 +126,70 @@ namespace Clipper2Lib
       PolyInfoList.Clear();
       textInfos.Clear();
     }
+    public void AddClosedPath(Path64 path, uint brushColor,
+      uint penColor, double penWidth, bool showCoords = false)
+    {
+      Paths64 tmp = new Paths64();
+      tmp.Add(path);
+      AddClosedPaths(tmp, brushColor, penColor, penWidth, showCoords);
+    }
 
+    public void AddClosedPath(PathD path, uint brushColor,
+      uint penColor, double penWidth, bool showCoords = false)
+    {
+      PathsD tmp = new PathsD();
+      tmp.Add(path);
+      AddClosedPaths(tmp, brushColor, penColor, penWidth, showCoords);
+    }
 
-    public void AddPaths(Paths64 paths, bool IsOpen, uint brushColor,
+    public void AddClosedPaths(Paths64 paths, uint brushColor,
       uint penColor, double penWidth, bool showCoords = false)
     {
       if (paths.Count == 0) return;
       PolyInfoList.Add(new PolyInfo(Clipper.PathsD(paths),
-        brushColor, penColor, penWidth, showCoords, IsOpen));
+        brushColor, penColor, penWidth, showCoords, false));
     }
-    //------------------------------------------------------------------------------
 
-    public void AddPaths(PathsD paths, bool IsOpen, uint brushColor,
+    public void AddClosedPaths(PathsD paths, uint brushColor,
       uint penColor, double penWidth, bool showCoords = false)
     {
       if (paths.Count == 0) return;
       PolyInfoList.Add(new PolyInfo(paths,
-        brushColor, penColor, penWidth, showCoords, IsOpen));
+        brushColor, penColor, penWidth, showCoords, false));
     }
+
+    public void AddOpenPath(Path64 path,  uint penColor, 
+      double penWidth, bool showCoords = false)
+    {
+      Paths64 tmp = new Paths64();
+      tmp.Add(path);
+      AddOpenPaths(tmp, penColor, penWidth, showCoords);
+    }
+
+    public void AddOpenPath(PathD path, uint penColor, 
+      double penWidth, bool showCoords = false)
+    {
+      PathsD tmp = new PathsD();
+      tmp.Add(path);
+      AddOpenPaths(tmp, penColor, penWidth, showCoords);
+    }
+
+    public void AddOpenPaths(Paths64 paths,
+      uint penColor, double penWidth, bool showCoords = false)
+    {
+      if (paths.Count == 0) return;
+      PolyInfoList.Add(new PolyInfo(Clipper.PathsD(paths),
+        0x0, penColor, penWidth, showCoords, true));
+    }
+
+    public void AddOpenPaths(PathsD paths, uint penColor, 
+      double penWidth, bool showCoords = false)
+    {
+      if (paths.Count == 0) return;
+      PolyInfoList.Add(new PolyInfo(paths,
+        0x0, penColor, penWidth, showCoords, true));
+    }
+
 
     public void AddText(string cap, int posX, int posY, int fontSize, uint fontClr = black)
     {

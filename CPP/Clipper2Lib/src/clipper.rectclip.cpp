@@ -1,6 +1,6 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  11 February 2023                                                *
+* Date      :  14 February 2023                                                *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2023                                         *
 * Purpose   :  FAST rectangular clipping                                       *
@@ -824,13 +824,15 @@ namespace Clipper2Lib {
       if (path.size() < 3) continue;
       path_bounds_ = GetBounds(path);
       if (!rect_.Intersects(path_bounds_))
-        continue; // the path must be completely outside fRect
-      // Apart from that, we can't be sure whether the path
-      // is completely outside or completed inside or intersects
-      // fRect, simply by comparing path bounds with fRect.
+        continue; // the path must be completely outside rect_
+      else if (rect_.Contains(path_bounds_))
+      {
+        // the path must be completely inside rect_
+        result.push_back(path);
+        continue;
+      }
 
       ExecuteInternal(path);
-
       if (!convex_only)
       {
         CheckEdges();

@@ -44,6 +44,24 @@ type
       afontsize: integer; afontcolor: Cardinal);
   end;
 
+  TArrayOfString = array of string;
+
+  PChartAxis = ^TChartAxis;
+  TChartAxis = record
+    caption: string;
+    fontSize: integer;
+    spaceNeeded: integer;
+    horizontal: Boolean;
+    ranges: TArrayOfInteger;
+  end;
+
+  PChartSeries = ^TChartSeries;
+  TChartSeries = record
+    caption: string;
+    values: TPathD;
+    color: Cardinal;
+  end;
+
   PTextInfo = ^TTextInfo;
 {$IFDEF RECORD_METHODS}
   TTextInfo = record
@@ -88,6 +106,9 @@ type
     fPolyInfos  : TList;
     fCircleInfos: TList;
     fTextInfos  : TList;
+    fHorzAxis   : TChartAxis;
+    fVertAxis   : TChartAxis;
+    fChartSeries: TList;
     function GetBounds: TRectD;
   public
     constructor Create(fillRule: TFillRule;
@@ -95,6 +116,11 @@ type
       coordFontSize: integer = 9;
       coordFontColor: Cardinal = black);
     destructor Destroy; override;
+
+    procedure AddPath(const path: TPath64; isOpen: Boolean;
+      brushColor, penColor: Cardinal;
+      penWidth: double; showCoords: Boolean = false);
+
     procedure AddPaths(const paths: TPaths64; isOpen: Boolean;
       brushColor, penColor: Cardinal;
       penWidth: double; showCoords: Boolean = false); overload;
@@ -117,22 +143,35 @@ type
     procedure AddText(text: string; x,y: integer;
       fontSize: integer = 14; fontClr:
       Cardinal = black; bold: Boolean = false);
+
+    procedure AddChartAxis(const caption: string;
+      fontSize: integer; isHorizontal: Boolean;
+      spaceNeeded: integer; const ranges: TArrayOfInteger);
+    procedure AddChartSeries(const caption: string; color: Cardinal;
+      const values: TPathD);
+
     function SaveToFile(const filename: string;
       maxWidth: integer = 0; maxHeight: integer = 0;
       margin: integer = 20): Boolean;
     procedure ClearPaths;
     procedure ClearText;
+    procedure ClearChart;
     procedure ClearAll;
   end;
 
-  procedure AddSubject(svg: TSvgWriter; const paths: TPaths64);
-  procedure AddOpenSubject(svg: TSvgWriter; const paths: TPaths64);
-  procedure AddClip(svg: TSvgWriter; const paths: TPaths64);
-  procedure AddSolution(svg: TSvgWriter; const paths: TPaths64);
-  procedure AddOpenSolution(svg: TSvgWriter; const paths: TPaths64);
+  procedure AddSubject(svg: TSvgWriter; const paths: TPaths64); overload;
+  procedure AddOpenSubject(svg: TSvgWriter; const paths: TPaths64); overload;
+  procedure AddClip(svg: TSvgWriter; const paths: TPaths64); overload;
+  procedure AddSolution(svg: TSvgWriter; const paths: TPaths64; showCoords: Boolean = false); overload;
+  procedure AddOpenSolution(svg: TSvgWriter; const paths: TPaths64); overload;
   procedure SaveSvg(svg: TSvgWriter; const filename: string;
-    width: integer = 0; height: integer = 0; margin: integer = 0);
+    width: integer = 0; height: integer = 0; margin: integer = 0); overload;
 
+  procedure AddSubject(svg: TSvgWriter; const paths: TPathsD); overload;
+  procedure AddOpenSubject(svg: TSvgWriter; const paths: TPathsD); overload;
+  procedure AddClip(svg: TSvgWriter; const paths: TPathsD); overload;
+  procedure AddSolution(svg: TSvgWriter; const paths: TPathsD; showCoords: Boolean= false); overload;
+  procedure AddOpenSolution(svg: TSvgWriter; const paths: TPathsD); overload;
 
 implementation
 
@@ -146,7 +185,8 @@ const
   svg_path_format: string = '"'+#10+'    style="fill:%s;' +
         ' fill-opacity:%1.2f; fill-rule:%s; stroke:%s;' +
         ' stroke-opacity:%1.2f; stroke-width:%1.2f;"/>'#10;
-  svg_path_format2: string = '"'+#10+'    style="fill:none; stroke:%s; ' +
+  svg_path_format2: string = '"'+#10+
+        '   style="fill:none; stroke:%s; ' +
         'stroke-opacity:%1.2f; stroke-width:%1.2f; %s"/>'#10;
 
 function ColorToHtml(color: Cardinal): string;
@@ -191,6 +231,7 @@ begin
   fPolyInfos := TList.Create;
   fCircleInfos := TList.Create;
   fTextInfos := TList.Create;
+  fChartSeries := TList.Create;
 end;
 
 destructor TSvgWriter.Destroy;
@@ -199,7 +240,15 @@ begin
   fPolyInfos.Free;
   fCircleInfos.Free;
   fTextInfos.Free;
+  fChartSeries.Free;
   inherited;
+end;
+
+procedure TSvgWriter.AddPath(const path: TPath64; isOpen: Boolean;
+  brushColor, penColor: Cardinal;
+  penWidth: double; showCoords: Boolean);
+begin
+  AddPaths(Paths64(path), isOpen, brushColor, penColor, penWidth, showCoords);
 end;
 
 procedure TSvgWriter.AddPaths(const paths: TPaths64;
@@ -313,6 +362,34 @@ begin
   fTextInfos.Add(ti);
 end;
 
+procedure TSvgWriter.AddChartAxis(const caption: string;
+  fontSize: integer; isHorizontal: Boolean;
+  spaceNeeded: integer; const ranges: TArrayOfInteger);
+var
+  axis: PChartAxis;
+begin
+  if spaceNeeded <= 0 then Exit;
+  if isHorizontal then
+    axis := @fHorzAxis else
+    axis := @fVertAxis;
+  axis.caption := caption;
+  axis.fontSize := fontSize;
+  axis.spaceNeeded := spaceNeeded;
+  axis.ranges := ranges;
+end;
+
+procedure TSvgWriter.AddChartSeries(const caption: string; color: Cardinal;
+  const values: TPathD);
+var
+  series: PChartSeries;
+begin
+  new(series);
+  fChartSeries.Add(series);
+  series.caption := caption;
+  series.color := color;
+  series.values := values;
+end;
+
 function TSvgWriter.GetBounds: TRectD;
 var
   i: integer;
@@ -323,6 +400,15 @@ begin
     with PPolyInfo(fPolyInfos[i])^ do
     begin
       bounds := Clipper.Core.GetBounds(paths);
+      if (bounds.left < Result.Left) then Result.Left := bounds.Left;
+      if (bounds.right> Result.Right) then Result.Right := bounds.Right;
+      if (bounds.top < Result.Top) then Result.Top := bounds.Top;
+      if (bounds.bottom > Result.Bottom) then Result.Bottom := bounds.Bottom;
+    end;
+  for i := 0 to fChartSeries.Count -1 do
+    with PChartSeries(fChartSeries[i])^ do
+    begin
+      bounds := Clipper.Core.GetBounds(values);
       if (bounds.left < Result.Left) then Result.Left := bounds.Left;
       if (bounds.right> Result.Right) then Result.Right := bounds.Right;
       if (bounds.top < Result.Top) then Result.Top := bounds.Top;
@@ -352,18 +438,31 @@ begin
   fTextInfos.Clear;
 end;
 
+procedure TSvgWriter.ClearChart;
+var
+  i: integer;
+begin
+  fHorzAxis.spaceNeeded := 0;
+  fVertAxis.spaceNeeded := 0;
+  for i := 0 to fChartSeries.Count -1 do
+    Dispose(PChartSeries(fChartSeries[i]));
+  fChartSeries.Clear;
+end;
+
 procedure TSvgWriter.ClearAll;
 begin
   ClearText;
+  ClearChart;
   ClearPaths;
 end;
 
 function TSvgWriter.SaveToFile(const filename: string;
   maxWidth: integer = 0; maxHeight: integer = 0; margin: integer = 20): Boolean;
 var
-  i,j,k: integer;
+  i,j,k, len1, len2: integer;
+  x,y,x2,y2,delta: double;
   bounds: TRectD;
-  scale: double;
+  scale, scaleX, scaleY: double;
   offsetX, offsetY: integer;
   s, sInline, dashStr: string;
   sl: TStringList;
@@ -371,6 +470,7 @@ var
 const
   fillRuleStr: array[boolean] of string = ('evenodd', 'nonzero');
   boldFont: array[boolean] of string = ('normal', '700');
+  gap: integer = 5;
 
   procedure Add(const s: string);
   begin
@@ -466,11 +566,20 @@ begin
       for i := 0 to fCircleInfos.Count -1 do
         with PCircleInfo(fCircleInfos[i])^ do
         begin
-          Add(Format('  <circle cx="%1.2f" cy="%1.2f" r="%1.2f" '+
-            'stroke="%s" stroke-width="%1.2f" fill="%s" />',
-            [center.X * scale + offsetX, center.Y * scale + offsetY,
-            radius, ColorToHtml(PenClr),
-            PenWidth, ColorToHtml(BrushClr)], formatSettings));
+          if GetAlpha(BrushClr) > 0.1 then
+            Add(Format('  <circle cx="%1.2f" cy="%1.2f" r="%1.2f" '+
+              'stroke="%s" stroke-width="%1.2f" '+
+              'fill="%s" opacity="%1.2f" />',
+              [center.X * scale + offsetX, center.Y * scale + offsetY,
+              radius, ColorToHtml(PenClr), PenWidth,
+              ColorToHtml(BrushClr), GetAlpha(BrushClr)], formatSettings))
+          else
+            Add(Format('  <circle cx="%1.2f" cy="%1.2f" r="%1.2f" '+
+              'stroke="%s" stroke-width="%1.2f" '+
+              'fill="none" opacity="%1.2f" />',
+              [center.X * scale + offsetX, center.Y * scale + offsetY,
+              radius, ColorToHtml(PenClr), PenWidth,
+              GetAlpha(PenClr)], formatSettings));
         end;
 
     for i := 0 to fTextInfos.Count -1 do
@@ -485,6 +594,91 @@ begin
             (x) * scale + offsetX,
             (y) * scale + offsetY, text], formatSettings));
       end;
+
+
+    len1 := Length(fHorzAxis.ranges);
+    len2 := Length(fVertAxis.ranges);
+    if (len1 > 0) and (len2 > 0) then
+    begin
+      x2 := fHorzAxis.ranges[0];
+      y2 := fVertAxis.ranges[0];
+      scaleX := (maxWidth - fVertAxis.spaceNeeded) * ((len1-1)/(len1)) /
+        (fHorzAxis.ranges[len1-1]-fHorzAxis.ranges[0]);
+      scaleY := (maxHeight - fHorzAxis.spaceNeeded) * ((len2-1)/len2) /
+        (fVertAxis.ranges[len2-1]-fVertAxis.ranges[0]);
+      offsetX := fVertAxis.spaceNeeded;
+      offsetY := (maxHeight - fHorzAxis.spaceNeeded);
+
+      AddInline('  <path d="');
+      AddInline(Format('M %d %d L ',
+        [fVertAxis.spaceNeeded, 10], formatSettings));
+      AddInline(Format('%d %d ',
+        [fVertAxis.spaceNeeded, maxHeight - fHorzAxis.spaceNeeded], formatSettings));
+      AddInline(Format('%d %d ',
+        [maxWidth -10, maxHeight - fHorzAxis.spaceNeeded], formatSettings));
+      Add('"' +#10+ '   style="fill:none; stroke:black; ' +
+        'stroke-width:1.2;"/>'+#10);
+
+      x := fVertAxis.spaceNeeded;
+      y := maxHeight - fHorzAxis.spaceNeeded + fHorzAxis.fontSize + gap;
+      delta := (maxWidth -fVertAxis.spaceNeeded) / len1;
+      for i := 0 to len1 -1 do
+        begin
+          Add(Format(
+          '  <g font-family="Verdana" font-style="normal" ' +
+          'font-size="%d" fill="black">' +
+          '<text text-anchor="middle" x="%1.2f" y="%1.2f">%d</text></g>',
+          [fHorzAxis.fontSize, x, y,
+            fHorzAxis.ranges[i] ], formatSettings));
+          Add(Format('  <circle cx="%1.2f" cy="%1.2f" r="2.0" '+
+            'stroke="none" fill="black" />',
+            [ x, 1.0 * maxHeight - fHorzAxis.spaceNeeded], formatSettings));
+          x := x + delta;
+        end;
+
+      x := fVertAxis.spaceNeeded - gap;
+      delta := (maxHeight -fHorzAxis.spaceNeeded) / len2;
+
+      y := maxHeight - fHorzAxis.spaceNeeded;
+      for i := 0 to len1 -1 do
+        begin
+          Add(Format(
+          '  <g font-family="Verdana" font-style="normal" ' +
+          'font-size="%d" fill="black">' +
+          '<text text-anchor="end" x="%1.2f" y="%1.2f">%d</text></g>',
+          [fVertAxis.fontSize, x, y,
+            fVertAxis.ranges[i] ], formatSettings));
+          Add(Format('  <circle cx="%d" cy="%1.0f" r="2.0" '+
+            'stroke="none" fill="black" />',
+            [ fVertAxis.spaceNeeded, y], formatSettings));
+          y := y - delta;
+        end;
+
+
+      for i := 0 to fChartSeries.Count -1 do
+        with PChartSeries(fChartSeries[i])^ do
+        begin
+          AddInline('  <path d="');
+          AddInline(Format('M %1.2f %1.2f L ',
+            [(values[0].X -x2) * scaleX + offsetX,
+            (y2 - values[0].Y) * scaleY + offsetY], formatSettings));
+          for j := 1 to High(values) do
+            AddInline(Format('%1.2f %1.2f ',
+              [(values[j].X -x2) * scaleX + offsetX,
+              (y2 - values[j].Y) * scaleY + offsetY], formatSettings));
+            Add(Format(svg_path_format2,
+                [ColorToHtml(color), GetAlpha(color),
+                2.2, ''], formatSettings));
+
+          for j := 0 to High(values) do
+            Add(Format('  <circle cx="%1.2f" cy="%1.2f" r="%1.2f" '+
+              'stroke="none" fill="%s" opacity="%1.2f" />',
+              [ values[j].X * scaleX + offsetX,
+                y2 - values[j].Y * scaleY + offsetY,
+                5.0, ColorToHtml(color), GetAlpha(color) ], formatSettings));
+        end;
+    end;
+
     Add('</svg>'#10);
     sl.SaveToFile(filename);
     Result := true;
@@ -509,20 +703,46 @@ begin
   svg.AddPaths(paths, false, $10FF9900, $80FF6600, 1.0);
 end;
 
-procedure AddSolution(svg: TSvgWriter; const paths: TPaths64);
+procedure AddSolution(svg: TSvgWriter; const paths: TPaths64; showCoords: Boolean);
 begin
-  svg.AddPaths(paths, false, $8066FF66, $FF006600, 1.5);
+  svg.AddPaths(paths, false, $8066FF66, $FF006600, 1.5, showCoords);
+  //svg.AddPaths(paths, false, $8066FF66, $FF006600, 1.5, showCoords);
 end;
 
 procedure AddOpenSolution(svg: TSvgWriter; const paths: TPaths64);
 begin
-  svg.AddPaths(paths, false, $8066FF66, $FF006600, 1.5);
+  svg.AddPaths(paths, true, $0, $FF006600, 1.5);
 end;
 
 procedure SaveSvg(svg: TSvgWriter; const filename: string;
   width: integer = 0; height: integer = 0; margin: integer = 0);
 begin
   svg.SaveToFile(filename, width, height, margin);
+end;
+
+procedure AddSubject(svg: TSvgWriter; const paths: TPathsD);
+begin
+  svg.AddPaths(paths, false, $200099FF, $800066FF, 1.0);
+end;
+
+procedure AddOpenSubject(svg: TSvgWriter; const paths: TPathsD);
+begin
+  svg.AddPaths(paths, true, $0, $400066FF, 2.2);
+end;
+
+procedure AddClip(svg: TSvgWriter; const paths: TPathsD);
+begin
+  svg.AddPaths(paths, false, $10FF9900, $80FF6600, 1.0);
+end;
+
+procedure AddSolution(svg: TSvgWriter; const paths: TPathsD; showCoords: Boolean);
+begin
+  svg.AddPaths(paths, false, $8066FF66, $FF006600, 1.5, showCoords);
+end;
+
+procedure AddOpenSolution(svg: TSvgWriter; const paths: TPathsD);
+begin
+  svg.AddPaths(paths, true, $0, $FF006600, 1.5);
 end;
 
 end.

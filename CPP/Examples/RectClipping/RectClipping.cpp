@@ -8,7 +8,9 @@
 #include <string>
 #include "clipper2/clipper.h"
 #include "../../Utils/clipper.svg.h"
+#include "../../Utils/ClipFileLoad.h"
 #include "../../Utils/clipper.svg.utils.h"
+#include "../../Utils/Colors.h"
 #include "../../Utils/Timer.h"
 
 using namespace std;
@@ -17,22 +19,23 @@ using namespace Clipper2Lib;
 void System(const std::string& filename);
 void PressEnterToExit();
 
-void DoEllipses();
-void DoRectangles();
+void DoEllipses(int cnt);
+void DoRectangles(int cnt);
 void DoRandomPoly(int count);
 void MeasurePerformance(int min, int max, int step);
-void MeasureLineClippingPerformance(int line_length);
 
-const int width = 1600, height = 1200, margin = 200;
+const int width = 800, height = 600, margin = 120;
+
 
 int main(int argc, char* argv[])
 {
   srand((unsigned)time(0));
-  DoEllipses();
-  DoRectangles();
-  DoRandomPoly(31);
-  //MeasurePerformance(500, 2500, 500);
-  //MeasureLineClippingPerformance(250);
+  
+  DoEllipses(500);      
+  DoRectangles(500);    
+  //DoRandomPoly(21);     
+  //MeasurePerformance(1000, 5000, 1000);  
+  PressEnterToExit();
 }
 
 Path64 MakeRandomEllipse(int minWidth, int minHeight, int maxWidth, int maxHeight,
@@ -45,18 +48,17 @@ Path64 MakeRandomEllipse(int minWidth, int minHeight, int maxWidth, int maxHeigh
   return Ellipse(Rect64(l, t, l + w, t + h));
 }
 
-void DoEllipses()
+void DoEllipses(int cnt)
 {
   Paths64 sub, clp, sol, store;
 
-  const int cnt = 1000;
   Rect64 rect = Rect64(margin, margin, width - margin, height - margin);
   clp.push_back(rect.AsPath());
   for (int i = 0; i < cnt; ++i)
     sub.push_back(MakeRandomEllipse(10, 10, 100, 100, width, height));
       
   //////////////////////////////////
-  sol = RectClip(rect, sub);
+  sol = RectClip(rect, sub, true);
   //////////////////////////////////
 
   FillRule fr = FillRule::EvenOdd;
@@ -84,16 +86,15 @@ Path64 MakeRandomRectangle(int minWidth, int minHeight, int maxWidth, int maxHei
   return result;
 }
 
-void DoRectangles()
+void DoRectangles(int cnt)
 {
   Paths64 sub, clp, sol, store;
-  const int cnt = 1000;
   Rect64 rect = Rect64(margin, margin, width - margin, height - margin);
   clp.push_back(rect.AsPath());
   for (int i = 0; i < cnt; ++i)
     sub.push_back(MakeRandomRectangle(10, 10, 100, 100, width, height));
 
-  sol = RectClip(rect, sub);
+  sol = RectClip(rect, sub, true);
 
   FillRule fr = FillRule::EvenOdd;
   SvgWriter svg;
@@ -124,24 +125,32 @@ PathD MakeRandomPolyD(int width, int height, unsigned vertCnt)
 
 void DoRandomPoly(int count)
 {
-  PathsD sub_open, clp, sol_open, store;
-  RectD rect;
+  PathsD sub, clp, sol;
 
   // generate random poly
-  rect = RectD(margin, margin, width - margin, height - margin);
+  RectD rect = RectD(margin, margin, width - margin, height - margin);
   clp.push_back(rect.AsPath());
-  sub_open.push_back(MakeRandomPolyD(width, height, count));
+  sub.push_back(MakeRandomPolyD(width, height, count));
 
   //////////////////////////////////
-  sol_open = RectClipLines(rect, sub_open);
+  sol = RectClip(rect, sub);
   //////////////////////////////////
 
   FillRule fr = FillRule::EvenOdd;
+  double frac = sol.size() ? 1.0 / sol.size() : 1.0;
+  double cum_frac = 0;
   SvgWriter svg;
-  svg.AddPaths(sub_open, true, fr, 0x0, 0x400066FF, 1, false);
-  svg.AddPaths(clp, false, fr, 0x10FFAA00, 0xFFFF0000, 1, false);
-  svg.AddPaths(sol_open, true, fr, 0x0, 0xFF006600, 2.2, false);
-  svg.SaveToFile("rectclip3.svg", 800, 600, 0);
+  svg.AddPaths(sub, false, fr, 0x100066FF, 0x800066FF, 1, false);
+  svg.AddPaths(clp, false, fr, 0x10FFAA00, 0x80FF0000, 1, false);
+  //svg.AddPaths(sol, false, fr, 0x30AAFF00, 0xFF00FF00, 1, false);
+  for (const PathD& sol_path : sol)
+  {
+    uint32_t c = RainbowColor(cum_frac, 64);
+    cum_frac += frac;
+    uint32_t c2 = (c & 0xFFFFFF) | 0x20000000;
+    svg.AddPath(sol_path, false, fr, c2, c, 1.2, false);
+  }
+  svg.SaveToFile("rectclip3.svg", width, height, 0);
   System("rectclip3.svg");
 }
 
@@ -149,19 +158,15 @@ void MeasurePerformance(int min, int max, int step)
 {
   FillRule fr = FillRule::EvenOdd;
   Paths64 sub, clp, sol, store;
-  Rect64 rect;
+  Rect64 rect = Rect64(margin, margin, width - margin, height - margin);
+  clp.push_back(rect.AsPath());
 
   for (int cnt = min; cnt <= max; cnt += step)
   {
-    // generate random poly
-    Rect64 rect = Rect64(margin, margin, width - margin, height - margin);
-    clp.push_back(rect.AsPath());
     sub.clear();
+    sub.push_back(MakeRandomPoly(width, height, cnt));
 
-    for (int i = 0; i < cnt; ++i)
-      sub.push_back(MakeRandomEllipse(100, 100, 100, 100, width, height));
-
-    std::cout << std::endl << cnt << " ellipses" << std::endl;
+    std::cout << std::endl << cnt << " random poly" << std::endl;
     {
       Timer t("Clipper64: ");
       sol = Intersect(sub, clp, fr);
@@ -171,54 +176,28 @@ void MeasurePerformance(int min, int max, int step)
       Timer t("RectClip: ");
       sol = RectClip(rect, sub);
     }
+
+    {
+      Timer t("RectClip: (convex flagged)");
+      sol = RectClip(rect, sub, true);
+    }
   }
 
   SvgWriter svg;
   svg.AddPaths(sub, false, fr, 0x200066FF, 0x400066FF, 1, false);
   svg.AddPaths(clp, false, fr, 0x10FFAA00, 0xFFFF0000, 1, false);
-  svg.AddPaths(sol, false, fr, 0x8066FF66, 0xFF006600, 1, false);
-  svg.SaveToFile("RectClipQ.svg", 800, 600, 0);
-  System("RectClipQ.svg");
-
-  PressEnterToExit();
-}
-
-void MeasureLineClippingPerformance(int line_length)
-{
-  FillRule fr = FillRule::EvenOdd;
-  Paths64 sub_open, clp, sol_open, store;
-
-  // generate random poly
-  Rect64 rect = Rect64(margin, margin, width - margin, height - margin);
-  clp.push_back(rect.AsPath());
-
-  sub_open.push_back(MakeRandomPoly(width, height, line_length));
-
-  std::cout << std::endl << "Measuring line clipping performance" << std::endl;
-  std::cout << "line length: " << line_length << std::endl;
+  //svg.AddPaths(sol, false, fr, 0x8066FF66, 0xFF006600, 1, false);
+  double frac = sol.size() ? 1.0 / sol.size() : 1.0;
+  double cum_frac = 0;
+  for (const Path64& sol_path : sol)
   {
-    Timer t("Clipper64: ");
-    Paths64 dummy;
-    Clipper64 c;
-    c.AddOpenSubject(sub_open);
-    c.AddClip(clp);
-    c.Execute(ClipType::Intersection, fr, dummy, sol_open);
-    sol_open = Intersect(sub_open, clp, fr);
+    uint32_t c = RainbowColor(cum_frac, 64);
+    cum_frac += frac;
+    uint32_t c2 = (c & 0xFFFFFF) | 0x20000000;
+    svg.AddPath(sol_path, false, fr, c2, c, 1.2, false);
   }
-
-  {
-    Timer t("RectClip: ");
-    sol_open = RectClipLines(rect, sub_open);
-  }
-
-  SvgWriter svg;
-  svg.AddPaths(sub_open, true, fr, 0x0, 0x400066FF, 1, false);
-  svg.AddPaths(clp, false, fr, 0x10FFAA00, 0xFFFF0000, 1, false);
-  svg.AddPaths(sol_open, true, fr, 0x0, 0xFF006600, 2.0, false);
-  svg.SaveToFile("RectClipL.svg", 800, 600, 0);
-  System("RectClipL.svg");
-
-  PressEnterToExit();
+  svg.SaveToFile("RectClipQ2.svg", 800, 600, 0);
+  System("RectClipQ2.svg");
 }
 
 void System(const std::string& filename)

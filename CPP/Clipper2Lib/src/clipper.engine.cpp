@@ -2286,7 +2286,7 @@ namespace Clipper2Lib {
 
       node.edge1->curr_x = node.pt.x;
       node.edge2->curr_x = node.pt.x;
-      CheckJoinLeft(*node.edge2, node.pt);
+      CheckJoinLeft(*node.edge2, node.pt, true);
       CheckJoinRight(*node.edge1, node.pt, true);
     }
   }
@@ -2656,7 +2656,7 @@ namespace Clipper2Lib {
 
     if (check_curr_x)
     {
-      if (DistanceFromLineSqrd(pt, prev->bot, prev->top) > 0.35) return;
+      if (DistanceFromLineSqrd(pt, prev->bot, prev->top) > 0.25) return;
     }
     else if (e.curr_x != prev->curr_x) return;
     if (CrossProduct(e.top, pt, prev->top)) return;

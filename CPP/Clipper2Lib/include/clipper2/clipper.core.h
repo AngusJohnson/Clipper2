@@ -288,8 +288,8 @@ namespace Clipper2Lib
 
     bool Intersects(const Rect<T>& rec) const
     {
-      return ((std::max)(left, rec.left) < (std::min)(right, rec.right)) &&
-        ((std::max)(top, rec.top) < (std::min)(bottom, rec.bottom));
+      return ((std::max)(left, rec.left) <= (std::min)(right, rec.right)) &&
+        ((std::max)(top, rec.top) <= (std::min)(bottom, rec.bottom));
     };
 
     friend std::ostream& operator<<(std::ostream& os, const Rect<T>& rect) {
@@ -339,7 +339,7 @@ namespace Clipper2Lib
       if (pt.y < rec.top) rec.top = pt.y;
       if (pt.y > rec.bottom) rec.bottom = pt.y;
     }
-    if (rec.IsEmpty()) return Rect64();
+    if (rec.left == INT64_MAX) return Rect64();
     return rec;
   }
 
@@ -354,7 +354,7 @@ namespace Clipper2Lib
         if (pt.y < rec.top) rec.top = pt.y;
         if (pt.y > rec.bottom) rec.bottom = pt.y;
       }
-    if (rec.IsEmpty()) return Rect64();
+    if (rec.left == INT64_MAX) return Rect64();
     return rec;
   }
 
@@ -368,7 +368,7 @@ namespace Clipper2Lib
       if (pt.y < rec.top) rec.top = pt.y;
       if (pt.y > rec.bottom) rec.bottom = pt.y;
     }
-    if (rec.IsEmpty()) return RectD();
+    if (rec.left == MAX_DBL) return Rect64();
     return rec;
   }
 
@@ -383,7 +383,7 @@ namespace Clipper2Lib
         if (pt.y < rec.top) rec.top = pt.y;
         if (pt.y > rec.bottom) rec.bottom = pt.y;
       }
-    if (rec.IsEmpty()) return RectD();
+    if (rec.left == MAX_DBL) return Rect64();
     return rec;
   }
 
