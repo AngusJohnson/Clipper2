@@ -368,7 +368,7 @@ namespace Clipper2Lib
       if (pt.y < rec.top) rec.top = pt.y;
       if (pt.y > rec.bottom) rec.bottom = pt.y;
     }
-    if (rec.left == MAX_DBL) return Rect64();
+    if (rec.left == MAX_DBL) return RectD();
     return rec;
   }
 
@@ -383,7 +383,7 @@ namespace Clipper2Lib
         if (pt.y < rec.top) rec.top = pt.y;
         if (pt.y > rec.bottom) rec.bottom = pt.y;
       }
-    if (rec.left == MAX_DBL) return Rect64();
+    if (rec.left == MAX_DBL) return RectD();
     return rec;
   }
 
