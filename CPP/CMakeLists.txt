@@ -52,7 +52,7 @@ target_include_directories(Clipper2Z
 
 if (MSVC)
   target_compile_options(Clipper2 PRIVATE /W4 /WX)
-  target_compile_options(Clipper2Z PRIVATE /W4 /WX)
+  target_compile_options(Clipper2Z PRIVATE /W4 /WX)  
 else()
   target_compile_options(Clipper2 PRIVATE -Wall -Wextra -Wpedantic -Werror)
   target_link_libraries(Clipper2 PUBLIC -lm)
@@ -72,6 +72,8 @@ if(CLIPPER2_UTILS OR CLIPPER2_TESTS OR CLIPPER2_EXAMPLES)
     Utils/clipper.svg.h
     Utils/ClipFileLoad.h
     Utils/ClipFileSave.h
+    Utils/Timer.h
+    Utils/Colors.h
   )
   set(CLIPPER2_UTILS_SRC
     Utils/clipper.svg.cpp
@@ -146,7 +148,6 @@ if(CLIPPER2_EXAMPLES)
     target_compile_options(UsingZ PRIVATE -Wno-unused-result -Wno-unused-function)
   endif()
 endif()
-
 
 if(CLIPPER2_TESTS)
   # See: https://cliutils.gitlab.io/modern-cmake/chapters/testing/googletest.html

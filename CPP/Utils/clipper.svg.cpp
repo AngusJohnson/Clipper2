@@ -71,6 +71,20 @@ namespace Clipper2Lib {
   }
   //------------------------------------------------------------------------------
 
+  void SvgWriter::AddPath(const Path64& path, bool is_open, FillRule fillrule,
+    unsigned brush_color, unsigned pen_color, double pen_width, bool show_coords)
+  {
+    int error_code = 0;
+    if (path.size() == 0) return;
+    PathsD tmp;
+    tmp.push_back(ScalePath<double, int64_t>(path, scale_, error_code));
+    if (error_code) return;
+    PathInfo* pi = new PathInfo(tmp, is_open, fillrule,
+      brush_color, pen_color, pen_width, show_coords);
+    path_infos.push_back(pi);
+  }
+  //------------------------------------------------------------------------------
+
   void SvgWriter::AddPath(const PathD &path, bool is_open, FillRule fillrule,
     unsigned brush_color, unsigned pen_color, double pen_width, bool show_coords)
   {

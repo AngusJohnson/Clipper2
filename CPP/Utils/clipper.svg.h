@@ -46,7 +46,7 @@ namespace Clipper2Lib {
     public:
       std::string font_name;
       unsigned font_color = 0xFF000000;
-      unsigned font_size = 11;
+      unsigned font_size = 7;
     };
 
     class TextInfo {
@@ -91,9 +91,11 @@ namespace Clipper2Lib {
     FillRule Fill_Rule() { return fill_rule_; }
     void SetCoordsStyle(const std::string &font_name, unsigned font_color, unsigned font_size);
     void AddText(const std::string &text, unsigned font_color, unsigned font_size, int x, int y);
-    void AddPath(const PathD& path, bool is_open, FillRule fillrule, 
+    void AddPath(const Path64& path, bool is_open, FillRule fillrule,
       unsigned brush_color, unsigned pen_color, double pen_width, bool show_coords);
-    void AddPaths(const PathsD& paths, bool is_open, FillRule fillrule, 
+    void AddPath(const PathD& path, bool is_open, FillRule fillrule,
+      unsigned brush_color, unsigned pen_color, double pen_width, bool show_coords);
+    void AddPaths(const PathsD& paths, bool is_open, FillRule fillrule,
       unsigned brush_color, unsigned pen_color, double pen_width, bool show_coords);
     void AddPaths(const Paths64& paths, bool is_open, FillRule fillrule, 
       unsigned brush_color, unsigned pen_color, double pen_width, bool show_coords);
