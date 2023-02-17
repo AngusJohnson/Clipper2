@@ -99,12 +99,20 @@ inline bool IsClosedPath(EndType et)
 
 inline Point64 GetPerpendic(const Point64& pt, const PointD& norm, double delta)
 {
+#if USINGZ
+	return Point64(pt.x + norm.x * delta, pt.y + norm.y * delta, pt.z);
+#else
 	return Point64(pt.x + norm.x * delta, pt.y + norm.y * delta);
+#endif
 }
 
 inline PointD GetPerpendicD(const Point64& pt, const PointD& norm, double delta)
 {
+#if USINGZ
+	return PointD(pt.x + norm.x * delta, pt.y + norm.y * delta, pt.z);
+#else
 	return PointD(pt.x + norm.x * delta, pt.y + norm.y * delta);
+#endif
 }
 
 inline void NegatePath(PathD& path)
@@ -113,6 +121,9 @@ inline void NegatePath(PathD& path)
 	{
 		pt.x = -pt.x;
 		pt.y = -pt.y;
+#if USINGZ
+		pt.z = pt.z;
+#endif
 	}
 }
 
@@ -159,12 +170,20 @@ void ClipperOffset::BuildNormals(const Path64& path)
 
 inline PointD TranslatePoint(const PointD& pt, double dx, double dy)
 {
+#if USINGZ
+	return PointD(pt.x + dx, pt.y + dy, pt.z);
+#else
 	return PointD(pt.x + dx, pt.y + dy);
+#endif
 }
 
 inline PointD ReflectPoint(const PointD& pt, const PointD& pivot)
 {
+#if USINGZ
+	return PointD(pivot.x + (pivot.x - pt.x), pivot.y + (pivot.y - pt.y), pt.z);
+#else
 	return PointD(pivot.x + (pivot.x - pt.x), pivot.y + (pivot.y - pt.y));
+#endif
 }
 
 PointD IntersectPoint(const PointD& pt1a, const PointD& pt1b,
@@ -218,6 +237,9 @@ void ClipperOffset::DoSquare(Group& group, const Path64& path, size_t j, size_t 
 	{
 		PointD pt4 = PointD(pt3.x + vec.x * group_delta_, pt3.y + vec.y * group_delta_);
 		PointD pt = IntersectPoint(pt1, pt2, pt3, pt4);
+#if USINGZ
+		pt.z = ptQ.z;
+#endif
 		//get the second intersect point through reflecion
 		group.path.push_back(Point64(ReflectPoint(pt, ptQ)));
 		group.path.push_back(Point64(pt));
@@ -226,6 +248,9 @@ void ClipperOffset::DoSquare(Group& group, const Path64& path, size_t j, size_t 
 	{
 		PointD pt4 = GetPerpendicD(path[j], norms[k], group_delta_);
 		PointD pt = IntersectPoint(pt1, pt2, pt3, pt4);
+#if USINGZ
+		pt.z = ptQ.z;
+#endif
 		group.path.push_back(Point64(pt));
 		//get the second intersect point through reflecion
 		group.path.push_back(Point64(ReflectPoint(pt, ptQ)));
@@ -235,9 +260,16 @@ void ClipperOffset::DoSquare(Group& group, const Path64& path, size_t j, size_t 
 void ClipperOffset::DoMiter(Group& group, const Path64& path, size_t j, size_t k, double cos_a)
 {
 	double q = group_delta_ / (cos_a + 1);
+#if USINGZ
+	group.path.push_back(Point64(
+		path[j].x + (norms[k].x + norms[j].x) * q,
+		path[j].y + (norms[k].y + norms[j].y) * q,
+		path[j].z));
+#else
 	group.path.push_back(Point64(
 		path[j].x + (norms[k].x + norms[j].x) * q,
 		path[j].y + (norms[k].y + norms[j].y) * q));
+#endif
 }
 
 void ClipperOffset::DoRound(Group& group, const Path64& path, size_t j, size_t k, double angle)
@@ -245,7 +277,11 @@ void ClipperOffset::DoRound(Group& group, const Path64& path, size_t j, size_t k
 	Point64 pt = path[j];
 	PointD offDist = PointD(norms[k].x * group_delta_, norms[k].y * group_delta_);
 	if (j == k) offDist.Negate();
+#if USINGZ
+	group.path.push_back(Point64(pt.x + offDist.x, pt.y + offDist.y, pt.z));
+#else
 	group.path.push_back(Point64(pt.x + offDist.x, pt.y + offDist.y));
+#endif
 
 	if (angle > 0.01 - PI)
 	{
@@ -257,7 +293,11 @@ void ClipperOffset::DoRound(Group& group, const Path64& path, size_t j, size_t k
 		{
 			offDist = PointD(offDist.x * step_cos - step_sin * offDist.y,
 				offDist.x * step_sin + offDist.y * step_cos);
+#if USINGZ
+			group.path.push_back(Point64(pt.x + offDist.x, pt.y + offDist.y, pt.z));
+#else
 			group.path.push_back(Point64(pt.x + offDist.x, pt.y + offDist.y));
+#endif
 		}
 	}
 	group.path.push_back(GetPerpendic(path[j], norms[j], group_delta_));
@@ -337,9 +377,16 @@ void ClipperOffset::OffsetOpenPath(Group& group, Path64& path)
 	switch (end_type_)
 	{
 	case EndType::Butt:
+#if USINGZ
+		group.path.push_back(Point64(
+			path[0].x - norms[0].x * group_delta_,
+			path[0].y - norms[0].y * group_delta_,
+			path[0].z));
+#else
 		group.path.push_back(Point64(
 			path[0].x - norms[0].x * group_delta_,
 			path[0].y - norms[0].y * group_delta_));
+#endif
 		group.path.push_back(GetPerpendic(path[0], norms[0], group_delta_));
 		break;
 	case EndType::Round:
@@ -365,9 +412,16 @@ void ClipperOffset::OffsetOpenPath(Group& group, Path64& path)
 	switch (end_type_)
 	{
 	case EndType::Butt:
+#if USINGZ
+		group.path.push_back(Point64(
+			path[highI].x - norms[highI].x * group_delta_,
+			path[highI].y - norms[highI].y * group_delta_,
+			path[highI].z));
+#else
 		group.path.push_back(Point64(
 			path[highI].x - norms[highI].x * group_delta_,
 			path[highI].y - norms[highI].y * group_delta_));
+#endif
 		group.path.push_back(GetPerpendic(path[highI], norms[highI], group_delta_));
 		break;
 	case EndType::Round:
@@ -450,12 +504,18 @@ void ClipperOffset::DoGroupOffset(Group& group)
 			{
 				double radius = abs_group_delta_;
 				group.path = Ellipse(path[0], radius, radius);
+#if USINGZ
+				for (auto& p : group.path) p.z = path[0].z;
+#endif
 			}
 			else
 			{
 				int d = (int)std::ceil(abs_group_delta_);
 				Rect64 r = Rect64(path[0].x - d, path[0].y - d, path[0].x + d, path[0].y + d);
 				group.path = r.AsPath();
+#if USINGZ
+				for (auto& p : group.path) p.z = path[0].z;
+#endif
 			}
 			group.paths_out.push_back(group.path);
 		}
@@ -515,6 +575,11 @@ Paths64 ClipperOffset::Execute(double delta)
 	c.PreserveCollinear = false;
 	//the solution should retain the orientation of the input
 	c.ReverseSolution = reverse_solution_ != groups_[0].is_reversed;
+#if USINGZ
+	if (zCallback64_) {
+		c.SetZCallback(zCallback64_);
+	}
+#endif
 	c.AddSubject(solution);
 	if (groups_[0].is_reversed)
 		c.Execute(ClipType::Union, FillRule::Negative, solution);

@@ -11,6 +11,7 @@
 #define CLIPPER_OFFSET_H_
 
 #include "clipper.core.h"
+#include "clipper.engine.h"
 
 namespace Clipper2Lib {
 
@@ -55,6 +56,10 @@ private:
 	bool preserve_collinear_ = false;
 	bool reverse_solution_ = false;
 
+#if USINGZ
+	ZCallback64 zCallback64_ = nullptr;
+#endif
+
 	void DoSquare(Group& group, const Path64& path, size_t j, size_t k);
 	void DoMiter(Group& group, const Path64& path, size_t j, size_t k, double cos_a);
 	void DoRound(Group& group, const Path64& path, size_t j, size_t k, double angle);
@@ -96,6 +101,10 @@ public:
 	
 	bool ReverseSolution() const { return reverse_solution_; }
 	void ReverseSolution(bool reverse_solution) {reverse_solution_ = reverse_solution;}
+
+#if USINGZ
+	void SetZCallback(ZCallback64 cb) { zCallback64_ = cb; }
+#endif
 };
 
 }
