@@ -2,7 +2,7 @@ unit Clipper.Core;
 
 (*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  10 February 2023                                                *
+* Date      :  19 February 2023                                                *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2023                                         *
 * Purpose   :  Core Clipper Library module                                     *
@@ -1959,53 +1959,58 @@ end;
 function PointInPolygon(const pt: TPoint64;
   const polygon: TPath64): TPointInPolygonResult;
 var
-  i, len, val: Integer;
-  isAbove: Boolean;
-  d: Double; // used to avoid integer overflow
-  curr, prev, first, last, stop: PPoint64;
+  len, val: Integer;
+  isAbove, startingAbove: Boolean;
+  d: Double; // avoids integer overflow
+  curr, prev, cbegin, cend, first: PPoint64;
 begin
   result := pipOutside;
   len := Length(polygon);
   if len < 3 then Exit;
 
-  i := len -1;
-  first := @polygon[0];
+  cbegin := @polygon[0];
+  cend := @polygon[len]; // stop is just past the last point (nb {$R-})
 
-  while (i >= 0) and (polygon[i].Y = pt.Y) do dec(i);
-  if i < 0 then Exit;
-  isAbove := polygon[i].Y < pt.Y;
+  first := cbegin;
+  while (first <> cend) and (first.Y = pt.Y) do inc(first);
+  if (first = cend) then Exit; // not a proper polygon
 
+  isAbove := first.Y < pt.Y;
+  startingAbove := isAbove;
   Result := pipOn;
-  last := @polygon[len-1];
-  stop := @polygon[len]; // stop is just past the last point (nb {$R-})
-
   curr := first;
+  inc(curr);
   val := 0;
-
-  while (curr <> stop) do
+  while true do
   begin
-    if isAbove then
+    if (curr = cend) then
     begin
-      while (curr <> stop) and (curr.Y < pt.Y) do inc(curr);
-      if (curr = stop) then break;
-    end else
-    begin
-      while (curr <> stop) and (curr.Y > pt.Y) do inc(curr);
-      if (curr = stop) then break;
+      if (cend = first) or (first = cbegin) then break;
+      cend := first;
+      curr := cbegin;
     end;
 
-    if curr <> first then
+    if isAbove then
     begin
-      prev := curr;
-      dec(prev);
+      while (curr <> cend) and (curr.Y < pt.Y) do inc(curr);
+      if (curr = cend) then Continue;
     end else
-      prev := last;
+    begin
+      while (curr <> cend) and (curr.Y > pt.Y) do inc(curr);
+      if (curr = cend) then Continue;
+    end;
+
+    if curr = cbegin then
+      prev := @polygon[len] else // NOT cend!
+      prev := curr;
+    dec(prev);
 
     if (curr.Y = pt.Y) then
     begin
       if (curr.X = pt.X) or ((curr.Y = prev.Y) and
         ((pt.X < prev.X) <> (pt.X < curr.X))) then Exit;
       inc(curr);
+      if (curr = first) then Break;
       Continue;
     end;
 
@@ -2023,6 +2028,20 @@ begin
     isAbove := not isAbove;
     inc(curr);
   end;
+
+  if (isAbove <> startingAbove) then
+  begin
+    cend := @polygon[len];
+    if (curr = cend) then curr := cbegin;
+    if curr = cbegin then
+      prev := cend else
+      prev := curr;
+    dec(prev);
+    d := CrossProduct(prev^, curr^, pt);
+    if d = 0 then Exit; // ie point on path
+    if (d < 0) = isAbove then val := 1 - val;
+  end;
+
   if val = 0 then
      result := pipOutside else
      result := pipInside;

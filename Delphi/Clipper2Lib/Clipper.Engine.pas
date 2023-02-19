@@ -2,7 +2,7 @@ unit Clipper.Engine;
 
 (*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  27 January 2023                                                 *
+* Date      :  19 February 2023                                                *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2023                                         *
 * Purpose   :  This is the main polygon clipping module                        *
@@ -414,7 +414,6 @@ resourcestring
 
 const
   DefaultClipperDScale = 100;
-
 
 //------------------------------------------------------------------------------
 // TLocMinList class
@@ -2666,19 +2665,21 @@ function PointInOpPolygon(const pt: TPoint64; op: POutPt): TPointInPolygonResult
 var
   val: Integer;
   op2: POutPt;
-  isAbove: Boolean;
-  d: Double; // used to avoid integer overflow
+  isAbove, startingAbove: Boolean;
+  d: double; // avoids integer overflow
 begin
   result := pipOutside;
   if (op = op.next) or (op.prev = op.next) then Exit;
+
   op2 := op;
   repeat
     if (op.pt.Y <> pt.Y) then break;
     op := op.next;
   until op = op2;
-  if (op = op2) then Exit;
-  // must be above or below to get here
+  if (op.pt.Y = pt.Y) then Exit; // not a proper polygon
+
   isAbove := op.pt.Y < pt.Y;
+  startingAbove := isAbove;
   Result := pipOn;
   val := 0;
   op2 := op.next;
@@ -2698,6 +2699,7 @@ begin
       if (op2.pt.X = pt.X) or ((op2.pt.Y = op2.prev.pt.Y) and
         ((pt.X < op2.prev.pt.X) <> (pt.X < op2.pt.X))) then Exit;
       op2 := op2.next;
+      if (op2 = op) then break;
       Continue;
     end;
 
@@ -2715,37 +2717,21 @@ begin
     isAbove := not isAbove;
     op2 := op2.next;
   end;
+
+  if (isAbove <> startingAbove) then
+  begin
+    d := CrossProduct(op2.prev.pt, op2.pt, pt);
+    if d = 0 then Exit; // ie point on path
+    if (d < 0) = isAbove then val := 1 - val;
+  end;
+
   if val = 0 then
      result := pipOutside else
      result := pipInside;
 end;
 //------------------------------------------------------------------------------
 
-function Path1InsidePath2(const or1, or2: POutRec): Boolean; overload;
-var
-  op: POutPt;
-  pipResult: TPointInPolygonResult;
-  outsideCnt: integer;
-begin
-  // precondition - the twi paths or1 & pr2 don't intersect
-  // we need to make some accommodation for rounding errors
-  // so we won't jump if the first vertex is found outside
-  outsideCnt := 0;
-  op := or1.pts;
-  repeat
-    pipResult := PointInPolygon(op.pt, or2.path);
-    if pipResult = pipOutside then inc(outsideCnt)
-    else if pipResult = pipInside then dec(outsideCnt);
-    op := op.next;
-  until (op = or1.pts) or (Abs(outsideCnt) = 2);
-  // if path1's location is still equivocal then check its midpoint
-  if Abs(outsideCnt) > 1 then
-    Result := outsideCnt < 0 else
-    Result := PointInPolygon(GetBounds(op).MidPoint, or2.path) = pipInside;
-end;
-//------------------------------------------------------------------------------
-
-function Path1InsidePath2(const op1, op2: POutPt): Boolean; overload;
+function Path1InsidePath2(const op1, op2: POutPt): Boolean;
 var
   op: POutPt;
   pipResult: TPointInPolygonResult;
@@ -2948,6 +2934,7 @@ begin
         or1.pts := op1;
         or1.pts.outrec := or1;
       end;
+
       if FUsingPolytree then
       begin
         if Path1InsidePath2(or2.pts, or1.pts) then
@@ -3640,7 +3627,7 @@ begin
 
   while Assigned(outrec.owner) do
     if (outrec.owner.bounds.Contains(outrec.bounds) and
-      Path1InsidePath2(outrec, outrec.owner)) then
+      Path1InsidePath2(outrec.pts, outrec.owner.pts)) then
         break // found - owner contain outrec!
     else
       outrec.owner := outrec.owner.owner;
@@ -3667,7 +3654,7 @@ begin
       if Assigned(split) and (split <> outrec) and
         (split <> outrec.owner) and CheckBounds(split) and
         (split.bounds.Contains(outrec.bounds) and
-          Path1InsidePath2(outrec, split)) then
+          Path1InsidePath2(outrec.pts, split.pts)) then
       begin
         RecursiveCheckOwners(split, polytree);
         outrec.owner := split; //found in split

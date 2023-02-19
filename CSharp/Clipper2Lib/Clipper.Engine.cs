@@ -1,6 +1,6 @@
 ﻿/*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  17 February 2023                                                *
+* Date      :  19 February 2023                                                *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2023                                         *
 * Purpose   :  This is the main polygon clipping module                        *
@@ -2554,16 +2554,18 @@ private void DoHorizontal(Active horz)
     {
       if (op == op.next || op.prev == op.next)
         return PointInPolygonResult.IsOutside;
+
       OutPt op2 = op;
       do
       {
         if (op.pt.Y != pt.Y) break;
         op = op.next!;
       } while (op != op2);
-      if (op == op2)  return PointInPolygonResult.IsOutside;
+      if (op.pt.Y == pt.Y) // not a proper polygon
+        return PointInPolygonResult.IsOutside;
 
       // must be above or below to get here
-      bool isAbove = op.pt.Y < pt.Y;
+      bool isAbove = op.pt.Y < pt.Y, startingAbove = isAbove;
       int val = 0;
 
       op2 = op.next!;
@@ -2584,6 +2586,7 @@ private void DoHorizontal(Active horz)
             (pt.X < op2.prev.pt.X) != (pt.X < op2.pt.X)))
             return PointInPolygonResult.IsOn;
           op2 = op2.next!;
+          if (op2 == op) break;
           continue;
         }
 
@@ -2601,6 +2604,14 @@ private void DoHorizontal(Active horz)
         isAbove = !isAbove;
         op2 = op2.next!;
       }
+
+      if (isAbove != startingAbove)
+      {
+        double d = InternalClipper.CrossProduct(op2.prev.pt, op2.pt, pt);
+        if (d == 0) return PointInPolygonResult.IsOn;
+        if ((d < 0) == isAbove) val = 1 - val;
+      }
+
       if (val == 0) return PointInPolygonResult.IsOutside;
       else return PointInPolygonResult.IsInside;
     }
@@ -2917,22 +2928,6 @@ private void DoHorizontal(Active horz)
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static bool Path1InsidePath2(OutRec or1, OutRec or2)
-    {
-      PointInPolygonResult result;
-      OutPt op = or1.pts!;
-      do
-      {
-        result = InternalClipper.PointInPolygon(op.pt, or2.path);
-        if (result != PointInPolygonResult.IsOn) break;
-        op = op.next!;
-      } while (op != or1.pts);
-      if (result == PointInPolygonResult.IsOn)
-        return Area(op) < Area(or2.pts!);
-      return result == PointInPolygonResult.IsInside;
-    }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static Rect64 GetBounds(Path64 path)
 	  {
 		  if (path.Count == 0) return new Rect64();
@@ -2976,7 +2971,7 @@ private void DoHorizontal(Active horz)
 
       while (outrec.owner != null)
         if (outrec.owner.bounds.Contains(outrec.bounds) &&
-          Path1InsidePath2(outrec, outrec.owner))
+          Path1InsidePath2(outrec.pts!, outrec.owner.pts!))
           break; // found - owner contain outrec!
         else
           outrec.owner = outrec.owner.owner;
@@ -3000,7 +2995,7 @@ private void DoHorizontal(Active horz)
           if (split != null && split != outrec &&
             split != outrec.owner && CheckBounds(split) &&
             split.bounds.Contains(outrec.bounds) &&
-              Path1InsidePath2(outrec, split))
+              Path1InsidePath2(outrec.pts!, split.pts!))
           {
             RecursiveCheckOwners(split, polypath);
             outrec.owner = split; //found in split

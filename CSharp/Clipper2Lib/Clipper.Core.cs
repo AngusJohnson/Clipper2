@@ -1,6 +1,6 @@
 ﻿/*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  11 February 2023                                                *
+* Date      :  19 February 2023                                                *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2023                                         *
 * Purpose   :  Core structures and functions for the Clipper Library           *
@@ -683,33 +683,36 @@ namespace Clipper2Lib
 
     public static PointInPolygonResult PointInPolygon(Point64 pt, Path64 polygon)
     {
-      int len = polygon.Count, i = len - 1;
-
+      int len = polygon.Count, start = 0;
       if (len < 3) return PointInPolygonResult.IsOutside;
 
-      while (i >= 0 && polygon[i].Y == pt.Y) --i;
-      if (i < 0) return PointInPolygonResult.IsOutside;
+      while (start < len && polygon[start].Y == pt.Y) start++;
+      if (start == len) return PointInPolygonResult.IsOutside;
 
-      int val = 0;
-      bool isAbove = polygon[i].Y < pt.Y;
-      i = 0;
-
-      while (i < len)
+      double d;
+      bool isAbove = polygon[start].Y < pt.Y, startingAbove = isAbove;
+      int val = 0, i = start + 1, end = len;
+      while (true)
       {
+        if (i == end)
+        {
+          if (end == 0 || start == 0) break;  
+          end = start;
+          i = 0;
+        }
+        
         if (isAbove)
         {
-          while (i < len && polygon[i].Y < pt.Y) i++;
-          if (i == len) break;
+          while (i < end && polygon[i].Y < pt.Y) i++;
+          if (i == end) continue;
         }
         else
         {
-          while (i < len && polygon[i].Y > pt.Y) i++;
-          if (i == len) break;
+          while (i < end && polygon[i].Y > pt.Y) i++;
+          if (i == end) continue;
         }
 
-        Point64 prev;
-
-        Point64 curr = polygon[i];
+        Point64 curr = polygon[i], prev;
         if (i > 0) prev = polygon[i - 1];
         else prev = polygon[len - 1];
 
@@ -719,6 +722,7 @@ namespace Clipper2Lib
             ((pt.X < prev.X) != (pt.X < curr.X))))
             return PointInPolygonResult.IsOn;
           i++;
+          if (i == start) break;
           continue;
         }
 
@@ -732,13 +736,25 @@ namespace Clipper2Lib
         }
         else
         {
-          double d = CrossProduct(prev, curr, pt);
+          d = CrossProduct(prev, curr, pt);
           if (d == 0) return PointInPolygonResult.IsOn;
           if ((d < 0) == isAbove) val = 1 - val;
         }
         isAbove = !isAbove;
         i++;
       }
+
+      if (isAbove != startingAbove)
+      {
+        if (i == len) i = 0;  
+        if (i == 0)
+          d = CrossProduct(polygon[len - 1], polygon[0], pt);
+        else
+          d = CrossProduct(polygon[i - 1], polygon[i], pt);
+        if (d == 0) return PointInPolygonResult.IsOn;
+        if ((d < 0) == isAbove) val = 1 - val;
+      }
+
       if (val == 0)
         return PointInPolygonResult.IsOutside;
       return PointInPolygonResult.IsInside;
