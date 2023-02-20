@@ -1,6 +1,6 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  6 February 2023                                                 *
+* Date      :  19 February 2023                                                *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2023                                         *
 * Purpose   :  Core Clipper Library structures and functions                   *
@@ -774,56 +774,78 @@ namespace Clipper2Lib
       return PointInPolygonResult::IsOutside;
 
     int val = 0;
-    typename Path<T>::const_iterator start = polygon.cbegin(), cit = start;
-    typename Path<T>::const_iterator cend = polygon.cend(), pit = cend - 1;
+    typename Path<T>::const_iterator cbegin = polygon.cbegin(), first = cbegin, curr, prev;
+    typename Path<T>::const_iterator cend = polygon.cend();
 
-    while (pit->y == pt.y)
-    {
-      if (pit == start) return PointInPolygonResult::IsOutside;
-      --pit;
-    }
-    bool is_above = pit->y < pt.y;
+    while (first != cend && first->y == pt.y) ++first;
+    if (first == cend) // not a proper polygon
+      return PointInPolygonResult::IsOutside;
 
-    while (cit != cend)
+    bool is_above = first->y < pt.y, starting_above = is_above;
+    curr = first +1; 
+    while (true)
     {
+      if (curr == cend)
+      {
+        if (cend == first || first == cbegin) break;
+        cend = first;
+        curr = cbegin;
+      }
+      
       if (is_above)
       {
-        while (cit != cend && cit->y < pt.y) ++cit;
-        if (cit == cend) break;
+        while (curr != cend && curr->y < pt.y) ++curr;
+        if (curr == cend) continue;
       }
       else
       {
-        while (cit != cend && cit->y > pt.y) ++cit;
-        if (cit == cend) break;
+        while (curr != cend && curr->y > pt.y) ++curr;
+        if (curr == cend) continue;
       }
 
-      if (cit == start) pit = cend - 1;
-      else  pit = cit - 1;
+      if (curr == cbegin) 
+        prev = polygon.cend() - 1; //nb: NOT cend (since might equal first)
+      else  
+        prev = curr - 1;
 
-      if (cit->y == pt.y)
+      if (curr->y == pt.y)
       {
-        if (cit->x == pt.x || (cit->y == pit->y &&
-          ((pt.x < pit->x) != (pt.x < cit->x))))
-          return PointInPolygonResult::IsOn;
-        ++cit;
+        if (curr->x == pt.x || 
+          (curr->y == prev->y &&
+            ((pt.x < prev->x) != (pt.x < curr->x))))
+              return PointInPolygonResult::IsOn;
+        ++curr;
+        if (curr == first) break;
         continue;
       }
 
-      if (pt.x < cit->x && pt.x < pit->x)
+      if (pt.x < curr->x && pt.x < prev->x)
       {
         // we're only interested in edges crossing on the left
       }
-      else if (pt.x > pit->x && pt.x > cit->x)
+      else if (pt.x > prev->x && pt.x > curr->x)
         val = 1 - val; // toggle val
       else
       {
-        double d = CrossProduct(*pit, *cit, pt);
+        double d = CrossProduct(*prev, *curr, pt);
         if (d == 0) return PointInPolygonResult::IsOn;
         if ((d < 0) == is_above) val = 1 - val;
       }
       is_above = !is_above;
-      ++cit;
+      ++curr;
     }
+    
+    if (is_above != starting_above)
+    {
+      cend = polygon.cend();
+      if (curr == cend) curr = cbegin;
+      if (curr == cbegin) prev = cend - 1;
+      else prev = curr - 1;
+      double d = CrossProduct(*prev, *curr, pt);
+      if (d == 0) return PointInPolygonResult::IsOn;
+      if ((d < 0) == is_above) val = 1 - val;
+    }
+
     return (val == 0) ?
       PointInPolygonResult::IsOutside :
       PointInPolygonResult::IsInside;

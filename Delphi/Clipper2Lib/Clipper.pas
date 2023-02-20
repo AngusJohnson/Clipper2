@@ -119,7 +119,9 @@ function TranslatePaths(const paths: TPaths64; dx, dy: Int64): TPaths64; overloa
 function TranslatePaths(const paths: TPathsD; dx, dy: double): TPathsD; overload;
 
 function MinkowskiSum(const pattern, path: TPath64;
-  pathIsClosed: Boolean): TPaths64;
+  pathIsClosed: Boolean): TPaths64; overload;
+function MinkowskiSum(const pattern, path: TPathD;
+  pathIsClosed: Boolean): TPathsD; overload;
 
 function PolyTreeToPaths64(PolyTree: TPolyTree64): TPaths64;
 function PolyTreeToPathsD(PolyTree: TPolyTreeD): TPathsD;
@@ -132,8 +134,8 @@ function TrimCollinear(const p: TPath64;
 function TrimCollinear(const path: TPathD;
   precision: integer; isOpenPath: Boolean = false): TPathD; overload;
 
-function PointInPolygon(const pt: TPoint64;
-  const polygon: TPath64): TPointInPolygonResult;
+function PointInPolygon(const pt: TPoint64; const polygon: TPath64):
+  TPointInPolygonResult; {$IFDEF INLINE} inline; {$ENDIF}
 
 function SimplifyPath(const path: TPath64;
   epsilon: double; isOpenPath: Boolean = false): TPath64;
@@ -567,6 +569,13 @@ end;
 
 function MinkowskiSum(const pattern, path: TPath64;
   pathIsClosed: Boolean): TPaths64;
+begin
+ Result := Clipper.Minkowski.MinkowskiSum(pattern, path, pathIsClosed);
+end;
+//------------------------------------------------------------------------------
+
+function MinkowskiSum(const pattern, path: TPathD;
+  pathIsClosed: Boolean): TPathsD;
 begin
  Result := Clipper.Minkowski.MinkowskiSum(pattern, path, pathIsClosed);
 end;

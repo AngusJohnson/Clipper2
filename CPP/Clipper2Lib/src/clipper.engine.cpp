@@ -1,6 +1,6 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  6 February 2023                                                 *
+* Date      :  19 February 2023                                                *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2023                                         *
 * Purpose   :  This is the main polygon clipping module                        *
@@ -1916,21 +1916,22 @@ namespace Clipper2Lib {
   {
     if (op == op->next || op->prev == op->next)
       return PointInPolygonResult::IsOutside;
+  
     OutPt* op2 = op;
     do
     {
       if (op->pt.y != pt.y) break;
       op = op->next;
     } while (op != op2);
-    if (op == op2)  return PointInPolygonResult::IsOutside;
+    if (op->pt.y == pt.y) // not a proper polygon
+      return PointInPolygonResult::IsOutside;
 
-    // must be above or below to get here
-    bool isAbove = op->pt.y < pt.y;
+    bool is_above = op->pt.y < pt.y, starting_above = is_above;
     int val = 0;
     op2 = op->next;
     while (op2 != op)
     {
-      if (isAbove)
+      if (is_above)
         while (op2 != op && op2->pt.y < pt.y) op2 = op2->next;
       else
         while (op2 != op && op2->pt.y > pt.y) op2 = op2->next;
@@ -1946,6 +1947,7 @@ namespace Clipper2Lib {
           return PointInPolygonResult::IsOn;
 
         op2 = op2->next;
+        if (op2 == op) break;
         continue;
       }
 
@@ -1958,11 +1960,19 @@ namespace Clipper2Lib {
       {
         double d = CrossProduct(op2->prev->pt, op2->pt, pt);
         if (d == 0) return PointInPolygonResult::IsOn;
-        if ((d < 0) == isAbove) val = 1 - val;
+        if ((d < 0) == is_above) val = 1 - val;
       }
-      isAbove = !isAbove;
+      is_above = !is_above;
       op2 = op2->next;
     }
+
+    if (is_above != starting_above)
+    {
+      double d = CrossProduct(op2->prev->pt, op2->pt, pt);
+      if (d == 0) return PointInPolygonResult::IsOn;
+      if ((d < 0) == is_above) val = 1 - val;
+    }
+
     if (val == 0) return PointInPolygonResult::IsOutside;
     else return PointInPolygonResult::IsInside;
   }
@@ -1984,25 +1994,6 @@ namespace Clipper2Lib {
     // since path1's location is still equivocal, check its midpoint
     Point64 mp = GetBounds(op).MidPoint();
     return  PointInOpPolygon(mp, op2) == PointInPolygonResult::IsInside;
-  }
-
-  inline bool Path1InsidePath2(const OutRec* or1, const OutRec* or2)
-  {
-    // we need to make some accommodation for rounding errors
-    // so we won't jump if the first vertex is found outside
-    int outside_cnt = 0;
-    OutPt* op = or1->pts;
-    do
-    {
-      PointInPolygonResult result = PointInPolygon(op->pt, or2->path);
-      if (result == PointInPolygonResult::IsOutside) ++outside_cnt;
-      else if (result == PointInPolygonResult::IsInside) --outside_cnt;
-      op = op->next;
-    } while (op != or1->pts && std::abs(outside_cnt) < 2);
-    if (std::abs(outside_cnt) > 1) return (outside_cnt < 0);
-    // since path1's location is still equivocal, check its midpoint
-    Point64 mp = GetBounds(op).MidPoint();
-    return  PointInPolygon(mp, or2->path) == PointInPolygonResult::IsInside;
   }
 
   inline bool SetHorzSegHeadingForward(HorzSegment& hs, OutPt* opP, OutPt* opN)
@@ -2785,7 +2776,7 @@ namespace Clipper2Lib {
 
     while (outrec->owner)
       if (outrec->owner->bounds.Contains(outrec->bounds) &&
-        Path1InsidePath2(outrec, outrec->owner))
+        Path1InsidePath2(outrec->pts, outrec->owner->pts))
         break; // found - owner contain outrec!
       else
         outrec->owner = outrec->owner->owner;
@@ -2809,7 +2800,7 @@ namespace Clipper2Lib {
         if (split && split != outrec &&
           split != outrec->owner && CheckBounds(split) &&
           split->bounds.Contains(outrec->bounds) &&
-            Path1InsidePath2(outrec, split)) 
+            Path1InsidePath2(outrec->pts, split->pts)) 
         {
           RecursiveCheckOwners(split, polypath);
           outrec->owner = split; //found in split

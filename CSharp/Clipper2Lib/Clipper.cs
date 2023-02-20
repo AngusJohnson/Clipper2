@@ -14,7 +14,6 @@
 #nullable enable
 using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Runtime.CompilerServices;
 
 namespace Clipper2Lib
@@ -238,7 +237,17 @@ namespace Clipper2Lib
       return Minkowski.Sum(pattern, path, isClosed);
     }
 
+    public static PathsD MinkowskiSum(PathD pattern, PathD path, bool isClosed)
+    {
+      return Minkowski.Sum(pattern, path, isClosed);
+    }
+
     public static Paths64 MinkowskiDiff(Path64 pattern, Path64 path, bool isClosed)
+    {
+      return Minkowski.Diff(pattern, path, isClosed);
+    }
+
+    public static PathsD MinkowskiDiff(PathD pattern, PathD path, bool isClosed)
     {
       return Minkowski.Diff(pattern, path, isClosed);
     }
