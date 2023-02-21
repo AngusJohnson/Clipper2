@@ -1,6 +1,6 @@
 ﻿/*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  15 February 2023                                                *
+* Date      :  21 February 2023                                                *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2023                                         *
 * Purpose   :  Path Offset (Inflate/Shrink)                                    *
@@ -67,13 +67,9 @@ namespace Clipper2Lib
     public double MiterLimit { get; set; }
     public bool PreserveCollinear { get; set; }
     public bool ReverseSolution { get; set; }
-
 #if USINGZ
-    public ZCallback64? ZCallback { get; set; };
+    public ClipperBase.ZCallback64? ZCallback { get; set; }
 #endif
-
-    private const double TwoPi = Math.PI * 2;
-
     public ClipperOffset(double miterLimit = 2.0, 
       double arcTolerance = 0.0, bool 
       preserveCollinear = false, bool reverseSolution = false)
@@ -83,6 +79,9 @@ namespace Clipper2Lib
       MergeGroups = true;
       PreserveCollinear = preserveCollinear;
       ReverseSolution = reverseSolution;
+#if USINGZ
+      ZCallback = null;
+#endif
     }
 
     public void Clear()
@@ -132,7 +131,9 @@ namespace Clipper2Lib
         // the solution should retain the orientation of the input
         ReverseSolution = ReverseSolution != _groupList[0].pathsReversed
       };
-      c.ZCallback64 = ZCallback;
+#if USINGZ
+      c.ZCallback = ZCallback;
+#endif
       c.AddSubject(solution);
       if (_groupList[0].pathsReversed)
         c.Execute(ClipType.Union, FillRule.Negative, solution);
@@ -185,7 +186,7 @@ namespace Clipper2Lib
 #if USINGZ
       return new PointD(pt.x + dx, pt.y + dy, pt.z);
 #else
-	    return new PointD(pt.x + dx, pt.y + dy);
+      return new PointD(pt.x + dx, pt.y + dy);
 #endif
     }
 
@@ -313,7 +314,7 @@ namespace Clipper2Lib
         PointD pt = IntersectPoint(pt1, pt2, pt3, pt4);
 #if USINGZ
         pt.z = ptQ.z;
-#endif
+#endif    
         //get the second intersect point through reflecion
         group.outPath.Add(new Point64(ReflectPoint(pt, ptQ)));
         group.outPath.Add(new Point64(pt));
@@ -389,8 +390,7 @@ namespace Clipper2Lib
       _normals.Add(GetUnitNormal(path[cnt - 1], path[0]));
     }
 
-    private void OffsetPoint(Group group, Path64 path, 
-      int j, ref int k, bool reversing = false)
+    private void OffsetPoint(Group group, Path64 path, int j, ref int k)
     {
       // Let A = change in angle where edges join
       // A == 0: ie no change in angle (flat join)
@@ -460,9 +460,16 @@ namespace Clipper2Lib
       switch (_endType)
       {
         case EndType.Butt:
+#if USINGZ
           group.outPath.Add(new Point64(
-              path[0].X - _normals[0].x * _group_delta,
-              path[0].Y - _normals[0].y * _group_delta));
+              path[highI].X - _normals[highI].x * _group_delta,
+              path[highI].Y - _normals[highI].y * _group_delta,
+              path[highI].Z));
+#else
+          group.outPath.Add(new Point64(
+              path[highI].X - _normals[highI].x * _group_delta,
+              path[highI].Y - _normals[highI].y * _group_delta));
+#endif
           group.outPath.Add(GetPerpendic(path[0], _normals[0]));
           break;
         case EndType.Round:
@@ -508,15 +515,9 @@ namespace Clipper2Lib
 
       // offset the left side going back
       for (int i = highI, k = 0; i > 0; i--)
-        OffsetPoint(group, path, i, ref k, true);
+        OffsetPoint(group, path, i, ref k);
 
       group.outPaths.Add(group.outPath);
-    }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static bool IsFullyOpenEndType(EndType et)
-    {
-      return (et != EndType.Polygon) && (et != EndType.Joined);
     }
 
     private void DoGroupOffset(Group group)
@@ -576,11 +577,8 @@ namespace Clipper2Lib
             double r = _abs_group_delta;
             group.outPath = Clipper.Ellipse(path[0], r, r);
 #if USINGZ
-            for (int i = 0; i < group.outPath.Count; ++i)
-            {
-              group.outPath[i].Z = path[0].Z;
-            }
-#endif
+            group.outPath = InternalClipper.SetZ(group.outPath, path[0].Z);
+#endif      
           }
           else
           {
@@ -589,10 +587,7 @@ namespace Clipper2Lib
               path[0].X - d, path[0].Y - d);
             group.outPath = r.AsPath();
 #if USINGZ
-            for (int i = 0; i < 4; ++i)
-            {
-              group.outPath[i].Z = path[0].Z;
-            }
+            group.outPath = InternalClipper.SetZ(group.outPath, path[0].Z);
 #endif
           }
           group.outPaths.Add(group.outPath);
