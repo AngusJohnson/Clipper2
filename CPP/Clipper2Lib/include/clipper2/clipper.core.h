@@ -1,6 +1,6 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  19 February 2023                                                *
+* Date      :  21 February 2023                                                *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2023                                         *
 * Purpose   :  Core Clipper Library structures and functions                   *
@@ -17,6 +17,7 @@
 #include <iostream>
 #include <algorithm>
 #include <climits>
+#include <numeric>
 
 namespace Clipper2Lib
 {
@@ -244,6 +245,18 @@ namespace Clipper2Lib
       right(r),
       bottom(b) {}
 
+    Rect(bool is_valid)
+    {
+      if (is_valid)
+      {
+        left = right = top = bottom = 0;
+      }
+      else
+      {
+        left = top = std::numeric_limits<T>::max();
+        right = bottom = -std::numeric_limits<int64_t>::max();
+      }
+    }
 
     T Width() const { return right - left; }
     T Height() const { return bottom - top; }

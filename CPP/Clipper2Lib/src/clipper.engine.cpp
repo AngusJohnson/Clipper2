@@ -1,6 +1,6 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  19 February 2023                                                *
+* Date      :  21 February 2023                                                *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2023                                         *
 * Purpose   :  This is the main polygon clipping module                        *
@@ -28,12 +28,7 @@
 
 namespace Clipper2Lib {
 
-  static const Rect64 invalid_rect = Rect64(
-    std::numeric_limits<int64_t>::max(),
-    std::numeric_limits<int64_t>::max(),
-    -std::numeric_limits<int64_t>::max(),
-    -std::numeric_limits<int64_t>::max()
-  );
+  static const Rect64 invalid_rect = Rect64(false);
 
   // Every closed path (or polygon) is made up of a series of vertices forming
   // edges that alternate between going up (relative to the Y-axis) and going

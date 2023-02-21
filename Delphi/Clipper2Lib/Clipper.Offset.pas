@@ -2,7 +2,7 @@ unit Clipper.Offset;
 
 (*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  15 February 2023                                                *
+* Date      :  21 February 2023                                                *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2023                                         *
 * Purpose   :  Path Offset (Inflate/Shrink)                                    *
@@ -10,12 +10,11 @@ unit Clipper.Offset;
 *******************************************************************************)
 
 {$I Clipper.inc}
-{$I Clipper.Engine.pas}
 
 interface
 
 uses
-  Classes, Clipper.Core;
+  Classes, Clipper.Core, Clipper.Engine;
 
 type
 
@@ -58,8 +57,10 @@ type
     fReverseSolution    : Boolean;
 {$IFDEF USINGZ}
     fZCallback64 : TZCallback64;
-{$ENDIF}
+    procedure AddPoint(x,y: double; z: Int64); overload;
+{$ELSE}
     procedure AddPoint(x,y: double); overload;
+{$ENDIF}
     procedure AddPoint(const pt: TPoint64); overload;
       {$IFDEF INLINING} inline; {$ENDIF}
     procedure DoSquare(j, k: Integer);
@@ -101,7 +102,7 @@ type
 implementation
 
 uses
-  Math, Clipper.Engine;
+  Math;
 
 const
   TwoPi     : Double = 2 * PI;
@@ -349,8 +350,8 @@ begin
         begin
           fOutPath := Path64(Ellipse(RectD(X-r, Y-r, X+r, Y+r)));
 {$IFDEF USINGZ}
-          for n := 0 to high(fOutPath) do
-            fOutPath[n].Z := Z;
+          for j := 0 to high(fOutPath) do
+            fOutPath[j].Z := Z;
 {$ENDIF}
         end;
       end else
@@ -361,8 +362,8 @@ begin
           rec := Rect64(X -j, Y -j, X+j, Y+j);
           fOutPath := rec.AsPath;
 {$IFDEF USINGZ}
-          for n := 0 to high(fOutPath) do
-            fOutPath[n].Z := Z;
+          for j := 0 to high(fOutPath) do
+            fOutPath[j].Z := Z;
 {$ENDIF}
         end
       end;
@@ -445,12 +446,12 @@ begin
 {$IFDEF USINGZ}
         with fInPath[0] do AddPoint(Point64(
           X - fNorms[0].X * fGroupDelta,
-          Y - fNorms[0].Y * fGroupDelta));
+          Y - fNorms[0].Y * fGroupDelta,
+          Z));
 {$ELSE}
         with fInPath[0] do AddPoint(Point64(
           X - fNorms[0].X * fGroupDelta,
-          Y - fNorms[0].Y * fGroupDelta,
-          Z));
+          Y - fNorms[0].Y * fGroupDelta));
 {$ENDIF}
         AddPoint(GetPerpendic(fInPath[0], fNorms[0], fGroupDelta));
       end;
@@ -552,7 +553,7 @@ end;
 //------------------------------------------------------------------------------
 
 {$IFDEF USINGZ}
-procedure TClipperOffset.AddPoint(x,y: double, z: Int64);
+procedure TClipperOffset.AddPoint(x,y: double; z: Int64);
 {$ELSE}
 procedure TClipperOffset.AddPoint(x,y: double);
 {$ENDIF}
@@ -561,10 +562,11 @@ const
 var
   pt: TPoint64;
 begin
+{$IFDEF USINGZ}
+  pt := Point64(Round(x),Round(y), z);
+{$ELSE}
   pt := Point64(Round(x),Round(y));
-  {$IFDEF USINGZ}
-  pt.Z := z;
-  {$ENDIF}
+{$ENDIF}
   if fOutPathLen = length(fOutPath) then
     SetLength(fOutPath, fOutPathLen + BuffLength);
   if (fOutPathLen > 0) and
@@ -673,9 +675,15 @@ begin
     pt4 := GetPerpendicD(fInPath[j], fNorms[k], fGroupDelta);
     // get the intersection point
     pt := IntersectPoint(pt1, pt2, pt3, pt4);
+{$IFDEF USINGZ}
+    AddPoint(pt.X, pt.Y, ptQ.Z);
+    //get the second intersect point through reflecion
+    with ReflectPoint(pt, ptQ) do AddPoint(X, Y, ptQ.Z);
+{$ELSE}
     AddPoint(pt.X, pt.Y);
     //get the second intersect point through reflecion
     with ReflectPoint(pt, ptQ) do AddPoint(X, Y);
+{$ENDIF}
   end;
 end;
 //------------------------------------------------------------------------------
