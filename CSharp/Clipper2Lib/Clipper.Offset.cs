@@ -67,11 +67,9 @@ namespace Clipper2Lib
     public double MiterLimit { get; set; }
     public bool PreserveCollinear { get; set; }
     public bool ReverseSolution { get; set; }
-
 #if USINGZ
     public ClipperBase.ZCallback64? ZCallback { get; set; }
 #endif
-
     public ClipperOffset(double miterLimit = 2.0, 
       double arcTolerance = 0.0, bool 
       preserveCollinear = false, bool reverseSolution = false)
@@ -325,6 +323,9 @@ namespace Clipper2Lib
       {
         PointD pt4 = GetPerpendicD(path[j], _normals[k]);
         PointD pt = IntersectPoint(pt1, pt2, pt3, pt4);
+#if USINGZ
+        pt.z = ptQ.z;
+#endif
         group.outPath.Add(new Point64(pt));
         //get the second intersect point through reflecion
         group.outPath.Add(new Point64(ReflectPoint(pt, ptQ)));
@@ -492,9 +493,16 @@ namespace Clipper2Lib
       switch (_endType)
       {
         case EndType.Butt:
+#if USINGZ
+          group.outPath.Add(new Point64(
+              path[highI].X - _normals[highI].x * _group_delta,
+              path[highI].Y - _normals[highI].y * _group_delta,
+              path[highI].Z));
+#else
           group.outPath.Add(new Point64(
               path[highI].X - _normals[highI].x * _group_delta,
               path[highI].Y - _normals[highI].y * _group_delta));
+#endif
           group.outPath.Add(GetPerpendic(path[highI], _normals[highI]));
           break;
         case EndType.Round:

@@ -10,6 +10,7 @@ unit Clipper.Offset;
 *******************************************************************************)
 
 {$I Clipper.inc}
+{$I Clipper.Engine.pas}
 
 interface
 
@@ -55,6 +56,9 @@ type
     fSolution     : TPaths64;
     fPreserveCollinear  : Boolean;
     fReverseSolution    : Boolean;
+{$IFDEF USINGZ}
+    fZCallback64 : TZCallback64;
+{$ENDIF}
     procedure AddPoint(x,y: double); overload;
     procedure AddPoint(const pt: TPoint64); overload;
       {$IFDEF INLINING} inline; {$ENDIF}
@@ -89,6 +93,9 @@ type
       read fPreserveCollinear write fPreserveCollinear;
     property ReverseSolution: Boolean
       read fReverseSolution write fReverseSolution;
+{$IFDEF USINGZ}
+    property ZCallback: TZCallback64 read fZCallback64 write fZCallback64;
+{$ENDIF}
   end;
 
 implementation
@@ -261,6 +268,9 @@ function GetPerpendic(const pt: TPoint64; const norm: TPointD; delta: double): T
   {$IFDEF INLINING} inline; {$ENDIF}
 begin
   result := Point64(pt.X + norm.X * delta, pt.Y + norm.Y * delta);
+{$IFDEF USINGZ}
+  result.Z := pt.Z;
+{$ENDIF}
 end;
 //------------------------------------------------------------------------------
 
@@ -268,6 +278,9 @@ function GetPerpendicD(const pt: TPoint64; const norm: TPointD; delta: double): 
   {$IFDEF INLINING} inline; {$ENDIF}
 begin
   result := PointD(pt.X + norm.X * delta, pt.Y + norm.Y * delta);
+{$IFDEF USINGZ}
+  result.Z := pt.Z;
+{$ENDIF}
 end;
 //------------------------------------------------------------------------------
 
@@ -333,13 +346,25 @@ begin
       begin
         r := fAbsGrpDelta;
         with fInPath[0] do
+        begin
           fOutPath := Path64(Ellipse(RectD(X-r, Y-r, X+r, Y+r)));
+{$IFDEF USINGZ}
+          for n := 0 to high(fOutPath) do
+            fOutPath[n].Z := Z;
+{$ENDIF}
+        end;
       end else
       begin
         j := Round(fGroupDelta);
         with fInPath[0] do
+        begin
           rec := Rect64(X -j, Y -j, X+j, Y+j);
-        fOutPath := rec.AsPath;
+          fOutPath := rec.AsPath;
+{$IFDEF USINGZ}
+          for n := 0 to high(fOutPath) do
+            fOutPath[n].Z := Z;
+{$ENDIF}
+        end
       end;
       AppendPath(fOutPaths, fOutPath);
       Continue;
@@ -417,9 +442,16 @@ begin
   case fEndType of
     etButt:
       begin
+{$IFDEF USINGZ}
         with fInPath[0] do AddPoint(Point64(
           X - fNorms[0].X * fGroupDelta,
           Y - fNorms[0].Y * fGroupDelta));
+{$ELSE}
+        with fInPath[0] do AddPoint(Point64(
+          X - fNorms[0].X * fGroupDelta,
+          Y - fNorms[0].Y * fGroupDelta,
+          Z));
+{$ENDIF}
         AddPoint(GetPerpendic(fInPath[0], fNorms[0], fGroupDelta));
       end;
     etRound: DoRound(0,0, PI);
@@ -443,9 +475,16 @@ begin
   case fEndType of
     etButt:
       begin
+{$IFDEF USINGZ}
+        with fInPath[highI] do AddPoint(Point64(
+          X - fNorms[highI].X *fGroupDelta,
+          Y - fNorms[highI].Y *fGroupDelta,
+          Z));
+{$ELSE}
         with fInPath[highI] do AddPoint(Point64(
           X - fNorms[highI].X *fGroupDelta,
           Y - fNorms[highI].Y *fGroupDelta));
+{$ENDIF}
         AddPoint(GetPerpendic(fInPath[highI], fNorms[highI], fGroupDelta));
       end;
     etRound: DoRound(highI,highI, PI);
@@ -512,13 +551,20 @@ begin
 end;
 //------------------------------------------------------------------------------
 
+{$IFDEF USINGZ}
+procedure TClipperOffset.AddPoint(x,y: double, z: Int64);
+{$ELSE}
 procedure TClipperOffset.AddPoint(x,y: double);
+{$ENDIF}
 const
   BuffLength = 32;
 var
   pt: TPoint64;
 begin
   pt := Point64(Round(x),Round(y));
+  {$IFDEF USINGZ}
+  pt.Z := z;
+  {$ENDIF}
   if fOutPathLen = length(fOutPath) then
     SetLength(fOutPath, fOutPathLen + BuffLength);
   if (fOutPathLen > 0) and
@@ -530,7 +576,11 @@ end;
 
 procedure TClipperOffset.AddPoint(const pt: TPoint64);
 begin
+{$IFDEF USINGZ}
+  AddPoint(pt.X, pt.Y, pt.Z);
+{$ELSE}
   AddPoint(pt.X, pt.Y);
+{$ENDIF}
 end;
 //------------------------------------------------------------------------------
 
@@ -571,6 +621,9 @@ function ReflectPoint(const pt, pivot: TPointD): TPointD;
 begin
   Result.X := pivot.X + (pivot.X - pt.X);
   Result.Y := pivot.Y + (pivot.Y - pt.Y);
+{$IFDEF USINGZ}
+  Result.Z := pt.Z;
+{$ENDIF}
 end;
 //------------------------------------------------------------------------------
 
@@ -608,8 +661,13 @@ begin
     pt4.Y := pt3.Y + vec.Y * fGroupDelta;
     // get the intersection point
     pt := IntersectPoint(pt1, pt2, pt3, pt4);
+{$IFDEF USINGZ}
+    with ReflectPoint(pt, ptQ) do AddPoint(X, Y, Z);
+    AddPoint(pt.X, pt.Y, pt.Z);
+{$ELSE}
     with ReflectPoint(pt, ptQ) do AddPoint(X, Y);
     AddPoint(pt.X, pt.Y);
+{$ENDIF}
   end else
   begin
     pt4 := GetPerpendicD(fInPath[j], fNorms[k], fGroupDelta);
@@ -628,8 +686,14 @@ var
 begin
   // see offset_triginometry4.svg
   q := fGroupDelta / (cosA +1);
+{$IFDEF USINGZ}
+  AddPoint(fInPath[j].X + (fNorms[k].X + fNorms[j].X)*q,
+    fInPath[j].Y + (fNorms[k].Y + fNorms[j].Y)*q,
+    fInPath[j].Z);
+{$ELSE}
   AddPoint(fInPath[j].X + (fNorms[k].X + fNorms[j].X)*q,
     fInPath[j].Y + (fNorms[k].Y + fNorms[j].Y)*q);
+{$ENDIF}
 end;
 //------------------------------------------------------------------------------
 
@@ -644,14 +708,22 @@ begin
   pt := fInPath[j];
   offDist := ScalePoint(fNorms[k], fGroupDelta);
   if j = k then  offDist := Negate(offDist);
+{$IFDEF USINGZ}
+  AddPoint(pt.X + offDist.X, pt.Y + offDist.Y, pt.Z);
+{$ELSE}
   AddPoint(pt.X + offDist.X, pt.Y + offDist.Y);
+{$ENDIF}
   steps := Max(2, Floor(fStepsPerRad * abs(angle)));
   GetSinCos(angle / steps, stepSin, stepCos);
   for i := 2 to steps do
   begin
     offDist := PointD(offDist.X * stepCos - stepSin * offDist.Y,
       offDist.X * stepSin + offDist.Y * stepCos);
+{$IFDEF USINGZ}
+    AddPoint(pt.X + offDist.X, pt.Y + offDist.Y, pt.Z);
+{$ELSE}
     AddPoint(pt.X + offDist.X, pt.Y + offDist.Y);
+{$ENDIF}
   end;
   AddPoint(GetPerpendic(pt, fNorms[j], fGroupDelta));
 end;
