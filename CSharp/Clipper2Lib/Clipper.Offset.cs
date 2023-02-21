@@ -1,6 +1,6 @@
 ﻿/*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  15 February 2023                                                *
+* Date      :  21 February 2023                                                *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2023                                         *
 * Purpose   :  Path Offset (Inflate/Shrink)                                    *
@@ -68,7 +68,9 @@ namespace Clipper2Lib
     public bool PreserveCollinear { get; set; }
     public bool ReverseSolution { get; set; }
 
-    private const double TwoPi = Math.PI * 2;
+#if USINGZ
+    public ClipperBase.ZCallback64? ZCallback { get; set; }
+#endif
 
     public ClipperOffset(double miterLimit = 2.0, 
       double arcTolerance = 0.0, bool 
@@ -79,6 +81,9 @@ namespace Clipper2Lib
       MergeGroups = true;
       PreserveCollinear = preserveCollinear;
       ReverseSolution = reverseSolution;
+#if USINGZ
+      ZCallback = null;
+#endif
     }
 
     public void Clear()
@@ -128,6 +133,9 @@ namespace Clipper2Lib
         // the solution should retain the orientation of the input
         ReverseSolution = ReverseSolution != _groupList[0].pathsReversed
       };
+#if USINGZ
+      c.ZCallback = ZCallback;
+#endif
       c.AddSubject(solution);
       if (_groupList[0].pathsReversed)
         c.Execute(ClipType.Union, FillRule.Negative, solution);
@@ -177,13 +185,21 @@ namespace Clipper2Lib
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static PointD TranslatePoint(PointD pt, double dx, double dy)
     {
-	    return new PointD(pt.x + dx, pt.y + dy);
+#if USINGZ
+      return new PointD(pt.x + dx, pt.y + dy, pt.z);
+#else
+      return new PointD(pt.x + dx, pt.y + dy);
+#endif
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static PointD ReflectPoint(PointD pt, PointD pivot)
     {
+#if USINGZ
+      return new PointD(pivot.x + (pivot.x - pt.x), pivot.y + (pivot.y - pt.y), pt.z);
+#else
       return new PointD(pivot.x + (pivot.x - pt.x), pivot.y + (pivot.y - pt.y));
+#endif
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -246,15 +262,25 @@ namespace Clipper2Lib
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private Point64 GetPerpendic(Point64 pt, PointD norm)
     {
+#if USINGZ
+      return new Point64(pt.X + norm.x * _group_delta,
+        pt.Y + norm.y * _group_delta, pt.Z);
+#else
       return new Point64(pt.X + norm.x * _group_delta,
         pt.Y + norm.y * _group_delta);
+#endif
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private PointD GetPerpendicD(Point64 pt, PointD norm)
     {
+#if USINGZ
+      return new PointD(pt.X + norm.x * _group_delta,
+        pt.Y + norm.y * _group_delta, pt.Z);
+#else
       return new PointD(pt.X + norm.x * _group_delta,
         pt.Y + norm.y * _group_delta);
+#endif
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -288,6 +314,9 @@ namespace Clipper2Lib
           pt3.x + vec.x * _group_delta,
           pt3.y + vec.y * _group_delta);
         PointD pt = IntersectPoint(pt1, pt2, pt3, pt4);
+#if USINGZ
+        pt.z = ptQ.z;
+#endif    
         //get the second intersect point through reflecion
         group.outPath.Add(new Point64(ReflectPoint(pt, ptQ)));
         group.outPath.Add(new Point64(pt));
@@ -306,9 +335,16 @@ namespace Clipper2Lib
     private void DoMiter(Group group, Path64 path, int j, int k, double cosA)
     {
       double q = _group_delta / (cosA + 1);
+#if USINGZ
+      group.outPath.Add(new Point64(
+          path[j].X + (_normals[k].x + _normals[j].x) * q,
+          path[j].Y + (_normals[k].y + _normals[j].y) * q,
+          path[j].Z));
+#else
       group.outPath.Add(new Point64(
           path[j].X + (_normals[k].x + _normals[j].x) * q,
           path[j].Y + (_normals[k].y + _normals[j].y) * q));
+#endif
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -317,7 +353,11 @@ namespace Clipper2Lib
       Point64 pt = path[j];
       PointD offsetVec = new PointD(_normals[k].x * _group_delta, _normals[k].y * _group_delta);
       if (j == k) offsetVec.Negate();
+#if USINGZ
+      group.outPath.Add(new Point64(pt.X + offsetVec.x, pt.Y + offsetVec.y, pt.Z));
+#else
       group.outPath.Add(new Point64(pt.X + offsetVec.x, pt.Y + offsetVec.y));
+#endif
       if (angle > -Math.PI + 0.01) // avoid 180deg concave
       {
         int steps = Math.Max(2, (int) Math.Floor(_stepsPerRad * Math.Abs(angle)));
@@ -327,7 +367,11 @@ namespace Clipper2Lib
         {
           offsetVec = new PointD(offsetVec.x * stepCos - stepSin * offsetVec.y,
               offsetVec.x * stepSin + offsetVec.y * stepCos);
+#if USINGZ
+          group.outPath.Add(new Point64(pt.X + offsetVec.x, pt.Y + offsetVec.y, pt.Z));
+#else
           group.outPath.Add(new Point64(pt.X + offsetVec.x, pt.Y + offsetVec.y));
+#endif
         }
       }
       group.outPath.Add(GetPerpendic(pt, _normals[j]));
@@ -345,8 +389,7 @@ namespace Clipper2Lib
       _normals.Add(GetUnitNormal(path[cnt - 1], path[0]));
     }
 
-    private void OffsetPoint(Group group, Path64 path, 
-      int j, ref int k, bool reversing = false)
+    private void OffsetPoint(Group group, Path64 path, int j, ref int k)
     {
       // Let A = change in angle where edges join
       // A == 0: ie no change in angle (flat join)
@@ -416,9 +459,16 @@ namespace Clipper2Lib
       switch (_endType)
       {
         case EndType.Butt:
+#if USINGZ
           group.outPath.Add(new Point64(
-              path[0].X - _normals[0].x * _group_delta,
-              path[0].Y - _normals[0].y * _group_delta));
+              path[highI].X - _normals[highI].x * _group_delta,
+              path[highI].Y - _normals[highI].y * _group_delta,
+              path[highI].Z));
+#else
+          group.outPath.Add(new Point64(
+              path[highI].X - _normals[highI].x * _group_delta,
+              path[highI].Y - _normals[highI].y * _group_delta));
+#endif
           group.outPath.Add(GetPerpendic(path[0], _normals[0]));
           break;
         case EndType.Round:
@@ -457,15 +507,9 @@ namespace Clipper2Lib
 
       // offset the left side going back
       for (int i = highI, k = 0; i > 0; i--)
-        OffsetPoint(group, path, i, ref k, true);
+        OffsetPoint(group, path, i, ref k);
 
       group.outPaths.Add(group.outPath);
-    }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static bool IsFullyOpenEndType(EndType et)
-    {
-      return (et != EndType.Polygon) && (et != EndType.Joined);
     }
 
     private void DoGroupOffset(Group group)
@@ -524,6 +568,9 @@ namespace Clipper2Lib
           {
             double r = _abs_group_delta;
             group.outPath = Clipper.Ellipse(path[0], r, r);
+#if USINGZ
+            group.outPath = InternalClipper.SetZ(group.outPath, path[0].Z);
+#endif      
           }
           else
           {
@@ -531,6 +578,9 @@ namespace Clipper2Lib
             Rect64 r = new Rect64(path[0].X - d, path[0].Y - d,
               path[0].X - d, path[0].Y - d);
             group.outPath = r.AsPath();
+#if USINGZ
+            group.outPath = InternalClipper.SetZ(group.outPath, path[0].Z);
+#endif
           }
           group.outPaths.Add(group.outPath);
         }

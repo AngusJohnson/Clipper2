@@ -1,6 +1,6 @@
 ﻿/*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  19 February 2023                                                *
+* Date      :  21 February 2023                                                *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2023                                         *
 * Purpose   :  This is the main polygon clipping module                        *
@@ -2931,7 +2931,7 @@ private void DoHorizontal(Active horz)
     private static Rect64 GetBounds(Path64 path)
 	  {
 		  if (path.Count == 0) return new Rect64();
-      Rect64 result = new Rect64(long.MaxValue, long.MaxValue, -long.MaxValue, -long.MaxValue);
+      Rect64 result = Clipper.InvalidRect64;
 		  foreach (Point64 pt in path)
 		  {
 			  if (pt.X < result.left) result.left = pt.X;
@@ -3039,7 +3039,7 @@ private void DoHorizontal(Active horz)
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public Rect64 GetBounds()
     {
-      Rect64 bounds = Clipper.MaxInvalidRect64;
+      Rect64 bounds = Clipper.InvalidRect64;
       foreach (Vertex t in _vertexList)
       {
         Vertex v = t;
