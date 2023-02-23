@@ -1,6 +1,6 @@
 ﻿/*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  21 February 2023                                                *
+* Date      :  23 February 2023                                                *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2023                                         *
 * Purpose   :  Path Offset (Inflate/Shrink)                                    *
@@ -405,6 +405,7 @@ namespace Clipper2Lib
       if (AlmostZero(cosA - 1, 0.01)) // almost straight
       {
         group.outPath.Add(GetPerpendic(path[j], _normals[k]));
+        group.outPath.Add(GetPerpendic(path[j], _normals[j])); // (#418)
       }
       else if (!AlmostZero(cosA + 1, 0.01) && 
         (sinA * _group_delta < 0)) // is concave

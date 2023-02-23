@@ -2,7 +2,7 @@ unit Clipper.Offset;
 
 (*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  21 February 2023                                                *
+* Date      :  23 February 2023                                                *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2023                                         *
 * Purpose   :  Path Offset (Inflate/Shrink)                                    *
@@ -761,6 +761,7 @@ begin
   if ValueAlmostZero(cosA - 1, 0.01) then // almost straight
   begin
     AddPoint(GetPerpendic(fInPath[j], fNorms[k], fGroupDelta));
+    AddPoint(GetPerpendic(fInPath[j], fNorms[j], fGroupDelta)); // (#418)
   end
   else if not ValueAlmostZero(cosA + 1, 0.01) and
     (sinA * fGroupDelta < 0) then // is concave

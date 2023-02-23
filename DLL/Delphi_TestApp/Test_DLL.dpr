@@ -10,6 +10,7 @@ program Test_DLL;
 
 uses
   Windows,
+  Math,
   ShellApi,
   SysUtils,
   {$IFDEF USING_CLIPPER2_SRC}
@@ -475,13 +476,6 @@ begin
   end;
 end;
 
-function RectToPath64(const rec: TRect64): TPath64;
-begin
-  with rec do
-    Result := MakePath64([left, top, right, top,
-      right, bottom, left, bottom]);
-end;
-
 procedure WriteCPath64(p: CPath64);
 var
   i, len: integer;
@@ -798,23 +792,25 @@ begin
     DisposeLocalCPathsD(cclp_local);
 end;
 
-procedure Test_InflatePaths64(delta: double);
+procedure Test_InflatePathsD(edgeCnt: integer; delta: double);
 var
-  sub: TPaths64;
-  csub_local: CPaths64;
-  csol_extern: CPaths64;
+  sub: TPathsD;
+  csub_local: CPathsD;
+  csol_extern: CPathsD;
   svg: TSvgWriter;
 begin
     // setup
     WriteLn(#10'Testing InflatePaths64');
     SetLength(sub, 1);
-    sub[0] := MakeRandomPath(displayWidth, displayHeight, 7);
-    // convert path into DLL structure (will require local clean up)
-    csub_local := TPaths64ToCPaths64(sub);
+    sub[0] := MakeRandomPathD(displayWidth, displayHeight, edgeCnt);
+    // and because offsetting self-intersecting paths is unpredictable ...
+    sub := Union(sub, frNonZero);
+    // convert path into required DLL structure (also requires local clean up)
+    csub_local := TPathsDToCPathsD(sub);
 
     // do the DLL operation
-    csol_extern := InflatePaths64(csub_local, delta,
-      UInt8(TJoinType.jtMiter), UInt8(TEndType.etPolygon), 2, 4);
+    csol_extern := InflatePathsD(csub_local, delta,
+      UInt8(TJoinType.jtRound), UInt8(TEndType.etPolygon), 2, 4);
 
     // optionally display result on the console
     //WriteCPaths64(csol_extern);
@@ -823,66 +819,102 @@ begin
     svg := TSvgWriter.Create(frNonZero);
     try
       AddSubject(svg, sub);
-      AddSolution(svg, CPaths64ToPaths64(csol_extern));
+      AddSolution(svg, CPathsDToPathsD(csol_extern));
       SaveSvg(svg, 'InflatePaths64.svg', displayWidth, displayHeight);
       ShowSvgImage('InflatePaths64.svg');
     finally
       svg.Free;
     end;
 
-    DisposeLocalCPaths64(csub_local);
-    DisposeExportedCPaths64(csol_extern);
+    DisposeLocalCPathsD(csub_local);
+    DisposeExportedCPathsD(csol_extern);
 end;
 
-procedure Test_RectClip64(edgeCnt: integer);
+function RotatePath(const path: TPathD;
+  const focalPoint: TPointD; angle: double): TPathD;
+var
+  i: integer;
+  sinA, cosA, x,y: double;
+begin
+  SetLength(Result, length(path));
+  SinCos(angle, sinA, cosA);
+  for i := 0 to high(path) do
+  begin
+    x := path[i].X - focalPoint.X;
+    y := path[i].Y - focalPoint.Y;
+    Result[i].X := x * cosA - y * sinA + focalPoint.X;
+    Result[i].Y := x * sinA + y * cosA + focalPoint.Y;
+  end;
+end;
+
+
+procedure Test_RectClipD(shapeCount: integer);
 var
   i, sol2_len, rec_margin: Integer;
-  sub, clp, sol1, sol2: TPaths64;
-  csub_local: CPaths64;
-  csol_extern: CPaths64;
+  sub, clp, sol1, sol2: TPathsD;
+  csub_local: CPathsD;
+  csol_extern: CPathsD;
   penClr, fillClr: TColor32;
-  frac: Double;
-  rec: TRect64;
+  scaleRnd, maxOffX, maxOffY, frac: Double;
+  rec: TRectD;
   fillrule: TFillRule;
   svg: TSvgWriter;
+  shapes: array [0..3] of TPathD;
+const
+  w = 300;
+  h = 300;
 begin
-    fillrule := frEvenOdd;
+    // four simple concave polygons
+    shapes[0] := MakePathD([20,20, 20,0, 40,0, 40,20, 60,20, 60,40,
+      40,40, 40,60, 20,60, 20,40, 0,40, 0,20]);
+    shapes[1] := MakePathD([0,0, 60,0, 60,20, 20,20, 20,40, 60,40,
+      60,60, 0,60]);
+    shapes[2] := MakePathD([0,0, 20,0, 20,20, 40,20, 40,0, 60,0,
+      60,60, 40,60, 40,40, 20,40, 20,60, 0,60]);
+    shapes[3] := MakePathD([20,60, 20,20, 0,20, 0,0, 60,0, 60,20,
+      40,20, 40,60]);
+
+    fillrule := frNonZero;
 
     // setup
     WriteLn(#10'Testing RectClip64:');
-    SetLength(sub, 1);
 
-    sub[0] := MakeRandomPath(displayWidth, displayHeight, edgeCnt);
-    csub_local := TPaths64ToCPaths64(sub);
-
-    rec_margin := displayHeight div 3;
+    rec_margin := Min(w,h) div 3;
     rec.Left := rec_margin;
     rec.Top := rec_margin;
-    rec.Right := displayWidth - rec_margin;
-    rec.Bottom := displayHeight -rec_margin;
+    rec.Right := w - rec_margin;
+    rec.Bottom := h -rec_margin;
 
-    // display 'sub' and 'rec' on the console
-    WriteLn(#10'  subject:');
-    WritePath64(sub[0]);
+    SetLength(sub, shapeCount);
+    for i := 0 to shapeCount -1 do
+    begin
+      scaleRnd := (60 + Random(w div 4)) / 120;
+      maxOffX := w - (scaleRnd * 60);
+      maxOffY := h - (scaleRnd * 60);
+      sub[i] := ScalePathD(shapes[Random(4)], scaleRnd);
+      sub[i] := TranslatePath(sub[i],
+        Random(Round(maxOffX)), Random(Round(maxOffY)));
+    end;
 
-    // display 'rec' on the console
-    WriteLn(#10'  rect path:');
-    WritePath64(rec.AsPath);
+    // do the DLL operation with ConvexOnly enabled
+  {$IFDEF USING_CLIPPER2_SRC}
+    sol1 := RectClip( rec, sub, true, 2);
+    sol2 := RectClip( rec, sub, false, 2);
+    csub_local := nil;
+    csol_extern := nil;
+  {$ELSE}
+    csub_local := TPathsDToCPathsD(sub);
+    csol_extern := RectClipD(rec, csub_local, 2, true);
+    sol1 := CPathsDToPathsD(csol_extern);
+    DisposeExportedCPathsD(csol_extern);
 
-    // do the DLL operation (twice :))
-    csol_extern := RectClip64(rec, csub_local, true);
-    sol1 := CPaths64ToPaths64(csol_extern);
-    DisposeExportedCPaths64(csol_extern);
+    // do the DLL operation again with ConvexOnly disabled
+    csol_extern := RectClipD(rec, csub_local, 2, false);
+    sol2 := CPathsDToPathsD(csol_extern);
+  {$ENDIF}
 
-    csol_extern := RectClip64(rec, csub_local, false);
-    sol2 := CPaths64ToPaths64(csol_extern);
-
-    // display result on the console
-    WriteLn(#10'  solution:');
-    WriteCPaths64(csol_extern);
 
     // display and clean up
-
     sol2_len := Length(sol2);
     if sol2_len = 0 then
       frac := 0 else
@@ -892,7 +924,7 @@ begin
     fillClr := (penClr and $FFFFFF) or $20000000;
 
     SetLength(clp, 1);
-    clp[0] := RectToPath64(rec);
+    clp[0] := rec.AsPath;
 
     svg := TSvgWriter.Create(fillrule);
     try
@@ -900,12 +932,12 @@ begin
       AddClip(svg, clp);
 
       // display the unclipped paths
-      SaveSvg(svg, 'RectClip64_1.svg', displayWidth, displayHeight);
+      SaveSvg(svg, 'RectClip64_1.svg', w, h);
       ShowSvgImage('RectClip64_1.svg');
 
-      // display the first RectClip operation (ignores concavity)
+      // display the first RectClip operation (assumes ConvexOnly)
       AddSolution(svg, sol1);
-      SaveSvg(svg, 'RectClip64_2.svg', displayWidth, displayHeight);
+      SaveSvg(svg, 'RectClip64_2.svg', w, h);
       ShowSvgImage('RectClip64_2.svg');
 
       svg.ClearPaths;
@@ -913,26 +945,14 @@ begin
       AddSubject(svg, sub);
       AddClip(svg, clp);
       AddSolution(svg, sol2);
-      SaveSvg(svg, 'RectClip64_3.svg', displayWidth, displayHeight);
+      SaveSvg(svg, 'RectClip64_3.svg', w, h);
       ShowSvgImage('RectClip64_3.svg');
-
-      svg.ClearPaths;
-      // display the second RectClip operation (manages convexity)
-      // but this time showing solutions with multi-colored paths
-      AddSubject(svg, sub);
-      AddClip(svg, clp);
-      for i := 0 to sol2_len -1 do
-        svg.AddPath(sol2[i], false, fillClr, penClr, 1.5, false);
-
-      SaveSvg(svg, 'RectClip64_4.svg', displayWidth, displayHeight);
-      ShowSvgImage('RectClip64_4.svg');
-
     finally
       svg.Free;
     end;
 
-    DisposeLocalCPaths64(csub_local);
-    DisposeExportedCPaths64(csol_extern);
+    DisposeLocalCPathsD(csub_local);
+    DisposeExportedCPathsD(csol_extern);
 end;
 
 procedure Test_RectClipLines64(edgeCnt: integer);
@@ -964,7 +984,7 @@ begin
     // finally, display and clean up
 
     SetLength(clp, 1);
-    clp[0] := RectToPath64(rec);
+    clp[0] := rec.AsPath;
 
     svg := TSvgWriter.Create(frNonZero);
     try
@@ -989,6 +1009,9 @@ var
   csub_local, cclp_local: CPaths64;
   csol_extern, csolo_extern: CPaths64;
   svg: TSvgWriter;
+const
+  w = 800;
+  h = 600;
 begin
   csolo_extern := nil;
   WriteLn(#10'Testing Performance');
@@ -997,9 +1020,9 @@ begin
     Write(format(#10' C++ DLL     - %d edges: ', [i*1000]));
     // setup
     SetLength(sub, 1);
-    sub[0] := MakeRandomPath(displayWidth, displayHeight, i*1000);
+    sub[0] := MakeRandomPath(w, h, i*1000);
     SetLength(clp, 1);
-    clp[0] := MakeRandomPath(displayWidth, displayHeight, i*1000);
+    clp[0] := MakeRandomPath(w, h, i*1000);
     // convert paths into DLL structures (will require local clean up)
     csub_local := TPaths64ToCPaths64(sub);
     cclp_local := TPaths64ToCPaths64(clp);
@@ -1031,7 +1054,7 @@ begin
         AddSubject(svg, sub);
         AddClip(svg, clp);
         AddSolution(svg, CPaths64ToPaths64(csol_extern));
-        SaveSvg(svg, 'Performance.svg', displayWidth, displayHeight);
+        SaveSvg(svg, 'Performance.svg', w, h);
         ShowSvgImage('Performance.svg');
       finally
         svg.Free;
@@ -1059,11 +1082,11 @@ begin
 //  Test_BooleanOp64(50);
 //  Test_BooleanOpD(75);
 //  Test_BooleanOpPtD(20);
-//  Test_InflatePaths64(-10);
-  Test_RectClip64(25);
+  Test_InflatePathsD(20, -10); // edgeCount, offsetDist
+//  Test_RectClipD(15);
 //  Test_RectClipLines64(25);
-  //Test_Performance(1, 5); // 1000 t0 5000
-  //Test_MegaStress(10000);
+//  Test_Performance(1, 5); // 1000 to 5000
+//  Test_MegaStress(10000);
 
   WriteLn(#10'Press Enter to quit.');
   ReadLn(s);
