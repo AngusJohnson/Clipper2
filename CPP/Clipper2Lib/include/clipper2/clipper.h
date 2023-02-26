@@ -207,9 +207,7 @@ namespace Clipper2Lib {
   {
     if (rect.IsEmpty() || path.empty()) return Paths64();
     class RectClip rc(rect);
-    Paths64 tmp;
-    tmp.push_back(path);
-    return rc.Execute(tmp, convex_only);
+    return rc.Execute(Paths64{ path }, convex_only);
   }
 
   inline PathsD RectClip(const RectD& rect, 
@@ -231,9 +229,7 @@ namespace Clipper2Lib {
   inline PathsD RectClip(const RectD& rect, 
     const PathD& path, bool convex_only = false, int precision = 2)
   {
-    PathsD tmp;
-    tmp.push_back(path);
-    return RectClip(rect, tmp, convex_only, precision);
+    return RectClip(rect, PathsD{ path }, convex_only, precision);
   }
 
   inline Paths64 RectClipLines(const Rect64& rect, const Paths64& lines)
@@ -245,16 +241,12 @@ namespace Clipper2Lib {
 
   inline Paths64 RectClipLines(const Rect64& rect, const Path64& line)
   {
-    Paths64 tmp;
-    tmp.push_back(line);
-    return RectClipLines(rect, tmp);
+    return RectClipLines(rect, Paths64{ line });
   }
 
   inline PathsD RectClipLines(const RectD& rect, const PathD& line, int precision = 2)
   {
-    PathsD tmp;
-    tmp.push_back(line);
-    return RectClip(rect, tmp, precision);
+    return RectClip(rect, PathsD{ line }, precision);
   }
 
   inline PathsD RectClipLines(const RectD& rect, const PathsD& lines, int precision = 2)
