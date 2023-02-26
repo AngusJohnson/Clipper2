@@ -98,7 +98,10 @@ type
 
     procedure AddPath(const path: TPath64; isOpen: Boolean;
       brushColor, penColor: Cardinal;
-      penWidth: double; showCoords: Boolean = false);
+      penWidth: double; showCoords: Boolean = false); overload;
+    procedure AddPath(const path: TPathD; isOpen: Boolean;
+      brushColor, penColor: Cardinal;
+      penWidth: double; showCoords: Boolean = false); overload;
 
     procedure AddPaths(const paths: TPaths64; isOpen: Boolean;
       brushColor, penColor: Cardinal;
@@ -217,6 +220,13 @@ procedure TSvgWriter.AddPath(const path: TPath64; isOpen: Boolean;
   penWidth: double; showCoords: Boolean);
 begin
   AddPaths(Paths64(path), isOpen, brushColor, penColor, penWidth, showCoords);
+end;
+
+procedure TSvgWriter.AddPath(const path: TPathD; isOpen: Boolean;
+  brushColor, penColor: Cardinal;
+  penWidth: double; showCoords: Boolean);
+begin
+  AddPaths(PathsD(path), isOpen, brushColor, penColor, penWidth, showCoords);
 end;
 
 procedure TSvgWriter.AddPaths(const paths: TPaths64;

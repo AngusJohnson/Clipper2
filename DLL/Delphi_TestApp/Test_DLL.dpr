@@ -854,7 +854,6 @@ var
   sub, clp, sol1, sol2: TPathsD;
   csub_local: CPathsD;
   csol_extern: CPathsD;
-  penClr, fillClr: TColor32;
   scaleRnd, maxOffX, maxOffY, frac: Double;
   rec: TRectD;
   fillrule: TFillRule;
@@ -919,9 +918,6 @@ begin
     if sol2_len = 0 then
       frac := 0 else
       frac := 1/sol2_len;
-
-    penClr := RainbowColor(frac, 92);
-    fillClr := (penClr and $FFFFFF) or $20000000;
 
     SetLength(clp, 1);
     clp[0] := rec.AsPath;
