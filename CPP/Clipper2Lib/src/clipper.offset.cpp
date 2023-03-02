@@ -1,6 +1,6 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  23 February 2023                                                *
+* Date      :  2 March 2023                                                    *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2023                                         *
 * Purpose   :  Path Offset (Inflate/Shrink)                                    *
@@ -316,12 +316,13 @@ void ClipperOffset::OffsetPoint(Group& group, Path64& path, size_t j, size_t& k)
 	if (sin_a > 1.0) sin_a = 1.0;
 	else if (sin_a < -1.0) sin_a = -1.0;
 
-	if (AlmostZero(cos_a - 1, 0.01)) // almost straight
+	if (cos_a > 0.99) // almost straight - less than 8 degrees
 	{
 		group.path.push_back(GetPerpendic(path[j], norms[k], group_delta_));
-		group.path.push_back(GetPerpendic(path[j], norms[j], group_delta_)); // (#418)
+		if (cos_a < 0.9998) // greater than 1 degree (#424)
+			group.path.push_back(GetPerpendic(path[j], norms[j], group_delta_)); // (#418)
 	}
-	else if (!AlmostZero(cos_a + 1, 0.01) && (sin_a * group_delta_ < 0)) 
+	else if (cos_a > -0.99 && (sin_a * group_delta_ < 0))
 	{
 		// is concave
 		group.path.push_back(GetPerpendic(path[j], norms[k], group_delta_));

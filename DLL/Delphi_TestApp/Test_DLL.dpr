@@ -6,48 +6,23 @@ program Test_DLL;
 {$APPTYPE CONSOLE}
 {$R *.res}
 
-{$DEFINE USING_CLIPPER2_SRC}
-
 uses
   Windows,
   Math,
   ShellApi,
   SysUtils,
-  {$IFDEF USING_CLIPPER2_SRC}
   Clipper in '..\..\Delphi\Clipper2Lib\Clipper.pas',
   Clipper.Core in '..\..\Delphi\Clipper2Lib\Clipper.Core.pas',
-  {$ENDIF }
-  Colors in 'Colors.pas',
-  Timer in 'Timer.pas',
-  Clipper.SVG in 'Clipper.SVG.pas';
+  Clipper.SVG in '..\..\Delphi\Utils\Clipper.SVG.pas',
+  Colors in '..\..\Delphi\Utils\Colors.pas',
+  Timer in '..\..\Delphi\Utils\Timer.pas';
 
 type
-
-  ////////////////////////////////////////////////////////
-  // Clipper2 DLL structures
-  ////////////////////////////////////////////////////////
-
-{$IFNDEF USING_CLIPPER2_SRC}
-  TClipType = (ctNone, ctIntersection, ctUnion, ctDifference, ctXor);
-  TJoinType = (jtSquare, jtRound, jtMiter);
-  TEndType  = (etPolygon, etJoined, etButt, etSquare, etRound);
-  //TFillRule = (frEvenOdd, frNonZero, frPositive, frNegative); // see SvgWriter
-  //TPoint64 = record X,Y: Int64; end;    // see SvgWriter
-  //TPath64 = array of TPoint64;          // see SvgWriter
-  //TPaths64 = array of TPath64;          // see SvgWriter
-  //TRect64 = record l,t,r,b: Int64; end; // see SvgWriter
-{$ENDIF}
 
   CInt64arr = array[0..$FFFF] of Int64;
   CPath64 = ^CInt64arr;
   CPath64arr = array[0..$FFFF] of CPath64;
   CPaths64 = ^CPath64arr;
-
-//  TPointD = record X,Y: double; end;    // see SvgWriter
-//  TPathD = array of TPointD;            // see SvgWriter
-//  TPathsD = array of TPathD;            // see SvgWriter
-//  TRectD = record l,t,r,b: double; end; // see SvgWriter
-
   CDblarr = array[0..$FFFF] of Double;
   CPathD = ^CDblarr;
   CPathDarr = array[0..$FFFF] of CPathD;
@@ -338,27 +313,6 @@ begin
     Result[i-1] := CPathDToPathD(cps[i]);
 end;
 
-{$IFNDEF USING_CLIPPER2_SRC}
-
-procedure AppendPath(var paths: TPaths64; const extra: TPath64); overload;
-var
-  len: Integer;
-begin
-  len := length(paths);
-  SetLength(paths, len +1);
-  paths[len] := extra;
-end;
-
-procedure AppendPath(var paths: TPathsD; const extra: TPathD); overload;
-var
-  len: Integer;
-begin
-  len := length(paths);
-  SetLength(paths, len +1);
-  paths[len] := extra;
-end;
-{$ENDIF}
-
 procedure CPt64Internal(cpt: PCPolyTree64; var paths: TPaths64);
 var
   i: integer;
@@ -607,15 +561,55 @@ begin
   ShellExecute(0, 'open',PChar(svgFilename), nil, nil, SW_SHOW);
 end;
 
-////////////////////////////////////////////////////////
-// test procedures
-////////////////////////////////////////////////////////
-
 const
   displayWidth = 800;
   displayHeight = 600;
 
-procedure Test_MegaStress(maxCnt: integer);
+procedure DisplaySVG(const sub, subo, clp, sol, solo: TPathsD;
+  const svgName: string; width: integer = displayWidth;
+  height: integer = displayHeight); overload;
+var
+  svg: TSvgWriter;
+begin
+  svg := TSvgWriter.Create(frNonZero);
+  try
+    AddSubject(svg, sub);
+    AddOpenSubject(svg, subo);
+    AddClip(svg, clp);
+    AddSolution(svg, sol);
+    AddOpenSolution(svg, solo);
+    SaveSvg(svg, svgName, width, height);
+    ShowSvgImage(svgName);
+  finally
+    svg.Free;
+  end;
+end;
+
+procedure DisplaySVG(const sub, subo, clp, sol, solo: TPaths64;
+  const svgName: string; width: integer = displayWidth;
+  height: integer = displayHeight); overload;
+var
+  svg: TSvgWriter;
+begin
+  svg := TSvgWriter.Create(frNonZero);
+  try
+    AddSubject(svg, sub);
+    AddOpenSubject(svg, subo);
+    AddClip(svg, clp);
+    AddSolution(svg, sol);
+    AddOpenSolution(svg, solo);
+    SaveSvg(svg, svgName, width, height);
+    ShowSvgImage(svgName);
+  finally
+    svg.Free;
+  end;
+end;
+
+////////////////////////////////////////////////////////
+// test procedures
+////////////////////////////////////////////////////////
+
+procedure Test_RandIntersect_MegaStress(maxCnt: integer);
 var
   i: integer;
   sub, clp: TPathsD;
@@ -659,7 +653,6 @@ var
   sub, clp: TPaths64;
   csub_local, cclp_local: CPaths64;
   csol_extern, csolo_extern: CPaths64;
-  svg: TSvgWriter;
 begin
     // setup
     csolo_extern := nil;
@@ -681,18 +674,10 @@ begin
     // optionally display result on the console
     //WriteCPaths64(csol_extern);
 
-    // finally, display and clean up
-    svg := TSvgWriter.Create(frNonZero);
-    try
-      AddSubject(svg, sub);
-      AddClip(svg, clp);
-      AddSolution(svg, CPaths64ToPaths64(csol_extern));
-      SaveSvg(svg, 'BooleanOp64.svg', displayWidth, displayHeight);
-      ShowSvgImage('BooleanOp64.svg');
-    finally
-      svg.Free;
-    end;
+    DisplaySVG(sub, nil, clp,
+      CPaths64ToPaths64(csol_extern), nil, 'BooleanOp64.svg');
 
+    // clean up
     DisposeLocalCPaths64(csub_local);
     DisposeLocalCPaths64(cclp_local);
     DisposeExportedCPaths64(csol_extern);
@@ -704,7 +689,6 @@ var
   sub, clp: TPathsD;
   csub_local, cclp_local: CPathsD;
   csol_extern, csolo_extern: CPathsD;
-  svg: TSvgWriter;
 begin
     // setup
     csolo_extern := nil;
@@ -726,17 +710,8 @@ begin
     // optionally display result on the console
     //WriteCPaths64(csol_extern);
 
-    // finally, display and clean up
-    svg := TSvgWriter.Create(frNonZero);
-    try
-      AddSubject(svg, sub);
-      AddClip(svg, clp);
-      AddSolution(svg, CPathsDToPathsD(csol_extern));
-      SaveSvg(svg, 'BooleanOpD.svg', displayWidth, displayHeight);
-      ShowSvgImage('BooleanOpD.svg');
-    finally
-      svg.Free;
-    end;
+    DisplaySVG(sub, nil, clp,
+      CPathsDToPathsD(csol_extern), nil, 'BooleanOpD.svg');
 
     DisposeLocalCPathsD(csub_local);
     DisposeLocalCPathsD(cclp_local);
@@ -750,7 +725,6 @@ var
   csub_local, cclp_local: CPathsD;
   csol_extern: PCPolyTreeD;
   csolo_extern: CPathsD;
-  svg: TSvgWriter;
 begin
     // setup
     csolo_extern := nil;
@@ -776,20 +750,11 @@ begin
     DisposeExportedCPolyTreeD(csol_extern);
     DisposeExportedCPathsD(csolo_extern);
 
-    // finally, display and clean up
-    svg := TSvgWriter.Create(frNonZero);
-    try
-      AddSubject(svg, sub);
-      AddClip(svg, clp);
-      AddSolution(svg, sol);
-      SaveSvg(svg, 'BooleanOpPtD.svg', displayWidth, displayHeight);
-      ShowSvgImage('BooleanOpPtD.svg');
-    finally
-      svg.Free;
-    end;
-
     DisposeLocalCPathsD(csub_local);
     DisposeLocalCPathsD(cclp_local);
+
+    // finally, display and clean up
+    DisplaySVG(sub, nil, clp, sol, nil, 'BooleanOpPtD.svg');
 end;
 
 procedure Test_InflatePathsD(edgeCnt: integer; delta: double);
@@ -797,37 +762,34 @@ var
   sub: TPathsD;
   csub_local: CPathsD;
   csol_extern: CPathsD;
-  svg: TSvgWriter;
+  csolo_extern: CPathsD;
 begin
     // setup
     WriteLn(#10'Testing InflatePaths64');
     SetLength(sub, 1);
     sub[0] := MakeRandomPathD(displayWidth, displayHeight, edgeCnt);
-    // and because offsetting self-intersecting paths is unpredictable ...
-    sub := Union(sub, frNonZero);
     // convert path into required DLL structure (also requires local clean up)
     csub_local := TPathsDToCPathsD(sub);
 
-    // do the DLL operation
-    csol_extern := InflatePathsD(csub_local, delta,
+    // and because offsetting self-intersecting paths is unpredictable
+    // we must remove self-intersection via a union operation
+    BooleanOpD(Uint8(TClipType.ctUnion),
+      Uint8(TFillRule.frNonZero), csub_local, nil, nil,
+      csol_extern, csolo_extern);
+
+    // now do the DLL operation
+    csol_extern := InflatePathsD(csol_extern, delta,
       UInt8(TJoinType.jtRound), UInt8(TEndType.etPolygon), 2, 4);
 
     // optionally display result on the console
     //WriteCPaths64(csol_extern);
 
-    // finally, display and clean up
-    svg := TSvgWriter.Create(frNonZero);
-    try
-      AddSubject(svg, sub);
-      AddSolution(svg, CPathsDToPathsD(csol_extern));
-      SaveSvg(svg, 'InflatePaths64.svg', displayWidth, displayHeight);
-      ShowSvgImage('InflatePaths64.svg');
-    finally
-      svg.Free;
-    end;
+    DisplaySVG(sub, nil, nil,
+      CPathsDToPathsD(csol_extern), nil, 'InflatePaths64.svg');
 
     DisposeLocalCPathsD(csub_local);
     DisposeExportedCPathsD(csol_extern);
+    DisposeExportedCPathsD(csolo_extern);
 end;
 
 function RotatePath(const path: TPathD;
@@ -857,7 +819,6 @@ var
   scaleRnd, maxOffX, maxOffY, frac: Double;
   rec: TRectD;
   fillrule: TFillRule;
-  svg: TSvgWriter;
   shapes: array [0..3] of TPathD;
 const
   w = 300;
@@ -895,13 +856,6 @@ begin
         Random(Round(maxOffX)), Random(Round(maxOffY)));
     end;
 
-    // do the DLL operation with ConvexOnly enabled
-  {$IFDEF USING_CLIPPER2_SRC}
-    sol1 := RectClip( rec, sub, true, 2);
-    sol2 := RectClip( rec, sub, false, 2);
-    csub_local := nil;
-    csol_extern := nil;
-  {$ELSE}
     csub_local := TPathsDToCPathsD(sub);
     csol_extern := RectClipD(rec, csub_local, 2, true);
     sol1 := CPathsDToPathsD(csol_extern);
@@ -910,8 +864,6 @@ begin
     // do the DLL operation again with ConvexOnly disabled
     csol_extern := RectClipD(rec, csub_local, 2, false);
     sol2 := CPathsDToPathsD(csol_extern);
-  {$ENDIF}
-
 
     // display and clean up
     sol2_len := Length(sol2);
@@ -922,30 +874,9 @@ begin
     SetLength(clp, 1);
     clp[0] := rec.AsPath;
 
-    svg := TSvgWriter.Create(fillrule);
-    try
-      AddSubject(svg, sub);
-      AddClip(svg, clp);
-
-      // display the unclipped paths
-      SaveSvg(svg, 'RectClip64_1.svg', w, h);
-      ShowSvgImage('RectClip64_1.svg');
-
-      // display the first RectClip operation (assumes ConvexOnly)
-      AddSolution(svg, sol1);
-      SaveSvg(svg, 'RectClip64_2.svg', w, h);
-      ShowSvgImage('RectClip64_2.svg');
-
-      svg.ClearPaths;
-      // display the second RectClip operation (manages convexity)
-      AddSubject(svg, sub);
-      AddClip(svg, clp);
-      AddSolution(svg, sol2);
-      SaveSvg(svg, 'RectClip64_3.svg', w, h);
-      ShowSvgImage('RectClip64_3.svg');
-    finally
-      svg.Free;
-    end;
+    DisplaySVG(sub, nil, clp, nil, nil, 'RectClip64_1.svg', w,h);
+    DisplaySVG(sub, nil, clp, sol1, nil, 'RectClip64_2.svg', w,h);
+    DisplaySVG(sub, nil, clp, sol2, nil, 'RectClip64_3.svg', w,h);
 
     DisposeLocalCPathsD(csub_local);
     DisposeExportedCPathsD(csol_extern);
@@ -957,7 +888,6 @@ var
   csub_local: CPaths64;
   csolo_extern: CPaths64;
   rec: TRect64;
-  svg: TSvgWriter;
 begin
     // setup
     WriteLn(#10'Testing RectClipLines64:');
@@ -982,16 +912,8 @@ begin
     SetLength(clp, 1);
     clp[0] := rec.AsPath;
 
-    svg := TSvgWriter.Create(frNonZero);
-    try
-      AddOpenSubject(svg, sub);
-      AddClip(svg, clp); //rectangle
-      AddOpenSolution(svg, CPaths64ToPaths64(csolo_extern));
-      SaveSvg(svg, 'RectClipLines64.svg', displayWidth, displayHeight);
-      ShowSvgImage('RectClipLines64.svg');
-    finally
-      svg.Free;
-    end;
+    DisplaySVG(nil, sub, clp, nil,
+      CPaths64ToPaths64(csolo_extern), 'RectClipLines64.svg');
 
     DisposeLocalCPaths64(csub_local);
     DisposeExportedCPaths64(csolo_extern);
@@ -1004,7 +926,6 @@ var
   sub, clp: TPaths64;
   csub_local, cclp_local: CPaths64;
   csol_extern, csolo_extern: CPaths64;
-  svg: TSvgWriter;
 const
   w = 800;
   h = 600;
@@ -1034,28 +955,15 @@ begin
     end;
     WriteLn(format('%1.3n secs', [elapsed]));
 
-{$IFDEF USING_CLIPPER2_SRC}
     Write(format(' Pure delphi - %d edges: ', [i*1000]));
     begin
       InitTimer(elapsed);
       Clipper.Intersect(sub, clp, Clipper.frNonZero);
     end;
     WriteLn(format('%1.3n secs', [elapsed]));
-{$ENDIF}
 
     if i = hiThousand then
-    begin
-      svg := TSvgWriter.Create(frNonZero);
-      try
-        AddSubject(svg, sub);
-        AddClip(svg, clp);
-        AddSolution(svg, CPaths64ToPaths64(csol_extern));
-        SaveSvg(svg, 'Performance.svg', w, h);
-        ShowSvgImage('Performance.svg');
-      finally
-        svg.Free;
-      end;
-    end;
+      DisplaySVG(sub, nil, clp, CPaths64ToPaths64(csol_extern), nil, 'Performance.svg');
 
     DisposeLocalCPaths64(csub_local);
     DisposeLocalCPaths64(cclp_local);
@@ -1082,7 +990,7 @@ begin
 //  Test_RectClipD(15);
 //  Test_RectClipLines64(25);
 //  Test_Performance(1, 5); // 1000 to 5000
-//  Test_MegaStress(10000);
+  Test_RandIntersect_MegaStress(10000);
 
   WriteLn(#10'Press Enter to quit.');
   ReadLn(s);

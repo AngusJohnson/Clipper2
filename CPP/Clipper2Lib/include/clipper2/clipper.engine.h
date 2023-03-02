@@ -1,6 +1,6 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  26 February 2023                                                *
+* Date      :  2 March 2023                                                    *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2023                                         *
 * Purpose   :  This is the main polygon clipping module                        *
@@ -10,7 +10,7 @@
 #ifndef CLIPPER_ENGINE_H
 #define CLIPPER_ENGINE_H
 
-constexpr auto CLIPPER2_VERSION = "1.2.0";
+constexpr auto CLIPPER2_VERSION = "1.2.1";
 
 #include <cstdlib>
 #include <iostream>

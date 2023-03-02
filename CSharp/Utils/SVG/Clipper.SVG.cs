@@ -28,11 +28,10 @@ namespace Clipper2Lib
     public const uint fuscia = 0xFFFF00FF;
     public const uint aqua = 0xFF00FFFF;
 
-    private static RectD rectMax =
-      new RectD(double.MaxValue, double.MaxValue, -double.MaxValue, -double.MaxValue);
+    private static RectD rectMax = Clipper.InvalidRectD;
     public static RectD RectMax => rectMax;
 
-    private static RectD rectEmpty = new RectD(0, 0, 0, 0);
+    private static RectD rectEmpty = new RectD(true);
     public static RectD RectEmpty => rectEmpty;
     internal static bool IsValidRect(RectD rec)
     {

@@ -1,6 +1,6 @@
 ﻿/*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  23 February 2023                                                *
+* Date      :  2 March 2023                                                    *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2023                                         *
 * Purpose   :  Path Offset (Inflate/Shrink)                                    *
@@ -402,13 +402,13 @@ namespace Clipper2Lib
       if (sinA > 1.0) sinA = 1.0;
       else if (sinA < -1.0) sinA = -1.0;
 
-      if (AlmostZero(cosA - 1, 0.01)) // almost straight
+      if (cosA > 0.99) // almost straight - less than 8 degrees
       {
         group.outPath.Add(GetPerpendic(path[j], _normals[k]));
-        group.outPath.Add(GetPerpendic(path[j], _normals[j])); // (#418)
+        if (cosA < 0.9998) // greater than 1 degree (#424)
+          group.outPath.Add(GetPerpendic(path[j], _normals[j])); // (#418)
       }
-      else if (!AlmostZero(cosA + 1, 0.01) && 
-        (sinA * _group_delta < 0)) // is concave
+      else if (cosA > -0.99 && (sinA * _group_delta < 0)) // is concave
       {
         group.outPath.Add(GetPerpendic(path[j], _normals[k]));
         // this extra point is the only (simple) way to ensure that

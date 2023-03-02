@@ -63,9 +63,11 @@
         <DelphiCompile Include="$(MainSource)">
             <MainSource>MainSource</MainSource>
         </DelphiCompile>
-        <DCCReference Include="SvgWriter.pas"/>
-        <DCCReference Include="Colors.pas"/>
-        <DCCReference Include="Timer.pas"/>
+        <DCCReference Include="..\..\Delphi\Clipper2Lib\Clipper.pas"/>
+        <DCCReference Include="..\..\Delphi\Clipper2Lib\Clipper.Core.pas"/>
+        <DCCReference Include="..\..\Delphi\Utils\Clipper.SVG.pas"/>
+        <DCCReference Include="..\..\Delphi\Utils\Colors.pas"/>
+        <DCCReference Include="..\..\Delphi\Utils\Timer.pas"/>
         <BuildConfiguration Include="Debug">
             <Key>Cfg_2</Key>
             <CfgParent>Base</CfgParent>
