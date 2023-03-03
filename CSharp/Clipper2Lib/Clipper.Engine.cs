@@ -1,6 +1,6 @@
 ﻿/*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  21 February 2023                                                *
+* Date      :  3 March 2023                                                    *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2023                                         *
 * Purpose   :  This is the main polygon clipping module                        *
@@ -1864,7 +1864,7 @@ namespace Clipper2Lib
           if (ip.Y < topY) ip.Y = topY;
           else ip.Y = _currentBotY;
           if (absDx1 < absDx2) ip.X = TopX(ae1, ip.Y);
-          else ip.X = TopX(ae2, topY);
+          else ip.X = TopX(ae2, ip.Y);
         }
       }
       IntersectNode node = new IntersectNode(ip, ae1, ae2);

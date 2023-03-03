@@ -2,7 +2,7 @@ unit Clipper.Engine;
 
 (*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  19 February 2023                                                *
+* Date      :  3 March 2023                                                    *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2023                                         *
 * Purpose   :  This is the main polygon clipping module                        *
@@ -3008,8 +3008,8 @@ begin
         ip.Y := topY else
         ip.Y := fBotY;
       if (absDx1 < absDx2)  then
-        ip.X := TopX(e1, topY) else
-        ip.X := TopX(e2, topY);
+        ip.X := TopX(e1, ip.Y) else
+        ip.X := TopX(e2, ip.Y);
     end;
   end;
   new(node);
