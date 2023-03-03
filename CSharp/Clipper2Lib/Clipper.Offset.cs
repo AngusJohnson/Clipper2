@@ -1,6 +1,6 @@
 ﻿/*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  2 March 2023                                                    *
+* Date      :  3 March 2023                                                    *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2023                                         *
 * Purpose   :  Path Offset (Inflate/Shrink)                                    *
@@ -463,13 +463,13 @@ namespace Clipper2Lib
         case EndType.Butt:
 #if USINGZ
           group.outPath.Add(new Point64(
-              path[highI].X - _normals[highI].x * _group_delta,
-              path[highI].Y - _normals[highI].y * _group_delta,
-              path[highI].Z));
+              path[0].X - _normals[0].x * _group_delta,
+              path[0].Y - _normals[0].y * _group_delta,
+              path[0].Z));
 #else
           group.outPath.Add(new Point64(
-              path[highI].X - _normals[highI].x * _group_delta,
-              path[highI].Y - _normals[highI].y * _group_delta));
+              path[0].X - _normals[0].x * _group_delta,
+              path[0].Y - _normals[0].y * _group_delta));
 #endif
           group.outPath.Add(GetPerpendic(path[0], _normals[0]));
           break;
