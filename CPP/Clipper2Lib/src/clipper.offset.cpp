@@ -1,6 +1,6 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  2 March 2023                                                    *
+* Date      :  8 March 2023                                                    *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2023                                         *
 * Purpose   :  Path Offset (Inflate/Shrink)                                    *
@@ -439,8 +439,6 @@ void ClipperOffset::OffsetOpenPath(Group& group, Path64& path)
 
 void ClipperOffset::DoGroupOffset(Group& group)
 {
-
-
 	Rect64 r;
 	int idx = -1;
 	//the lowermost polygon must be an outer polygon. So we can use that as the
@@ -451,7 +449,7 @@ void ClipperOffset::DoGroupOffset(Group& group)
 	if (group.end_type == EndType::Polygon)
 	{
 		double area = Area(group.paths_in[idx]);
-		if (area == 0) return;
+		//if (area == 0) return; // probably unhelpful (#430)
 		group.is_reversed = (area < 0);
 		if (group.is_reversed) group_delta_ = -delta_;
 		else group_delta_ = delta_;

@@ -2,7 +2,7 @@ unit Clipper.Offset;
 
 (*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  2 March 2023                                                    *
+* Date      :  8 March 2023                                                    *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2023                                         *
 * Purpose   :  Path Offset (Inflate/Shrink)                                    *
@@ -300,7 +300,7 @@ begin
     if lowestIdx < 0 then Exit;
     // nb: don't use the default orientation here ...
     area := Clipper.Core.Area(group.paths[lowestIdx]);
-    if area = 0 then Exit;
+    //if area = 0 then Exit; // this is probably unhelpful (#430)
     group.reversed := (area < 0);
     if group.reversed then fGroupDelta := -fDelta
     else fGroupDelta := fDelta;

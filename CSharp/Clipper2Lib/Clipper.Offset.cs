@@ -1,6 +1,6 @@
 ﻿/*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  3 March 2023                                                    *
+* Date      :  8 March 2023                                                    *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2023                                         *
 * Purpose   :  Path Offset (Inflate/Shrink)                                    *
@@ -531,7 +531,7 @@ namespace Clipper2Lib
           out int lowestIdx, out Rect64 grpBounds);
         if (lowestIdx < 0) return;
         double area = Clipper.Area(group.inPaths[lowestIdx]);
-        if (area == 0) return;
+        //if (area == 0) return; // this is probably unhelpful (#430)
         group.pathsReversed = (area < 0);
         if (group.pathsReversed) _group_delta = -_delta;
         else _group_delta = _delta;
