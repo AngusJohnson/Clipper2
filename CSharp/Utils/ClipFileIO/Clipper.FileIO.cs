@@ -58,14 +58,14 @@ namespace Clipper2Lib
             nlCnt++;
             if (nlCnt == 2)
             {
-              if (p.Count > 2) pp.Add(p);
+              if (p.Count > 0) pp.Add(p);
               p = new Path64();
             }
           }
           i++;
         }
       }
-      if (p.Count > 2) pp.Add(p);
+      if (p.Count > 0) pp.Add(p);
       return pp;
     }
     //------------------------------------------------------------------------------
