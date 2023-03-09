@@ -8,7 +8,7 @@ The <b>Clipper2</b> library performs **intersection**, **union**, **difference**
 
 ### Compilers
 
-C++: Requires C++17 (but could be modified to C++11 without too much effort)<br>
+C++: Requires C++17 (but could be modified to C++11 with only minor changes)<br>
 C#: The core library uses Standard Library 2.0 but the sample code uses .NET6<br>
 Delphi: Compiles with any version of Delphi back to Delphi 7.
 
