@@ -22,7 +22,7 @@
 namespace Clipper2Lib
 {
 
-#if __cpp_exceptions
+#if (defined(__cpp_exceptions) && __cpp_exceptions) || (defined(__EXCEPTIONS) && __EXCEPTIONS)
 
   class Clipper2Exception : public std::exception {
   public:
@@ -61,7 +61,7 @@ namespace Clipper2Lib
 
   static void DoError(int error_code)
   {
-#if __cpp_exceptions
+#if (defined(__cpp_exceptions) && __cpp_exceptions) || (defined(__EXCEPTIONS) && __EXCEPTIONS)
     switch (error_code)
     {
     case precision_error_i:
