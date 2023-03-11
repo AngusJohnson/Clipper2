@@ -18,11 +18,12 @@
     Requires Delphi version 6 or above.
   {$IFEND}
   {$IF CompilerVersion >= 18}             //Delphi 2007
-    {$DEFINE RECORD_METHODS}              //Delphi 2006 - added records with methods
-    //While "inlining" has been supported since D2005, both D2005 and D2006
-    //have an inline codegen bug (QC41166) so ignore inline until D2007.
-    {$DEFINE INLINING}
+    {$DEFINE RECORD_METHODS}              
     {$DEFINE STRICT}
+    {$IF CompilerVersion >= 19}           //Delphi 2009  
+      //While "inlining" is supported from D2005, it's buggy (see QC41166) until D2009
+      {$DEFINE INLINING}
+    {$IFEND}
     {$IF COMPILERVERSION >= 23}           //Delphi XE2+
       {$DEFINE XPLAT_GENERICS}
       {$DEFINE ROUNDINGMODE}   

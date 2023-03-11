@@ -89,7 +89,7 @@ begin
   SetLength(subj, 1);
   subj[0] := MakeNPointedStar(Rect64(0,0,500,500), 5);
   SetLength(clip, 1);
-  clip[0] := Clipper.Core.Ellipse(Rect64(100,100,400,400));
+  clip[0] := ClipMisc.Ellipse(Rect64(100,100,400,400));
   sol := Union(subj, clip, frNonZero);
 
   with TSvgWriter.Create(frNonZero) do
@@ -111,7 +111,7 @@ begin
   SetLength(subj, 1);
   subj[0] := MakeNPointedStar(Rect64(0,0,500,500), 5);
   SetLength(clip, 1);
-  clip[0] := Clipper.Core.Ellipse(Rect64(100,100,400,400));
+  clip[0] := ClipMisc.Ellipse(Rect64(100,100,400,400));
   sol := Intersect(subj, clip, frEvenOdd);
 
   with TSvgWriter.Create(frEvenOdd) do
@@ -131,7 +131,7 @@ var
   subj, sol: TPaths64;
 begin
   SetLength(subj, 1);
-  subj[0] := Clipper.Core.Ellipse(Rect64(0,0,450,450), 7);
+  subj[0] := ClipMisc.Ellipse(Rect64(0,0,450,450), 7);
   sol := InflatePaths(subj, 25, jtRound, etPolygon);
   with TSvgWriter.Create(frEvenOdd) do
   try
@@ -149,7 +149,7 @@ var
   subjOpen, sol: TPaths64;
 begin
   SetLength(subjOpen, 1);
-  subjOpen[0] := Clipper.Core.Ellipse(Rect64(0,0,450,450), 7);
+  subjOpen[0] := ClipMisc.Ellipse(Rect64(0,0,450,450), 7);
   sol := InflatePaths(subjOpen, -25, jtRound, etJoined);
 
   with TSvgWriter.Create(frEvenOdd) do
@@ -168,7 +168,7 @@ var
   subjOpen, sol: TPaths64;
 begin
   SetLength(subjOpen, 1);
-  subjOpen[0] := Clipper.Core.Ellipse(Rect64(0,0,450,450), 7);
+  subjOpen[0] := ClipMisc.Ellipse(Rect64(0,0,450,450), 7);
   sol := InflatePaths(subjOpen, 25, jtRound, etRound);
 
   with TSvgWriter.Create(frEvenOdd) do
@@ -187,13 +187,13 @@ var
   circle, paths, sol: TPaths64;
 begin
   SetLength(circle, 1);
-  circle[0] := Clipper.Core.Ellipse(Rect64(-10,-10,10,10));
+  circle[0] := ClipMisc.Ellipse(Rect64(-10,-10,10,10));
   SetLength(paths, 2);
   paths[0] := MakePath([40,40, 100,160, 160,40]);     //triangle
   paths[1] := MakePath([0,0, 200,0, 200,200, 0,200]); //square
 
-  sol := MinkowskiSum(circle[0], paths[0], true);
-  AppendPaths(sol, MinkowskiSum(circle[0], paths[1], true));
+  sol := Clipper.MinkowskiSum(circle[0], paths[0], true);
+  AppendPaths(sol, Clipper.MinkowskiSum(circle[0], paths[1], true));
 
   with TSvgWriter.Create(frEvenOdd) do
   try

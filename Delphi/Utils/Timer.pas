@@ -51,13 +51,13 @@ type
 {$IFDEF FPC}
   TTimer = object
 {$ELSE}
-  TTimer = record
+  TTimer = {$IFDEF RECORD_METHODS} record {$ELSE} object {$ENDIF}
 {$ENDIF}
   public
     class function QueryInterface(Inst: PTimerData;
-      const IID: TGUID; out Obj): HResult; stdcall; static;
-    class function AddRef(Inst: PTimerData): Integer; stdcall; static;
-    class function Release(Inst: PTimerData): Integer; stdcall; static;
+      const IID: TGUID; out Obj): HResult; stdcall;
+    class function AddRef(Inst: PTimerData): Integer; stdcall;
+    class function Release(Inst: PTimerData): Integer; stdcall;
   end;
 
 

@@ -28,7 +28,7 @@ const
     margin: integer = 100;
   begin
     SetLength(clp, 1);
-    clp[0] := Clipper.Core.Ellipse(Rect64(0, 0, radius, radius));
+    clp[0] := ClipMisc.Ellipse(Rect64(0, 0, radius, radius));
     SetLength(sub, count);
     for i := 0 to count -1 do
       sub[i] := TranslatePath(clp[0],
