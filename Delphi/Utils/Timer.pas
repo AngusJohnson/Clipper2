@@ -10,17 +10,17 @@ uses
 *  Example:                                                                    *
 *                                                                              *
 *    var                                                                       *
-*      time: double;                                                           *
+*      timeRec  : TTimeRec;                                                    *
+*      elapsed  : double;                                                      *
 *    begin                                                                     *
-*      ...                                                                     *
-*      begin                                                                   *
-*        InitTimer(time);                                                      *
-*        DoSomeLengthyOp();                                                    *
-*      end;                                                                    *
-*      Caption := Format('DoSomeLengthyOp took %1.3n secs', [time]);              *
-*      ....                                                                    *
+*      StartTimer(timeRec);                                                    *
+*      DoSomeLengthyOp();                                                      *
+*      elapsed := EndTimer(timeRec)                                            *
+*      Caption := Format('DoSomeLengthyOp took %1.3n secs', [elapsed);         *
 *    end;                                                                      *
 *******************************************************************************)
+
+{$I Clipper.inc}
 
 {$IFDEF FPC}
   {$MODE DELPHI}
@@ -28,85 +28,30 @@ uses
 
 type
 
-  ITimer = interface
-  ['{A50173E8-6497-4F83-B4A8-9C0D5D709834}']
-  end;
+TTimeRec = record
+  freq      : TLargeInteger;
+  startTime : TLargeInteger;
+  endTime   : TLargeInteger;
+end;
 
-function InitTimer(out timeResult: double): ITimer;
+procedure StartTimer(out timeRec: TTimeRec);
+function EndTimer(timeRec: TTimeRec): double;
 
 implementation
 
-type
-
-  PTimerData = ^TTimerData;
-  TTimerData = record
-    FVTable     : Pointer;
-    FRefCount   : Integer;
-    FResult     : PDouble;
-    FTimeFreq   : TLargeInteger;
-    FStartTime  : TLargeInteger;
-    FEndTime    : TLargeInteger;
-  end;
-
-{$IFDEF FPC}
-  TTimer = object
-{$ELSE}
-  TTimer = {$IFDEF RECORD_METHODS} record {$ELSE} object {$ENDIF}
-{$ENDIF}
-  public
-    class function QueryInterface(Inst: PTimerData;
-      const IID: TGUID; out Obj): HResult; stdcall;
-    class function AddRef(Inst: PTimerData): Integer; stdcall;
-    class function Release(Inst: PTimerData): Integer; stdcall;
-  end;
-
-
-const
-  TimerVTable: array[0..2] of Pointer =
-  (
-    @TTimer.QueryInterface,
-    @TTimer.AddRef,
-    @TTimer.Release
-  );
-
-class function TTimer.QueryInterface(Inst: PTimerData;
-      const IID: TGUID; out Obj): HResult; stdcall;
+procedure StartTimer(out timeRec: TTimeRec);
 begin
-  Result:= E_NOINTERFACE;
+  QueryPerformanceFrequency(timeRec.freq);
+  QueryPerformanceCounter(timeRec.startTime);
+  timeRec.endTime := timeRec.startTime;
 end;
 
-class function TTimer.AddRef(Inst: PTimerData): Integer; stdcall;
+function EndTimer(timeRec: TTimeRec): double;
 begin
-  inc(inst.FRefCount);
-  Result := inst.FRefCount;
-  if inst.FRefCount <> 1 then Exit;
-  QueryPerformanceCounter(inst.FStartTime);
+  QueryPerformanceCounter(timeRec.endTime);
+  with timeRec do
+    Result := (endTime - startTime)/freq;
 end;
 
-class function TTimer.Release(Inst: PTimerData): Integer; stdcall;
-begin
-  QueryPerformanceCounter(inst.FEndTime);
-  with inst^ do
-  begin
-    dec(FRefCount);
-    Result := FRefCount;
-    if (Result <> 0) then Exit;
-    if assigned(FResult) then
-      FResult^ := (FEndTime - FStartTime)/FTimeFreq;
-  end;
-  Dispose(Inst);
-end;
-
-function InitTimer(out timeResult: double): ITimer;
-var
-  timer: PTimerData;
-begin
-  New(timer);
-  timer.FVTable:= @TimerVTable;
-  timer.FRefCount:= 0;
-  timer.FResult := @timeResult;
-  QueryPerformanceFrequency(timer.FTimeFreq);
-  Result := ITimer(timer);
-end;
 
 end.

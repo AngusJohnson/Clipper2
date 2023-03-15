@@ -4,7 +4,7 @@
         <MainSource>RectClip_Demo.dpr</MainSource>
         <Base>True</Base>
         <Config Condition="'$(Config)'==''">Debug</Config>
-        <TargetedPlatforms>32769</TargetedPlatforms>
+        <TargetedPlatforms>1</TargetedPlatforms>
         <AppType>Console</AppType>
         <FrameworkType>None</FrameworkType>
         <ProjectVersion>19.2</ProjectVersion>
@@ -63,9 +63,13 @@
         <DelphiCompile Include="$(MainSource)">
             <MainSource>MainSource</MainSource>
         </DelphiCompile>
-        <DCCReference Include="..\..\Clipper2Lib\Clipper.pas"/>
-        <DCCReference Include="..\..\Clipper2Lib\Clipper.Core.pas"/>
         <DCCReference Include="..\..\Utils\Clipper.SVG.pas"/>
+        <DCCReference Include="..\..\Clipper2Lib\Clipper.Core.pas"/>
+        <DCCReference Include="..\..\Clipper2Lib\Clipper.Engine.pas"/>
+        <DCCReference Include="..\..\Clipper2Lib\Clipper.Minkowski.pas"/>
+        <DCCReference Include="..\..\Clipper2Lib\Clipper.Offset.pas"/>
+        <DCCReference Include="..\..\Clipper2Lib\Clipper.RectClip.pas"/>
+        <DCCReference Include="..\..\Clipper2Lib\Clipper.pas"/>
         <DCCReference Include="..\..\Utils\Timer.pas"/>
         <DCCReference Include="..\..\Utils\ClipMisc.pas"/>
         <BuildConfiguration Include="Debug">
@@ -91,7 +95,6 @@
             </Delphi.Personality>
             <Platforms>
                 <Platform value="Win32">True</Platform>
-                <Platform value="Win64">False</Platform>
             </Platforms>
             <Deployment Version="3">
                 <DeployFile LocalName="RectClip_Demo.exe" Configuration="Debug" Class="ProjectOutput">

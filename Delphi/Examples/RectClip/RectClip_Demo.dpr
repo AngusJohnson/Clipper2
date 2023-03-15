@@ -8,10 +8,13 @@ uses
   Windows,
   ShellAPI,
   SysUtils,
-  Clipper in '..\..\Clipper2Lib\Clipper.pas',
-  Clipper.Core in '..\..\Clipper2Lib\Clipper.Core.pas',
   Clipper.SVG in '..\..\Utils\Clipper.SVG.pas',
-  Timer in '..\..\Utils\Timer.pas',
+  Clipper.Core in '..\..\Clipper2Lib\Clipper.Core.pas',
+  Clipper.Engine in '..\..\Clipper2Lib\Clipper.Engine.pas',
+  Clipper.Minkowski in '..\..\Clipper2Lib\Clipper.Minkowski.pas',
+  Clipper.Offset in '..\..\Clipper2Lib\Clipper.Offset.pas',
+  Clipper.RectClip in '..\..\Clipper2Lib\Clipper.RectClip.pas',
+  Clipper in '..\..\Clipper2Lib\Clipper.pas',
   ClipMisc in '..\..\Utils\ClipMisc.pas';
 
 const
