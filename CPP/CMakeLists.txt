@@ -38,7 +38,9 @@ set(PCFILEZ "${CMAKE_CURRENT_BINARY_DIR}/Clipper2Z.pc")
 add_library(Clipper2 ${CLIPPER2_INC} ${CLIPPER2_SRC})
 
 target_include_directories(Clipper2
-  PUBLIC Clipper2Lib/include
+  PUBLIC 
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/Clipper2Lib/include>
+    $<INSTALL_INTERFACE:include>
 )
 
 # Clipper2 but with USINGZ defined
@@ -47,7 +49,9 @@ add_library(Clipper2Z ${CLIPPER2_INC} ${CLIPPER2_SRC})
 target_compile_definitions(Clipper2Z PUBLIC USINGZ)
 
 target_include_directories(Clipper2Z
-  PUBLIC Clipper2Lib/include
+  PUBLIC 
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/Clipper2Lib/include>
+    $<INSTALL_INTERFACE:include>
 )
 
 if (MSVC)
@@ -212,14 +216,51 @@ endif()
   file(COPY ../Tests/Polygons.txt DESTINATION ${CMAKE_BINARY_DIR} FILE_PERMISSIONS OWNER_READ GROUP_READ WORLD_READ )
 endif()
 
+# create package config file
+include(CMakePackageConfigHelpers)
+include(GNUInstallDirs)
+
+write_basic_package_version_file("${PROJECT_BINARY_DIR}/Clipper2ConfigVersion.cmake" COMPATIBILITY AnyNewerVersion)
+
+configure_package_config_file(
+    "Clipper2Config.cmake.in" 
+    "${PROJECT_BINARY_DIR}/Clipper2Config.cmake"
+    INSTALL_DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/clipper2
+)
+
+export(TARGETS Clipper2 Clipper2Z FILE "${PROJECT_BINARY_DIR}/Clipper2Targets.cmake")
+
+# installation
+install(TARGETS Clipper2 Clipper2Z EXPORT Clipper2-targets
+        PUBLIC_HEADER DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/clipper2
+        LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+)
+
+install(
+    FILES 
+        ${PROJECT_BINARY_DIR}/Clipper2Config.cmake 
+        ${PROJECT_BINARY_DIR}/Clipper2ConfigVersion.cmake 
+    DESTINATION 
+        ${CMAKE_INSTALL_LIBDIR}/cmake/clipper2
+)
+
+install(
+    EXPORT 
+        Clipper2-targets
+    NAMESPACE 
+        Clipper2:: 
+    FILE 
+        Clipper2Targets.cmake 
+    DESTINATION 
+        ${CMAKE_INSTALL_LIBDIR}/cmake/clipper2
+)
+
 CONFIGURE_FILE(Clipper2.pc.cmakein "${PCFILE}" @ONLY)
 set(PCFILE_LIB_SUFFIX "Z")
 CONFIGURE_FILE(Clipper2.pc.cmakein "${PCFILEZ}" @ONLY)
 
-install(TARGETS Clipper2 Clipper2Z
-        PUBLIC_HEADER DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/clipper2
-)
 install(FILES ${PCFILE} ${PCFILEZ} DESTINATION ${CMAKE_INSTALL_LIBDIR}/pkgconfig)
+
 
 # disable exceptions
 #string(REGEX REPLACE "/W[3|4]" "/w" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
