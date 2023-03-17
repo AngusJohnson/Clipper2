@@ -2928,8 +2928,10 @@ namespace Clipper2Lib {
       solutionOpen->reserve(outrec_list_.size());
     }
 
-    for (OutRec* outrec : outrec_list_)
+    // n.b.: outrec_list_ can grow during the loop, due to self-intersection handling in CleanCollinear
+    for (std::size_t i = 0; i < outrec_list_.size(); i++)
     {
+      OutRec* outrec = outrec_list_[i];
       if (outrec->pts == nullptr) continue;
 
       PathD path;
