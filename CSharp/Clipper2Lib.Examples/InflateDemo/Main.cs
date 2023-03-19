@@ -50,7 +50,7 @@ namespace ClipperDemo1
       p = Clipper.TranslatePaths(p, 120, 100);
       pp.AddRange(p);
       co.AddPaths(p, JoinType.Round, EndType.Joined);
-      p = co.Execute(20);
+      co.Execute(20, p);
       pp.AddRange(p);
 
       SvgWriter svg = new ();

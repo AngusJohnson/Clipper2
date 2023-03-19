@@ -3,7 +3,6 @@
 #include "clipper2/clipper.h"
 #include "../../Utils/clipper.svg.h"
 #include "../../Utils/clipper.svg.utils.h"
-#include "../../Utils/Timer.h"
 
 using namespace std;
 using namespace Clipper2Lib;
@@ -72,7 +71,7 @@ void DoSimpleShapes()
   p = TranslatePaths(p, 120, 100);
   pp.insert(pp.end(), p.begin(), p.end());
   co.AddPaths(p, JoinType::Round, EndType::Joined);
-  p = co.Execute(20);
+  co.Execute(20, p);
   pp.insert(pp.end(), p.begin(), p.end());
 
   FillRule fr = FillRule::EvenOdd;
@@ -99,7 +98,6 @@ void DoRabbit()
     // essential but is highly recommended because it 
     // speeds up the loop and also tidies up the result
     p = SimplifyPaths(p, 0.25); // preferred over RDP()
-    //p = RamerDouglasPeucker(p, 0.25);
     solution.reserve(solution.size() + p.size());
     copy(p.begin(), p.end(), back_inserter(solution));
   }

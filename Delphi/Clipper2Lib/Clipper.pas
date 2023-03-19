@@ -2,7 +2,7 @@ unit Clipper;
 
 (*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  9 February 2023                                                 *
+* Date      :  17 March 2023                                                   *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2023                                         *
 * Purpose   :  This module provides a simple interface to the Clipper Library  *
@@ -126,8 +126,8 @@ function MinkowskiSum(const pattern, path: TPathD;
 function PolyTreeToPaths64(PolyTree: TPolyTree64): TPaths64;
 function PolyTreeToPathsD(PolyTree: TPolyTreeD): TPathsD;
 
-function MakePath(const ints: TArrayOfInt64): TPath64; overload;
-function MakePathD(const dbls: TArrayOfDouble): TPathD; overload;
+function MakePath(const ints: array of Int64): TPath64; overload;
+function MakePathD(const dbls: array of double): TPathD; overload;
 
 function TrimCollinear(const p: TPath64;
   isOpenPath: Boolean = false): TPath64; overload;
@@ -152,7 +152,7 @@ uses
 //------------------------------------------------------------------------------
 //------------------------------------------------------------------------------
 
-function MakePath(const ints: TArrayOfInt64): TPath64;
+function MakePath(const ints: array of Int64): TPath64;
 var
   i, len: integer;
 begin
@@ -166,7 +166,7 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-function MakePathD(const dbls: TArrayOfDouble): TPathD; overload;
+function MakePathD(const dbls: array of double): TPathD; overload;
 var
   i, len: integer;
 begin
@@ -344,7 +344,7 @@ begin
   co := TClipperOffset.Create(MiterLimit, ArcTolerance);
   try
     co.AddPaths(paths, jt, et);
-    Result := co.Execute(delta);
+    co.Execute(delta, Result);
   finally
     co.free;
   end;
@@ -366,7 +366,7 @@ begin
   with TClipperOffset.Create(miterLimit, ArcTolerance) do
   try
     AddPaths(pp, jt, et);
-    pp := Execute(delta * scale);
+    Execute(delta * scale, pp); // reuse pp to receive the solution.
   finally
     free;
   end;

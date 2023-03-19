@@ -1,6 +1,6 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  21 February 2023                                                *
+* Date      :  19 March 2023                                                   *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2023                                         *
 * Purpose   :  This is the main polygon clipping module                        *
@@ -2821,10 +2821,9 @@ namespace Clipper2Lib {
     // nb: outrec_list_.size() may change in the following
     // while loop because polygons may be split during
     // calls to CleanCollinear which calls FixSelfIntersects
-    size_t i = 0;
-    while (i < outrec_list_.size())
+    for (size_t i = 0; i < outrec_list_.size(); ++i)
     {
-      OutRec* outrec = outrec_list_[i++];
+      OutRec* outrec = outrec_list_[i];
       if (outrec->pts == nullptr) continue;
 
       Path64 path;
@@ -2850,14 +2849,13 @@ namespace Clipper2Lib {
     open_paths.resize(0);
     if (has_open_paths_)
       open_paths.reserve(outrec_list_.size());
-
-    size_t i = 0;
+    
     // outrec_list_.size() is not static here because
     // CheckBounds below can indirectly add additional
     // OutRec (via FixOutRecPts & CleanCollinear)
-    while (i < outrec_list_.size())
+    for (size_t i = 0; i < outrec_list_.size(); ++i)
     {
-      OutRec* outrec = outrec_list_[i++];
+      OutRec* outrec = outrec_list_[i];
       if (!outrec || !outrec->pts) continue;
       if (outrec->is_open)
       {
@@ -2928,8 +2926,10 @@ namespace Clipper2Lib {
       solutionOpen->reserve(outrec_list_.size());
     }
 
-    // n.b.: outrec_list_ can grow during the loop, due to self-intersection handling in CleanCollinear
-    for (std::size_t i = 0; i < outrec_list_.size(); i++)
+    // outrec_list_.size() is not static here because
+    // CleanCollinear below can indirectly add additional
+    // OutRec (via FixOutRecPts)
+    for (std::size_t i = 0; i < outrec_list_.size(); ++i)
     {
       OutRec* outrec = outrec_list_[i];
       if (outrec->pts == nullptr) continue;

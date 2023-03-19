@@ -1,6 +1,6 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  15 February 2023                                                *
+* Date      :  17 March 2023                                                   *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2023                                         *
 * Purpose   :  Path Offset (Inflate/Shrink)                                    *
@@ -24,6 +24,7 @@ enum class EndType {Polygon, Joined, Butt, Square, Round};
 //Joined : offsets both sides of a path, with joined ends
 //Polygon: offsets only one side of a closed path
 
+
 class ClipperOffset {
 private:
 
@@ -45,6 +46,8 @@ private:
 	double abs_group_delta_ = 0.0;
 	double temp_lim_ = 0.0;
 	double steps_per_rad_ = 0.0;
+	double step_sin_ = 0.0;
+	double step_cos_ = 0.0;
 	PathD norms;
 	Paths64 solution;
 	std::vector<Group> groups_;
@@ -69,6 +72,7 @@ private:
 	void OffsetOpenPath(Group& group, Path64& path);
 	void OffsetPoint(Group& group, Path64& path, size_t j, size_t& k);
 	void DoGroupOffset(Group &group);
+	void ClipperOffset::ExecuteInternal(double delta);
 public:
 	explicit ClipperOffset(double miter_limit = 2.0,
 		double arc_tolerance = 0.0,
@@ -83,11 +87,10 @@ public:
 	int ErrorCode() { return error_code_; };
 	void AddPath(const Path64& path, JoinType jt_, EndType et_);
 	void AddPaths(const Paths64& paths, JoinType jt_, EndType et_);
-	void AddPath(const PathD &p, JoinType jt_, EndType et_);
-	void AddPaths(const PathsD &p, JoinType jt_, EndType et_);
 	void Clear() { groups_.clear(); norms.clear(); };
 	
-	Paths64 Execute(double delta);
+	void Execute(double delta, Paths64& paths);
+	void Execute(double delta, PolyTree64& polytree);
 
 	double MiterLimit() const { return miter_limit_; }
 	void MiterLimit(double miter_limit) { miter_limit_ = miter_limit; }

@@ -388,13 +388,12 @@ end;
 function TSvgWriter.SaveToFile(const filename: string;
   maxWidth: integer = 0; maxHeight: integer = 0; margin: integer = 20): Boolean;
 var
-  i,j,k, len1, len2: integer;
-  x,y,x2,y2,delta: double;
-  bounds: TRectD;
-  scale, scaleX, scaleY: double;
-  offsetX, offsetY: integer;
+  i, j, k           : integer;
+  bounds            : TRectD;
+  scale             : double;
+  offsetX, offsetY  : integer;
   s, sInline, dashStr: string;
-  sl: TStringList;
+  sl                : TStringList;
   formatSettings: TFormatSettings;
 const
   fillRuleStr: array[boolean] of string = ('evenodd', 'nonzero');

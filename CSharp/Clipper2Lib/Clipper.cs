@@ -1,6 +1,6 @@
 ﻿/*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  21 February 2023                                                *
+* Date      :  17 March 2023                                                   *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2023                                         *
 * Purpose   :  This module contains simple functions that will likely cover    *
@@ -142,7 +142,9 @@ namespace Clipper2Lib
     {
       ClipperOffset co = new ClipperOffset(miterLimit);
       co.AddPaths(paths, joinType, endType);
-      return co.Execute(delta);
+      Paths64 solution = new Paths64();
+      co.Execute(delta, solution);
+      return solution;
     }
 
     public static PathsD InflatePaths(PathsD paths, double delta, JoinType joinType,
@@ -153,7 +155,7 @@ namespace Clipper2Lib
       Paths64 tmp = ScalePaths64(paths, scale);
       ClipperOffset co = new ClipperOffset(miterLimit);
       co.AddPaths(tmp, joinType, endType);
-      tmp = co.Execute(delta * scale);
+      co.Execute(delta * scale, tmp); // reuse 'tmp' to receive (scaled) solution
       return ScalePathsD(tmp, 1 / scale);
     }
 

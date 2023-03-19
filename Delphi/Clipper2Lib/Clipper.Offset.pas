@@ -2,7 +2,7 @@ unit Clipper.Offset;
 
 (*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  11 March 2023                                                   *
+* Date      :  17 March 2023                                                   *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2023                                         *
 * Purpose   :  Path Offset (Inflate/Shrink)                                    *
@@ -46,6 +46,8 @@ type
     fMiterLimit   : Double;
     fArcTolerance : Double;
     fStepsPerRad  : Double;
+    fStepSin      : Double;
+    fStepCos      : Double;
     fNorms        : TPathD;
     fGroupList    : TListEx;
     fInPath       : TPath64;
@@ -73,6 +75,7 @@ type
     procedure OffsetPolygon;
     procedure OffsetOpenJoined;
     procedure OffsetOpenPath;
+    procedure ExecuteInternal(delta: Double);
   public
     constructor Create(miterLimit: double = 2.0;
       arcTolerance: double = 0.0;
@@ -84,7 +87,8 @@ type
     procedure AddPaths(const paths: TPaths64;
       joinType: TJoinType; endType: TEndType);
     procedure Clear;
-    function Execute(delta: Double): TPaths64;
+    procedure Execute(delta: Double; out solution: TPaths64); overload;
+    procedure Execute(delta: Double; out polytree: TPolyTree64); overload;
 
     // MiterLimit: needed for mitered offsets (see offset_triginometry3.svg)
     property MiterLimit: Double read fMiterLimit write fMiterLimit;
@@ -288,7 +292,7 @@ end;
 procedure TClipperOffset.DoGroupOffset(group: TGroup);
 var
   i,j, len, lowestIdx: Integer;
-  r, arcTol, area: Double;
+  r, stepsPer360, arcTol, area: Double;
   rec: TRect64;
   isJoined: Boolean;
 begin
@@ -323,7 +327,14 @@ begin
     if fArcTolerance > 0.01 then
       arcTol := Min(fAbsGrpDelta, fArcTolerance) else
       arcTol := Log10(2 + fAbsGrpDelta) * 0.25; // empirically derived
-    fStepsPerRad := 0.5 / ArcCos(1 - arcTol / fAbsGrpDelta);
+    //http://www.angusj.com/clipper2/Docs/Trigonometry.htm
+    stepsPer360 := Pi / ArcCos(1 - arcTol / fAbsGrpDelta);
+		if (stepsPer360 > fAbsGrpDelta * Pi) then
+			stepsPer360 := fAbsGrpDelta * Pi;  // avoid excessive precision
+    fStepSin := sin(TwoPi/stepsPer360);
+    fStepCos := cos(TwoPi/stepsPer360);
+		if (fGroupDelta < 0.0) then fStepSin := -fStepSin;
+    fStepsPerRad := stepsPer360 / TwoPi;
   end;
 
   fOutPaths := nil;
@@ -499,13 +510,12 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-function TClipperOffset.Execute(delta: Double): TPaths64;
+procedure TClipperOffset.ExecuteInternal(delta: Double);
 var
   i: integer;
   group: TGroup;
 begin
   fSolution := nil;
-  Result := nil;
   if fGroupList.Count = 0 then Exit;
 
   fMinLenSqrd := 1;
@@ -517,7 +527,6 @@ begin
       group := TGroup(fGroupList[i]);
       AppendPaths(fSolution, group.paths);
     end;
-    Result := fSolution;
     Exit;
   end;
 
@@ -548,7 +557,57 @@ begin
   finally
     free;
   end;
-  Result := fSolution;
+end;
+//------------------------------------------------------------------------------
+
+procedure TClipperOffset.Execute(delta: Double; out solution: TPaths64);
+var
+  i: integer;
+  group: TGroup;
+begin
+  fSolution := nil;
+  ExecuteInternal(delta);
+
+  // clean up self-intersections ...
+  with TClipper64.Create do
+  try
+    PreserveCollinear := fPreserveCollinear;
+    // the solution should retain the orientation of the input
+    ReverseSolution :=
+      fReverseSolution <> TGroup(fGroupList[0]).reversed;
+    AddSubject(fSolution);
+    if TGroup(fGroupList[0]).reversed then
+      Execute(ctUnion, frNegative, solution) else
+      Execute(ctUnion, frPositive, solution);
+  finally
+    free;
+  end;
+end;
+//------------------------------------------------------------------------------
+
+procedure TClipperOffset.Execute(delta: Double; out polytree: TPolyTree64);
+var
+  i: integer;
+  group: TGroup;
+  dummy: TPaths64;
+begin
+  fSolution := nil;
+  ExecuteInternal(delta);
+
+  // clean up self-intersections ...
+  with TClipper64.Create do
+  try
+    PreserveCollinear := fPreserveCollinear;
+    // the solution should retain the orientation of the input
+    ReverseSolution :=
+      fReverseSolution <> TGroup(fGroupList[0]).reversed;
+    AddSubject(fSolution);
+    if TGroup(fGroupList[0]).reversed then
+      Execute(ctUnion, frNegative, polytree, dummy) else
+      Execute(ctUnion, frPositive, polytree, dummy);
+  finally
+    free;
+  end;
 end;
 //------------------------------------------------------------------------------
 
@@ -708,7 +767,6 @@ end;
 procedure TClipperOffset.DoRound(j, k: Integer; angle: double);
 var
   i, steps: Integer;
-  stepSin, stepCos: double;
   pt: TPoint64;
   offDist: TPointD;
 begin
@@ -721,12 +779,11 @@ begin
 {$ELSE}
   AddPoint(pt.X + offDist.X, pt.Y + offDist.Y);
 {$ENDIF}
-  steps := Max(2, Floor(fStepsPerRad * abs(angle)));
-  GetSinCos(angle / steps, stepSin, stepCos);
+  steps := Max(2, Ceil(fStepsPerRad * abs(angle)));
   for i := 2 to steps do
   begin
-    offDist := PointD(offDist.X * stepCos - stepSin * offDist.Y,
-      offDist.X * stepSin + offDist.Y * stepCos);
+    offDist := PointD(offDist.X * fStepCos - fStepSin * offDist.Y,
+      offDist.X * fStepSin + offDist.Y * fStepCos);
 {$IFDEF USINGZ}
     AddPoint(pt.X + offDist.X, pt.Y + offDist.Y, pt.Z);
 {$ELSE}

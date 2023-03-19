@@ -1,6 +1,6 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  8 March 2023                                                    *
+* Date      :  19 March 2023                                                   *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2023                                         *
 * Purpose   :  Path Offset (Inflate/Shrink)                                    *
@@ -143,19 +143,6 @@ void ClipperOffset::AddPaths(const Paths64 &paths, JoinType jt_, EndType et_)
 	groups_.push_back(Group(paths, jt_, et_));
 }
 
-void ClipperOffset::AddPath(const Clipper2Lib::PathD& path, JoinType jt_, EndType et_)
-{
-	PathsD paths;
-	paths.push_back(path);
-	AddPaths(paths, jt_, et_);
-}
-
-void ClipperOffset::AddPaths(const PathsD& paths, JoinType jt_, EndType et_)
-{
-	if (paths.size() == 0) return;
-	groups_.push_back(Group(PathsDToPaths64(paths), jt_, et_));
-}
-
 void ClipperOffset::BuildNormals(const Path64& path)
 {
 	norms.clear();
@@ -275,6 +262,8 @@ void ClipperOffset::DoRound(Group& group, const Path64& path, size_t j, size_t k
 {
 	Point64 pt = path[j];
 	PointD offsetVec = PointD(norms[k].x * group_delta_, norms[k].y * group_delta_);
+	PointD xy = norms[k];
+
 	if (j == k) offsetVec.Negate();
 #if USINGZ
 	group.path.push_back(Point64(pt.x + offsetVec.x, pt.y + offsetVec.y, pt.z));
@@ -284,18 +273,17 @@ void ClipperOffset::DoRound(Group& group, const Path64& path, size_t j, size_t k
 	if (angle > -PI + 0.01)	// avoid 180deg concave
 	{
 		int steps = std::max(2, static_cast<int>(
-			std::floor(steps_per_rad_ * std::abs(angle))));
-		double step_sin = std::sin(angle / steps);
-		double step_cos = std::cos(angle / steps);
+			std::ceil(steps_per_rad_ * std::abs(angle)))); // #448
 		for (int i = 1; i < steps; ++i) // ie 1 less than steps
 		{
-			offsetVec = PointD(offsetVec.x * step_cos - step_sin * offsetVec.y,
-				offsetVec.x * step_sin + offsetVec.y * step_cos);
+			offsetVec = PointD(offsetVec.x * step_cos_ - step_sin_ * offsetVec.y,
+				offsetVec.x * step_sin_ + offsetVec.y * step_cos_);
 #if USINGZ
 			group.path.push_back(Point64(pt.x + offsetVec.x, pt.y + offsetVec.y, pt.z));
 #else
 			group.path.push_back(Point64(pt.x + offsetVec.x, pt.y + offsetVec.y));
 #endif
+
 		}
 	}
 	group.path.push_back(GetPerpendic(path[j], norms[j], group_delta_));
@@ -482,7 +470,14 @@ void ClipperOffset::DoGroupOffset(Group& group)
 		double arcTol = (arc_tolerance_ > floating_point_tolerance ?
 			std::min(abs_group_delta_, arc_tolerance_) :
 			std::log10(2 + abs_group_delta_) * default_arc_tolerance); 
-		steps_per_rad_ = 0.5 / std::acos(1 - arcTol / abs_group_delta_);
+		double steps_per_360 = PI / std::acos(1 - arcTol / abs_group_delta_);
+		if (steps_per_360 > abs_group_delta_ * PI)
+			steps_per_360 = abs_group_delta_ * PI;  //ie avoids excessive precision
+
+		step_sin_ = std::sin(2 * PI / steps_per_360);
+		step_cos_ = std::cos(2 * PI / steps_per_360);
+		if (group_delta_ < 0.0) step_sin_ = -step_sin_;		
+		steps_per_rad_ = steps_per_360 / (2 *PI);
 	}
 
 	bool is_joined =
@@ -541,11 +536,11 @@ void ClipperOffset::DoGroupOffset(Group& group)
 	group.paths_out.clear();
 }
 
-Paths64 ClipperOffset::Execute(double delta)
+void ClipperOffset::ExecuteInternal(double delta)
 {
 	error_code_ = 0;
 	solution.clear();
-	if (groups_.size() == 0) return solution;
+	if (groups_.size() == 0) return;
 
 	if (std::abs(delta) < 0.5)
 	{
@@ -554,22 +549,30 @@ Paths64 ClipperOffset::Execute(double delta)
 			solution.reserve(solution.size() + group.paths_in.size());
 			copy(group.paths_in.begin(), group.paths_in.end(), back_inserter(solution));
 		}
-		return solution;
-	}
-
-	temp_lim_ = (miter_limit_ <= 1) ? 
-		2.0 : 
-		2.0 / (miter_limit_ * miter_limit_);
-	
-	delta_ = delta;
-	std::vector<Group>::iterator git;
-	for (git = groups_.begin(); git != groups_.end(); ++git)
+	} 
+	else
 	{
-		DoGroupOffset(*git);
-		if (!error_code_) continue; // all OK
-		solution.clear();
-		return solution;
+		temp_lim_ = (miter_limit_ <= 1) ?
+			2.0 :
+			2.0 / (miter_limit_ * miter_limit_);
+
+		delta_ = delta;
+		std::vector<Group>::iterator git;
+		for (git = groups_.begin(); git != groups_.end(); ++git)
+		{
+			DoGroupOffset(*git);
+			if (!error_code_) continue; // all OK
+			solution.clear();
+		}
 	}
+}
+
+void ClipperOffset::Execute(double delta, Paths64& paths)
+{
+	paths.clear();
+
+	ExecuteInternal(delta);
+	if (!solution.size()) return;
 
 	//clean up self-intersections ...
 	Clipper64 c;
@@ -583,10 +586,34 @@ Paths64 ClipperOffset::Execute(double delta)
 #endif
 	c.AddSubject(solution);
 	if (groups_[0].is_reversed)
-		c.Execute(ClipType::Union, FillRule::Negative, solution);
+		c.Execute(ClipType::Union, FillRule::Negative, paths);
 	else
-		c.Execute(ClipType::Union, FillRule::Positive, solution);
-	return solution;
+		c.Execute(ClipType::Union, FillRule::Positive, paths);
+}
+
+
+void ClipperOffset::Execute(double delta, PolyTree64& polytree)
+{
+	polytree.Clear();
+
+	ExecuteInternal(delta);
+	if (!solution.size()) return;
+
+	//clean up self-intersections ...
+	Clipper64 c;
+	c.PreserveCollinear = false;
+	//the solution should retain the orientation of the input
+	c.ReverseSolution = reverse_solution_ != groups_[0].is_reversed;
+#if USINGZ
+	if (zCallback64_) {
+		c.SetZCallback(zCallback64_);
+	}
+#endif
+	c.AddSubject(solution);
+	if (groups_[0].is_reversed)
+		c.Execute(ClipType::Union, FillRule::Negative, polytree);
+	else
+		c.Execute(ClipType::Union, FillRule::Positive, polytree);
 }
 
 } // namespace

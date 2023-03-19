@@ -139,7 +139,9 @@ namespace Clipper2Lib {
     if (!delta) return paths;
     ClipperOffset clip_offset(miter_limit, arc_tolerance);
     clip_offset.AddPaths(paths, jt, et);
-    return clip_offset.Execute(delta);
+    Paths64 solution;
+    clip_offset.Execute(delta, solution);
+    return solution;
   }
 
   inline PathsD InflatePaths(const PathsD& paths, double delta,
@@ -154,8 +156,9 @@ namespace Clipper2Lib {
     ClipperOffset clip_offset(miter_limit, arc_tolerance);
     clip_offset.AddPaths(ScalePaths<int64_t,double>(paths, scale, error_code), jt, et);
     if (error_code) return PathsD();
-    Paths64 tmp = clip_offset.Execute(delta * scale);
-    return ScalePaths<double, int64_t>(tmp, 1 / scale, error_code);
+    Paths64 solution;
+    clip_offset.Execute(delta * scale, solution);
+    return ScalePaths<double, int64_t>(solution, 1 / scale, error_code);
   }
 
   inline Path64 TranslatePath(const Path64& path, int64_t dx, int64_t dy)

@@ -12,7 +12,8 @@ TEST(Clipper2Tests, TestOffsettingOrientation) {
     };
 
     co.AddPath(input, Clipper2Lib::JoinType::Round, Clipper2Lib::EndType::Polygon);
-    const auto outputs = co.Execute(1);
+    Clipper2Lib::Paths64 outputs;
+    co.Execute(1, outputs);
 
     ASSERT_EQ(outputs.size(), 1);
     //when offsetting, output orientation should match input

@@ -1,6 +1,6 @@
 ﻿/*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  8 March 2023                                                    *
+* Date      :  19 March 2023                                                   *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2023                                         *
 * Purpose   :  Path Offset (Inflate/Shrink)                                    *
@@ -54,12 +54,14 @@ namespace Clipper2Lib
 
     private readonly List<Group> _groupList = new List<Group>();
     private readonly PathD _normals = new PathD();
-    private readonly Paths64 solution = new Paths64();
+    private readonly Paths64 _solution = new Paths64();
     private double _group_delta; //*0.5 for open paths; *-1.0 for negative areas
     private double _delta;
     private double _abs_group_delta;
     private double _mitLimSqr;
     private double _stepsPerRad;
+    private double _stepSin;
+    private double _stepCos;
     private JoinType _joinType;
     private EndType _endType;
     public double ArcTolerance { get; set; }
@@ -104,25 +106,32 @@ namespace Clipper2Lib
       _groupList.Add(new Group(paths, joinType, endType));
     }
 
-    public Paths64 Execute(double delta)
+    private void ExecuteInternal(double delta)
     {
-      solution.Clear();
-      if (_groupList.Count == 0) return solution;
+      _solution.Clear();
+      if (_groupList.Count == 0) return;
 
       if (Math.Abs(delta) < 0.5)
       {
         foreach (Group group in _groupList)
           foreach (Path64 path in group.inPaths)
-            solution.Add(path);
-        return solution;
+            _solution.Add(path);
       }
+      else
+      { 
+        _delta = delta;
+        _mitLimSqr = (MiterLimit <= 1 ?
+          2.0 : 2.0 / Clipper.Sqr(MiterLimit));
 
-      _delta = delta;
-      _mitLimSqr = (MiterLimit <= 1 ?
-        2.0 : 2.0 / Clipper.Sqr(MiterLimit));
+        foreach (Group group in _groupList)
+          DoGroupOffset(group);
+      }
+    }
 
-      foreach (Group group in _groupList)
-        DoGroupOffset(group);
+    public void Execute(double delta, Paths64 solution)
+    {
+      solution.Clear();
+      ExecuteInternal(delta);
 
       // clean up self-intersections ...
       Clipper64 c = new Clipper64()
@@ -134,13 +143,35 @@ namespace Clipper2Lib
 #if USINGZ
       c.ZCallback = ZCallback;
 #endif
-      c.AddSubject(solution);
+      c.AddSubject(_solution);
       if (_groupList[0].pathsReversed)
         c.Execute(ClipType.Union, FillRule.Negative, solution);
       else
         c.Execute(ClipType.Union, FillRule.Positive, solution);
-      return solution;
     }
+
+    public void Execute(double delta, PolyTree64 polytree)
+    {
+      polytree.Clear();
+      ExecuteInternal(delta);
+
+      // clean up self-intersections ...
+      Clipper64 c = new Clipper64()
+      {
+        PreserveCollinear = PreserveCollinear,
+        // the solution should retain the orientation of the input
+        ReverseSolution = ReverseSolution != _groupList[0].pathsReversed
+      };
+#if USINGZ
+      c.ZCallback = ZCallback;
+#endif
+      c.AddSubject(_solution);
+      if (_groupList[0].pathsReversed)
+        c.Execute(ClipType.Union, FillRule.Negative, polytree);
+      else
+        c.Execute(ClipType.Union, FillRule.Positive, polytree);
+    }
+
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static PointD GetUnitNormal(Point64 pt1, Point64 pt2)
@@ -361,13 +392,11 @@ namespace Clipper2Lib
 #endif
       if (angle > -Math.PI + 0.01) // avoid 180deg concave
       {
-        int steps = Math.Max(2, (int) Math.Floor(_stepsPerRad * Math.Abs(angle)));
-        double stepSin = Math.Sin(angle / steps);
-        double stepCos = Math.Cos(angle / steps);
+        int steps = Math.Max(2, (int) Math.Ceiling(_stepsPerRad * Math.Abs(angle)));
         for (int i = 1; i < steps; i++) // ie 1 less than steps
         {
-          offsetVec = new PointD(offsetVec.x * stepCos - stepSin * offsetVec.y,
-              offsetVec.x * stepSin + offsetVec.y * stepCos);
+          offsetVec = new PointD(offsetVec.x * _stepCos - _stepSin * offsetVec.y,
+              offsetVec.x * _stepSin + offsetVec.y * _stepCos);
 #if USINGZ
           group.outPath.Add(new Point64(pt.X + offsetVec.x, pt.Y + offsetVec.y, pt.Z));
 #else
@@ -555,10 +584,14 @@ namespace Clipper2Lib
         double arcTol = ArcTolerance > 0.01 ?
           ArcTolerance :              
           Math.Log10(2 + _abs_group_delta) * InternalClipper.defaultArcTolerance; 
-        _stepsPerRad = 0.5 / Math.Acos(1 - arcTol / _abs_group_delta);
+        double stepsPer360 = Math.PI / Math.Acos(1 - arcTol / _abs_group_delta);
+        _stepSin = Math.Sin((2 * Math.PI) / stepsPer360);
+        _stepCos = Math.Cos((2 * Math.PI) / stepsPer360);
+        if (_group_delta < 0.0) _stepSin = -_stepSin;
+        _stepsPerRad = stepsPer360 / (2 * Math.PI);
       }
 
-      bool isJoined = 
+      bool isJoined =
         (group.endType == EndType.Joined) ||
         (group.endType == EndType.Polygon);
 
@@ -608,7 +641,7 @@ namespace Clipper2Lib
           else OffsetOpenPath(group, path);
         }
       }
-      solution.AddRange(group.outPaths);
+      _solution.AddRange(group.outPaths);
       group.outPaths.Clear();
     }
   }

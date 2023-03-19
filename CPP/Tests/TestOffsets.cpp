@@ -20,7 +20,8 @@ TEST(Clipper2Tests, TestOffsets) {
         ASSERT_TRUE(LoadTestNum(ifs, test_number, subject, subject_open, clip, stored_area, stored_count, ct, fr));
 
         co.AddPaths(subject, Clipper2Lib::JoinType::Round, Clipper2Lib::EndType::Polygon);
-        const auto outputs = co.Execute(1);
+        Clipper2Lib::Paths64 outputs; 
+        co.Execute(1, outputs);
 
         // is the sum total area of the solution is positive
         const auto outer_is_positive = Clipper2Lib::Area(outputs) > 0;
