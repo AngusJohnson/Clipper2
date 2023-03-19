@@ -1,6 +1,6 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  17 March 2023                                                   *
+* Date      :  19 March 2023                                                   *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2023                                         *
 * Purpose   :  Path Offset (Inflate/Shrink)                                    *
@@ -72,7 +72,7 @@ private:
 	void OffsetOpenPath(Group& group, Path64& path);
 	void OffsetPoint(Group& group, Path64& path, size_t j, size_t& k);
 	void DoGroupOffset(Group &group);
-	void ClipperOffset::ExecuteInternal(double delta);
+	void ExecuteInternal(double delta);
 public:
 	explicit ClipperOffset(double miter_limit = 2.0,
 		double arc_tolerance = 0.0,
