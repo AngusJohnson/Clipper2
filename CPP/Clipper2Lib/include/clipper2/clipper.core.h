@@ -57,7 +57,6 @@ namespace Clipper2Lib
   const double min_coord = static_cast<double>(MIN_COORD);
 
   static const double MAX_DBL = (std::numeric_limits<double>::max)();
-  static const double MIN_DBL = (std::numeric_limits<double>::min)();
 
   static void DoError(int error_code)
   {
@@ -340,7 +339,7 @@ namespace Clipper2Lib
     INT64_MAX, INT64_MAX, INT64_MIN, INT64_MIN);
 
   static const RectD MaxInvalidRectD = RectD(
-    MAX_DBL, MAX_DBL, MIN_DBL, MIN_DBL);
+    MAX_DBL, MAX_DBL, -MAX_DBL, -MAX_DBL);
 
   inline Rect64 GetBounds(const Path64& path)
   {
