@@ -1,6 +1,6 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  12 February 2023                                                *
+* Date      :  22 March 2023                                                   *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2023                                         *
 * Purpose   :  This module exports the Clipper2 Library (ie DLL/so)            *
@@ -361,7 +361,8 @@ EXTERN_DLL_EXPORT CPaths64 InflatePaths64(const CPaths64 paths,
   ClipperOffset clip_offset( miter_limit, 
     arc_tolerance, reverse_solution);
   clip_offset.AddPaths(pp, JoinType(jointype), EndType(endtype));
-  Paths64 result = clip_offset.Execute(delta);
+  Paths64 result; 
+  clip_offset.Execute(delta, result);
   return CreateCPaths64(result);
 }
 
@@ -375,7 +376,8 @@ EXTERN_DLL_EXPORT CPathsD InflatePathsD(const CPathsD paths,
   ClipperOffset clip_offset(miter_limit, arc_tolerance, reverse_solution);
   Paths64 pp = ConvertCPathsD(paths, scale);
   clip_offset.AddPaths(pp, JoinType(jointype), EndType(endtype));
-  Paths64 result = clip_offset.Execute(delta * scale);
+  Paths64 result;
+  clip_offset.Execute(delta * scale, result);
   return CreateCPathsD(result, 1/scale);
 }
 
