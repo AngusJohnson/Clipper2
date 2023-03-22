@@ -1,6 +1,6 @@
 ﻿/*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  19 March 2023                                                   *
+* Date      :  22 March 2023                                                   *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2023                                         *
 * Purpose   :  Path Offset (Inflate/Shrink)                                    *
@@ -392,7 +392,7 @@ namespace Clipper2Lib
 #endif
       if (angle > -Math.PI + 0.01) // avoid 180deg concave
       {
-        int steps = Math.Max(2, (int) Math.Ceiling(_stepsPerRad * Math.Abs(angle)));
+        int steps = (int) Math.Ceiling(_stepsPerRad * Math.Abs(angle));
         for (int i = 1; i < steps; i++) // ie 1 less than steps
         {
           offsetVec = new PointD(offsetVec.x * _stepCos - _stepSin * offsetVec.y,

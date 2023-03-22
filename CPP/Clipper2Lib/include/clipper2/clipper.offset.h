@@ -1,6 +1,6 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  19 March 2023                                                   *
+* Date      :  22 March 2023                                                   *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2023                                         *
 * Purpose   :  Path Offset (Inflate/Shrink)                                    *
@@ -59,7 +59,7 @@ private:
 	bool preserve_collinear_ = false;
 	bool reverse_solution_ = false;
 
-#if USINGZ
+#ifdef USINGZ
 	ZCallback64 zCallback64_ = nullptr;
 #endif
 
@@ -105,7 +105,7 @@ public:
 	bool ReverseSolution() const { return reverse_solution_; }
 	void ReverseSolution(bool reverse_solution) {reverse_solution_ = reverse_solution;}
 
-#if USINGZ
+#ifdef USINGZ
 	void SetZCallback(ZCallback64 cb) { zCallback64_ = cb; }
 #endif
 };

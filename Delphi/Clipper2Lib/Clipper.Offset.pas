@@ -2,7 +2,7 @@ unit Clipper.Offset;
 
 (*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  17 March 2023                                                   *
+* Date      :  22 March 2023                                                   *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2023                                         *
 * Purpose   :  Path Offset (Inflate/Shrink)                                    *
@@ -779,7 +779,7 @@ begin
 {$ELSE}
   AddPoint(pt.X + offDist.X, pt.Y + offDist.Y);
 {$ENDIF}
-  steps := Max(2, Ceil(fStepsPerRad * abs(angle)));
+  steps := Ceil(fStepsPerRad * abs(angle));
   for i := 2 to steps do
   begin
     offDist := PointD(offDist.X * fStepCos - fStepSin * offDist.Y,

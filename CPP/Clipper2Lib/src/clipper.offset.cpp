@@ -1,6 +1,6 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  19 March 2023                                                   *
+* Date      :  22 March 2023                                                   *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2023                                         *
 * Purpose   :  Path Offset (Inflate/Shrink)                                    *
@@ -98,7 +98,7 @@ inline bool IsClosedPath(EndType et)
 
 inline Point64 GetPerpendic(const Point64& pt, const PointD& norm, double delta)
 {
-#if USINGZ
+#ifdef USINGZ
 	return Point64(pt.x + norm.x * delta, pt.y + norm.y * delta, pt.z);
 #else
 	return Point64(pt.x + norm.x * delta, pt.y + norm.y * delta);
@@ -107,7 +107,7 @@ inline Point64 GetPerpendic(const Point64& pt, const PointD& norm, double delta)
 
 inline PointD GetPerpendicD(const Point64& pt, const PointD& norm, double delta)
 {
-#if USINGZ
+#ifdef USINGZ
 	return PointD(pt.x + norm.x * delta, pt.y + norm.y * delta, pt.z);
 #else
 	return PointD(pt.x + norm.x * delta, pt.y + norm.y * delta);
@@ -120,7 +120,7 @@ inline void NegatePath(PathD& path)
 	{
 		pt.x = -pt.x;
 		pt.y = -pt.y;
-#if USINGZ
+#ifdef USINGZ
 		pt.z = pt.z;
 #endif
 	}
@@ -156,7 +156,7 @@ void ClipperOffset::BuildNormals(const Path64& path)
 
 inline PointD TranslatePoint(const PointD& pt, double dx, double dy)
 {
-#if USINGZ
+#ifdef USINGZ
 	return PointD(pt.x + dx, pt.y + dy, pt.z);
 #else
 	return PointD(pt.x + dx, pt.y + dy);
@@ -165,7 +165,7 @@ inline PointD TranslatePoint(const PointD& pt, double dx, double dy)
 
 inline PointD ReflectPoint(const PointD& pt, const PointD& pivot)
 {
-#if USINGZ
+#ifdef USINGZ
 	return PointD(pivot.x + (pivot.x - pt.x), pivot.y + (pivot.y - pt.y), pt.z);
 #else
 	return PointD(pivot.x + (pivot.x - pt.x), pivot.y + (pivot.y - pt.y));
@@ -223,7 +223,7 @@ void ClipperOffset::DoSquare(Group& group, const Path64& path, size_t j, size_t 
 	{
 		PointD pt4 = PointD(pt3.x + vec.x * group_delta_, pt3.y + vec.y * group_delta_);
 		PointD pt = IntersectPoint(pt1, pt2, pt3, pt4);
-#if USINGZ
+#ifdef USINGZ
 		pt.z = ptQ.z;
 #endif
 		//get the second intersect point through reflecion
@@ -234,7 +234,7 @@ void ClipperOffset::DoSquare(Group& group, const Path64& path, size_t j, size_t 
 	{
 		PointD pt4 = GetPerpendicD(path[j], norms[k], group_delta_);
 		PointD pt = IntersectPoint(pt1, pt2, pt3, pt4);
-#if USINGZ
+#ifdef USINGZ
 		pt.z = ptQ.z;
 #endif
 		group.path.push_back(Point64(pt));
@@ -246,7 +246,7 @@ void ClipperOffset::DoSquare(Group& group, const Path64& path, size_t j, size_t 
 void ClipperOffset::DoMiter(Group& group, const Path64& path, size_t j, size_t k, double cos_a)
 {
 	double q = group_delta_ / (cos_a + 1);
-#if USINGZ
+#ifdef USINGZ
 	group.path.push_back(Point64(
 		path[j].x + (norms[k].x + norms[j].x) * q,
 		path[j].y + (norms[k].y + norms[j].y) * q,
@@ -264,20 +264,19 @@ void ClipperOffset::DoRound(Group& group, const Path64& path, size_t j, size_t k
 	PointD offsetVec = PointD(norms[k].x * group_delta_, norms[k].y * group_delta_);
 
 	if (j == k) offsetVec.Negate();
-#if USINGZ
+#ifdef USINGZ
 	group.path.push_back(Point64(pt.x + offsetVec.x, pt.y + offsetVec.y, pt.z));
 #else
 	group.path.push_back(Point64(pt.x + offsetVec.x, pt.y + offsetVec.y));
 #endif
 	if (angle > -PI + 0.01)	// avoid 180deg concave
 	{
-		int steps = std::max(2, static_cast<int>(
-			std::ceil(steps_per_rad_ * std::abs(angle)))); // #448
+		int steps = static_cast<int>(std::ceil(steps_per_rad_ * std::abs(angle))); // #448, #456
 		for (int i = 1; i < steps; ++i) // ie 1 less than steps
 		{
 			offsetVec = PointD(offsetVec.x * step_cos_ - step_sin_ * offsetVec.y,
 				offsetVec.x * step_sin_ + offsetVec.y * step_cos_);
-#if USINGZ
+#ifdef USINGZ
 			group.path.push_back(Point64(pt.x + offsetVec.x, pt.y + offsetVec.y, pt.z));
 #else
 			group.path.push_back(Point64(pt.x + offsetVec.x, pt.y + offsetVec.y));
@@ -364,7 +363,7 @@ void ClipperOffset::OffsetOpenPath(Group& group, Path64& path)
 	switch (end_type_)
 	{
 	case EndType::Butt:
-#if USINGZ
+#ifdef USINGZ
 		group.path.push_back(Point64(
 			path[0].x - norms[0].x * group_delta_,
 			path[0].y - norms[0].y * group_delta_,
@@ -399,7 +398,7 @@ void ClipperOffset::OffsetOpenPath(Group& group, Path64& path)
 	switch (end_type_)
 	{
 	case EndType::Butt:
-#if USINGZ
+#ifdef USINGZ
 		group.path.push_back(Point64(
 			path[highI].x - norms[highI].x * group_delta_,
 			path[highI].y - norms[highI].y * group_delta_,
@@ -499,7 +498,7 @@ void ClipperOffset::DoGroupOffset(Group& group)
 			{
 				double radius = abs_group_delta_;
 				group.path = Ellipse(path[0], radius, radius);
-#if USINGZ
+#ifdef USINGZ
 				for (auto& p : group.path) p.z = path[0].z;
 #endif
 			}
@@ -508,7 +507,7 @@ void ClipperOffset::DoGroupOffset(Group& group)
 				int d = (int)std::ceil(abs_group_delta_);
 				r = Rect64(path[0].x - d, path[0].y - d, path[0].x + d, path[0].y + d);
 				group.path = r.AsPath();
-#if USINGZ
+#ifdef USINGZ
 				for (auto& p : group.path) p.z = path[0].z;
 #endif
 			}
@@ -573,12 +572,13 @@ void ClipperOffset::Execute(double delta, Paths64& paths)
 	ExecuteInternal(delta);
 	if (!solution.size()) return;
 
+	paths = solution;
 	//clean up self-intersections ...
 	Clipper64 c;
 	c.PreserveCollinear = false;
 	//the solution should retain the orientation of the input
 	c.ReverseSolution = reverse_solution_ != groups_[0].is_reversed;
-#if USINGZ
+#ifdef USINGZ
 	if (zCallback64_) {
 		c.SetZCallback(zCallback64_);
 	}
@@ -603,7 +603,7 @@ void ClipperOffset::Execute(double delta, PolyTree64& polytree)
 	c.PreserveCollinear = false;
 	//the solution should retain the orientation of the input
 	c.ReverseSolution = reverse_solution_ != groups_[0].is_reversed;
-#if USINGZ
+#ifdef USINGZ
 	if (zCallback64_) {
 		c.SetZCallback(zCallback64_);
 	}
