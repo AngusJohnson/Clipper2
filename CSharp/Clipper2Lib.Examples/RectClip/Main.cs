@@ -21,12 +21,11 @@ namespace ClipperDemo1
     public const int displayHeight  = 500;
     public const int rectInsetDist  = 200;
     ////////////////////
-
     public static void Main()
     {
       // although RectClip isn't really designed for 
       // complex  self-intersecting polygons, it still 
-      // handles them pretty well.
+      // handles them pretty well.      
       DoRandomPoly(/* true == repeat last random */);
     }
 
@@ -84,7 +83,7 @@ namespace ClipperDemo1
       }
 
       /////////////////////////////////////////////////
-      sol = Clipper.RectClip(rec, sub);
+      sol = Clipper.ExecuteRectClip(rec, sub);
       /////////////////////////////////////////////////
 
       SvgWriter svg = new (FillRule.NonZero);

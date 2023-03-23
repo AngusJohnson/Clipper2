@@ -117,18 +117,18 @@ function InflatePathsD(const paths: CPathsD;
   reverse_solution: Boolean = false): CPathsD; cdecl;
   external CLIPPER2_DLL name 'InflatePathsD';
 
-function RectClip64(const rect: TRect64; const paths: CPaths64;
+function ExecuteRectClip64(const rect: TRect64; const paths: CPaths64;
   convexOnly: Boolean = false): CPaths64; cdecl;
-  external CLIPPER2_DLL name 'RectClip64';
-function RectClipD(const rect: TRectD; const paths: CPathsD;
+  external CLIPPER2_DLL name 'ExecuteRectClip64';
+function ExecuteRectClipD(const rect: TRectD; const paths: CPathsD;
   precision: integer = 2; convexOnly: Boolean = false): CPathsD; cdecl;
-  external CLIPPER2_DLL name 'RectClipD';
-function RectClipLines64(const rect: TRect64;
+  external CLIPPER2_DLL name 'ExecuteRectClipD';
+function ExecuteRectClipLines64(const rect: TRect64;
   const paths: CPaths64): CPaths64; cdecl;
-  external CLIPPER2_DLL name 'RectClipLines64';
-function RectClipLinesD(const rect: TRectD;
+  external CLIPPER2_DLL name 'ExecuteRectClipLines64';
+function ExecuteRectClipLinesD(const rect: TRectD;
   const paths: CPathsD; precision: integer = 2): CPathsD; cdecl;
-  external CLIPPER2_DLL name 'RectClipLinesD';
+  external CLIPPER2_DLL name 'ExecuteRectClipLinesD';
 
 ////////////////////////////////////////////////////////
 // functions related to Clipper2 DLL structures
@@ -857,12 +857,12 @@ begin
     end;
 
     csub_local := TPathsDToCPathsD(sub);
-    csol_extern := RectClipD(rec, csub_local, 2, true);
+    csol_extern := ExecuteRectClipD(rec, csub_local, 2, true);
     sol1 := CPathsDToPathsD(csol_extern);
     DisposeExportedCPathsD(csol_extern);
 
     // do the DLL operation again with ConvexOnly disabled
-    csol_extern := RectClipD(rec, csub_local, 2, false);
+    csol_extern := ExecuteRectClipD(rec, csub_local, 2, false);
     sol2 := CPathsDToPathsD(csol_extern);
 
     // display and clean up
@@ -902,7 +902,7 @@ begin
     rec.Bottom := displayHeight -80;
 
     // do the DLL operation
-    csolo_extern := RectClipLines64(rec, csub_local);
+    csolo_extern := ExecuteRectClipLines64(rec, csub_local);
 
     // optionally display result on the console
     //WriteCPaths64(csol_extern);
@@ -922,7 +922,7 @@ end;
 procedure Test_Performance(lowThousand, hiThousand: integer);
 var
   i: integer;
-  elapsed: double;
+  tr: TTimeRec;
   sub, clp: TPaths64;
   csub_local, cclp_local: CPaths64;
   csol_extern, csolo_extern: CPaths64;
@@ -944,23 +944,18 @@ begin
     csub_local := TPaths64ToCPaths64(sub);
     cclp_local := TPaths64ToCPaths64(clp);
 
-    //using a code block for the timer
-    begin
-      InitTimer(elapsed);
-      // do the DLL operation
-      BooleanOp64(Uint8(TClipType.ctIntersection),
-        Uint8(TFillRule.frNonZero),
-        csub_local, nil, cclp_local,
-        csol_extern, csolo_extern);
-    end;
-    WriteLn(format('%1.3n secs', [elapsed]));
+    StartTimer(tr);
+    // do the DLL operation
+    BooleanOp64(Uint8(TClipType.ctIntersection),
+      Uint8(TFillRule.frNonZero),
+      csub_local, nil, cclp_local,
+      csol_extern, csolo_extern);
+    WriteLn(format('%1.3n secs', [EndTimer(tr)]));
 
     Write(format(' Pure delphi - %d edges: ', [i*1000]));
-    begin
-      InitTimer(elapsed);
-      Clipper.Intersect(sub, clp, Clipper.frNonZero);
-    end;
-    WriteLn(format('%1.3n secs', [elapsed]));
+    StartTimer(tr);
+    Clipper.Intersect(sub, clp, Clipper.frNonZero);
+    WriteLn(format('%1.3n secs', [EndTimer(tr)]));
 
     if i = hiThousand then
       DisplaySVG(sub, nil, clp, CPaths64ToPaths64(csol_extern), nil, 'Performance.svg');
@@ -983,13 +978,13 @@ var
 begin
   Randomize;
   Test_Version();
-//  Test_BooleanOp64(50);
-//  Test_BooleanOpD(75);
-//  Test_BooleanOpPtD(20);
+  Test_BooleanOp64(50);
+  Test_BooleanOpD(75);
+  Test_BooleanOpPtD(20);
   Test_InflatePathsD(20, -10); // edgeCount, offsetDist
-//  Test_RectClipD(15);
-//  Test_RectClipLines64(25);
-//  Test_Performance(1, 5); // 1000 to 5000
+  Test_RectClipD(15);
+  Test_RectClipLines64(25);
+  Test_Performance(1, 5); // 1000 to 5000
   Test_RandIntersect_MegaStress(10000);
 
   WriteLn(#10'Press Enter to quit.');

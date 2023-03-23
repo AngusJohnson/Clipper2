@@ -1,6 +1,6 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  9 February 2023                                                 *
+* Date      :  23 March 2023                                                   *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2023                                         *
 * Purpose   :  This module provides a simple interface to the Clipper Library  *
@@ -197,23 +197,23 @@ namespace Clipper2Lib {
     return result;
   }
 
-  inline Paths64 RectClip(const Rect64& rect, 
+  inline Paths64 ExecuteRectClip(const Rect64& rect, 
     const Paths64& paths, bool convex_only = false)
   {
     if (rect.IsEmpty() || paths.empty()) return Paths64();
-    class RectClip rc(rect);
+    RectClip rc(rect);
     return rc.Execute(paths, convex_only);
   }
 
-  inline Paths64 RectClip(const Rect64& rect, 
+  inline Paths64 ExecuteRectClip(const Rect64& rect,
     const Path64& path, bool convex_only = false)
   {
     if (rect.IsEmpty() || path.empty()) return Paths64();
-    class RectClip rc(rect);
+    RectClip rc(rect);
     return rc.Execute(Paths64{ path }, convex_only);
   }
 
-  inline PathsD RectClip(const RectD& rect, 
+  inline PathsD ExecuteRectClip(const RectD& rect,
     const PathsD& paths, bool convex_only = false, int precision = 2)
   {
     if (rect.IsEmpty() || paths.empty()) return PathsD();
@@ -222,37 +222,37 @@ namespace Clipper2Lib {
     if (error_code) return PathsD();
     const double scale = std::pow(10, precision);
     Rect64 r = ScaleRect<int64_t, double>(rect, scale);
-    class RectClip rc(r);
+    RectClip rc(r);
     Paths64 pp = ScalePaths<int64_t, double>(paths, scale, error_code);
     if (error_code) return PathsD(); // ie: error_code result is lost 
     return ScalePaths<double, int64_t>(
       rc.Execute(pp, convex_only), 1 / scale, error_code);
   }
 
-  inline PathsD RectClip(const RectD& rect, 
+  inline PathsD ExecuteRectClip(const RectD& rect,
     const PathD& path, bool convex_only = false, int precision = 2)
   {
-    return RectClip(rect, PathsD{ path }, convex_only, precision);
+    return ExecuteRectClip(rect, PathsD{ path }, convex_only, precision);
   }
 
-  inline Paths64 RectClipLines(const Rect64& rect, const Paths64& lines)
+  inline Paths64 ExecuteRectClipLines(const Rect64& rect, const Paths64& lines)
   {
     if (rect.IsEmpty() || lines.empty()) return Paths64();
-    class RectClipLines rcl(rect);
+    RectClipLines rcl(rect);
     return rcl.Execute(lines);
   }
 
-  inline Paths64 RectClipLines(const Rect64& rect, const Path64& line)
+  inline Paths64 ExecuteRectClipLines(const Rect64& rect, const Path64& line)
   {
-    return RectClipLines(rect, Paths64{ line });
+    return ExecuteRectClipLines(rect, Paths64{ line });
   }
 
-  inline PathsD RectClipLines(const RectD& rect, const PathD& line, int precision = 2)
+  inline PathsD ExecuteRectClipLines(const RectD& rect, const PathD& line, int precision = 2)
   {
-    return RectClip(rect, PathsD{ line }, precision);
+    return ExecuteRectClip(rect, PathsD{ line }, precision);
   }
 
-  inline PathsD RectClipLines(const RectD& rect, const PathsD& lines, int precision = 2)
+  inline PathsD ExecuteRectClipLines(const RectD& rect, const PathsD& lines, int precision = 2)
   {
     if (rect.IsEmpty() || lines.empty()) return PathsD();
     int error_code = 0;
@@ -260,7 +260,7 @@ namespace Clipper2Lib {
     if (error_code) return PathsD();
     const double scale = std::pow(10, precision);
     Rect64 r = ScaleRect<int64_t, double>(rect, scale);
-    class RectClipLines rcl(r);
+    RectClipLines rcl(r);
     Paths64 p = ScalePaths<int64_t, double>(lines, scale, error_code);
     if (error_code) return PathsD();
     p = rcl.Execute(p);

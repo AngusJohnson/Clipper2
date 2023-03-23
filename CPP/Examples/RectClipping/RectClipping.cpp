@@ -58,7 +58,7 @@ void DoEllipses(int cnt)
     sub.push_back(MakeRandomEllipse(10, 10, 100, 100, width, height));
       
   //////////////////////////////////
-  sol = RectClip(rect, sub, true);
+  sol = ExecuteRectClip(rect, sub, true);
   //////////////////////////////////
 
   FillRule fr = FillRule::EvenOdd;
@@ -94,7 +94,7 @@ void DoRectangles(int cnt)
   for (int i = 0; i < cnt; ++i)
     sub.push_back(MakeRandomRectangle(10, 10, 100, 100, width, height));
 
-  sol = RectClip(rect, sub, true);
+  sol = ExecuteRectClip(rect, sub, true);
 
   FillRule fr = FillRule::EvenOdd;
   SvgWriter svg;
@@ -133,7 +133,7 @@ void DoRandomPoly(int count)
   sub.push_back(MakeRandomPolyD(width, height, count));
 
   //////////////////////////////////
-  sol = RectClip(rect, sub);
+  sol = ExecuteRectClip(rect, sub);
   //////////////////////////////////
 
   FillRule fr = FillRule::EvenOdd;
@@ -174,12 +174,12 @@ void MeasurePerformance(int min, int max, int step)
 
     {
       Timer t("RectClip: ");
-      sol = RectClip(rect, sub);
+      sol = ExecuteRectClip(rect, sub);
     }
 
     {
       Timer t("RectClip: (convex flagged)");
-      sol = RectClip(rect, sub, true);
+      sol = ExecuteRectClip(rect, sub, true);
     }
   }
 
