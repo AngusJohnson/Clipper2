@@ -12,6 +12,7 @@ option(CLIPPER2_EXAMPLES "Build examples" ON)
 option(CLIPPER2_TESTS "Build tests" ON)
 option(USE_EXTERNAL_GTEST "Use system-wide installed GoogleTest" OFF)
 option(BUILD_SHARED_LIBS "Build shared libs" OFF)
+set(CLIPPER2_USINGZ "ON" CACHE STRING "Build Clipper2Z, either \"ON\" or \"OFF\" or \"ONLY\"")
 
 include(GNUInstallDirs)
 
@@ -31,37 +32,45 @@ set(CLIPPER2_SRC
   Clipper2Lib/src/clipper.rectclip.cpp
 )
 
-set(PCFILE "${CMAKE_CURRENT_BINARY_DIR}/Clipper2.pc")
-set(PCFILEZ "${CMAKE_CURRENT_BINARY_DIR}/Clipper2Z.pc")
+set(CLIPPER2_LIBS "")
 
 # 2d version of Clipper2
-add_library(Clipper2 ${CLIPPER2_INC} ${CLIPPER2_SRC})
+if (NOT (CLIPPER2_USINGZ STREQUAL "ONLY"))
+  list(APPEND CLIPPER2_LIBS Clipper2)
+  add_library(Clipper2 ${CLIPPER2_INC} ${CLIPPER2_SRC})
 
-target_include_directories(Clipper2
-  PUBLIC Clipper2Lib/include
-)
+  target_include_directories(Clipper2
+    PUBLIC Clipper2Lib/include
+  )
 
-# Clipper2 but with USINGZ defined
-add_library(Clipper2Z ${CLIPPER2_INC} ${CLIPPER2_SRC})
-
-target_compile_definitions(Clipper2Z PUBLIC USINGZ)
-
-target_include_directories(Clipper2Z
-  PUBLIC Clipper2Lib/include
-)
-
-if (MSVC)
-  target_compile_options(Clipper2 PRIVATE /W4 /WX)
-  target_compile_options(Clipper2Z PRIVATE /W4 /WX)  
-else()
-  target_compile_options(Clipper2 PRIVATE -Wall -Wextra -Wpedantic -Werror)
-  target_link_libraries(Clipper2 PUBLIC -lm)
-
-  target_compile_options(Clipper2Z PRIVATE -Wall -Wextra -Wpedantic -Werror)
-  target_link_libraries(Clipper2Z PUBLIC -lm)
+  if (MSVC)
+    target_compile_options(Clipper2 PRIVATE /W4 /WX)
+  else()
+    target_compile_options(Clipper2 PRIVATE -Wall -Wextra -Wpedantic -Werror)
+    target_link_libraries(Clipper2 PUBLIC -lm)
+  endif()
 endif()
 
-set_target_properties(Clipper2 Clipper2Z PROPERTIES FOLDER Libraries
+# Clipper2 but with USINGZ defined
+if (NOT (CLIPPER2_USINGZ STREQUAL "OFF"))
+  list(APPEND CLIPPER2_LIBS Clipper2Z)
+  add_library(Clipper2Z ${CLIPPER2_INC} ${CLIPPER2_SRC})
+
+  target_compile_definitions(Clipper2Z PUBLIC USINGZ)
+
+  target_include_directories(Clipper2Z
+    PUBLIC Clipper2Lib/include
+  )
+
+  if (MSVC)
+    target_compile_options(Clipper2Z PRIVATE /W4 /WX)
+  else()
+    target_compile_options(Clipper2Z PRIVATE -Wall -Wextra -Wpedantic -Werror)
+    target_link_libraries(Clipper2Z PUBLIC -lm)
+  endif()
+endif()
+
+set_target_properties(${CLIPPER2_LIBS} PROPERTIES FOLDER Libraries
                                          VERSION ${PROJECT_VERSION}
                                          SOVERSION ${PROJECT_VERSION_MAJOR}
                                          PUBLIC_HEADER "${CLIPPER2_INC}"
@@ -80,25 +89,33 @@ if(CLIPPER2_UTILS OR CLIPPER2_TESTS OR CLIPPER2_EXAMPLES)
     Utils/ClipFileLoad.cpp
     Utils/ClipFileSave.cpp
   )
+  set(CLIPPER2_UTILS "")
 
-  add_library(Clipper2utils STATIC ${CLIPPER2_UTILS_INC} ${CLIPPER2_UTILS_SRC})
+  if (NOT (CLIPPER2_USINGZ STREQUAL "ONLY"))
+    list(APPEND CLIPPER2_UTILS Clipper2utils)
+    add_library(Clipper2utils STATIC ${CLIPPER2_UTILS_INC} ${CLIPPER2_UTILS_SRC})
 
-  target_link_libraries(Clipper2utils PUBLIC Clipper2)
-  target_include_directories(Clipper2utils
-    PUBLIC Utils
-  )
+    target_link_libraries(Clipper2utils PUBLIC Clipper2)
+    target_include_directories(Clipper2utils
+      PUBLIC Utils
+    )
+  endif()
 
-  add_library(Clipper2Zutils STATIC ${CLIPPER2_UTILS_INC} ${CLIPPER2_UTILS_SRC})
+  if (NOT (CLIPPER2_USINGZ STREQUAL "OFF"))
+    list(APPEND CLIPPER2_UTILS Clipper2Zutils)
+    add_library(Clipper2Zutils STATIC ${CLIPPER2_UTILS_INC} ${CLIPPER2_UTILS_SRC})
 
-  target_link_libraries(Clipper2Zutils PUBLIC Clipper2Z)
-  target_include_directories(Clipper2Zutils
-    PUBLIC Utils
-  )
+    target_link_libraries(Clipper2Zutils PUBLIC Clipper2Z)
+    target_include_directories(Clipper2Zutils
+      PUBLIC Utils
+    )
+  endif()
 
-  set_target_properties(Clipper2utils Clipper2Zutils PROPERTIES FOLDER Libraries)
+  set_target_properties(${CLIPPER2_UTILS} PROPERTIES FOLDER Libraries)
   if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
-    target_compile_options(Clipper2utils PRIVATE -Wno-unused-variable -Wno-unused-function)
-    target_compile_options(Clipper2Zutils PRIVATE -Wno-unused-variable -Wno-unused-function)
+    foreach(lib ${CLIPPER2_UTILS})
+      target_compile_options(${lib} PRIVATE -Wno-unused-variable -Wno-unused-function)
+    endforeach()
   endif()
 endif()
 
@@ -106,52 +123,48 @@ if(CLIPPER2_EXAMPLES)
   ##########################################################################
   ##########################################################################
 
-  add_executable(Benchmarks Examples/Benchmarks/Benchmarks.cpp)
-  target_link_libraries(Benchmarks PRIVATE Clipper2 Clipper2utils)
+  set(ALL_EXAMPLES "")
+  if (NOT (CLIPPER2_USINGZ STREQUAL "ONLY"))
+    set(EXAMPLES
+      Benchmarks
+      Inflate
+      MemLeakTest
+      PolygonSamples
+      RandomClipping
+      UnionClipping
+      RectClipping
+      SimpleClipping
+    )
 
-  add_executable(Inflate Examples/Inflate/Inflate.cpp)
-  target_link_libraries(Inflate PRIVATE Clipper2 Clipper2utils)
+    foreach(ex ${EXAMPLES})
+      add_executable(${ex} Examples/${ex}/${ex}.cpp)
+      target_link_libraries(${ex} PRIVATE Clipper2 Clipper2utils)
+    endforeach()
 
-  add_executable(MemLeakTest Examples/MemLeakTest/MemLeakTest.cpp)
-  target_link_libraries(MemLeakTest PRIVATE Clipper2 Clipper2utils)
+    file(COPY Examples/Inflate/rabbit.svg DESTINATION ${CMAKE_BINARY_DIR} FILE_PERMISSIONS OWNER_READ GROUP_READ WORLD_READ )
+    list(APPEND ALL_EXAMPLES ${EXAMPLES})
+  endif()
 
-  add_executable(PolygonSamples Examples/PolygonSamples/PolygonSamples.cpp)
-  target_link_libraries(PolygonSamples PRIVATE Clipper2 Clipper2utils)
+  if (NOT (CLIPPER2_USINGZ STREQUAL "OFF"))
+    set(EXAMPLESZ "UsingZ")
+    foreach(ex ${EXAMPLESZ})
+      add_executable(${ex} Examples/${ex}/${ex}.cpp)
+      target_link_libraries(${ex} PRIVATE Clipper2Z Clipper2Zutils)
+    endforeach()
 
-  add_executable(RandomClipping Examples/RandomClipping/RandomClipping.cpp)
-  target_link_libraries(RandomClipping PRIVATE Clipper2 Clipper2utils)
+    list(APPEND ALL_EXAMPLES ${EXAMPLESZ})
+  endif()
 
-  add_executable(UnionClipping Examples/UnionClipping/UnionClipping.cpp)
-  target_link_libraries(UnionClipping PRIVATE Clipper2 Clipper2utils)
-
-  add_executable(RectClipping Examples/RectClipping/RectClipping.cpp)
-  target_link_libraries(RectClipping PRIVATE Clipper2 Clipper2utils)
-
-  add_executable(SimpleClipping Examples/SimpleClipping/SimpleClipping.cpp)
-  target_link_libraries(SimpleClipping PRIVATE Clipper2 Clipper2utils)
-
-  file(COPY Examples/Inflate/rabbit.svg DESTINATION ${CMAKE_BINARY_DIR} FILE_PERMISSIONS OWNER_READ GROUP_READ WORLD_READ )
-
-  add_executable(UsingZ Examples/UsingZ/UsingZ.cpp)
-  target_link_libraries(UsingZ PRIVATE Clipper2Z Clipper2Zutils)
-
-  set_target_properties(Benchmarks Inflate MemLeakTest PolygonSamples RandomClipping UnionClipping RectClipping SimpleClipping UsingZ PROPERTIES FOLDER Examples)
+  set_target_properties(${ALL_EXAMPLES} PROPERTIES FOLDER Examples)
   if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
-    target_compile_options(Benchmarks PRIVATE -Wno-unused-result -Wno-unused-function)
-    target_compile_options(Inflate PRIVATE -Wno-unused-result -Wno-unused-function)
-    target_compile_options(MemLeakTest PRIVATE -Wno-unused-result -Wno-unused-function)
-    target_compile_options(PolygonSamples PRIVATE -Wno-unused-result -Wno-unused-function)
-    target_compile_options(RandomClipping PRIVATE -Wno-unused-result -Wno-unused-function)
-    target_compile_options(UnionClipping PRIVATE -Wno-unused-result -Wno-unused-function)
-    target_compile_options(RectClipping PRIVATE -Wno-unused-result -Wno-unused-function)
-    target_compile_options(SimpleClipping PRIVATE -Wno-unused-result -Wno-unused-function)
-    target_compile_options(UsingZ PRIVATE -Wno-unused-result -Wno-unused-function)
+    foreach(ex ${ALL_EXAMPLES})
+      target_compile_options(${ex} PRIVATE -Wno-unused-variable -Wno-unused-function)
+    endforeach()
   endif()
 endif()
 
 if(CLIPPER2_TESTS)
   # See: https://cliutils.gitlab.io/modern-cmake/chapters/testing/googletest.html
-
   enable_testing()
   if (WIN32)
     set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
@@ -180,31 +193,40 @@ endif()
     Tests/TestRectClip.cpp
     Tests/TestTrimCollinear.cpp
   )
-  add_executable(ClipperTests ${ClipperTests_SRC})
-  target_link_libraries(ClipperTests gtest gtest_main Clipper2 Clipper2utils)
 
-  add_executable(ClipperTestsZ ${ClipperTests_SRC})
-  target_link_libraries(ClipperTestsZ gtest gtest_main Clipper2Z Clipper2Zutils)
+  set(CLIPPER2_TESTS "")
+  if (NOT (CLIPPER2_USINGZ STREQUAL "ONLY"))
+    list(APPEND CLIPPER2_TESTS "ClipperTests")
+    add_executable(ClipperTests ${ClipperTests_SRC})
+    target_link_libraries(ClipperTests gtest gtest_main Clipper2 Clipper2utils)
 
-  if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
-    target_compile_options(ClipperTests PRIVATE -Wno-unused-variable -Wno-unused-function)
-    target_compile_options(ClipperTestsZ PRIVATE -Wno-unused-variable -Wno-unused-function)
+    gtest_discover_tests(ClipperTests
+      # set a working directory so your project root so that you can find test data via paths relative to the project root
+      WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}/../Tests
+      PROPERTIES VS_DEBUGGER_WORKING_DIRECTORY "${PROJECT_DIR}"
+    )
   endif()
 
-  set_target_properties(ClipperTests ClipperTestsZ PROPERTIES FOLDER Tests)
+  if (NOT (CLIPPER2_USINGZ STREQUAL "OFF"))
+    list(APPEND CLIPPER2_TESTS "ClipperTestsZ")
+    add_executable(ClipperTestsZ ${ClipperTests_SRC})
+    target_link_libraries(ClipperTestsZ gtest gtest_main Clipper2Z Clipper2Zutils)
 
-  gtest_discover_tests(ClipperTests
-        # set a working directory so your project root so that you can find test data via paths relative to the project root
-        WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}/../Tests
-        PROPERTIES VS_DEBUGGER_WORKING_DIRECTORY "${PROJECT_DIR}"
-  )
+    gtest_discover_tests(ClipperTestsZ
+      # set a working directory so your project root so that you can find test data via paths relative to the project root
+      WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}/../Tests
+      PROPERTIES VS_DEBUGGER_WORKING_DIRECTORY "${PROJECT_DIR}"
+      TEST_SUFFIX "_USINGZ"
+    )
+  endif()
 
-  gtest_discover_tests(ClipperTestsZ
-    # set a working directory so your project root so that you can find test data via paths relative to the project root
-    WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}/../Tests
-    PROPERTIES VS_DEBUGGER_WORKING_DIRECTORY "${PROJECT_DIR}"
-    TEST_SUFFIX "_USINGZ"
-  )
+  if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+    foreach(ts ${CLIPPER2_TESTS})
+      target_compile_options(${ts} PRIVATE -Wno-unused-variable -Wno-unused-function)
+    endforeach()
+  endif()
+
+  set_target_properties(${CLIPPER2_TESTS} PROPERTIES FOLDER Tests)
 
   file(COPY ../Tests/PolytreeHoleOwner.txt DESTINATION ${CMAKE_BINARY_DIR} FILE_PERMISSIONS OWNER_READ GROUP_READ WORLD_READ )
   file(COPY ../Tests/PolytreeHoleOwner2.txt DESTINATION ${CMAKE_BINARY_DIR} FILE_PERMISSIONS OWNER_READ GROUP_READ WORLD_READ )
@@ -212,14 +234,17 @@ endif()
   file(COPY ../Tests/Polygons.txt DESTINATION ${CMAKE_BINARY_DIR} FILE_PERMISSIONS OWNER_READ GROUP_READ WORLD_READ )
 endif()
 
-CONFIGURE_FILE(Clipper2.pc.cmakein "${PCFILE}" @ONLY)
-set(PCFILE_LIB_SUFFIX "Z")
-CONFIGURE_FILE(Clipper2.pc.cmakein "${PCFILEZ}" @ONLY)
+set(CLIPPER2_PCFILES "")
+foreach(lib ${CLIPPER2_LIBS})
+  set(pc "${CMAKE_CURRENT_BINARY_DIR}/${lib}.pc")
+  list(APPEND CLIPPER2_PCFILES ${pc})
+  CONFIGURE_FILE(Clipper2.pc.cmakein "${pc}" @ONLY)
+endforeach()
 
-install(TARGETS Clipper2 Clipper2Z
+install(TARGETS ${CLIPPER2_LIBS}
         PUBLIC_HEADER DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/clipper2
 )
-install(FILES ${PCFILE} ${PCFILEZ} DESTINATION ${CMAKE_INSTALL_LIBDIR}/pkgconfig)
+install(FILES ${CLIPPER2_PCFILES} DESTINATION ${CMAKE_INSTALL_LIBDIR}/pkgconfig)
 
 # disable exceptions
 #string(REGEX REPLACE "/W[3|4]" "/w" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
