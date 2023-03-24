@@ -32,7 +32,7 @@ set(CLIPPER2_SRC
   Clipper2Lib/src/clipper.rectclip.cpp
 )
 
-set(CLIPPER2_LIBS "")
+set(CLIPPER2_LIBS "") # one or both of Clipper2/Clipper2Z
 
 # 2d version of Clipper2
 if (NOT (CLIPPER2_USINGZ STREQUAL "ONLY"))
@@ -89,7 +89,7 @@ if(CLIPPER2_UTILS OR CLIPPER2_TESTS OR CLIPPER2_EXAMPLES)
     Utils/ClipFileLoad.cpp
     Utils/ClipFileSave.cpp
   )
-  set(CLIPPER2_UTILS "")
+  set(CLIPPER2_UTILS "") # one or both of Clipper2utils/Clipper2Zutils
 
   if (NOT (CLIPPER2_USINGZ STREQUAL "ONLY"))
     list(APPEND CLIPPER2_UTILS Clipper2utils)
@@ -123,7 +123,8 @@ if(CLIPPER2_EXAMPLES)
   ##########################################################################
   ##########################################################################
 
-  set(ALL_EXAMPLES "")
+  set(ALL_EXAMPLES "") # 2d and 3d examples (if enabled)
+
   if (NOT (CLIPPER2_USINGZ STREQUAL "ONLY"))
     set(EXAMPLES
       Benchmarks
@@ -194,7 +195,8 @@ endif()
     Tests/TestTrimCollinear.cpp
   )
 
-  set(CLIPPER2_TESTS "")
+  set(CLIPPER2_TESTS "") # one or both of ClipperTests/ClipperTestsZ
+
   if (NOT (CLIPPER2_USINGZ STREQUAL "ONLY"))
     list(APPEND CLIPPER2_TESTS "ClipperTests")
     add_executable(ClipperTests ${ClipperTests_SRC})
