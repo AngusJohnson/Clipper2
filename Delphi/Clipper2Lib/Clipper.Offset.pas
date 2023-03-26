@@ -2,7 +2,7 @@ unit Clipper.Offset;
 
 (*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  22 March 2023                                                   *
+* Date      :  26 March 2023                                                   *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2023                                         *
 * Purpose   :  Path Offset (Inflate/Shrink)                                    *
@@ -88,7 +88,7 @@ type
       joinType: TJoinType; endType: TEndType);
     procedure Clear;
     procedure Execute(delta: Double; out solution: TPaths64); overload;
-    procedure Execute(delta: Double; out polytree: TPolyTree64); overload;
+    procedure Execute(delta: Double; polytree: TPolyTree64); overload;
 
     // MiterLimit: needed for mitered offsets (see offset_triginometry3.svg)
     property MiterLimit: Double read fMiterLimit write fMiterLimit;
@@ -585,13 +585,16 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-procedure TClipperOffset.Execute(delta: Double; out polytree: TPolyTree64);
+procedure TClipperOffset.Execute(delta: Double; polytree: TPolyTree64);
 var
   i: integer;
   group: TGroup;
   dummy: TPaths64;
 begin
   fSolution := nil;
+  if not Assigned(polytree) then
+    Raise EClipper2LibException(rsClipper_PolyTreeErr);
+
   ExecuteInternal(delta);
 
   // clean up self-intersections ...
@@ -779,7 +782,7 @@ begin
 {$ELSE}
   AddPoint(pt.X + offDist.X, pt.Y + offDist.Y);
 {$ENDIF}
-  steps := Ceil(fStepsPerRad * abs(angle));
+  steps := Ceil(fStepsPerRad * abs(angle)); // #448, #456
   for i := 2 to steps do
   begin
     offDist := PointD(offDist.X * fStepCos - fStepSin * offDist.Y,
@@ -821,8 +824,7 @@ begin
     if (cosA < 0.9998) then // greater than 1 degree (#424)
       AddPoint(GetPerpendic(fInPath[j], fNorms[j], fGroupDelta)); // (#418)
   end
-  else if (cosA > -0.99) and
-    (sinA * fGroupDelta < 0) then // is concave
+  else if (cosA > -0.99) and (sinA * fGroupDelta < 0) then // is concave
   begin
     AddPoint(GetPerpendic(fInPath[j], fNorms[k], fGroupDelta));
     // this extra point is the only (simple) way to ensure that

@@ -2,7 +2,7 @@ unit Clipper.Engine;
 
 (*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  17 March 2023                                                   *
+* Date      :  26 March 2023                                                   *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2023                                         *
 * Purpose   :  This is the main polygon clipping module                        *
@@ -401,16 +401,16 @@ type
     property  Scale: double read FScale;
   end;
 
+resourcestring
+  rsClipper_PolyTreeErr = 'The TPolyTree parameter must be assigned.';
+  rsClipper_ClippingErr = 'Undefined clipping error';
+
 implementation
 
 //OVERFLOWCHECKS OFF is a necessary workaround for a compiler bug that very
 //occasionally reports incorrect overflow errors in Delphi versions before 10.2.
 //see https://forums.embarcadero.com/message.jspa?messageID=871444
 {$OVERFLOWCHECKS OFF}
-
-resourcestring
-  rsClipper_PolyTreeErr = 'The TPolyTree parameter must be assigned.';
-  rsClipper_ClippingErr = 'Undefined clipping error';
 
 const
   DefaultClipperDScale = 100;
