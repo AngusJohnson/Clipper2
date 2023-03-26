@@ -594,6 +594,9 @@ namespace Clipper2Lib {
       //for each path create a circular double linked list of vertices
       Vertex* v0 = v, * curr_v = v, * prev_v = nullptr;
 
+      if (path.empty())
+        continue;
+
       v->prev = nullptr;
       int cnt = 0;
       for (const Point64& pt : path)
