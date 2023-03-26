@@ -22,7 +22,7 @@ Clipper2Lib::Paths64 GenerateRandomPaths(std::default_random_engine& rng, int mi
 
   for (int path = 0; path < path_count; ++path)
   {
-    const int min_point_count = 3;
+    const int min_point_count = 0;
     const int path_length = GenerateRandomInt(rng, min_point_count, std::max(min_point_count, max_complexity));
     auto& result_path = result[path];
     result_path.reserve(path_length);
