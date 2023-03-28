@@ -6,11 +6,8 @@
 * License   :  http://www.boost.org/LICENSE_1_0.txt                            *
 *******************************************************************************/
 
-using System;
-using System.Collections.Generic;
 using System.IO;
 using System.Reflection;
-using System.Runtime.CompilerServices;
 using Clipper2Lib;
 
 namespace ClipperDemo1

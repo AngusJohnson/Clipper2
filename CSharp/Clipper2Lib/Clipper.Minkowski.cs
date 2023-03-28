@@ -9,7 +9,6 @@
 
 #nullable enable
 using System;
-using System.Collections.Generic;
 
 namespace Clipper2Lib
 {

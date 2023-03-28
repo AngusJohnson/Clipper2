@@ -6,13 +6,10 @@
 * License   :  http://www.boost.org/LICENSE_1_0.txt                            *
 *******************************************************************************/
 
-using System.Collections.Generic;
 using System.Reflection;
 using System.IO;
 using Clipper2Lib;
 using System;
-using System.Security.Cryptography;
-using System.Xml.Linq;
 
 namespace ClipperDemo1
 {
