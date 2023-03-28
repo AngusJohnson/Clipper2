@@ -1,6 +1,6 @@
 ﻿/*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  3 March 2023                                                    *
+* Date      :  28 March 2023                                                   *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2023                                         *
 * Purpose   :  This is the main polygon clipping module                        *
@@ -3290,11 +3290,12 @@ private void DoHorizontal(Active horz)
     public bool Execute(ClipType clipType, FillRule fillRule, PolyTreeD polytree, PathsD openPaths)
     {
       polytree.Clear();
+      openPaths.Clear();
+      _using_polytree = true;
       (polytree as PolyPathD).Scale = _scale;
 #if USINGZ
       CheckZCallback();
 #endif
-      openPaths.Clear();
       Paths64 oPaths = new Paths64();
       bool success = true;
       try
