@@ -6,9 +6,7 @@
 * License   :  http://www.boost.org/LICENSE_1_0.txt                            *
 *******************************************************************************/
 
-using System;
 using System.IO;
-using System.Runtime.InteropServices;
 
 namespace Clipper2Lib
 {
