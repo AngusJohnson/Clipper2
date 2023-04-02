@@ -1,6 +1,6 @@
 ﻿/*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  22 March 2023                                                   *
+* Date      :  2 April 2023                                                    *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2023                                         *
 * Purpose   :  Path Offset (Inflate/Shrink)                                    *
@@ -132,6 +132,7 @@ namespace Clipper2Lib
     {
       solution.Clear();
       ExecuteInternal(delta);
+      if (_groupList.Count == 0) return;
 
       // clean up self-intersections ...
       Clipper64 c = new Clipper64()
@@ -154,6 +155,7 @@ namespace Clipper2Lib
     {
       polytree.Clear();
       ExecuteInternal(delta);
+      if (_groupList.Count == 0) return;
 
       // clean up self-intersections ...
       Clipper64 c = new Clipper64()

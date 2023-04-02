@@ -1,6 +1,6 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  23 March 2023                                                   *
+* Date      :  2 April 2023                                                    *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2023                                         *
 * Purpose   :  This module provides a simple interface to the Clipper Library  *
@@ -198,7 +198,7 @@ namespace Clipper2Lib {
   }
 
   inline Paths64 ExecuteRectClip(const Rect64& rect, 
-    const Paths64& paths, bool convex_only = false)
+    const Paths64& paths, bool convex_only)
   {
     if (rect.IsEmpty() || paths.empty()) return Paths64();
     RectClip rc(rect);
@@ -206,7 +206,7 @@ namespace Clipper2Lib {
   }
 
   inline Paths64 ExecuteRectClip(const Rect64& rect,
-    const Path64& path, bool convex_only = false)
+    const Path64& path, bool convex_only)
   {
     if (rect.IsEmpty() || path.empty()) return Paths64();
     RectClip rc(rect);
@@ -214,7 +214,7 @@ namespace Clipper2Lib {
   }
 
   inline PathsD ExecuteRectClip(const RectD& rect,
-    const PathsD& paths, bool convex_only = false, int precision = 2)
+    const PathsD& paths, bool convex_only, int precision = 2)
   {
     if (rect.IsEmpty() || paths.empty()) return PathsD();
     int error_code = 0;
@@ -230,7 +230,7 @@ namespace Clipper2Lib {
   }
 
   inline PathsD ExecuteRectClip(const RectD& rect,
-    const PathD& path, bool convex_only = false, int precision = 2)
+    const PathD& path, bool convex_only, int precision = 2)
   {
     return ExecuteRectClip(rect, PathsD{ path }, convex_only, precision);
   }
@@ -247,11 +247,6 @@ namespace Clipper2Lib {
     return ExecuteRectClipLines(rect, Paths64{ line });
   }
 
-  inline PathsD ExecuteRectClipLines(const RectD& rect, const PathD& line, int precision = 2)
-  {
-    return ExecuteRectClip(rect, PathsD{ line }, precision);
-  }
-
   inline PathsD ExecuteRectClipLines(const RectD& rect, const PathsD& lines, int precision = 2)
   {
     if (rect.IsEmpty() || lines.empty()) return PathsD();
@@ -265,6 +260,11 @@ namespace Clipper2Lib {
     if (error_code) return PathsD();
     p = rcl.Execute(p);
     return ScalePaths<double, int64_t>(p, 1 / scale, error_code);
+  }
+
+  inline PathsD ExecuteRectClipLines(const RectD& rect, const PathD& line, int precision = 2)
+  {
+    return ExecuteRectClipLines(rect, PathsD{ line }, precision);
   }
 
   namespace details

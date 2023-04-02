@@ -2,7 +2,7 @@ unit Clipper.Offset;
 
 (*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  26 March 2023                                                   *
+* Date      :  2 April 2023                                                    *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2023                                         *
 * Purpose   :  Path Offset (Inflate/Shrink)                                    *
@@ -566,7 +566,9 @@ var
   group: TGroup;
 begin
   fSolution := nil;
+  solution := nil;
   ExecuteInternal(delta);
+  if fGroupList.Count = 0 then Exit;
 
   // clean up self-intersections ...
   with TClipper64.Create do

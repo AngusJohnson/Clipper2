@@ -1,7 +1,6 @@
 
 
 #include <cstdint>
-
 #include <cstdlib>
 #include <sstream>
 #include <fstream>
@@ -133,7 +132,7 @@ void DoRandomPoly(int count)
   sub.push_back(MakeRandomPolyD(width, height, count));
 
   //////////////////////////////////
-  sol = ExecuteRectClip(rect, sub);
+  sol = ExecuteRectClip(rect, sub, false);
   //////////////////////////////////
 
   FillRule fr = FillRule::EvenOdd;
@@ -174,7 +173,7 @@ void MeasurePerformance(int min, int max, int step)
 
     {
       Timer t("RectClip: ");
-      sol = ExecuteRectClip(rect, sub);
+      sol = ExecuteRectClip(rect, sub, false);
     }
 
     {
