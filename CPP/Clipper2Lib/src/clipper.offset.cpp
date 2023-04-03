@@ -481,10 +481,11 @@ void ClipperOffset::DoGroupOffset(Group& group)
 	bool is_joined =
 		(end_type_ == EndType::Polygon) ||
 		(end_type_ == EndType::Joined);
-	Paths64::const_iterator path_iter;
-	for(path_iter = group.paths_in.cbegin(); path_iter != group.paths_in.cend(); ++path_iter)
+	Paths64::iterator path_iter;
+	for(path_iter = group.paths_in.begin(); path_iter != group.paths_in.end(); ++path_iter)
 	{
-		Path64 path = StripDuplicates(*path_iter, is_joined);
+		auto path = *path_iter;
+		StripDuplicates(path, is_joined);
 		Path64::size_type cnt = path.size();
 		if (cnt == 0 || ((cnt < 3) && group.end_type == EndType::Polygon)) 
 			continue;
