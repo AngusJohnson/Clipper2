@@ -558,38 +558,36 @@ namespace Clipper2Lib
   }
 
   template<typename T>
-  inline Path<T> StripDuplicates(const Path<T>& path, bool is_closed_path)
+  inline void StripDuplicates( Path<T>& path, bool is_closed_path)
   {
-    if (path.size() == 0) return Path<T>();
-    Path<T> result;
-    result.reserve(path.size());
-    typename Path<T>::const_iterator path_iter = path.cbegin();
-    Point<T> first_pt = *path_iter++, last_pt = first_pt;
-    result.push_back(first_pt);
-    for (; path_iter != path.cend(); ++path_iter)
+  if (path.size() == 0) return;
+  typename Path<T>::iterator path_iter = path.begin();
+  Point<T> first_pt = *path_iter++, last_pt = first_pt;
+  for (; path_iter != path.end();)
+  {
+    if (*path_iter == last_pt)
+      path_iter = path.erase(path_iter);
+    else
     {
-      if (*path_iter != last_pt)
-      {
-        last_pt = *path_iter;
-        result.push_back(last_pt);
-      }
+      last_pt = *path_iter;
+      ++path_iter;
     }
-    if (!is_closed_path) return result;
-    while (result.size() > 1 && result.back() == first_pt) result.pop_back();
-    return result;
+  }
+  if (is_closed_path)
+    while (path.size() > 1 && path.back() == first_pt) path.pop_back();
   }
 
   template<typename T>
-  inline Paths<T> StripDuplicates(const Paths<T>& paths, bool is_closed_path)
+  inline Paths<T> StripDuplicates( Paths<T>& paths, bool is_closed_path)
   {
-    Paths<T> result;
-    result.reserve(paths.size());
-    for (typename Paths<T>::const_iterator paths_citer = paths.cbegin();
-      paths_citer != paths.cend(); ++paths_citer)
+    //Paths<T> result;
+    //result.reserve(paths.size());
+    for (typename Paths<T>::iterator paths_citer = paths.begin();
+      paths_citer != paths.end(); ++paths_citer)
     {
-      result.push_back(StripDuplicates(*paths_citer, is_closed_path));
+      StripDuplicates(*paths_citer, is_closed_path);
     }
-    return result;
+    return paths;
   }
 
   // Miscellaneous ------------------------------------------------------------
