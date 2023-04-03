@@ -1,6 +1,6 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  22 March 2023                                                   *
+* Date      :  3 April 2023                                                    *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2023                                         *
 * Purpose   :  Core Clipper Library structures and functions                   *
@@ -578,16 +578,13 @@ namespace Clipper2Lib
   }
 
   template<typename T>
-  inline Paths<T> StripDuplicates( Paths<T>& paths, bool is_closed_path)
+  inline void StripDuplicates( Paths<T>& paths, bool is_closed_path)
   {
-    //Paths<T> result;
-    //result.reserve(paths.size());
     for (typename Paths<T>::iterator paths_citer = paths.begin();
       paths_citer != paths.end(); ++paths_citer)
     {
       StripDuplicates(*paths_citer, is_closed_path);
     }
-    return paths;
   }
 
   // Miscellaneous ------------------------------------------------------------
