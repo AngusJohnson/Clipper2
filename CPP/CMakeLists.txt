@@ -11,6 +11,7 @@ option(CLIPPER2_UTILS "Build utilities" ON)
 option(CLIPPER2_EXAMPLES "Build examples" ON)
 option(CLIPPER2_TESTS "Build tests" ON)
 option(USE_EXTERNAL_GTEST "Use system-wide installed GoogleTest" OFF)
+option(USE_EXTERNAL_GBENCHMARK "Use the googlebenchmark" OFF) 
 option(BUILD_SHARED_LIBS "Build shared libs" OFF)
 set(CLIPPER2_USINGZ "ON" CACHE STRING "Build Clipper2Z, either \"ON\" or \"OFF\" or \"ONLY\"")
 
@@ -83,6 +84,7 @@ if(CLIPPER2_UTILS OR CLIPPER2_TESTS OR CLIPPER2_EXAMPLES)
     Utils/ClipFileSave.h
     Utils/Timer.h
     Utils/Colors.h
+    Utils/CommonUtils.h
   )
   set(CLIPPER2_UTILS_SRC
     Utils/clipper.svg.cpp
@@ -234,6 +236,10 @@ endif()
   file(COPY ../Tests/PolytreeHoleOwner2.txt DESTINATION ${CMAKE_BINARY_DIR} FILE_PERMISSIONS OWNER_READ GROUP_READ WORLD_READ )
   file(COPY ../Tests/Lines.txt DESTINATION ${CMAKE_BINARY_DIR} FILE_PERMISSIONS OWNER_READ GROUP_READ WORLD_READ )
   file(COPY ../Tests/Polygons.txt DESTINATION ${CMAKE_BINARY_DIR} FILE_PERMISSIONS OWNER_READ GROUP_READ WORLD_READ )
+endif()
+
+if(USE_EXTERNAL_GBENCHMARK)
+  add_subdirectory(BenchMark)
 endif()
 
 set(CLIPPER2_PCFILES "")
