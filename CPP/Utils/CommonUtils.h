@@ -1,7 +1,7 @@
 #include <cstdlib>
 #include "clipper2/clipper.h"
-#ifndef __BENCHMARKUTILS_H__
-#define __BENCHMARKUTILS_H__
+#ifndef __COMMONUTILS_H__
+#define __COMMONUTILS_H__
 
 Clipper2Lib::Path64 MakeRandomPoly(int width, int height, unsigned vertCnt)
 {

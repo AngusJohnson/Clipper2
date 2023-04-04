@@ -84,6 +84,7 @@ if(CLIPPER2_UTILS OR CLIPPER2_TESTS OR CLIPPER2_EXAMPLES)
     Utils/ClipFileSave.h
     Utils/Timer.h
     Utils/Colors.h
+    Utils/CommonUtils.h
   )
   set(CLIPPER2_UTILS_SRC
     Utils/clipper.svg.cpp

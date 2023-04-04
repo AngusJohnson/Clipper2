@@ -25,11 +25,12 @@ foreach(benchmark ${benchmark_srcs})
     message(STATUS "${PROJECT_NAME} add benchmark ${benchmark_target}")
     add_executable(${benchmark_target} ${benchmark})
     target_include_directories(${benchmark_target}  PUBLIC
-        ${CMAKE_CURRENT_BINARY_DIR}/common/
+        
     )
 
     target_link_libraries(${benchmark_target}
         benchmark::benchmark
         Clipper2
+        Clipper2utils
     )
 endforeach()
