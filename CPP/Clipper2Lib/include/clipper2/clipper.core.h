@@ -560,21 +560,10 @@ namespace Clipper2Lib
   template<typename T>
   inline void StripDuplicates( Path<T>& path, bool is_closed_path)
   {
-  if (path.size() == 0) return;
-  typename Path<T>::iterator path_iter = path.begin();
-  Point<T> first_pt = *path_iter++, last_pt = first_pt;
-  for (; path_iter != path.end();)
-  {
-    if (*path_iter == last_pt)
-      path_iter = path.erase(path_iter);
-    else
-    {
-      last_pt = *path_iter;
-      ++path_iter;
-    }
-  }
-  if (is_closed_path)
-    while (path.size() > 1 && path.back() == first_pt) path.pop_back();
+    //https://stackoverflow.com/questions/1041620/whats-the-most-efficient-way-to-erase-duplicates-and-sort-a-vector#:~:text=Let%27s%20compare%20three%20approaches%3A
+    path.erase(std::unique(path.begin(), path.end()),path.end());
+    if (is_closed_path)
+      while (path.size() > 1 && path.back() == path.front()) path.pop_back();
   }
 
   template<typename T>
