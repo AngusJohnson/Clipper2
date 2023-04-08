@@ -1,6 +1,6 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  22 March 2023                                                   *
+* Date      :  8 April 2023                                                    *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2023                                         *
 * Purpose   :  Path Offset (Inflate/Shrink)                                    *
@@ -302,13 +302,7 @@ void ClipperOffset::OffsetPoint(Group& group, Path64& path, size_t j, size_t& k)
 	if (sin_a > 1.0) sin_a = 1.0;
 	else if (sin_a < -1.0) sin_a = -1.0;
 
-	if (cos_a > 0.99) // almost straight - less than 8 degrees
-	{
-		group.path.push_back(GetPerpendic(path[j], norms[k], group_delta_));
-		if (cos_a < 0.9998) // greater than 1 degree (#424)
-			group.path.push_back(GetPerpendic(path[j], norms[j], group_delta_)); // (#418)
-	}
-	else if (cos_a > -0.99 && (sin_a * group_delta_ < 0))
+	if (cos_a > -0.99 && (sin_a * group_delta_ < 0))
 	{
 		// is concave
 		group.path.push_back(GetPerpendic(path[j], norms[k], group_delta_));
@@ -316,21 +310,21 @@ void ClipperOffset::OffsetPoint(Group& group, Path64& path, size_t j, size_t& k)
 		// path reversals are fully cleaned with the trailing clipper
 		group.path.push_back(path[j]); // (#405)
 		group.path.push_back(GetPerpendic(path[j], norms[j], group_delta_));
-	}	
-	else if (join_type_ == JoinType::Round)
-		DoRound(group, path, j, k, std::atan2(sin_a, cos_a));
+	}
 	else if (join_type_ == JoinType::Miter)
 	{
 		// miter unless the angle is so acute the miter would exceeds ML
 		if (cos_a > temp_lim_ - 1) DoMiter(group, path, j, k, cos_a);
 		else DoSquare(group, path, j, k);
 	}
-	// don't bother squaring angles that deviate < ~20 degrees because
-	// squaring will be indistinguishable from mitering and just be a lot slower
-	else if (cos_a > 0.9)
+	else if (cos_a > 0.9998) 
+		// almost straight - less than 1 degree (#424) 
 		DoMiter(group, path, j, k, cos_a);
-	else
+	else if (cos_a > 0.99 || join_type_ == JoinType::Square)
+		//angle less than 8 degrees or squared joins
 		DoSquare(group, path, j, k);
+	else
+		DoRound(group, path, j, k, std::atan2(sin_a, cos_a));
 
 	k = j;
 }

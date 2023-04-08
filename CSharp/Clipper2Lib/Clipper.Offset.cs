@@ -1,6 +1,6 @@
 ﻿/*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  2 April 2023                                                    *
+* Date      :  8 April 2023                                                    *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2023                                         *
 * Purpose   :  Path Offset (Inflate/Shrink)                                    *
@@ -433,34 +433,31 @@ namespace Clipper2Lib
       if (sinA > 1.0) sinA = 1.0;
       else if (sinA < -1.0) sinA = -1.0;
 
-      if (cosA > 0.99) // almost straight - less than 8 degrees
+
+      if (cosA > -0.99 && (sinA * _group_delta < 0)) 
       {
-        group.outPath.Add(GetPerpendic(path[j], _normals[k]));
-        if (cosA < 0.9998) // greater than 1 degree (#424)
-          group.outPath.Add(GetPerpendic(path[j], _normals[j])); // (#418)
-      }
-      else if (cosA > -0.99 && (sinA * _group_delta < 0)) // is concave
-      {
+        // is concave
         group.outPath.Add(GetPerpendic(path[j], _normals[k]));
         // this extra point is the only (simple) way to ensure that
         // path reversals are fully cleaned with the trailing clipper
         group.outPath.Add(path[j]); // (#405)
         group.outPath.Add(GetPerpendic(path[j], _normals[j]));
       }
-      else if (_joinType == JoinType.Round)
-          DoRound(group, path, j, k, Math.Atan2(sinA, cosA));
       else if (_joinType == JoinType.Miter)
       {
         // miter unless the angle is so acute the miter would exceeds ML
         if (cosA > _mitLimSqr - 1) DoMiter(group, path, j, k, cosA);
         else DoSquare(group, path, j, k);
       }
-      // don't bother squaring angles that deviate < ~20 degrees because
-      // squaring will be indistinguishable from mitering and just be a lot slower
-      else if (cosA > 0.9)
-        DoMiter(group, path, j, k, cosA); 
-      else
+      else if (cosA > 0.9998)
+        // almost straight - less than 1 degree (#424) 
+        DoMiter(group, path, j, k, cosA);
+      else if (cosA > 0.99 || _joinType == JoinType.Square)
+        //angle less than 8 degrees or a squared join
         DoSquare(group, path, j, k);
+      else
+          DoRound(group, path, j, k, Math.Atan2(sinA, cosA));
+        
       k = j;
     }
 

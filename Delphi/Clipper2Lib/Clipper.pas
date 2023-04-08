@@ -2,7 +2,7 @@ unit Clipper;
 
 (*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  23 March 2023                                                   *
+* Date      :  8 April 2023                                                    *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2023                                         *
 * Purpose   :  This module provides a simple interface to the Clipper Library  *
@@ -140,10 +140,10 @@ function PointInPolygon(const pt: TPoint64; const polygon: TPath64):
   TPointInPolygonResult; {$IFDEF INLINE} inline; {$ENDIF}
 
 function SimplifyPath(const path: TPath64;
-  epsilon: double; isOpenPath: Boolean = false): TPath64;
+  epsilon: double; isClosedPath: Boolean = false): TPath64;
   {$IFDEF INLINE} inline; {$ENDIF}
 function SimplifyPaths(const paths: TPaths64;
-  epsilon: double; isOpenPath: Boolean = false): TPaths64;
+  epsilon: double; isClosedPaths: Boolean = false): TPaths64;
   {$IFDEF INLINE} inline; {$ENDIF}
 
 implementation
@@ -693,7 +693,7 @@ begin
 end;
 
 function SimplifyPath(const path: TPath64;
-  epsilon: double; isOpenPath: Boolean = false): TPath64;
+  epsilon: double; isClosedPath: Boolean = false): TPath64;
 var
   i,j, len, high: integer;
   curr, prev, start, prev2, next, next2: integer;
@@ -710,14 +710,14 @@ begin
   SetLength(dsq, len);
 
   curr := 0;
-  if (isOpenPath) then
-  begin
-    dsq[0] := MaxDouble;
-    dsq[high] := MaxDouble;
-  end else
+  if (isClosedPath) then
   begin
     dsq[0] := PerpendicDistFromLineSqrd(path[0], path[high], path[1]);
     dsq[high] := PerpendicDistFromLineSqrd(path[high], path[0], path[high - 1]);
+  end else
+  begin
+    dsq[0] := MaxDouble;
+    dsq[high] := MaxDouble;
   end;
 
   for i := 1 to high -1 do
@@ -745,7 +745,7 @@ begin
       next2 := GetNext(next, high, flags);
       dsq[curr] := PerpendicDistFromLineSqrd(
         path[curr], path[prev], path[next]);
-      if (next <> high) or not isOpenPath then
+      if (next <> high) or isClosedPath then
         dsq[next] := PerpendicDistFromLineSqrd(
           path[next], path[curr], path[next2]);
       curr := next;
@@ -757,7 +757,7 @@ begin
       prev2 := GetPrior(prev, high, flags);
       dsq[curr] := PerpendicDistFromLineSqrd(
         path[curr], path[prev], path[next]);
-      if (prev <> 0) or not isOpenPath then
+      if (prev <> 0) or isClosedPath then
         dsq[prev] := PerpendicDistFromLineSqrd(
           path[prev], path[prev2], path[curr]);
     end;
@@ -774,14 +774,14 @@ begin
 end;
 
 function SimplifyPaths(const paths: TPaths64;
-  epsilon: double; isOpenPath: Boolean = false): TPaths64;
+  epsilon: double; isClosedPaths: Boolean = false): TPaths64;
 var
   i, len: integer;
 begin
   len := Length(paths);
   SetLength(Result, len);
   for i := 0 to len -1 do
-    result[i] := SimplifyPath(paths[i], epsilon, isOpenPath);
+    result[i] := SimplifyPath(paths[i], epsilon, isClosedPaths);
 end;
 
 end.

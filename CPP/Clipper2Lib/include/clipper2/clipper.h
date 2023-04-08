@@ -1,6 +1,6 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  2 April 2023                                                    *
+* Date      :  8 April 2023                                                    *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2023                                         *
 * Purpose   :  This module provides a simple interface to the Clipper Library  *
@@ -645,7 +645,7 @@ namespace Clipper2Lib {
 
   template <typename T>
   inline Path<T> SimplifyPath(const Path<T> path, 
-    double epsilon, bool isOpenPath = false)
+    double epsilon, bool isClosedPath = true)
   {
     const size_t len = path.size(), high = len -1;
     const double epsSqr = Sqr(epsilon);
@@ -654,15 +654,15 @@ namespace Clipper2Lib {
     std::vector<bool> flags(len);
     std::vector<double> distSqr(len);
     size_t prior = high, curr = 0, start, next, prior2, next2;
-    if (isOpenPath)
-    {
-      distSqr[0] = MAX_DBL;
-      distSqr[high] = MAX_DBL;
-    }
-    else 
+    if (isClosedPath)
     {
       distSqr[0] = PerpendicDistFromLineSqrd(path[0], path[high], path[1]);
       distSqr[high] = PerpendicDistFromLineSqrd(path[high], path[0], path[high - 1]);
+    }
+    else 
+    {
+      distSqr[0] = MAX_DBL;
+      distSqr[high] = MAX_DBL;
     }
     for (size_t i = 1; i < high; ++i)
       distSqr[i] = PerpendicDistFromLineSqrd(path[i], path[i - 1], path[i + 1]);
@@ -689,7 +689,7 @@ namespace Clipper2Lib {
         next = GetNext(next, high, flags);
         next2 = GetNext(next, high, flags);
         distSqr[curr] = PerpendicDistFromLineSqrd(path[curr], path[prior], path[next]);
-        if (next != high || !isOpenPath)
+        if (next != high || isClosedPath)
           distSqr[next] = PerpendicDistFromLineSqrd(path[next], path[curr], path[next2]);
         curr = next;
       }
@@ -700,7 +700,7 @@ namespace Clipper2Lib {
         next = GetNext(next, high, flags);
         prior2 = GetPrior(prior, high, flags);
         distSqr[curr] = PerpendicDistFromLineSqrd(path[curr], path[prior], path[next]);
-        if (prior != 0 || !isOpenPath)
+        if (prior != 0 || isClosedPath)
           distSqr[prior] = PerpendicDistFromLineSqrd(path[prior], path[prior2], path[curr]);
       }
     }
@@ -713,12 +713,12 @@ namespace Clipper2Lib {
 
   template <typename T>
   inline Paths<T> SimplifyPaths(const Paths<T> paths, 
-    double epsilon, bool isOpenPath = false)
+    double epsilon, bool isClosedPath = true)
   {
     Paths<T> result;
     result.reserve(paths.size());
     for (const auto& path : paths)
-      result.push_back(SimplifyPath(path, epsilon, isOpenPath));
+      result.push_back(SimplifyPath(path, epsilon, isClosedPath));
     return result;
   }
 

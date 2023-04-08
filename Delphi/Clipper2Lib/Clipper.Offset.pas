@@ -2,7 +2,7 @@ unit Clipper.Offset;
 
 (*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  2 April 2023                                                    *
+* Date      :  8 April 2023                                                    *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2023                                         *
 * Purpose   :  Path Offset (Inflate/Shrink)                                    *
@@ -820,35 +820,29 @@ begin
   else if (sinA < -1.0) then sinA := -1.0;
 
 
-  if (cosA > 0.99) then // almost straight - less than 8 degrees
+  if (cosA > -0.99) and (sinA * fGroupDelta < 0) then
   begin
-    AddPoint(GetPerpendic(fInPath[j], fNorms[k], fGroupDelta));
-    if (cosA < 0.9998) then // greater than 1 degree (#424)
-      AddPoint(GetPerpendic(fInPath[j], fNorms[j], fGroupDelta)); // (#418)
-  end
-  else if (cosA > -0.99) and (sinA * fGroupDelta < 0) then // is concave
-  begin
+    // is concave
     AddPoint(GetPerpendic(fInPath[j], fNorms[k], fGroupDelta));
     // this extra point is the only (simple) way to ensure that
     // path reversals are fully cleaned with the trailing clipper
     AddPoint(fInPath[j]); // (#405)
     AddPoint(GetPerpendic(fInPath[j], fNorms[j], fGroupDelta));
   end
-  //else convex of one sort or another
-  else if (fJoinType = jtRound) then
-    DoRound(j, k, ArcTan2(sinA, cosA))
   else if (fJoinType = jtMiter) then
   begin
     // miter unless the angle is so acute the miter would exceeds ML
     if (cosA > fTmpLimit -1) then DoMiter(j, k, cosA)
     else DoSquare(j, k);
   end
-  // don't bother squaring angles that deviate < ~20 degrees because
-  // squaring will be indistinguishable from mitering and just be a lot slower
-  else if (cosA > 0.9) then
+  else if (cosA > 0.9998) then
+		// almost straight - less than 1 degree (#424)
     DoMiter(j, k, cosA)
+  else if (cosA > 0.99) or (fJoinType = jtSquare) then
+		//angle less than 8 degrees or squared joins
+    DoSquare(j, k)
   else
-    DoSquare(j, k);
+    DoRound(j, k, ArcTan2(sinA, cosA));
 
   k := j;
 end;

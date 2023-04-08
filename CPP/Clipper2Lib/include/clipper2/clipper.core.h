@@ -1,6 +1,6 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  3 April 2023                                                    *
+* Date      :  8 April 2023                                                    *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2023                                         *
 * Purpose   :  Core Clipper Library structures and functions                   *
@@ -50,7 +50,9 @@ namespace Clipper2Lib
   const int non_pair_error_i    = 4; // non-fatal 
   const int range_error_i = 64;
 
+#ifndef PI
   static const double PI = 3.141592653589793238;
+#endif
   static const int64_t MAX_COORD = INT64_MAX >> 2;
   static const int64_t MIN_COORD = -MAX_COORD;
   static const int64_t INVALID = INT64_MAX;
