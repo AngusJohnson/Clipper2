@@ -15,6 +15,7 @@ message("fetching is done")
 
 set(benchmark_srcs
     StripDuplicateBenchmark.cpp
+    CoedgeBenchmark.cpp
     # more to add
 )
 
