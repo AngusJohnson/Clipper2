@@ -1,6 +1,6 @@
 ﻿/*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  28 March 2023                                                   *
+* Date      :  22 April 2023                                                   *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2023                                         *
 * Purpose   :  This is the main polygon clipping module                        *
@@ -2351,9 +2351,10 @@ private void DoHorizontal(Active horz)
     {
       Active? prev = e.prevInAEL;
       if (prev == null || IsOpen(e) || IsOpen(prev) ||
-        !IsHotEdge(e) || !IsHotEdge(prev) ||
-        pt.Y < e.top.Y + 2 || pt.Y < prev.top.Y + 2) return;
- 
+        !IsHotEdge(e) || !IsHotEdge(prev)) return;
+      if ((pt.Y < e.top.Y + 2 || pt.Y < prev.top.Y + 2) &&  // avoid trivial joins
+        ((e.bot.Y > pt.Y) || (prev.bot.Y > pt.Y))) return;  // (#490)
+
       if (checkCurrX)
       {
         if (Clipper.PerpendicDistFromLineSqrd(pt, prev.bot, prev.top) > 0.25) return;
@@ -2377,9 +2378,9 @@ private void DoHorizontal(Active horz)
     {
       Active? next = e.nextInAEL;
       if (IsOpen(e) || !IsHotEdge(e) || IsJoined(e) ||
-        next == null || IsOpen(next) || !IsHotEdge(next) ||
-        pt.Y < e.top.Y + 2 || pt.Y < next.top.Y + 2) // avoids trivial joins
-          return;
+        next == null || IsOpen(next) || !IsHotEdge(next)) return; 
+      if ((pt.Y < e.top.Y + 2 || pt.Y < next.top.Y + 2) &&  // avoid trivial joins
+        ((e.bot.Y > pt.Y) || (next.bot.Y > pt.Y)))  return; // (#490)
 
       if (checkCurrX)
       {
@@ -2668,7 +2669,11 @@ private void DoHorizontal(Active horz)
             else if (Path1InsidePath2(or1.pts, or2.pts))
               SetOwner(or1, or2);
             else
+            {
+              or1.splits ??= new List<int>();
+              or1.splits.Add(or2.idx); // (#498)
               or2.owner = or1;
+            }
           }
           else
             or2.owner = or1;
@@ -2954,6 +2959,22 @@ private void DoHorizontal(Active horz)
       return true;
     }
 
+    private bool CheckSplitOwner(OutRec outrec)
+    {
+      foreach (int i in outrec.owner!.splits!)
+      {
+        OutRec? split = GetRealOutRec(_outrecList[i]);
+        if (split != null && split != outrec &&
+          split != outrec.owner && CheckBounds(split) &&
+          split.bounds.Contains(outrec.bounds) &&
+            Path1InsidePath2(outrec.pts!, split.pts!))
+        {
+          outrec.owner = split; //found in split
+          return true;
+        }
+      }
+      return false;
+    }
     private void RecursiveCheckOwners(OutRec outrec, PolyPathBase polypath)
     {
       // pre-condition: outrec will have valid bounds
@@ -2961,49 +2982,22 @@ private void DoHorizontal(Active horz)
 
       if (outrec.polypath != null || outrec.bounds.IsEmpty()) return;
 
-      while (outrec.owner != null &&
-        (outrec.owner.pts == null || !CheckBounds(outrec.owner)))
-          outrec.owner = outrec.owner.owner;
-
-      if (outrec.owner != null && outrec.owner.polypath == null)
-        RecursiveCheckOwners(outrec.owner, polypath);
-
       while (outrec.owner != null)
-        if (outrec.owner.bounds.Contains(outrec.bounds) &&
-          Path1InsidePath2(outrec.pts!, outrec.owner.pts!))
-          break; // found - owner contain outrec!
-        else
-          outrec.owner = outrec.owner.owner;
+      {
+        if (outrec.owner.splits != null && CheckSplitOwner(outrec)) break; 
+        if (outrec.owner.pts != null && CheckBounds(outrec.owner) &&
+          Path1InsidePath2(outrec.pts!, outrec.owner.pts!)) break;
+        outrec.owner = outrec.owner.owner;
+      }
 
       if (outrec.owner != null)
-        outrec.polypath = outrec.owner.polypath!.AddChild(outrec.path);
+      {
+        if (outrec.owner.polypath == null)
+          RecursiveCheckOwners(outrec.owner, polypath);
+        outrec.polypath = outrec.owner.polypath!.AddChild(outrec.path); 
+      }
       else
         outrec.polypath = polypath.AddChild(outrec.path);
-    }
-
-    private void DeepCheckOwners(OutRec outrec, PolyPathBase polypath)
-    {
-      RecursiveCheckOwners(outrec, polypath);
-
-      while (outrec.owner != null && outrec.owner.splits != null)
-      {
-        OutRec? split = null;
-        foreach (int i in outrec.owner.splits)
-        {
-          split = GetRealOutRec(_outrecList[i]);
-          if (split != null && split != outrec &&
-            split != outrec.owner && CheckBounds(split) &&
-            split.bounds.Contains(outrec.bounds) &&
-              Path1InsidePath2(outrec.pts!, split.pts!))
-          {
-            RecursiveCheckOwners(split, polypath);
-            outrec.owner = split; //found in split
-            break; // inner 'for' loop
-          }
-          else split = null;
-        }
-        if (split == null) break;
-      }
     }
 
     protected void BuildTree(PolyPathBase polytree, Paths64 solutionOpen)
@@ -3030,7 +3024,7 @@ private void DoHorizontal(Active horz)
           continue;
         }
         if (CheckBounds(outrec))
-          DeepCheckOwners(outrec, polytree);
+          RecursiveCheckOwners(outrec, polytree);
       }
     }
 

@@ -2,7 +2,7 @@ unit Clipper;
 
 (*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  8 April 2023                                                    *
+* Date      :  21 April 2023                                                   *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2023                                         *
 * Purpose   :  This module provides a simple interface to the Clipper Library  *
@@ -14,7 +14,7 @@ interface
 {$I Clipper.inc}
 
 uses
-  Math, SysUtils,
+  Math, SysUtils, Classes,
   Clipper.Core, Clipper.Engine, Clipper.Offset, Clipper.RectClip;
 
 // Redeclare here a number of structures defined in
@@ -128,6 +128,10 @@ function MinkowskiSum(const pattern, path: TPathD;
 function PolyTreeToPaths64(PolyTree: TPolyTree64): TPaths64;
 function PolyTreeToPathsD(PolyTree: TPolyTreeD): TPathsD;
 
+//ShowPolyTreeStructure: only useful when debugging
+procedure ShowPolyTreeStructure(polytree: TPolyTree64; strings: TStrings); overload;
+procedure ShowPolyTreeStructure(polytree: TPolyTreeD; strings: TStrings); overload;
+
 function MakePath(const ints: array of Int64): TPath64; overload;
 function MakePathD(const dbls: array of double): TPathD; overload;
 
@@ -153,6 +157,38 @@ uses
 
 //------------------------------------------------------------------------------
 //------------------------------------------------------------------------------
+
+{$IFDEF USINGZ}
+function MakePath(const ints: array of Int64): TPath64;
+var
+  i, len: integer;
+begin
+  len := length(ints) div 3;
+  SetLength(Result, len);
+  for i := 0 to len -1 do
+  begin
+    Result[i].X := ints[i*3];
+    Result[i].Y := ints[i*3 +1];
+    Result[i].z := ints[i*3 +2];
+  end;
+end;
+//------------------------------------------------------------------------------
+
+function MakePathD(const dbls: array of double): TPathD; overload;
+var
+  i, len: integer;
+begin
+  len := length(dbls) div 3;
+  SetLength(Result, len);
+  for i := 0 to len -1 do
+  begin
+    Result[i].X := dbls[i*3];
+    Result[i].Y := dbls[i*3 +1];
+    Result[i].Z := Round(dbls[i*3 +2]);
+  end;
+end;
+//------------------------------------------------------------------------------
+{$ELSE}
 
 function MakePath(const ints: array of Int64): TPath64;
 var
@@ -181,6 +217,7 @@ begin
   end;
 end;
 //------------------------------------------------------------------------------
+{$ENDIF}
 
 procedure AddPolyNodeToPaths(Poly: TPolyPath64; var Paths: TPaths64);
 var
@@ -582,6 +619,65 @@ begin
  Result := Clipper.Minkowski.MinkowskiSum(pattern, path, pathIsClosed);
 end;
 //------------------------------------------------------------------------------
+
+procedure ShowPolyPathStructure64(pp: TPolyPath64; level: integer; strings: TStrings);
+var
+  i: integer;
+  spaces, caption: string;
+begin
+  spaces := StringOfChar(' ', level * 2);
+  if pp.IsHole then
+    caption := 'Hole' else
+    caption := 'Outer';
+  if (pp.Count > 0) then
+  begin
+    strings.Add(Format('%s%s (%d)',[spaces, caption, pp.Count]));
+    for i := 0 to pp.Count -1 do
+      ShowPolyPathStructure64(pp.child[i], level + 1, strings);
+  end else
+    strings.Add(spaces + caption);
+end;
+//------------------------------------------------------------------------------
+
+procedure ShowPolyTreeStructure(polytree: TPolyTree64; strings: TStrings);
+var
+  i: integer;
+begin
+  strings.Add('Polytree Root');
+  for i := 0 to polytree.Count -1 do
+    ShowPolyPathStructure64(polytree[i], 1, strings);
+end;
+//------------------------------------------------------------------------------
+
+procedure ShowPolyPathStructureD(pp: TPolyPathD; level: integer; strings: TStrings);
+var
+  i: integer;
+  spaces, caption: string;
+begin
+  spaces := StringOfChar(' ', level * 2);
+  if pp.IsHole then
+    caption := 'Hole ' else
+    caption := 'Outer ';
+  if (pp.Count > 0) then
+  begin
+    strings.Add(Format('%s%s (%d)',[spaces + caption, pp.Count]));
+    for i := 0 to pp.Count -1 do
+      ShowPolyPathStructureD(pp.child[i], level + 1, strings);
+  end else
+    strings.Add(spaces + caption);
+end;
+//------------------------------------------------------------------------------
+
+procedure ShowPolyTreeStructure(polytree: TPolyTreeD; strings: TStrings);
+var
+  i: integer;
+begin
+  strings.Add('Polytree Root');
+  for i := 0 to polytree.Count -1 do
+    ShowPolyPathStructureD(polytree[i], 1, strings);
+end;
+//------------------------------------------------------------------------------
+
 
 function TrimCollinear(const p: TPath64; isOpenPath: Boolean = false): TPath64;
 var

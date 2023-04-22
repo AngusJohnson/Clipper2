@@ -1,6 +1,6 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  8 April 2023                                                    *
+* Date      :  21 April 2023                                                   *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2023                                         *
 * Purpose   :  This module provides a simple interface to the Clipper Library  *
@@ -370,6 +370,7 @@ namespace Clipper2Lib {
 
   inline std::ostream& operator<< (std::ostream& os, const PolyTree64& pp)
   {
+    os << std::endl << "Polytree root" << std::endl;
     PolyPath64List::const_iterator it = pp.begin();
     for (; it < pp.end() - 1; ++it)
       details::OutlinePolyPath64(os, **it, "   ", false);

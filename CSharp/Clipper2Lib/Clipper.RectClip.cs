@@ -1,6 +1,6 @@
 ﻿/*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  16 February 2023                                                *
+* Date      :  22 April 2023                                                   *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2023                                         *
 * Purpose   :  FAST rectangular clipping                                       *
@@ -720,7 +720,7 @@ namespace Clipper2Lib
         p1 = cw[i];
         if (p1 == null || p1.next == p1.prev)
         {
-          cw[i++]!.edge = null;
+          cw[i++] = null;
           j = 0;
           continue;
         }

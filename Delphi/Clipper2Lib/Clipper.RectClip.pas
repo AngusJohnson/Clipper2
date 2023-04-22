@@ -2,7 +2,7 @@ unit Clipper.RectClip;
 
 (*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  13 February 2023                                                *
+* Date      :  22 April 2023                                                   *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2023                                         *
 * Purpose   :  FAST rectangular clipping                                       *
@@ -862,7 +862,7 @@ begin
     p1 := cw[i];
     if not Assigned(p1) or (p1.next = p1.prev) then
     begin
-      cw[i].edge := nil;
+      cw[i] := nil;
       inc(i);
       j := 0;
       Continue;
