@@ -2,7 +2,7 @@ unit Clipper.Engine;
 
 (*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  22 April 2023                                                   *
+* Date      :  23 April 2023                                                   *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2023                                         *
 * Purpose   :  This is the main polygon clipping module                        *
@@ -2155,7 +2155,7 @@ begin
   if IsOpen(e) or not IsHotEdge(e) or not Assigned(prev) or
     IsOpen(prev) or not IsHotEdge(prev) then Exit;
   if ((pt.Y < e.top.Y +2) or (pt.Y < prev.top.Y +2)) and
-    ((e.bot.Y > pt.Y) or (prev.bot.Y > pt.Y)) then Exit;
+    ((e.bot.Y > pt.Y) or (prev.bot.Y > pt.Y)) then Exit; // (#490)
 
   if checkCurrX then
   begin
@@ -2182,9 +2182,9 @@ var
 begin
   next := e.nextInAEL;
   if IsOpen(e) or not IsHotEdge(e) or not Assigned(next) or
-    IsOpen(next) or not IsHotEdge(next) then Exit;
+    not IsHotEdge(next) or IsOpen(next) then Exit;
   if ((pt.Y < e.top.Y +2) or (pt.Y < next.top.Y +2)) and
-    ((e.bot.Y > pt.Y) or (next.bot.Y > pt.Y)) then Exit;
+    ((e.bot.Y > pt.Y) or (next.bot.Y > pt.Y)) then Exit; // (#490)
 
   if (checkCurrX) then
   begin
@@ -2272,7 +2272,7 @@ begin
   InsertScanLine(e.top.Y);
 
   CheckJoinLeft(e, e.bot);
-  CheckJoinRight(e, e.bot);
+  CheckJoinRight(e, e.bot, true); // (#500)
 end;
 //------------------------------------------------------------------------------
 

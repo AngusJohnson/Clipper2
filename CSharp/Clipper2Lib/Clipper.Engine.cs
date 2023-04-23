@@ -1,6 +1,6 @@
 ﻿/*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  22 April 2023                                                   *
+* Date      :  23 April 2023                                                   *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2023                                         *
 * Purpose   :  This is the main polygon clipping module                        *
@@ -1480,7 +1480,7 @@ namespace Clipper2Lib
       InsertScanline(ae.top.Y);
 
       CheckJoinLeft(ae, ae.bot);
-      CheckJoinRight(ae, ae.bot);
+      CheckJoinRight(ae, ae.bot, true); // (#500)
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
