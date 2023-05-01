@@ -561,9 +561,6 @@ end;
 //------------------------------------------------------------------------------
 
 procedure TClipperOffset.Execute(delta: Double; out solution: TPaths64);
-var
-  i: integer;
-  group: TGroup;
 begin
   fSolution := nil;
   solution := nil;
@@ -589,8 +586,6 @@ end;
 
 procedure TClipperOffset.Execute(delta: Double; polytree: TPolyTree64);
 var
-  i: integer;
-  group: TGroup;
   dummy: TPaths64;
 begin
   fSolution := nil;

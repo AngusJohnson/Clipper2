@@ -1,6 +1,6 @@
 ﻿/*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  21 February 2023                                                *
+* Date      :  1 May 2023                                                      *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2023                                         *
 * Purpose   :  Core structures and functions for the Clipper Library           *
@@ -211,9 +211,9 @@ namespace Clipper2Lib
       this.z = z;
     }
 
-    public override string ToString()
+    public string ToString(int precision = 2)
     {
-      return $"{x:F},{y:F},{z} ";
+      return string.Format($"{{0:F{precision}}},{{1:F{precision}}},{{2:D}}", x,y,z);
     }
 
 #else
@@ -253,9 +253,9 @@ namespace Clipper2Lib
       this.y = y;
     }
 
-    public override string ToString()
+    public string ToString(int precision = 2)
     {
-      return $"{x:F},{y:F} ";
+      return string.Format($"{{0:F{precision}}},{{1:F{precision}}}", x,y);
     }
 
 #endif
@@ -289,12 +289,9 @@ namespace Clipper2Lib
     public long top;
     public long right;
     public long bottom;
-    private static readonly string InvalidRect = "Invalid Rect64 assignment";
 
     public Rect64(long l, long t, long r, long b)
     {
-      if (r < l || b < t)
-        throw new Exception(InvalidRect);
       left = l;
       top = t;
       right = r;
@@ -382,12 +379,9 @@ namespace Clipper2Lib
     public double top;
     public double right;
     public double bottom;
-    private static readonly string InvalidRect = "Invalid RectD assignment";
 
     public RectD(double l, double t, double r, double b)
     {
-      if (r < l || b < t)
-        throw new Exception(InvalidRect);
       left = l;
       top = t;
       right = r;
@@ -501,11 +495,11 @@ namespace Clipper2Lib
     private PathD() : base() { }
     public PathD(int capacity = 0) : base(capacity) { }
     public PathD(IEnumerable<PointD> path) : base(path) { }
-    public override string ToString()
+    public string ToString(int precision = 2)
     {
       string s = "";
       foreach (PointD p in this)
-        s = s + p.ToString() + " ";
+        s = s + p.ToString(precision) + " ";
       return s;
     }
   }
@@ -515,11 +509,11 @@ namespace Clipper2Lib
     private PathsD() : base() { }
     public PathsD(int capacity = 0) : base(capacity) { }
     public PathsD(IEnumerable<PathD> paths) : base(paths) { }
-    public override string ToString()
+    public string ToString(int precision = 2)
     {
       string s = "";
       foreach (PathD p in this)
-        s = s + p.ToString() + "\n";
+        s = s + p.ToString(precision) + "\n";
       return s;
     }
   }

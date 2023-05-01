@@ -2,7 +2,7 @@ unit Clipper.Engine;
 
 (*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  23 April 2023                                                   *
+* Date      :  1 May 2023                                                      *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2023                                         *
 * Purpose   :  This is the main polygon clipping module                        *
@@ -51,6 +51,18 @@ type
   public
     function Add: PLocalMinima;
     procedure Clear; override;
+  end;
+
+  TReuseableDataContainer64 = class
+  private
+    FLocMinList         : TLocMinList;
+    FVertexArrayList    : TList;
+  public
+    constructor Create;
+    destructor  Destroy; override;
+    procedure   Clear;
+    procedure   AddPaths(const paths: TPaths64;
+      pathType: TPathType; isOpen: Boolean);
   end;
 
   // forward declarations
@@ -265,6 +277,7 @@ type
       pathType: TPathType; isOpen: Boolean);
     procedure AddPaths(const paths: TPaths64;
       pathType: TPathType; isOpen: Boolean);
+    procedure AddReuseableData(const reuseableData: TReuseableDataContainer64);
     function ClearSolutionOnly: Boolean;
     procedure ExecuteInternal(clipType: TClipType;
       fillRule: TFillRule; usingPolytree: Boolean);
@@ -289,6 +302,7 @@ type
 
   TClipper64 = class(TClipperBase) // for integer coordinates
   public
+    procedure AddReuseableData(const reuseableData: TReuseableDataContainer64);
     procedure AddSubject(const subject: TPath64); overload;
     procedure AddSubject(const subjects: TPaths64); overload;
     procedure AddOpenSubject(const subject: TPath64); overload;
@@ -536,10 +550,16 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-function IsOpenEnd(e: PActive): Boolean; overload; {$IFDEF INLINING} inline; {$ENDIF}
+//function IsOpenEnd(e: PActive): Boolean; overload; {$IFDEF INLINING} inline; {$ENDIF}
+//begin
+//  Result := e.locMin.isOpen and
+//    (e.vertTop.flags * [vfOpenStart, vfOpenEnd] <> []);
+//end;
+//------------------------------------------------------------------------------
+
+function IsOpenEnd(v: PVertex): Boolean; overload; {$IFDEF INLINING} inline; {$ENDIF}
 begin
-  Result := e.locMin.isOpen and
-    (e.vertTop.flags * [vfOpenStart, vfOpenEnd] <> []);
+  Result := (v.flags * [vfOpenStart, vfOpenEnd] <> []);
 end;
 //------------------------------------------------------------------------------
 
@@ -1182,6 +1202,44 @@ begin
 end;
 
 //------------------------------------------------------------------------------
+// TReuseableDataContainer64 methods ...
+//------------------------------------------------------------------------------
+
+constructor TReuseableDataContainer64.Create;
+begin
+  FLocMinList := TLocMinList.Create;
+  FVertexArrayList := TList.Create;
+end;
+//------------------------------------------------------------------------------
+
+destructor TReuseableDataContainer64.Destroy;
+begin
+  Clear;
+  FLocMinList.Free;
+  FVertexArrayList.Free;
+  inherited;
+end;
+//------------------------------------------------------------------------------
+
+procedure TReuseableDataContainer64.Clear;
+var
+  i: integer;
+begin
+  FLocMinList.Clear;
+  for i := 0 to FVertexArrayList.Count -1 do
+    FreeMem(UnsafeGet(FVertexArrayList, i));
+  FVertexArrayList.Clear;
+end;
+//------------------------------------------------------------------------------
+
+procedure TReuseableDataContainer64.AddPaths(const paths: TPaths64;
+  pathType: TPathType; isOpen: Boolean);
+begin
+  AddPathsToVertexList(paths, pathType, isOpen,
+    FVertexArrayList, FLocMinList);
+end;
+
+//------------------------------------------------------------------------------
 // TClipperBase methods ...
 //------------------------------------------------------------------------------
 
@@ -1399,6 +1457,29 @@ begin
   FLocMinListSorted := false;
   AddPathsToVertexList(paths, pathType, isOpen,
     FVertexArrayList, FLocMinList);
+end;
+//------------------------------------------------------------------------------
+
+procedure TClipperBase.AddReuseableData(const reuseableData: TReuseableDataContainer64);
+var
+  i: integer;
+  lm: PLocalMinima;
+begin
+  if reuseableData.FLocMinList.Count = 0 then Exit;
+  // nb: reuseableData will continue to own the vertices
+  // and will remain responsible for their clean up.
+  // Consequently, it's important that the reuseableData object isn't
+  // destroyed before the Clipper object that's using the data.
+  FLocMinListSorted := false;
+  for i := 0 to reuseableData.FLocMinList.Count -1 do
+    with PLocalMinima(reuseableData.FLocMinList[i])^ do
+    begin
+      lm := self.FLocMinList.Add;
+      lm.vertex := vertex;
+      lm.polytype := polytype;
+      lm.isOpen := isOpen;
+      if isOpen then FHasOpenPaths := true;
+    end;
 end;
 //------------------------------------------------------------------------------
 
@@ -2035,9 +2116,9 @@ begin
 
   if (IsFront(e1) = IsFront(e2)) then
   begin
-    if IsOpenEnd(e1) then
+    if IsOpenEnd(e1.vertTop) then
       SwapFrontBackSides(e1.outrec)
-    else if IsOpenEnd(e2) then
+    else if IsOpenEnd(e2.vertTop) then
       SwapFrontBackSides(e2.outrec)
     else
     begin
@@ -2118,7 +2199,7 @@ begin
   e2.outrec.pts := nil;
   SetOwner(e2.outrec, e1.outrec);
 
-  if IsOpenEnd(e1) then
+  if IsOpenEnd(e1.vertTop) then
   begin
     e2.outrec.pts := e1.outrec.pts;
     e1.outrec.pts := nil;
@@ -2910,7 +2991,7 @@ procedure TClipperBase.ProcessHorzJoins;
 var
   i: integer;
   or1, or2: POutRec;
-  op, op1b, op2b: POutPt;
+  op1b, op2b: POutPt;
 begin
   for i := 0 to FHorzJoinList.Count -1 do
     with PHorzJoin(FHorzJoinList[i])^ do
@@ -3365,7 +3446,7 @@ begin
 
       // if horzEdge is a maxima, keep going until we reach
       // its maxima pair, otherwise check for Break conditions
-      if (maxVertex <> horzEdge.vertTop) or IsOpenEnd(horzEdge) then
+      if (maxVertex <> horzEdge.vertTop) or IsOpenEnd(horzEdge.vertTop) then
       begin
         // otherwise stop when 'e' is beyond the end of the horizontal line
         if (isLeftToRight and (e.currX > horzRight)) or
@@ -3416,7 +3497,7 @@ begin
     end; // we've reached the end of this horizontal
 
     // check if we've finished looping through consecutive horizontals
-    if horzIsOpen and IsOpenEnd(horzEdge) then
+    if horzIsOpen and IsOpenEnd(horzEdge.vertTop) then
     begin
       if IsHotEdge(horzEdge) then
       begin
@@ -3494,7 +3575,7 @@ begin
   eNext := e.nextInAEL;
   Result := eNext;
 
-  if IsOpenEnd(e) then
+  if IsOpenEnd(e.vertTop) then
   begin
     if IsHotEdge(e) then AddOutPt(e, e.top);
     if not IsHorizontal(e) then
@@ -3735,6 +3816,12 @@ end;
 
 //------------------------------------------------------------------------------
 // TClipper methods
+//------------------------------------------------------------------------------
+
+procedure TClipper64.AddReuseableData(const reuseableData: TReuseableDataContainer64);
+begin
+  inherited AddReuseableData(reuseableData);
+end;
 //------------------------------------------------------------------------------
 
 procedure TClipper64.AddSubject(const subject: TPath64);

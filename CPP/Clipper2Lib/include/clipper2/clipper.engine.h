@@ -1,6 +1,6 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  22 April 2023                                                   *
+* Date      :  1 May 2023                                                      *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2023                                         *
 * Purpose   :  This is the main polygon clipping module                        *
@@ -179,6 +179,20 @@ namespace Clipper2Lib {
 	typedef std::vector<LocalMinima_ptr> LocalMinimaList;
 	typedef std::vector<IntersectNode> IntersectNodeList;
 
+	// ReuseableDataContainer64 ------------------------------------------------
+
+	class ReuseableDataContainer64 {
+	private:
+		friend class ClipperBase;
+		LocalMinimaList minima_list_;
+		std::vector<Vertex*> vertex_lists_;
+		void AddLocMin(Vertex& vert, PathType polytype, bool is_open);
+	public:
+		virtual ~ReuseableDataContainer64();
+		void Clear();
+		void AddPaths(const Paths64& paths, PathType polytype, bool is_open);
+	};
+
 	// ClipperBase -------------------------------------------------------------
 
 	class ClipperBase {
@@ -271,6 +285,7 @@ namespace Clipper2Lib {
 		bool PreserveCollinear = true;
 		bool ReverseSolution = false;
 		void Clear();
+		void AddReuseableData(const ReuseableDataContainer64& reuseable_data);
 #ifdef USINGZ
 		int64_t DefaultZ = 0;
 #endif

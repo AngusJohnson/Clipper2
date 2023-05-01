@@ -1,6 +1,6 @@
 ﻿/*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  23 April 2023                                                   *
+* Date      :  1 May 2023                                                      *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2023                                         *
 * Purpose   :  This is the main polygon clipping module                        *
@@ -87,7 +87,6 @@ namespace Clipper2Lib
     {
       return vertex.GetHashCode();
     }
-
   };
 
   // IntersectNode: a structure representing 2 intersecting edges.
@@ -227,6 +226,134 @@ namespace Clipper2Lib
     internal bool isLeftBound;
     internal JoinWith joinWith;
   };
+
+  internal static class ClipperEngine
+  {
+    internal static void AddLocMin(Vertex vert, PathType polytype, bool isOpen,
+      List<LocalMinima> minimaList)
+    {
+      // make sure the vertex is added only once ...
+      if ((vert.flags & VertexFlags.LocalMin) != VertexFlags.None) return;
+      vert.flags |= VertexFlags.LocalMin;
+
+      LocalMinima lm = new LocalMinima(vert, polytype, isOpen);
+      minimaList.Add(lm);
+    }
+
+    internal static void AddPathsToVertexList(Paths64 paths, PathType polytype, bool isOpen,
+      List<LocalMinima> minimaList, List<Vertex> vertexList)
+    {
+      int totalVertCnt = 0;
+      foreach (Path64 path in paths) totalVertCnt += path.Count;
+      vertexList.Capacity = vertexList.Count + totalVertCnt;
+
+      foreach (Path64 path in paths)
+      {
+        Vertex? v0 = null, prev_v = null, curr_v;
+        foreach (Point64 pt in path)
+        {
+          if (v0 == null)
+          {
+            v0 = new Vertex(pt, VertexFlags.None, null);
+            vertexList.Add(v0);
+            prev_v = v0;
+          }
+          else if (prev_v!.pt != pt) // ie skips duplicates
+          {
+            curr_v = new Vertex(pt, VertexFlags.None, prev_v);
+            vertexList.Add(curr_v);
+            prev_v.next = curr_v;
+            prev_v = curr_v;
+          }
+        }
+        if (prev_v == null || prev_v.prev == null) continue;
+        if (!isOpen && prev_v.pt == v0!.pt) prev_v = prev_v.prev;
+        prev_v.next = v0;
+        v0!.prev = prev_v;
+        if (!isOpen && prev_v.next == prev_v) continue;
+
+        // OK, we have a valid path
+        bool going_up, going_up0;
+        if (isOpen)
+        {
+          curr_v = v0.next;
+          while (curr_v != v0 && curr_v!.pt.Y == v0.pt.Y)
+            curr_v = curr_v.next;
+          going_up = curr_v.pt.Y <= v0.pt.Y;
+          if (going_up)
+          {
+            v0.flags = VertexFlags.OpenStart;
+            AddLocMin(v0, polytype, true, minimaList);
+          }
+          else
+            v0.flags = VertexFlags.OpenStart | VertexFlags.LocalMax;
+        }
+        else // closed path
+        {
+          prev_v = v0.prev;
+          while (prev_v != v0 && prev_v!.pt.Y == v0.pt.Y)
+            prev_v = prev_v.prev;
+          if (prev_v == v0)
+            continue; // only open paths can be completely flat
+          going_up = prev_v.pt.Y > v0.pt.Y;
+        }
+
+        going_up0 = going_up;
+        prev_v = v0;
+        curr_v = v0.next;
+        while (curr_v != v0)
+        {
+          if (curr_v!.pt.Y > prev_v.pt.Y && going_up)
+          {
+            prev_v.flags |= VertexFlags.LocalMax;
+            going_up = false;
+          }
+          else if (curr_v.pt.Y < prev_v.pt.Y && !going_up)
+          {
+            going_up = true;
+            AddLocMin(prev_v, polytype, isOpen, minimaList);
+          }
+          prev_v = curr_v;
+          curr_v = curr_v.next;
+        }
+
+        if (isOpen)
+        {
+          prev_v.flags |= VertexFlags.OpenEnd;
+          if (going_up)
+            prev_v.flags |= VertexFlags.LocalMax;
+          else
+            AddLocMin(prev_v, polytype, isOpen, minimaList);
+        }
+        else if (going_up != going_up0)
+        {
+          if (going_up0) AddLocMin(prev_v, polytype, false, minimaList);
+          else prev_v.flags |= VertexFlags.LocalMax;
+        }
+      }
+    }
+  }
+
+  public class ReuseableDataContainer64
+  {
+    internal readonly List<LocalMinima> _minimaList;
+    internal readonly List<Vertex> _vertexList;
+    public ReuseableDataContainer64()
+    {
+      _minimaList = new List<LocalMinima>();
+      _vertexList = new List<Vertex>();
+    }
+    public void Clear()
+    {
+      _minimaList.Clear();
+      _vertexList.Clear();
+    }
+
+    public void AddPaths(Paths64 paths, PathType pt, bool isOpen)
+    {
+      ClipperEngine.AddPathsToVertexList(paths, pt, isOpen, _minimaList, _vertexList);
+    }
+  }
 
   public class ClipperBase
   {
@@ -720,99 +847,7 @@ namespace Clipper2Lib
       LocalMinima lm = new LocalMinima(vert, polytype, isOpen);
       _minimaList.Add(lm);
     }
-
-    protected void AddPathsToVertexList(Paths64 paths, PathType polytype, bool isOpen)
-    {
-      int totalVertCnt = 0;
-      foreach (Path64 path in paths) totalVertCnt += path.Count;
-      _vertexList.Capacity = _vertexList.Count + totalVertCnt;
-
-      foreach (Path64 path in paths)
-      {
-        Vertex? v0 = null, prev_v = null, curr_v;
-        foreach (Point64 pt in path)
-        {
-          if (v0 == null)
-          {
-            v0 = new Vertex(pt, VertexFlags.None, null);
-            _vertexList.Add(v0);
-            prev_v = v0;
-          }
-          else if (prev_v!.pt != pt) // ie skips duplicates
-          {
-            curr_v = new Vertex(pt, VertexFlags.None, prev_v);
-            _vertexList.Add(curr_v);
-            prev_v.next = curr_v;
-            prev_v = curr_v;
-          }
-        }
-        if (prev_v == null || prev_v.prev == null) continue;
-        if (!isOpen && prev_v.pt == v0!.pt) prev_v = prev_v.prev;
-        prev_v.next = v0;
-        v0!.prev = prev_v;
-        if (!isOpen && prev_v.next == prev_v) continue;
-
-        // OK, we have a valid path
-        bool going_up, going_up0;
-        if (isOpen)
-        {
-          curr_v = v0.next;
-          while (curr_v != v0 && curr_v!.pt.Y == v0.pt.Y)
-            curr_v = curr_v.next;
-          going_up = curr_v.pt.Y <= v0.pt.Y;
-          if (going_up)
-          {
-            v0.flags = VertexFlags.OpenStart;
-            AddLocMin(v0, polytype, true);
-          }
-          else
-            v0.flags = VertexFlags.OpenStart | VertexFlags.LocalMax;
-        }
-        else // closed path
-        {
-          prev_v = v0.prev;
-          while (prev_v != v0 && prev_v!.pt.Y == v0.pt.Y)
-            prev_v = prev_v.prev;
-          if (prev_v == v0)
-            continue; // only open paths can be completely flat
-          going_up = prev_v.pt.Y > v0.pt.Y;
-        }
-
-        going_up0 = going_up;
-        prev_v = v0;
-        curr_v = v0.next;
-        while (curr_v != v0)
-        {
-          if (curr_v!.pt.Y > prev_v.pt.Y && going_up)
-          {
-            prev_v.flags |= VertexFlags.LocalMax;
-            going_up = false;
-          }
-          else if (curr_v.pt.Y < prev_v.pt.Y && !going_up)
-          {
-            going_up = true;
-            AddLocMin(prev_v, polytype, isOpen);
-          }
-          prev_v = curr_v;
-          curr_v = curr_v.next;
-        }
-
-        if (isOpen)
-        {
-          prev_v.flags |= VertexFlags.OpenEnd;
-          if (going_up)
-            prev_v.flags |= VertexFlags.LocalMax;
-          else
-            AddLocMin(prev_v, polytype, isOpen);
-        }
-        else if (going_up != going_up0)
-        {
-          if (going_up0) AddLocMin(prev_v, polytype, false);
-          else prev_v.flags |= VertexFlags.LocalMax;
-        }
-      }
-    }
-
+   
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void AddSubject(Path64 path)
     {
@@ -843,7 +878,22 @@ namespace Clipper2Lib
     {
       if (isOpen) _hasOpenPaths = true;
       _isSortedMinimaList = false;
-      AddPathsToVertexList(paths, polytype, isOpen);
+      ClipperEngine.AddPathsToVertexList(paths, polytype, isOpen, _minimaList, _vertexList);
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    protected void AddReuseableData(ReuseableDataContainer64 reuseableData)
+    {
+      if (reuseableData._minimaList.Count == 0) return;
+      // nb: reuseableData will continue to own the vertices, so it's important
+      // that the reuseableData object isn't destroyed before the Clipper object
+      // that's using the data.
+      _isSortedMinimaList = false;
+      foreach (LocalMinima lm in reuseableData._minimaList)
+      {
+        _minimaList.Add(new LocalMinima(lm.vertex, lm.polytype, lm.isOpen));
+        if (lm.isOpen) _hasOpenPaths = true;
+      }
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -3060,6 +3110,12 @@ private void DoHorizontal(Active horz)
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public new void AddReuseableData(ReuseableDataContainer64 reuseableData)
+    {
+      base.AddReuseableData(reuseableData);
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal new void AddPaths(Paths64 paths, PathType polytype, bool isOpen = false)
     {
       base.AddPaths(paths, polytype, isOpen);
@@ -3180,7 +3236,7 @@ private void DoHorizontal(Active horz)
       // temporarily convert integers to their initial float values
       // this will slow clipping marginally but will make it much easier
       // to understand the coordinates passed to the callback function
-      PointD tmp = new PointD(intersectPt);
+      PointD tmp = Clipper.ScalePointD(intersectPt, _invScale);
       //do the callback
       ZCallback?.Invoke(
         Clipper.ScalePointD(bot1, _invScale),
