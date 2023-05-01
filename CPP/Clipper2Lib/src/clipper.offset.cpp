@@ -203,6 +203,12 @@ PointD IntersectPoint(const PointD& pt1a, const PointD& pt1b,
 
 void ClipperOffset::DoSquare(Group& group, const Path64& path, size_t j, size_t k)
 {
+        auto delta = group_delta_;
+        auto abs_delta = abs_group_delta_;
+        if (deltaCallback64_ != nullptr) {
+                delta = (deltaCallback64_(path, j));
+                abs_delta = std::abs(delta);
+        }
 	PointD vec;
 	if (j == k) 
 		vec = PointD(norms[0].y, -norms[0].x);
@@ -213,15 +219,15 @@ void ClipperOffset::DoSquare(Group& group, const Path64& path, size_t j, size_t 
 
 	// now offset the original vertex delta units along unit vector
 	PointD ptQ = PointD(path[j]);
-	ptQ = TranslatePoint(ptQ, abs_group_delta_ * vec.x, abs_group_delta_ * vec.y);
+	ptQ = TranslatePoint(ptQ, abs_delta * vec.x, abs_delta * vec.y);
 	// get perpendicular vertices
-	PointD pt1 = TranslatePoint(ptQ, group_delta_ * vec.y, group_delta_ * -vec.x);
-	PointD pt2 = TranslatePoint(ptQ, group_delta_ * -vec.y, group_delta_ * vec.x);
+	PointD pt1 = TranslatePoint(ptQ, delta * vec.y, delta * -vec.x);
+	PointD pt2 = TranslatePoint(ptQ, delta * -vec.y, delta * vec.x);
 	// get 2 vertices along one edge offset
-	PointD pt3 = GetPerpendicD(path[k], norms[k], group_delta_);
+	PointD pt3 = GetPerpendicD(path[k], norms[k], delta);
 	if (j == k)
 	{
-		PointD pt4 = PointD(pt3.x + vec.x * group_delta_, pt3.y + vec.y * group_delta_);
+		PointD pt4 = PointD(pt3.x + vec.x * delta, pt3.y + vec.y * delta);
 		PointD pt = IntersectPoint(pt1, pt2, pt3, pt4);
 #ifdef USINGZ
 		pt.z = ptQ.z;
@@ -232,7 +238,7 @@ void ClipperOffset::DoSquare(Group& group, const Path64& path, size_t j, size_t 
 	}
 	else
 	{
-		PointD pt4 = GetPerpendicD(path[j], norms[k], group_delta_);
+		PointD pt4 = GetPerpendicD(path[j], norms[k], delta);
 		PointD pt = IntersectPoint(pt1, pt2, pt3, pt4);
 #ifdef USINGZ
 		pt.z = ptQ.z;
@@ -246,6 +252,9 @@ void ClipperOffset::DoSquare(Group& group, const Path64& path, size_t j, size_t 
 void ClipperOffset::DoMiter(Group& group, const Path64& path, size_t j, size_t k, double cos_a)
 {
 	double q = group_delta_ / (cos_a + 1);
+        if (deltaCallback64_ != nullptr) {
+                q = (double)(deltaCallback64_(path, j));
+        }
 #ifdef USINGZ
 	group.path.push_back(Point64(
 		path[j].x + (norms[k].x + norms[j].x) * q,
@@ -261,7 +270,11 @@ void ClipperOffset::DoMiter(Group& group, const Path64& path, size_t j, size_t k
 void ClipperOffset::DoRound(Group& group, const Path64& path, size_t j, size_t k, double angle)
 {
 	Point64 pt = path[j];
-	PointD offsetVec = PointD(norms[k].x * group_delta_, norms[k].y * group_delta_);
+        auto delta = group_delta_;
+        if (deltaCallback64_ != nullptr) {
+                delta = (double)(deltaCallback64_(path, j));
+        }
+	PointD offsetVec = PointD(norms[k].x * delta, norms[k].y * delta);
 
 	if (j == k) offsetVec.Negate();
 #ifdef USINGZ
@@ -284,7 +297,7 @@ void ClipperOffset::DoRound(Group& group, const Path64& path, size_t j, size_t k
 
 		}
 	}
-	group.path.push_back(GetPerpendic(path[j], norms[j], group_delta_));
+	group.path.push_back(GetPerpendic(path[j], norms[j], delta));
 }
 
 void ClipperOffset::OffsetPoint(Group& group, Path64& path, size_t j, size_t& k)
@@ -295,6 +308,11 @@ void ClipperOffset::OffsetPoint(Group& group, Path64& path, size_t j, size_t& k)
 	// sin(A) < 0: right turning
 	// cos(A) < 0: change in angle is more than 90 degree
 
+        auto delta = group_delta_;
+        if (deltaCallback64_ != nullptr) {
+                delta = double(deltaCallback64_(path, j));
+        }
+
 	if (path[j] == path[k]) { k = j; return; }
 
 	double sin_a = CrossProduct(norms[j], norms[k]);
@@ -302,14 +320,14 @@ void ClipperOffset::OffsetPoint(Group& group, Path64& path, size_t j, size_t& k)
 	if (sin_a > 1.0) sin_a = 1.0;
 	else if (sin_a < -1.0) sin_a = -1.0;
 
-	if (cos_a > -0.99 && (sin_a * group_delta_ < 0))
+	if (cos_a > -0.99 && (sin_a * delta < 0))
 	{
 		// is concave
-		group.path.push_back(GetPerpendic(path[j], norms[k], group_delta_));
+		group.path.push_back(GetPerpendic(path[j], norms[k], delta));
 		// this extra point is the only (simple) way to ensure that
 		// path reversals are fully cleaned with the trailing clipper
 		group.path.push_back(path[j]); // (#405)
-		group.path.push_back(GetPerpendic(path[j], norms[j], group_delta_));
+		group.path.push_back(GetPerpendic(path[j], norms[j], delta));
 	}
 	else if (join_type_ == JoinType::Miter)
 	{
@@ -353,21 +371,25 @@ void ClipperOffset::OffsetOpenJoined(Group& group, Path64& path)
 
 void ClipperOffset::OffsetOpenPath(Group& group, Path64& path)
 {
+        auto delta = group_delta_;
+        if (deltaCallback64_ != nullptr) {
+                delta = double(deltaCallback64_(path, 0));
+        }
 	// do the line start cap
 	switch (end_type_)
 	{
 	case EndType::Butt:
 #ifdef USINGZ
 		group.path.push_back(Point64(
-			path[0].x - norms[0].x * group_delta_,
-			path[0].y - norms[0].y * group_delta_,
+			path[0].x - norms[0].x * delta,
+			path[0].y - norms[0].y * delta,
 			path[0].z));
 #else
 		group.path.push_back(Point64(
-			path[0].x - norms[0].x * group_delta_,
-			path[0].y - norms[0].y * group_delta_));
+			path[0].x - norms[0].x * delta,
+			path[0].y - norms[0].y * delta));
 #endif
-		group.path.push_back(GetPerpendic(path[0], norms[0], group_delta_));
+		group.path.push_back(GetPerpendic(path[0], norms[0], delta));
 		break;
 	case EndType::Round:
 		DoRound(group, path, 0,0, PI);
@@ -378,6 +400,10 @@ void ClipperOffset::OffsetOpenPath(Group& group, Path64& path)
 	}
 
 	size_t highI = path.size() - 1;
+        delta = group_delta_;
+        if (deltaCallback64_ != nullptr) {
+                delta = double(deltaCallback64_(path, highI));
+        }
 
 	// offset the left side going forward
 	for (Path64::size_type i = 1, k = 0; i < highI; ++i)
@@ -394,15 +420,15 @@ void ClipperOffset::OffsetOpenPath(Group& group, Path64& path)
 	case EndType::Butt:
 #ifdef USINGZ
 		group.path.push_back(Point64(
-			path[highI].x - norms[highI].x * group_delta_,
-			path[highI].y - norms[highI].y * group_delta_,
+			path[highI].x - norms[highI].x * delta,
+			path[highI].y - norms[highI].y * delta,
 			path[highI].z));
 #else
 		group.path.push_back(Point64(
-			path[highI].x - norms[highI].x * group_delta_,
-			path[highI].y - norms[highI].y * group_delta_));
+			path[highI].x - norms[highI].x * delta,
+			path[highI].y - norms[highI].y * delta));
 #endif
-		group.path.push_back(GetPerpendic(path[highI], norms[highI], group_delta_));
+		group.path.push_back(GetPerpendic(path[highI], norms[highI], delta));
 		break;
 	case EndType::Round:
 		DoRound(group, path, highI, highI, PI);
@@ -442,7 +468,7 @@ void ClipperOffset::DoGroupOffset(Group& group)
 	abs_group_delta_ = std::fabs(group_delta_);
 
 	// do range checking
-	if (!IsSafeOffset(r, abs_group_delta_))
+	if (deltaCallback64_ == nullptr && !IsSafeOffset(r, abs_group_delta_))
 	{
 		DoError(range_error_i);
 		error_code_ |= range_error_i;
@@ -492,6 +518,9 @@ void ClipperOffset::DoGroupOffset(Group& group)
 			if (group.join_type == JoinType::Round)
 			{
 				double radius = abs_group_delta_;
+                                if (deltaCallback64_ != nullptr) {
+                                        radius = std::abs(deltaCallback64_(path, 0));
+                                }
 				group.path = Ellipse(path[0], radius, radius);
 #ifdef USINGZ
 				for (auto& p : group.path) p.z = path[0].z;
@@ -500,6 +529,9 @@ void ClipperOffset::DoGroupOffset(Group& group)
 			else
 			{
 				int d = (int)std::ceil(abs_group_delta_);
+                                if (deltaCallback64_ != nullptr) {
+                                        d = (int)std::ceil(deltaCallback64_(path, 0));
+                                }
 				r = Rect64(path[0].x - d, path[0].y - d, path[0].x + d, path[0].y + d);
 				group.path = r.AsPath();
 #ifdef USINGZ

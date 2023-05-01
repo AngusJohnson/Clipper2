@@ -63,6 +63,8 @@ private:
 	ZCallback64 zCallback64_ = nullptr;
 #endif
 
+        DeltaCallback64 deltaCallback64_ = nullptr;
+
 	void DoSquare(Group& group, const Path64& path, size_t j, size_t k);
 	void DoMiter(Group& group, const Path64& path, size_t j, size_t k, double cos_a);
 	void DoRound(Group& group, const Path64& path, size_t j, size_t k, double angle);
@@ -108,6 +110,8 @@ public:
 #ifdef USINGZ
 	void SetZCallback(ZCallback64 cb) { zCallback64_ = cb; }
 #endif
+
+        void SetDeltaCallback(DeltaCallback64 cb) { deltaCallback64_ = cb; }
 };
 
 }

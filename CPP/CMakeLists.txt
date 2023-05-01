@@ -137,6 +137,7 @@ if(CLIPPER2_EXAMPLES)
       UnionClipping
       RectClipping
       SimpleClipping
+      VariadicOffset
     )
 
     foreach(ex ${EXAMPLES})
