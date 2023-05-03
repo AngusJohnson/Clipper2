@@ -176,8 +176,7 @@ namespace Clipper2Lib {
 
         //  we want callback that returns group_delta depending on path and point index
         //  and we want to be able to pass in a group_delta value
-        typedef std::function<double(const Path64& path, size_t pt_idx)> DeltaCallback64;
-        typedef std::function<double(const PathD& path, size_t pt_idx)> DeltaCallbackD;
+        typedef std::function<double(const Path64& path, size_t pt_idx, const PathD& norms, size_t norm_idx)> DeltaCallback64;
 
 	typedef std::vector<HorzSegment> HorzSegmentList;
 	typedef std::unique_ptr<LocalMinima> LocalMinima_ptr;

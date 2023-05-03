@@ -21,7 +21,7 @@ void test1() {
   Paths64 subject = { Ellipse(Rect64(-radius, -radius, radius, radius), 200) };
   co.AddPaths(subject, JoinType::Miter, EndType::Polygon);
 
-  co.SetDeltaCallback([radius](const Path64& path, size_t pt_idx) {
+  co.SetDeltaCallback([radius](const Path64& path, size_t pt_idx, const PathD& norms, size_t norm_idx) {
     return double(path[pt_idx].x / radius * path[pt_idx].y / radius) * 1000;
   });
 
@@ -42,7 +42,7 @@ void test2() {
   int64_t const scale = 10;
   double delta = 10 * scale;
 
-  co.SetDeltaCallback([delta](const Path64& path, size_t pt_idx) {
+  co.SetDeltaCallback([delta](const Path64& path, size_t pt_idx, const PathD& norms, size_t norm_idx) {
     // gradually scale down the offset to minimum 25% of delta
     double high = static_cast<double>(path.size() -1) * 1.25;
     return (high - pt_idx)/ high * delta;
@@ -82,7 +82,7 @@ int test3() {
   });
   co.AddPath(pth, Clipper2Lib::JoinType::Miter, Clipper2Lib::EndType::Polygon);
 
-  co.SetDeltaCallback([](const Clipper2Lib::Path64 &path, size_t pt_idx) {
+  co.SetDeltaCallback([](const Path64 &path, size_t pt_idx, const PathD& norms, size_t norm_idx) {
     auto pt = path[pt_idx];
     auto delta = (pt.x ^ 2 + pt.y ^ 2) / 10.0;
     std::cout << "Point: " << pt.x << ", " << pt.y << ", delta:" << delta

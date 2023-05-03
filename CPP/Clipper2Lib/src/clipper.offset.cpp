@@ -265,7 +265,7 @@ void ClipperOffset::DoRound(Group& group, const Path64& path, size_t j, size_t k
   if (deltaCallback64_) {
     // unfortunately, because group_delta_ isn't constant, we'll need
     // to do the following calculations for *every* vertex.
-    if (deltaCallback64_) group_delta_ = deltaCallback64_(path, j);
+    group_delta_ = deltaCallback64_(path, j, norms, k);
     double abs_delta = std::fabs(group_delta_);
     double arcTol = (arc_tolerance_ > floating_point_tolerance ?
                                                                std::min(abs_delta, arc_tolerance_) :
@@ -319,7 +319,7 @@ void ClipperOffset::OffsetPoint(Group& group, Path64& path, size_t j, size_t& k)
   if (sin_a > 1.0) sin_a = 1.0;
   else if (sin_a < -1.0) sin_a = -1.0;
 
-  if (deltaCallback64_) group_delta_ = deltaCallback64_(path, j);
+  if (deltaCallback64_) group_delta_ = deltaCallback64_(path, j, norms, k);
   if (std::fabs(group_delta_) <= floating_point_tolerance)
   {
     group.path.push_back(path[j]);
@@ -329,10 +329,14 @@ void ClipperOffset::OffsetPoint(Group& group, Path64& path, size_t j, size_t& k)
   if (cos_a > -0.99 && (sin_a * group_delta_ < 0))
   {
     // is concave
+
+    // compute group delta for each norm separately
+    if (deltaCallback64_) group_delta_ = deltaCallback64_(path, j, norms, k);
     group.path.push_back(GetPerpendic(path[j], norms[k], group_delta_));
     // this extra point is the only (simple) way to ensure that
     // path reversals are fully cleaned with the trailing clipper
     group.path.push_back(path[j]); // (#405)
+    if (deltaCallback64_) group_delta_ = deltaCallback64_(path, j, norms, j);
     group.path.push_back(GetPerpendic(path[j], norms[j], group_delta_));
   }
   else if (join_type_ == JoinType::Miter)
@@ -378,7 +382,7 @@ void ClipperOffset::OffsetOpenJoined(Group& group, Path64& path)
 void ClipperOffset::OffsetOpenPath(Group& group, Path64& path)
 {
   // do the line start cap
-  if (deltaCallback64_) group_delta_ = deltaCallback64_(path, 0);
+  if (deltaCallback64_) group_delta_ = deltaCallback64_(path, 0, norms, 0);
 
   if (std::fabs(group_delta_) <= floating_point_tolerance)
     group.path.push_back(path[0]);
@@ -420,7 +424,7 @@ void ClipperOffset::OffsetOpenPath(Group& group, Path64& path)
 
   // do the line end cap
   if (deltaCallback64_)
-    group_delta_ = deltaCallback64_(path, highI);
+    group_delta_ = deltaCallback64_(path, highI, norms, highI);
 
   if (std::fabs(group_delta_) <= floating_point_tolerance)
     group.path.push_back(path[highI]);
