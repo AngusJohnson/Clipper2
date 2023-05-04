@@ -265,7 +265,6 @@ void ClipperOffset::DoRound(Group& group, const Path64& path, size_t j, size_t k
 	if (deltaCallback64_) {
 		// unfortunately, because group_delta_ isn't constant, we'll need 
 		// to do the following calculations for *every* vertex.
-            if (deltaCallback64_) group_delta_ = deltaCallback64_(path, j, norms, k);
 		double abs_delta = std::fabs(group_delta_);
 		double arcTol = (arc_tolerance_ > floating_point_tolerance ?
 			std::min(abs_delta, arc_tolerance_) :
