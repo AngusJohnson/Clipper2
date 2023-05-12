@@ -16,10 +16,211 @@ const int display_width = 800, display_height = 600, max_paths = 10;
 void DoRandomTest();
 void System(const std::string &filename);
 
+//typedef Path64 __Polygon
+//typedef Paths64 _Polygons
+//[
+typedef std::string String;
+typedef std::vector<String> StringVector;
+StringVector readFile(const String& fileName)
+{
+    std::ifstream file(fileName);
+
+    StringVector lines;
+    if (!file)
+    {
+        return lines;
+    }
+
+    String line;
+    while (std::getline(file, line))
+    {
+        lines.push_back(line);
+    }
+    return lines;
+}
+void writeFile(const String& fileName, const StringVector& lines)
+{
+    std::ofstream file(fileName);
+    for (const String& line : lines)
+    {
+        file << line << std::endl;
+    }
+}
+//从文件中读取多边形
+Paths64 readPolygon(const String& fileName)
+{
+    Clipper2Lib::Paths64 result(1);
+    Path64& result_path = result[0];
+
+    StringVector inputSub = readFile(fileName);
+
+    size_t length = inputSub.size();
+    //result_path.resize(length);
+    for (size_t i = 0; i < length; i++)
+    {
+        String strPoint = inputSub[i];
+        int iComma = strPoint.find(",");
+        String strX = strPoint.substr(0, iComma);
+        String strY = strPoint.substr(iComma + 1, strPoint.size() - iComma);
+
+        double dx = std::stod(strX);
+        double dy = std::stod(strY);
+        result_path.emplace_back(dx, dy);
+    }
+
+    return result;
+}
+void readDPolygon(const String& fileName, PathD& result)
+{
+    StringVector inputSub = readFile(fileName);
+
+    size_t length = inputSub.size();
+    //result_path.resize(length);
+    for (size_t i = 0; i < length; i++)
+    {
+        String strPoint = inputSub[i];
+        int iComma = strPoint.find(",");
+        String strX = strPoint.substr(0, iComma);
+        String strY = strPoint.substr(iComma + 1, strPoint.size() - iComma);
+
+        double dx = std::stod(strX);
+        double dy = std::stod(strY);
+        result.emplace_back(dx, dy);
+    }
+}
+
+void writePolygon(const String& fileName, PathsD& inPut)
+{
+    
+    for (auto polygon:inPut )
+    {
+        StringVector strPointVec;
+        int iSize = polygon.size();
+        if (iSize < 1)
+        {
+            continue;
+        }
+        
+        //strPointVec.resize(iSize);
+        strPointVec.reserve(iSize);
+        for (size_t i = 0; i < iSize; i++)
+        { 
+            auto pt = polygon[i];
+            String strLine = std::to_string(pt.x) + "," + std::to_string(pt.y);
+            //strPointVec.push_back(strLine);
+            strPointVec.emplace_back(strLine);
+        }
+        writeFile(fileName, strPointVec);
+    }
+}
+void writePolygon(const String& fileName, Paths64& inPut)
+{
+
+    for (auto polygon : inPut)
+    {
+        StringVector strPointVec;
+        int iSize = polygon.size();
+        if (iSize < 1)
+        {
+            continue;
+        }
+
+        //strPointVec.resize(iSize);
+        strPointVec.reserve(iSize);
+        for (size_t i = 0; i < iSize; i++)
+        {
+            auto pt = polygon[i];
+            String strLine = std::to_string(pt.x) + "," + std::to_string(pt.y);
+            //strPointVec.push_back(strLine);
+            strPointVec.emplace_back(strLine);
+        }
+        writeFile(fileName, strPointVec);
+    }
+}
+
+void DoDIntersectTest()
+{
+    ClipType cliptype = ClipType::Intersection;
+    FillRule fillrule = FillRule::EvenOdd;
+
+    PathsD subj, subj_open, clip, sol, sol_open;
+    //subj.push_back()
+    //[
+    PathsD subPolygon;
+    PathsD clipPolygon;
+    PathD polygon;
+    readDPolygon("D:/Work/Demo/input/Clipper2/SubPloygon.txt", polygon);
+    subPolygon.push_back(polygon);
+
+    polygon.clear();
+
+    readDPolygon("D:/Work/Demo/input/Clipper2/ClipPolygon.txt",polygon);
+    clipPolygon.push_back(polygon);
+
+    polygon.clear();
+    readDPolygon("D:/Work/Demo/input/Clipper2/ClipHoles.txt", polygon);
+    clipPolygon.push_back(polygon);
+
+    polygon.clear();
+    //]    
+
+    PolyTreeD clipTree;
+    //clipTree.AddChild(clipPolygon);
+
+    
+
+    ClipperD clipD;
+    clipD.AddSubject(subPolygon);
+    //c64.AddOpenSubject(subPolygon);
+    clipD.AddClip(clipPolygon);
+    //clipD.AddClip(clipPolygonHoles);
+
+    if (!clipD.Execute(cliptype, fillrule, sol, sol_open))
+    {
+        return;
+    }
+    writePolygon("D:/Work/Demo/output/result.txt", sol);
+}
+
+void DoIntersectTest()
+{
+    ClipType cliptype = ClipType::Intersection;
+    FillRule fillrule = FillRule::EvenOdd;
+
+    Paths64 subj, subj_open, clip, sol_open;
+    //subj.push_back()
+    //[
+    Paths64 subPolygon = readPolygon("D:/Work/Demo/input/BoostPolygon1.txt");
+    Paths64 clipPolygon = readPolygon("D:/Work/Demo/input/BoostPolygon2.txt");
+    //]    
+
+    Paths64 sol = Clipper2Lib::Intersect(subPolygon, clipPolygon, fillrule);
+    writePolygon("D:/Work/Demo/output/result.txt", sol);
+
+#if 0
+    Clipper64 clip64;
+    clip64.AddSubject(subPolygon);
+    //c64.AddOpenSubject(subPolygon);
+    clip64.AddClip(clipPolygon);
+
+    if (!clip64.Execute(cliptype, fillrule, sol, sol_open))
+    {
+        return;
+    }
+    writePolygon("D:/Work/Demo/output/result.txt", sol);
+#endif // 0
+
+
+}
 int main()
 {  
-  srand((unsigned)time(0));
-  DoRandomTest();
+  //srand((unsigned)time(0));
+  //DoRandomTest();
+
+  
+  DoDIntersectTest();
+
+
   return 0;
 }
 
