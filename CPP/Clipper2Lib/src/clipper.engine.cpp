@@ -419,6 +419,11 @@ namespace Clipper2Lib {
     return outrec;
   }
 
+  inline bool GetRealSplit(OutRec* split, OutRec* outrec)
+  {
+    while (split && split != outrec && !split->pts) split = split->owner;
+    return split != outrec;
+  }
 
   inline void UncoupleOutRec(Active ae)
   {
@@ -2831,10 +2836,9 @@ namespace Clipper2Lib {
 
   bool ClipperBase::CheckSplitOwner(OutRec* outrec, OutRecList* splits)
   {
-    for (auto s : *splits)
+    for (auto split : *splits)
     {
-      OutRec* split = GetRealOutRec(s);
-      if (!split || split == outrec || split == outrec->owner) continue;
+      if (!GetRealSplit(split, outrec) || !split) continue;
       else if (split->splits && CheckSplitOwner(outrec, split->splits)) return true;
       else if (CheckBounds(split) && split->bounds.Contains(outrec->bounds) &&
         Path1InsidePath2(outrec->pts, split->pts))
