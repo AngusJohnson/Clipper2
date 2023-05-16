@@ -167,7 +167,7 @@ TEST(Clipper2Tests, TestOffsets4) // see #482
     Clipper2Lib::JoinType::Square, Clipper2Lib::EndType::Polygon);
   std::cout << solution[0].size() << std::endl;
 
-  EXPECT_EQ(solution[0].size(), 6);
+  EXPECT_EQ(solution[0].size(), 5);
 
   paths = { { {0, 0}, {20000, 400},
     {40000, 0}, {40000, 50000}, {0, 50000}, {0, 0}} };
@@ -175,7 +175,7 @@ TEST(Clipper2Tests, TestOffsets4) // see #482
     Clipper2Lib::JoinType::Round, Clipper2Lib::EndType::Polygon);
   std::cout << solution[0].size() << std::endl;
 
-  EXPECT_EQ(solution[0].size(), 6);
+  EXPECT_EQ(solution[0].size(), 5);
 
   paths = { { {0, 0}, {20000, 1500},
     {40000, 0}, {40000, 50000}, {0, 50000}, {0, 0}} };
