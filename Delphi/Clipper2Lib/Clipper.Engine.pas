@@ -2,7 +2,7 @@ unit Clipper.Engine;
 
 (*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  15 May 2023                                                     *
+* Date      :  16 May 2023                                                     *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2023                                         *
 * Purpose   :  This is the main polygon clipping module                        *
@@ -637,6 +637,16 @@ begin
   Result := outRec;
   while Assigned(Result) and not Assigned(Result.pts) do
     Result := Result.owner;
+end;
+//------------------------------------------------------------------------------
+
+function GetRealSplit(var split: POutRec; outRec: POutRec): Boolean;
+ {$IFDEF INLINING} inline; {$ENDIF}
+begin
+  while Assigned(split) and not Assigned(split.pts) and
+    (split <> outrec) and (split <> outrec.owner) do
+      split := split.owner;
+  Result := Assigned(split) and (split <> outrec) and (split <> outrec.owner);
 end;
 //------------------------------------------------------------------------------
 
@@ -3705,10 +3715,8 @@ begin
   Result := false;
   for i := 0 to High(splits) do
   begin
-    split := GetRealOutRec(splits[i]);
-    if not Assigned(split) or
-      (split = outrec) or (split = outrec.owner)  then
-        Continue
+    split := splits[i];
+    if not GetRealSplit(split, outrec) then Continue
     else if Assigned(split.splits) and
       CheckSplitOwner(outrec, split.splits) then
     begin
