@@ -640,16 +640,6 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-function GetRealSplit(var split: POutRec; outRec: POutRec): Boolean;
- {$IFDEF INLINING} inline; {$ENDIF}
-begin
-  while Assigned(split) and not Assigned(split.pts) and
-    (split <> outrec) and (split <> outrec.owner) do
-      split := split.owner;
-  Result := Assigned(split) and (split <> outrec) and (split <> outrec.owner);
-end;
-//------------------------------------------------------------------------------
-
 function PtsReallyClose(const pt1, pt2: TPoint64): Boolean;
   {$IFDEF INLINING} inline; {$ENDIF}
 begin
@@ -3716,7 +3706,7 @@ begin
   for i := 0 to High(splits) do
   begin
     split := splits[i];
-    if not GetRealSplit(split, outrec) then Continue
+    if (split = outrec) or (split = outrec.owner) then Continue
     else if Assigned(split.splits) and
       CheckSplitOwner(outrec, split.splits) then
     begin

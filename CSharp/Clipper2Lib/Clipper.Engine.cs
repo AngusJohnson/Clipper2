@@ -724,14 +724,6 @@ namespace Clipper2Lib
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static bool GetRealSplit(ref OutRec? split, OutRec outrec)
-    {
-      while (split != null && split.pts != null && split != outrec && split != outrec.owner)
-        split = split.owner;
-      return split != null && split != outrec && split != outrec.owner;
-    }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static void UncoupleOutRec(Active ae)
     {
       OutRec? outrec = ae.outrec;
@@ -3023,7 +3015,7 @@ private void DoHorizontal(Active horz)
       foreach (int i in outrec.owner!.splits!)
       {
         OutRec? split = _outrecList[i];
-        if (!GetRealSplit(ref split, outrec)) continue;
+        if (split == outrec || split == outrec.owner) continue;
         else if (split!.splits != null && CheckSplitOwner(outrec, split.splits)) return true;
         else if (CheckBounds(split) && split.bounds.Contains(outrec.bounds) &&
             Path1InsidePath2(outrec.pts!, split.pts!))
