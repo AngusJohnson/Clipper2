@@ -2,7 +2,7 @@ unit Clipper.Engine;
 
 (*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  1 May 2023                                                      *
+* Date      :  15 May 2023                                                     *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2023                                         *
 * Purpose   :  This is the main polygon clipping module                        *
@@ -269,7 +269,7 @@ type
     procedure DoSplitOp(outrec: POutRec; splitOp: POutPt);
     procedure FixSelfIntersects(outrec: POutRec);
     function  CheckBounds(outrec: POutRec): Boolean;
-    function  CheckSplitOwner(outrec: POutRec): Boolean;
+    function  CheckSplitOwner(outrec: POutRec; const splits: TOutRecArray): Boolean;
     procedure RecursiveCheckOwners(outrec: POutRec; polytree: TPolyPathBase);
   protected
     FUsingPolytree : Boolean;
@@ -3022,7 +3022,10 @@ begin
       if FUsingPolytree then
       begin
         if Path1InsidePath2(or2.pts, or1.pts) then
-          SetOwner(or2, or1)
+        begin
+          SetOwner(or2, or1);
+          AddSplit(or1, or2); //(#520)
+        end
         else if Path1InsidePath2(or1.pts, or2.pts) then
           SetOwner(or1, or2)
         else
@@ -3694,16 +3697,25 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-function TClipperBase.CheckSplitOwner(outrec: POutRec): Boolean;
+function TClipperBase.CheckSplitOwner(outrec: POutRec; const splits: TOutRecArray): Boolean;
 var
   i     : integer;
   split : POutrec;
 begin
-  for i := 0 to High(outrec.owner.splits) do
+  Result := false;
+  for i := 0 to High(splits) do
   begin
-    split := GetRealOutRec(outrec.owner.splits[i]);
-    if Assigned(split) and (split <> outrec) and
-      (split <> outrec.owner) and CheckBounds(split) and
+    split := GetRealOutRec(splits[i]);
+    if not Assigned(split) or
+      (split = outrec) or (split = outrec.owner)  then
+        Continue
+    else if Assigned(split.splits) and
+      CheckSplitOwner(outrec, split.splits) then
+    begin
+      Result := True;
+      Exit;
+    end
+    else if CheckBounds(split) and
       (split.bounds.Contains(outrec.bounds) and
         Path1InsidePath2(outrec.pts, split.pts)) then
     begin
@@ -3712,7 +3724,6 @@ begin
       Exit;
     end;
   end;
-  Result := false;
 end;
 //------------------------------------------------------------------------------
 
@@ -3728,7 +3739,7 @@ begin
   while Assigned(outrec.owner) do
   begin
     if Assigned(outrec.owner.splits) and
-      CheckSplitOwner(outrec) then Break;
+      CheckSplitOwner(outrec, outrec.owner.splits) then Break;
     if Assigned(outrec.owner.pts) and
       CheckBounds(outrec.owner) and
       (outrec.owner.bounds.Contains(outrec.bounds) and

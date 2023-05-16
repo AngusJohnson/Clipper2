@@ -137,6 +137,7 @@ if(CLIPPER2_EXAMPLES)
       UnionClipping
       RectClipping
       SimpleClipping
+      VariableOffset
     )
 
     foreach(ex ${EXAMPLES})
@@ -190,6 +191,7 @@ endif()
     Tests/TestPolytreeHoles1.cpp
     Tests/TestPolytreeHoles2.cpp
     Tests/TestPolytreeHoles3.cpp
+    Tests/TestPolytreeHoles4.cpp
     Tests/TestPolytreeIntersection.cpp
     Tests/TestPolytreeUnion.cpp
     Tests/TestRandomPaths.cpp

@@ -1,6 +1,6 @@
 ﻿/*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  8 April 2023                                                    *
+* Date      :  16 May 2023                                                     *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2023                                         *
 * Purpose   :  Path Offset (Inflate/Shrink)                                    *
@@ -52,12 +52,12 @@ namespace Clipper2Lib
       }
     }
 
+    private static double Tolerance = 1.0E-12;
     private readonly List<Group> _groupList = new List<Group>();
     private readonly PathD _normals = new PathD();
     private readonly Paths64 _solution = new Paths64();
-    private double _group_delta; //*0.5 for open paths; *-1.0 for negative areas
+    private double _groupDelta; //*0.5 for open paths; *-1.0 for negative areas
     private double _delta;
-    private double _abs_group_delta;
     private double _mitLimSqr;
     private double _stepsPerRad;
     private double _stepSin;
@@ -69,6 +69,11 @@ namespace Clipper2Lib
     public double MiterLimit { get; set; }
     public bool PreserveCollinear { get; set; }
     public bool ReverseSolution { get; set; }
+
+    public delegate double DeltaCallback64(Path64 path,
+      PathD path_norms, int currPt, int prevPt);
+    public ClipperOffset.DeltaCallback64? DeltaCallback { get; set; }
+
 #if USINGZ
     public ClipperBase.ZCallback64? ZCallback { get; set; }
 #endif
@@ -189,6 +194,11 @@ namespace Clipper2Lib
       return new PointD(dy, -dx);
     }
 
+    public void Execute(DeltaCallback64 deltaCallback, Paths64 solution)
+    {
+      DeltaCallback = deltaCallback;
+      Execute(1.0, solution);
+    }
     private static void GetBoundsAndLowestPolyIdx(Paths64 paths,
       out int index, out Rect64 rec)
     {
@@ -297,8 +307,8 @@ namespace Clipper2Lib
       return new Point64(pt.X + norm.x * _group_delta,
         pt.Y + norm.y * _group_delta, pt.Z);
 #else
-      return new Point64(pt.X + norm.x * _group_delta,
-        pt.Y + norm.y * _group_delta);
+      return new Point64(pt.X + norm.x * _groupDelta,
+        pt.Y + norm.y * _groupDelta);
 #endif
     }
 
@@ -309,8 +319,8 @@ namespace Clipper2Lib
       return new PointD(pt.X + norm.x * _group_delta,
         pt.Y + norm.y * _group_delta, pt.Z);
 #else
-      return new PointD(pt.X + norm.x * _group_delta,
-        pt.Y + norm.y * _group_delta);
+      return new PointD(pt.X + norm.x * _groupDelta,
+        pt.Y + norm.y * _groupDelta);
 #endif
     }
 
@@ -328,22 +338,23 @@ namespace Clipper2Lib
           new PointD(-_normals[k].y, _normals[k].x),
           new PointD(_normals[j].y, -_normals[j].x));
       }
-      
+
+      double absDelta = Math.Abs(_groupDelta);
       // now offset the original vertex delta units along unit vector
       PointD ptQ = new PointD(path[j]);
-      ptQ = TranslatePoint(ptQ, _abs_group_delta * vec.x, _abs_group_delta * vec.y);
+      ptQ = TranslatePoint(ptQ, absDelta * vec.x, absDelta * vec.y);
 
       // get perpendicular vertices
-      PointD pt1 = TranslatePoint(ptQ, _group_delta * vec.y, _group_delta * -vec.x);
-      PointD pt2 = TranslatePoint(ptQ, _group_delta * -vec.y, _group_delta * vec.x);
+      PointD pt1 = TranslatePoint(ptQ, _groupDelta * vec.y, _groupDelta * -vec.x);
+      PointD pt2 = TranslatePoint(ptQ, _groupDelta * -vec.y, _groupDelta * vec.x);
       // get 2 vertices along one edge offset
       PointD pt3 = GetPerpendicD(path[k], _normals[k]);
 
       if (j == k)
       {
         PointD pt4 = new PointD(
-          pt3.x + vec.x * _group_delta,
-          pt3.y + vec.y * _group_delta);
+          pt3.x + vec.x * _groupDelta,
+          pt3.y + vec.y * _groupDelta);
         PointD pt = IntersectPoint(pt1, pt2, pt3, pt4);
 #if USINGZ
         pt.z = ptQ.z;
@@ -368,7 +379,7 @@ namespace Clipper2Lib
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private void DoMiter(Group group, Path64 path, int j, int k, double cosA)
     {
-      double q = _group_delta / (cosA + 1);
+      double q = _groupDelta / (cosA + 1);
 #if USINGZ
       group.outPath.Add(new Point64(
           path[j].X + (_normals[k].x + _normals[j].x) * q,
@@ -384,8 +395,23 @@ namespace Clipper2Lib
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private void DoRound(Group group, Path64 path, int j, int k, double angle)
     {
+      if (DeltaCallback != null)
+      {
+        // when DeltaCallback is assigned, _groupDelta won't be constant,
+        // so we'll need to do the following calculations for *every* vertex.
+        double absDelta = Math.Abs(_groupDelta);
+        double arcTol = ArcTolerance > 0.01 ?
+          ArcTolerance :
+          Math.Log10(2 + absDelta) * InternalClipper.defaultArcTolerance;
+        double stepsPer360 = Math.PI / Math.Acos(1 - arcTol / absDelta);
+        _stepSin = Math.Sin((2 * Math.PI) / stepsPer360);
+        _stepCos = Math.Cos((2 * Math.PI) / stepsPer360);
+        if (_groupDelta < 0.0) _stepSin = -_stepSin;
+        _stepsPerRad = stepsPer360 / (2 * Math.PI);
+      }
+
       Point64 pt = path[j];
-      PointD offsetVec = new PointD(_normals[k].x * _group_delta, _normals[k].y * _group_delta);
+      PointD offsetVec = new PointD(_normals[k].x * _groupDelta, _normals[k].y * _groupDelta);
       if (j == k) offsetVec.Negate();
 #if USINGZ
       group.outPath.Add(new Point64(pt.X + offsetVec.x, pt.Y + offsetVec.y, pt.Z));
@@ -433,8 +459,17 @@ namespace Clipper2Lib
       if (sinA > 1.0) sinA = 1.0;
       else if (sinA < -1.0) sinA = -1.0;
 
+      if (DeltaCallback != null)
+        _groupDelta = DeltaCallback(path, _normals, j, k);
+      if (Math.Abs(_groupDelta) < Tolerance)
+      {
+        group.outPath.Add(path[j]);
+        return;
+      }
 
-      if (cosA > -0.99 && (sinA * _group_delta < 0)) 
+      if (cosA > 0.99)
+        DoMiter(group, path, j, k, cosA);
+      else if (cosA > -0.99 && (sinA * _groupDelta < 0)) 
       {
         // is concave
         group.outPath.Add(GetPerpendic(path[j], _normals[k]));
@@ -449,14 +484,11 @@ namespace Clipper2Lib
         if (cosA > _mitLimSqr - 1) DoMiter(group, path, j, k, cosA);
         else DoSquare(group, path, j, k);
       }
-      else if (cosA > 0.9998)
-        // almost straight - less than 1 degree (#424) 
-        DoMiter(group, path, j, k, cosA);
-      else if (cosA > 0.99 || _joinType == JoinType.Square)
+      else if (_joinType == JoinType.Square)
         //angle less than 8 degrees or a squared join
         DoSquare(group, path, j, k);
       else
-          DoRound(group, path, j, k, Math.Atan2(sinA, cosA));
+        DoRound(group, path, j, k, Math.Atan2(sinA, cosA));
         
       k = j;
     }
@@ -485,29 +517,35 @@ namespace Clipper2Lib
       group.outPath = new Path64();
       int highI = path.Count - 1;
 
+      if (DeltaCallback != null) 
+        _groupDelta = DeltaCallback(path, _normals, 0, 0);
+
       // do the line start cap
-      switch (_endType)
-      {
-        case EndType.Butt:
+      if (Math.Abs(_groupDelta) < Tolerance)
+        group.outPath.Add(path[0]);
+      else
+        switch (_endType)
+        {
+          case EndType.Butt:
 #if USINGZ
-          group.outPath.Add(new Point64(
-              path[0].X - _normals[0].x * _group_delta,
-              path[0].Y - _normals[0].y * _group_delta,
-              path[0].Z));
+            group.outPath.Add(new Point64(
+                path[0].X - _normals[0].x * _group_delta,
+                path[0].Y - _normals[0].y * _group_delta,
+                path[0].Z));
 #else
-          group.outPath.Add(new Point64(
-              path[0].X - _normals[0].x * _group_delta,
-              path[0].Y - _normals[0].y * _group_delta));
+            group.outPath.Add(new Point64(
+                path[0].X - _normals[0].x * _groupDelta,
+                path[0].Y - _normals[0].y * _groupDelta));
 #endif
-          group.outPath.Add(GetPerpendic(path[0], _normals[0]));
-          break;
-        case EndType.Round:
-          DoRound(group, path, 0, 0, Math.PI);
-          break;
-        default:
-          DoSquare(group, path, 0, 0);
-          break;
-      }
+            group.outPath.Add(GetPerpendic(path[0], _normals[0]));
+            break;
+          case EndType.Round:
+            DoRound(group, path, 0, 0, Math.PI);
+            break;
+          default:
+            DoSquare(group, path, 0, 0);
+            break;
+        }
 
       // offset the left side going forward
       for (int i = 1, k = 0; i < highI; i++)
@@ -518,29 +556,34 @@ namespace Clipper2Lib
         _normals[i] = new PointD(-_normals[i - 1].x, -_normals[i - 1].y);
       _normals[0] = _normals[highI];
 
+      if (DeltaCallback != null)
+        _groupDelta = DeltaCallback(path, _normals, highI, highI);
       // do the line end cap
-      switch (_endType)
-      {
-        case EndType.Butt:
+      if (Math.Abs(_groupDelta) < Tolerance)
+        group.outPath.Add(path[highI]);
+      else
+        switch (_endType)
+        {
+          case EndType.Butt:
 #if USINGZ
-          group.outPath.Add(new Point64(
-              path[highI].X - _normals[highI].x * _group_delta,
-              path[highI].Y - _normals[highI].y * _group_delta,
-              path[highI].Z));
+            group.outPath.Add(new Point64(
+                path[highI].X - _normals[highI].x * _group_delta,
+                path[highI].Y - _normals[highI].y * _group_delta,
+                path[highI].Z));
 #else
-          group.outPath.Add(new Point64(
-              path[highI].X - _normals[highI].x * _group_delta,
-              path[highI].Y - _normals[highI].y * _group_delta));
+            group.outPath.Add(new Point64(
+                path[highI].X - _normals[highI].x * _groupDelta,
+                path[highI].Y - _normals[highI].y * _groupDelta));
 #endif
-          group.outPath.Add(GetPerpendic(path[highI], _normals[highI]));
-          break;
-        case EndType.Round:
-          DoRound(group, path, highI, highI, Math.PI);
-          break;
-        default:
-          DoSquare(group, path, highI, highI);
-          break;
-      }
+            group.outPath.Add(GetPerpendic(path[highI], _normals[highI]));
+            break;
+          case EndType.Round:
+            DoRound(group, path, highI, highI, Math.PI);
+            break;
+          default:
+            DoSquare(group, path, highI, highI);
+            break;
+        }
 
       // offset the left side going back
       for (int i = highI, k = 0; i > 0; i--)
@@ -561,32 +604,33 @@ namespace Clipper2Lib
         double area = Clipper.Area(group.inPaths[lowestIdx]);
         //if (area == 0) return; // this is probably unhelpful (#430)
         group.pathsReversed = (area < 0);
-        if (group.pathsReversed) _group_delta = -_delta;
-        else _group_delta = _delta;
+        if (group.pathsReversed) _groupDelta = -_delta;
+        else _groupDelta = _delta;
       }
       else
       {
         group.pathsReversed = false;
-        _group_delta = Math.Abs(_delta) * 0.5;
+        _groupDelta = Math.Abs(_delta) * 0.5;
       }
-      _abs_group_delta = Math.Abs(_group_delta);
+      double absDelta = Math.Abs(_groupDelta);
       _joinType = group.joinType;
       _endType = group.endType;
 
-      // calculate a sensible number of steps (for 360 deg for the given offset
-      if (group.joinType == JoinType.Round || group.endType == EndType.Round)
+      if (DeltaCallback == null && 
+        (group.joinType == JoinType.Round || group.endType == EndType.Round))
       {
+        // calculate a sensible number of steps (for 360 deg for the given offset
         // arcTol - when fArcTolerance is undefined (0), the amount of
         // curve imprecision that's allowed is based on the size of the
         // offset (delta). Obviously very large offsets will almost always
         // require much less precision. See also offset_triginometry2.svg
         double arcTol = ArcTolerance > 0.01 ?
           ArcTolerance :              
-          Math.Log10(2 + _abs_group_delta) * InternalClipper.defaultArcTolerance; 
-        double stepsPer360 = Math.PI / Math.Acos(1 - arcTol / _abs_group_delta);
+          Math.Log10(2 + absDelta) * InternalClipper.defaultArcTolerance; 
+        double stepsPer360 = Math.PI / Math.Acos(1 - arcTol / absDelta);
         _stepSin = Math.Sin((2 * Math.PI) / stepsPer360);
         _stepCos = Math.Cos((2 * Math.PI) / stepsPer360);
-        if (_group_delta < 0.0) _stepSin = -_stepSin;
+        if (_groupDelta < 0.0) _stepSin = -_stepSin;
         _stepsPerRad = stepsPer360 / (2 * Math.PI);
       }
 
@@ -607,7 +651,7 @@ namespace Clipper2Lib
           // single vertex so build a circle or square ...
           if (group.endType == EndType.Round)
           {
-            double r = _abs_group_delta;
+            double r = absDelta;
             group.outPath = Clipper.Ellipse(path[0], r, r);
 #if USINGZ
             group.outPath = InternalClipper.SetZ(group.outPath, path[0].Z);
@@ -615,7 +659,7 @@ namespace Clipper2Lib
           }
           else
           {
-            int d = (int) Math.Ceiling(_group_delta);
+            int d = (int) Math.Ceiling(_groupDelta);
             Rect64 r = new Rect64(path[0].X - d, path[0].Y - d,
               path[0].X - d, path[0].Y - d);
             group.outPath = r.AsPath();

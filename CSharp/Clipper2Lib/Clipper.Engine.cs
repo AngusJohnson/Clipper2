@@ -1,6 +1,6 @@
 ﻿/*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  1 May 2023                                                      *
+* Date      :  14 May 2023                                                     *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2023                                         *
 * Purpose   :  This is the main polygon clipping module                        *
@@ -2701,10 +2701,9 @@ private void DoHorizontal(Active horz)
 
         if (or1 == or2)
         {
-          or2 = new OutRec
-          {
-            pts = op1b
-          };
+          or2 = NewOutRec();
+          or2.pts = op1b;
+
           FixOutRecPts(or2);
           if (or1.pts!.outrec == or2)
           {
@@ -2715,7 +2714,11 @@ private void DoHorizontal(Active horz)
           if (_using_polytree)
           {
             if (Path1InsidePath2(or2.pts, or1.pts))
+            {
               SetOwner(or2, or1);
+              or1.splits ??= new List<int>();
+              or1.splits.Add(or2.idx); // (#520)
+            }
             else if (Path1InsidePath2(or1.pts, or2.pts))
               SetOwner(or1, or2);
             else
@@ -2727,8 +2730,6 @@ private void DoHorizontal(Active horz)
           }
           else
             or2.owner = or1;
-
-          _outrecList.Add(or2);
         }
         else
         {
@@ -3009,14 +3010,14 @@ private void DoHorizontal(Active horz)
       return true;
     }
 
-    private bool CheckSplitOwner(OutRec outrec)
+    private bool CheckSplitOwner(OutRec outrec, List<int>? splits)
     {
       foreach (int i in outrec.owner!.splits!)
       {
         OutRec? split = GetRealOutRec(_outrecList[i]);
-        if (split != null && split != outrec &&
-          split != outrec.owner && CheckBounds(split) &&
-          split.bounds.Contains(outrec.bounds) &&
+        if (split == null || split == outrec || split == outrec.owner) continue;
+        else if (split.splits != null && CheckSplitOwner(outrec, split.splits)) return true;
+        else if (CheckBounds(split) && split.bounds.Contains(outrec.bounds) &&
             Path1InsidePath2(outrec.pts!, split.pts!))
         {
           outrec.owner = split; //found in split
@@ -3034,8 +3035,9 @@ private void DoHorizontal(Active horz)
 
       while (outrec.owner != null)
       {
-        if (outrec.owner.splits != null && CheckSplitOwner(outrec)) break; 
-        if (outrec.owner.pts != null && CheckBounds(outrec.owner) &&
+        if (outrec.owner.splits != null && 
+          CheckSplitOwner(outrec, outrec.owner.splits)) break; 
+        else if (outrec.owner.pts != null && CheckBounds(outrec.owner) &&
           Path1InsidePath2(outrec.pts!, outrec.owner.pts!)) break;
         outrec.owner = outrec.owner.owner;
       }

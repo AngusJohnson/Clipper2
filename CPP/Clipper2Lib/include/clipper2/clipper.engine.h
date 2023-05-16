@@ -1,6 +1,6 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  1 May 2023                                                      *
+* Date      :  15 May 2023                                                     *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2023                                         *
 * Purpose   :  This is the main polygon clipping module                        *
@@ -270,7 +270,7 @@ namespace Clipper2Lib {
 		bool ExecuteInternal(ClipType ct, FillRule ft, bool use_polytrees);
 		void CleanCollinear(OutRec* outrec);
 		bool CheckBounds(OutRec* outrec);
-		bool CheckSplitOwner(OutRec* outrec);
+		bool CheckSplitOwner(OutRec* outrec, OutRecList* splits);
 		void RecursiveCheckOwners(OutRec* outrec, PolyPath* polypath);
 #ifdef USINGZ
 		ZCallback64 zCallback_ = nullptr;
@@ -347,7 +347,7 @@ namespace Clipper2Lib {
 
 		const PolyPath64* operator [] (size_t index) const
 		{ 
-			return childs_[index].get(); 
+			return childs_[index].get(); //std::unique_ptr
 		} 
 
 		const PolyPath64* Child(size_t index) const
@@ -390,12 +390,12 @@ namespace Clipper2Lib {
 	class PolyPathD : public PolyPath {
 	private:
 		PolyPathDList childs_;
-		double inv_scale_;
+		double scale_;
 		PathD polygon_;
 	public:
 		explicit PolyPathD(PolyPathD* parent = nullptr) : PolyPath(parent)
 		{
-			inv_scale_ = parent ? parent->inv_scale_ : 1.0;
+			scale_ = parent ? parent->scale_ : 1.0;
 		}
 
 		~PolyPathD() {
@@ -415,14 +415,14 @@ namespace Clipper2Lib {
 		PolyPathDList::const_iterator begin() const { return childs_.cbegin(); }
 		PolyPathDList::const_iterator end() const { return childs_.cend(); }
 
-		void SetInvScale(double value) { inv_scale_ = value; }
-		double InvScale() { return inv_scale_; }
+		void SetScale(double value) { scale_ = value; }
+		double Scale() { return scale_; }
 		PolyPathD* AddChild(const Path64& path) override
 		{
 			int error_code = 0;
 			auto p = std::make_unique<PolyPathD>(this);
 			PolyPathD* result = childs_.emplace_back(std::move(p)).get();
-			result->polygon_ = ScalePath<double, int64_t>(path, inv_scale_, error_code);
+			result->polygon_ = ScalePath<double, int64_t>(path, scale_, error_code);
 			return result;
 		}
 
@@ -610,7 +610,7 @@ namespace Clipper2Lib {
 			if (ExecuteInternal(clip_type, fill_rule, true))
 			{
 				polytree.Clear();
-				polytree.SetInvScale(invScale_);
+				polytree.SetScale(invScale_);
 				open_paths.clear();
 				BuildTreeD(polytree, open_paths);
 			}

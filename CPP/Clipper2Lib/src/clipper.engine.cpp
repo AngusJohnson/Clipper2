@@ -1,6 +1,6 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  1 May 2023                                                      *
+* Date      :  16 May 2023                                                     *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2023                                         *
 * Purpose   :  This is the main polygon clipping module                        *
@@ -1378,6 +1378,7 @@ namespace Clipper2Lib {
     result->owner = nullptr;
     result->polypath = nullptr;
     result->is_open = false;
+    result->splits = nullptr;
     return result;
   }
 
@@ -2174,7 +2175,7 @@ namespace Clipper2Lib {
 
       if (or1 == or2)
       {
-        or2 = new OutRec(); 
+        or2 = NewOutRec();
         or2->pts = op1b;
         FixOutRecPts(or2);
         if (or1->pts->outrec == or2)
@@ -2186,7 +2187,11 @@ namespace Clipper2Lib {
         if (using_polytree_)
         {
           if (Path1InsidePath2(or2->pts, or1->pts))
+          {
             SetOwner(or2, or1);
+            if (!or1->splits) or1->splits = new OutRecList();
+            or1->splits->push_back(or2); //(#520)
+          }
           else if (Path1InsidePath2(or1->pts, or2->pts))
             SetOwner(or1, or2);
           else
@@ -2198,8 +2203,6 @@ namespace Clipper2Lib {
         }
         else
           or2->owner = or1;
-
-        outrec_list_.push_back(or2);
       }
       else
       {
@@ -2826,14 +2829,14 @@ namespace Clipper2Lib {
     return true;
   }
 
-  bool ClipperBase::CheckSplitOwner(OutRec* outrec)
+  bool ClipperBase::CheckSplitOwner(OutRec* outrec, OutRecList* splits)
   {
-    for (auto s : *outrec->owner->splits)
+    for (auto s : *splits)
     {
       OutRec* split = GetRealOutRec(s);
-      if (split && split != outrec &&
-        split != outrec->owner && CheckBounds(split) &&
-        split->bounds.Contains(outrec->bounds) &&
+      if (!split || split == outrec || split == outrec->owner) continue;
+      else if (split->splits && CheckSplitOwner(outrec, split->splits)) return true;
+      else if (CheckBounds(split) && split->bounds.Contains(outrec->bounds) &&
         Path1InsidePath2(outrec->pts, split->pts))
       {
         outrec->owner = split; //found in split
@@ -2852,7 +2855,7 @@ namespace Clipper2Lib {
 
     while (outrec->owner)
     {
-      if (outrec->owner->splits && CheckSplitOwner(outrec)) break;
+      if (outrec->owner->splits && CheckSplitOwner(outrec, outrec->owner->splits)) break;
       if (outrec->owner->pts && CheckBounds(outrec->owner) &&
         outrec->owner->bounds.Contains(outrec->bounds) &&
         Path1InsidePath2(outrec->pts, outrec->owner->pts)) break;
