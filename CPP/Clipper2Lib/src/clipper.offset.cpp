@@ -1,6 +1,6 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  15 May 2023                                                     *
+* Date      :  17 May 2023                                                     *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2023                                         *
 * Purpose   :  Path Offset (Inflate/Shrink)                                    *
@@ -325,8 +325,10 @@ void ClipperOffset::OffsetPoint(Group& group, Path64& path, size_t j, size_t k)
 		return;
 	}
 
-	if (cos_a > 0.99) // 0.99 ~= 8.1 deg.
+	if (cos_a > 0.999) // almost straight - less than 2.5 degree (#424) 
+	{
 		DoMiter(group, path, j, k, cos_a);
+	}
 	else if (cos_a > -0.99 && (sin_a * group_delta_ < 0))
 	{
 		// is concave
@@ -342,7 +344,7 @@ void ClipperOffset::OffsetPoint(Group& group, Path64& path, size_t j, size_t k)
 		if (cos_a > temp_lim_ - 1) DoMiter(group, path, j, k, cos_a);
 		else DoSquare(group, path, j, k);
 	}
-	else if (join_type_ == JoinType::Square)
+	else if (cos_a > 0.99 || join_type_ == JoinType::Square) // 0.99 ~= 8.1 deg.
 		DoSquare(group, path, j, k);
 	else
 		DoRound(group, path, j, k, std::atan2(sin_a, cos_a));
@@ -485,25 +487,23 @@ void ClipperOffset::DoGroupOffset(Group& group)
 	join_type_	= group.join_type;
 	end_type_ = group.end_type;
 
-	//calculate a sensible number of steps (for 360 deg for the given offset
-	if (group.join_type == JoinType::Round || group.end_type == EndType::Round)
+	if (!deltaCallback64_ && 
+		(group.join_type == JoinType::Round || group.end_type == EndType::Round))
 	{
+		//calculate a sensible number of steps (for 360 deg for the given offset)
+		// arcTol - when arc_tolerance_ is undefined (0), the amount of 
+		// curve imprecision that's allowed is based on the size of the 
+		// offset (delta). Obviously very large offsets will almost always 
+		// require much less precision. See also offset_triginometry2.svg
+		double arcTol = (arc_tolerance_ > floating_point_tolerance ?
+			std::min(abs_delta, arc_tolerance_) :
+			std::log10(2 + abs_delta) * default_arc_tolerance);
 
-		if (!deltaCallback64_) {
-			// arcTol - when arc_tolerance_ is undefined (0), the amount of 
-			// curve imprecision that's allowed is based on the size of the 
-			// offset (delta). Obviously very large offsets will almost always 
-			// require much less precision. See also offset_triginometry2.svg
-			double arcTol = (arc_tolerance_ > floating_point_tolerance ?
-				std::min(abs_delta, arc_tolerance_) :
-				std::log10(2 + abs_delta) * default_arc_tolerance);
-
-			double steps_per_360 = std::min(PI / std::acos(1 - arcTol / abs_delta), abs_delta * PI);
-			step_sin_ = std::sin(2 * PI / steps_per_360);
-			step_cos_ = std::cos(2 * PI / steps_per_360);
-			if (group_delta_ < 0.0) step_sin_ = -step_sin_;
-			steps_per_rad_ = steps_per_360 / (2 * PI);
-		}
+		double steps_per_360 = std::min(PI / std::acos(1 - arcTol / abs_delta), abs_delta * PI);
+		step_sin_ = std::sin(2 * PI / steps_per_360);
+		step_cos_ = std::cos(2 * PI / steps_per_360);
+		if (group_delta_ < 0.0) step_sin_ = -step_sin_;
+		steps_per_rad_ = steps_per_360 / (2 * PI);
 	}
 
 	bool is_joined =

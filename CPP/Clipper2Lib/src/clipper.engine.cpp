@@ -1,6 +1,6 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  16 May 2023                                                     *
+* Date      :  20 May 2023                                                     *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2023                                         *
 * Purpose   :  This is the main polygon clipping module                        *
@@ -1659,17 +1659,14 @@ namespace Clipper2Lib {
       default: if (std::abs(edge_c->wind_cnt) != 1) return nullptr; break;
       }
 
+      OutPt* resultOp;
       //toggle contribution ...
       if (IsHotEdge(*edge_o))
       {
-        OutPt* resultOp = AddOutPt(*edge_o, pt);
-#ifdef USINGZ
-        if (zCallback_) SetZ(e1, e2, resultOp->pt);
-#endif
+        resultOp = AddOutPt(*edge_o, pt);
         if (IsFront(*edge_o)) edge_o->outrec->front_edge = nullptr;
         else edge_o->outrec->back_edge = nullptr;
         edge_o->outrec = nullptr;
-        return resultOp;
       }
 
       //horizontal edges can pass under open paths at a LocMins
@@ -1689,11 +1686,16 @@ namespace Clipper2Lib {
           return e3->outrec->pts;
         }
         else
-          return StartOpenPath(*edge_o, pt);
+          resultOp = StartOpenPath(*edge_o, pt);
       }
       else
-        return StartOpenPath(*edge_o, pt);
-    }
+        resultOp = StartOpenPath(*edge_o, pt);
+
+#ifdef USINGZ
+      if (zCallback_) SetZ(*edge_o, *edge_c, resultOp->pt);
+#endif
+      return resultOp;
+    } // end of an open path intersection
 
     //MANAGING CLOSED PATHS FROM HERE ON
 
