@@ -304,8 +304,8 @@ namespace Clipper2Lib
     private Point64 GetPerpendic(Point64 pt, PointD norm)
     {
 #if USINGZ
-      return new Point64(pt.X + norm.x * _group_delta,
-        pt.Y + norm.y * _group_delta, pt.Z);
+      return new Point64(pt.X + norm.x * _groupDelta,
+        pt.Y + norm.y * _groupDelta, pt.Z);
 #else
       return new Point64(pt.X + norm.x * _groupDelta,
         pt.Y + norm.y * _groupDelta);
@@ -316,8 +316,8 @@ namespace Clipper2Lib
     private PointD GetPerpendicD(Point64 pt, PointD norm)
     {
 #if USINGZ
-      return new PointD(pt.X + norm.x * _group_delta,
-        pt.Y + norm.y * _group_delta, pt.Z);
+      return new PointD(pt.X + norm.x * _groupDelta,
+        pt.Y + norm.y * _groupDelta, pt.Z);
 #else
       return new PointD(pt.X + norm.x * _groupDelta,
         pt.Y + norm.y * _groupDelta);
@@ -529,8 +529,8 @@ namespace Clipper2Lib
           case EndType.Butt:
 #if USINGZ
             group.outPath.Add(new Point64(
-                path[0].X - _normals[0].x * _group_delta,
-                path[0].Y - _normals[0].y * _group_delta,
+                path[0].X - _normals[0].x * _groupDelta,
+                path[0].Y - _normals[0].y * _groupDelta,
                 path[0].Z));
 #else
             group.outPath.Add(new Point64(
@@ -567,8 +567,8 @@ namespace Clipper2Lib
           case EndType.Butt:
 #if USINGZ
             group.outPath.Add(new Point64(
-                path[highI].X - _normals[highI].x * _group_delta,
-                path[highI].Y - _normals[highI].y * _group_delta,
+                path[highI].X - _normals[highI].x * _groupDelta,
+                path[highI].Y - _normals[highI].y * _groupDelta,
                 path[highI].Z));
 #else
             group.outPath.Add(new Point64(
