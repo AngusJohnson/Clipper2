@@ -1,6 +1,6 @@
 ﻿/*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  22 April 2023                                                   *
+* Date      :  26 May 2023                                                     *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2023                                         *
 * Purpose   :  FAST rectangular clipping                                       *
@@ -28,7 +28,7 @@ namespace Clipper2Lib
     }
   }
 
-  public class RectClip
+  public class RectClip64
   {
     protected enum Location
     {
@@ -42,7 +42,7 @@ namespace Clipper2Lib
     protected List<OutPt2?> results_;
     protected List<OutPt2?>[] edges_;
     protected int currIdx_ = -1;
-    internal RectClip(Rect64 rect)
+    internal RectClip64(Rect64 rect)
     {
       currIdx_ = -1;
       rect_ = rect;
@@ -915,9 +915,9 @@ namespace Clipper2Lib
 
   } // RectClip class
 
-  public class RectClipLines : RectClip
+  public class RectClipLines64 : RectClip64
   {
-    internal RectClipLines(Rect64 rect) : base(rect) { }
+    internal RectClipLines64(Rect64 rect) : base(rect) { }
 
     public Paths64 Execute(Paths64 paths)
     {
@@ -1004,7 +1004,7 @@ namespace Clipper2Lib
 
         if (loc == Location.inside) // path must be entering rect
         {
-          Add(ip);
+          Add(ip, true);
         }
         else if (prev != Location.inside)
         {

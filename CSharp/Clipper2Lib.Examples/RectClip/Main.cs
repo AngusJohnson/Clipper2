@@ -83,7 +83,7 @@ namespace ClipperDemo1
       }
 
       /////////////////////////////////////////////////
-      sol = Clipper.ExecuteRectClip(rec, sub);
+      sol = Clipper.RectClip(rec, sub);
       /////////////////////////////////////////////////
 
       SvgWriter svg = new (FillRule.NonZero);

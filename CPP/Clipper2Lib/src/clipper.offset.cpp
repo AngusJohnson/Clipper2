@@ -1,6 +1,6 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  17 May 2023                                                     *
+* Date      :  26 May 2023                                                     *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2023                                         *
 * Purpose   :  Path Offset (Inflate/Shrink)                                    *
@@ -205,7 +205,7 @@ void ClipperOffset::DoSquare(Group& group, const Path64& path, size_t j, size_t 
 {
 	PointD vec;
 	if (j == k) 
-		vec = PointD(norms[0].y, -norms[0].x);
+		vec = PointD(norms[j].y, -norms[j].x);
 	else
 		vec = GetAvgUnitVector(
 			PointD(-norms[k].y, norms[k].x),
@@ -325,7 +325,7 @@ void ClipperOffset::OffsetPoint(Group& group, Path64& path, size_t j, size_t k)
 		return;
 	}
 
-	if (cos_a > 0.999) // almost straight - less than 2.5 degree (#424) 
+	if (cos_a > 0.999) // almost straight - less than 2.5 degree (#424, #526) 
 	{
 		DoMiter(group, path, j, k, cos_a);
 	}
@@ -334,7 +334,7 @@ void ClipperOffset::OffsetPoint(Group& group, Path64& path, size_t j, size_t k)
 		// is concave
 		group.path.push_back(GetPerpendic(path[j], norms[k], group_delta_));
 		// this extra point is the only (simple) way to ensure that
-		// path reversals are fully cleaned with the trailing clipper
+	  // path reversals are fully cleaned with the trailing clipper		
 		group.path.push_back(path[j]); // (#405)
 		group.path.push_back(GetPerpendic(path[j], norms[j], group_delta_));
 	}
@@ -512,7 +512,7 @@ void ClipperOffset::DoGroupOffset(Group& group)
 	Paths64::iterator path_iter;
 	for(path_iter = group.paths_in.begin(); path_iter != group.paths_in.end(); ++path_iter)
 	{
-		auto path = *path_iter;
+		Path64 &path = *path_iter;
 		StripDuplicates(path, is_joined);
 		Path64::size_type cnt = path.size();
 		if (cnt == 0 || ((cnt < 3) && group.end_type == EndType::Polygon)) 
@@ -618,7 +618,7 @@ void ClipperOffset::Execute(double delta, Paths64& paths)
 		c.Execute(ClipType::Union, FillRule::Negative, paths);
 	else
 		c.Execute(ClipType::Union, FillRule::Positive, paths);
-/**/
+	/**/
 }
 
 

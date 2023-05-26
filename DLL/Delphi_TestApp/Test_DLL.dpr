@@ -117,18 +117,18 @@ function InflatePathsD(const paths: CPathsD;
   reverse_solution: Boolean = false): CPathsD; cdecl;
   external CLIPPER2_DLL name 'InflatePathsD';
 
-function ExecuteRectClip64(const rect: TRect64; const paths: CPaths64;
+function RectClip64(const rect: TRect64; const paths: CPaths64;
   convexOnly: Boolean = false): CPaths64; cdecl;
-  external CLIPPER2_DLL name 'ExecuteRectClip64';
-function ExecuteRectClipD(const rect: TRectD; const paths: CPathsD;
+  external CLIPPER2_DLL name 'RectClip64';
+function RectClipD(const rect: TRectD; const paths: CPathsD;
   precision: integer = 2; convexOnly: Boolean = false): CPathsD; cdecl;
-  external CLIPPER2_DLL name 'ExecuteRectClipD';
-function ExecuteRectClipLines64(const rect: TRect64;
+  external CLIPPER2_DLL name 'RectClipD';
+function RectClipLines64(const rect: TRect64;
   const paths: CPaths64): CPaths64; cdecl;
-  external CLIPPER2_DLL name 'ExecuteRectClipLines64';
-function ExecuteRectClipLinesD(const rect: TRectD;
+  external CLIPPER2_DLL name 'RectClipLines64';
+function RectClipLinesD(const rect: TRectD;
   const paths: CPathsD; precision: integer = 2): CPathsD; cdecl;
-  external CLIPPER2_DLL name 'ExecuteRectClipLinesD';
+  external CLIPPER2_DLL name 'RectClipLinesD';
 
 ////////////////////////////////////////////////////////
 // functions related to Clipper2 DLL structures
@@ -812,13 +812,12 @@ end;
 
 procedure Test_RectClipD(shapeCount: integer);
 var
-  i, sol2_len, rec_margin: Integer;
+  i, rec_margin: Integer;
   sub, clp, sol1, sol2: TPathsD;
   csub_local: CPathsD;
   csol_extern: CPathsD;
-  scaleRnd, maxOffX, maxOffY, frac: Double;
+  scaleRnd, maxOffX, maxOffY: Double;
   rec: TRectD;
-  fillrule: TFillRule;
   shapes: array [0..3] of TPathD;
 const
   w = 300;
@@ -833,8 +832,6 @@ begin
       60,60, 40,60, 40,40, 20,40, 20,60, 0,60]);
     shapes[3] := MakePathD([20,60, 20,20, 0,20, 0,0, 60,0, 60,20,
       40,20, 40,60]);
-
-    fillrule := frNonZero;
 
     // setup
     WriteLn(#10'Testing RectClip64:');
@@ -857,25 +854,19 @@ begin
     end;
 
     csub_local := TPathsDToCPathsD(sub);
-    csol_extern := ExecuteRectClipD(rec, csub_local, 2, true);
+    csol_extern := RectClipD(rec, csub_local, 2, true);
     sol1 := CPathsDToPathsD(csol_extern);
     DisposeExportedCPathsD(csol_extern);
 
     // do the DLL operation again with ConvexOnly disabled
-    csol_extern := ExecuteRectClipD(rec, csub_local, 2, false);
+    csol_extern := RectClipD(rec, csub_local, 2, false);
     sol2 := CPathsDToPathsD(csol_extern);
-
-    // display and clean up
-    sol2_len := Length(sol2);
-    if sol2_len = 0 then
-      frac := 0 else
-      frac := 1/sol2_len;
 
     SetLength(clp, 1);
     clp[0] := rec.AsPath;
 
-    DisplaySVG(sub, nil, clp, nil, nil, 'RectClip64_1.svg', w,h);
-    DisplaySVG(sub, nil, clp, sol1, nil, 'RectClip64_2.svg', w,h);
+    //DisplaySVG(sub, nil, clp, nil, nil, 'RectClip64_1.svg', w,h);
+    //DisplaySVG(sub, nil, clp, sol1, nil, 'RectClip64_2.svg', w,h);
     DisplaySVG(sub, nil, clp, sol2, nil, 'RectClip64_3.svg', w,h);
 
     DisposeLocalCPathsD(csub_local);
@@ -902,7 +893,7 @@ begin
     rec.Bottom := displayHeight -80;
 
     // do the DLL operation
-    csolo_extern := ExecuteRectClipLines64(rec, csub_local);
+    csolo_extern := RectClipLines64(rec, csub_local);
 
     // optionally display result on the console
     //WriteCPaths64(csol_extern);

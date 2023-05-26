@@ -2,7 +2,7 @@ unit Clipper.RectClip;
 
 (*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  22 April 2023                                                   *
+* Date      :  26 May 2023                                                     *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2023                                         *
 * Purpose   :  FAST rectangular clipping                                       *
@@ -32,7 +32,7 @@ type
     prev: POutPt2;
   end;
 
-  TRectClip = class
+  TRectClip64 = class
     procedure ExecuteInternal(const path: TPath64);
     function GetPath(resultIdx: integer): TPath64;
   protected
@@ -61,7 +61,7 @@ type
       convexOnly: Boolean = false): TPaths64;
   end;
 
-  TRectClipLines = class(TRectClip)
+  TRectClipLines64 = class(TRectClip64)
   private
     procedure ExecuteInternal(const path: TPath64);
     function GetPath(resultIdx: integer): TPath64;
@@ -377,10 +377,10 @@ begin
 end;
 
 //------------------------------------------------------------------------------
-// TRectClip class
+// TRectClip64 class
 //------------------------------------------------------------------------------
 
-constructor TRectClip.Create(const rect: TRect64);
+constructor TRectClip64.Create(const rect: TRect64);
 begin
   fResults := TList.Create;
 
@@ -392,7 +392,7 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-destructor TRectClip.Destroy;
+destructor TRectClip64.Destroy;
 begin
   fStartLocs.Free;
   fResults.Free;
@@ -414,7 +414,7 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-procedure TRectClip.DisposeResults;
+procedure TRectClip64.DisposeResults;
 var
   i: integer;
 begin
@@ -424,7 +424,7 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-function TRectClip.Add(const pt: TPoint64; startNewPath: Boolean): POutPt2;
+function TRectClip64.Add(const pt: TPoint64; startNewPath: Boolean): POutPt2;
 var
   currIdx: integer;
   prevOp: POutPt2;
@@ -462,7 +462,7 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-procedure TRectClip.AddCorner(prev, curr: TLocation);
+procedure TRectClip64.AddCorner(prev, curr: TLocation);
 var
   cnrIdx: integer;
 begin
@@ -474,7 +474,7 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-procedure TRectClip.AddCorner(var loc: TLocation; isClockwise: Boolean);
+procedure TRectClip64.AddCorner(var loc: TLocation; isClockwise: Boolean);
 begin
   if (isClockwise) then
   begin
@@ -488,7 +488,7 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-procedure TRectClip.GetNextLocation(const path: TPath64;
+procedure TRectClip64.GetNextLocation(const path: TPath64;
   var loc: TLocation; var i: integer; highI: integer);
 begin
   case loc of
@@ -564,7 +564,7 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-function TRectClip.Execute(const paths: TPaths64; convexOnly: Boolean): TPaths64;
+function TRectClip64.Execute(const paths: TPaths64; convexOnly: Boolean): TPaths64;
 var
   i,j, len: integer;
   path: TPath64;
@@ -605,7 +605,7 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-procedure TRectClip.ExecuteInternal(const path: TPath64);
+procedure TRectClip64.ExecuteInternal(const path: TPath64);
 var
   i,highI     : integer;
   prevPt,ip,ip2 : TPoint64;
@@ -782,7 +782,7 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-procedure TRectClip.CheckEdges;
+procedure TRectClip64.CheckEdges;
 var
   i,j: integer;
   edgeSet1, edgeSet2, combinedSet: Cardinal;
@@ -841,7 +841,7 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-procedure TRectClip.TidyEdgePair(idx: integer; var cw, ccw: TOutPtArray);
+procedure TRectClip64.TidyEdgePair(idx: integer; var cw, ccw: TOutPtArray);
 var
   isHorz, cwIsTowardLarger: Boolean;
   i, j, highJ, newIdx: integer;
@@ -1025,7 +1025,7 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-function TRectClip.GetPath(resultIdx: integer): TPath64;
+function TRectClip64.GetPath(resultIdx: integer): TPath64;
 var
   i, len: integer;
   op, op2: POutPt2;
@@ -1057,10 +1057,10 @@ begin
 end;
 
 //------------------------------------------------------------------------------
-// TRectClipLines
+// TRectClipLines64
 //------------------------------------------------------------------------------
 
-function TRectClipLines.Execute(const paths: TPaths64): TPaths64;
+function TRectClipLines64.Execute(const paths: TPaths64): TPaths64;
 var
   i,j, len: integer;
   pathrec: TRect64;
@@ -1089,7 +1089,7 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-procedure TRectClipLines.ExecuteInternal(const path: TPath64);
+procedure TRectClipLines64.ExecuteInternal(const path: TPath64);
 var
   i, highI      : integer;
   prevPt,ip,ip2 : TPoint64;
@@ -1155,7 +1155,7 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-function TRectClipLines.GetPath(resultIdx: integer): TPath64;
+function TRectClipLines64.GetPath(resultIdx: integer): TPath64;
 var
   i, len: integer;
   op: POutPt2;

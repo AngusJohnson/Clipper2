@@ -398,8 +398,8 @@ begin
           fEndType := etRound else
           fEndType := etSquare;
       end;
-
       BuildNormals;
+
       if fEndType = etPolygon then OffsetPolygon
       else if fEndType = etJoined then OffsetOpenJoined
       else OffsetOpenPath;
@@ -726,8 +726,8 @@ var
 begin
   if k = j then
   begin
-    vec.X := fNorms[0].Y;     //squaring a line end
-    vec.Y := -fNorms[0].X;
+    vec.X := fNorms[j].Y;     //squaring a line end
+    vec.Y := -fNorms[j].X;
   end else
   begin
     // using the reciprocal of unit normals (as unit vectors)
@@ -876,7 +876,9 @@ begin
 		Exit;
 	end;
 
-  if (cosA > -0.99) and (sinA * fGroupDelta < 0) then
+  if (cosA > 0.999) then // almost straight - less than 2.5 degree (#424, #526)
+    DoMiter(j, k, cosA)
+  else if (cosA > -0.99) and (sinA * fGroupDelta < 0) then
   begin
     // is concave
     AddPoint(GetPerpendic(fInPath[j], fNorms[k], fGroupDelta));
@@ -891,9 +893,6 @@ begin
     if (cosA > fTmpLimit -1) then DoMiter(j, k, cosA)
     else DoSquare(j, k);
   end
-  else if (cosA > 0.9998) then
-		// almost straight - less than 1 degree (#424)
-    DoMiter(j, k, cosA)
   else if (cosA > 0.99) or (fJoinType = jtSquare) then
 		//angle less than 8 degrees or squared joins
     DoSquare(j, k)

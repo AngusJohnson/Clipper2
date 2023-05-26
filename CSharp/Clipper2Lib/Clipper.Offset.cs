@@ -1,6 +1,6 @@
 ﻿/*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  16 May 2023                                                     *
+* Date      :  26 May 2023                                                     *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2023                                         *
 * Purpose   :  Path Offset (Inflate/Shrink)                                    *
@@ -330,7 +330,7 @@ namespace Clipper2Lib
       PointD vec;
       if (j == k)
       {
-        vec = new PointD(_normals[0].y, -_normals[0].x);
+        vec = new PointD(_normals[j].y, -_normals[j].x);
       }
       else
       {
@@ -467,7 +467,7 @@ namespace Clipper2Lib
         return;
       }
 
-      if (cosA > 0.99)
+      if (cosA > 0.999)
         DoMiter(group, path, j, k, cosA);
       else if (cosA > -0.99 && (sinA * _groupDelta < 0)) 
       {
@@ -484,7 +484,7 @@ namespace Clipper2Lib
         if (cosA > _mitLimSqr - 1) DoMiter(group, path, j, k, cosA);
         else DoSquare(group, path, j, k);
       }
-      else if (_joinType == JoinType.Square)
+      else if (cosA > 0.99 || _joinType == JoinType.Square)
         //angle less than 8 degrees or a squared join
         DoSquare(group, path, j, k);
       else

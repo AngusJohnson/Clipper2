@@ -1,6 +1,6 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  15 May 2023                                                     *
+* Date      :  26 May 2023                                                     *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2023                                         *
 * Purpose   :  This module provides a simple interface to the Clipper Library  *
@@ -201,23 +201,23 @@ namespace Clipper2Lib {
     return TranslatePaths<double>(paths, dx, dy);
   }
 
-  inline Paths64 ExecuteRectClip(const Rect64& rect, 
+  inline Paths64 RectClip(const Rect64& rect, 
     const Paths64& paths, bool convex_only)
   {
     if (rect.IsEmpty() || paths.empty()) return Paths64();
-    RectClip rc(rect);
+    RectClip64 rc(rect);
     return rc.Execute(paths, convex_only);
   }
 
-  inline Paths64 ExecuteRectClip(const Rect64& rect,
+  inline Paths64 RectClip(const Rect64& rect,
     const Path64& path, bool convex_only)
   {
     if (rect.IsEmpty() || path.empty()) return Paths64();
-    RectClip rc(rect);
+    RectClip64 rc(rect);
     return rc.Execute(Paths64{ path }, convex_only);
   }
 
-  inline PathsD ExecuteRectClip(const RectD& rect,
+  inline PathsD RectClip(const RectD& rect,
     const PathsD& paths, bool convex_only, int precision = 2)
   {
     if (rect.IsEmpty() || paths.empty()) return PathsD();
@@ -226,32 +226,32 @@ namespace Clipper2Lib {
     if (error_code) return PathsD();
     const double scale = std::pow(10, precision);
     Rect64 r = ScaleRect<int64_t, double>(rect, scale);
-    RectClip rc(r);
+    RectClip64 rc(r);
     Paths64 pp = ScalePaths<int64_t, double>(paths, scale, error_code);
     if (error_code) return PathsD(); // ie: error_code result is lost 
     return ScalePaths<double, int64_t>(
       rc.Execute(pp, convex_only), 1 / scale, error_code);
   }
 
-  inline PathsD ExecuteRectClip(const RectD& rect,
+  inline PathsD RectClip(const RectD& rect,
     const PathD& path, bool convex_only, int precision = 2)
   {
-    return ExecuteRectClip(rect, PathsD{ path }, convex_only, precision);
+    return RectClip(rect, PathsD{ path }, convex_only, precision);
   }
 
-  inline Paths64 ExecuteRectClipLines(const Rect64& rect, const Paths64& lines)
+  inline Paths64 RectClipLines(const Rect64& rect, const Paths64& lines)
   {
     if (rect.IsEmpty() || lines.empty()) return Paths64();
-    RectClipLines rcl(rect);
+    RectClipLines64 rcl(rect);
     return rcl.Execute(lines);
   }
 
-  inline Paths64 ExecuteRectClipLines(const Rect64& rect, const Path64& line)
+  inline Paths64 RectClipLines(const Rect64& rect, const Path64& line)
   {
-    return ExecuteRectClipLines(rect, Paths64{ line });
+    return RectClipLines(rect, Paths64{ line });
   }
 
-  inline PathsD ExecuteRectClipLines(const RectD& rect, const PathsD& lines, int precision = 2)
+  inline PathsD RectClipLines(const RectD& rect, const PathsD& lines, int precision = 2)
   {
     if (rect.IsEmpty() || lines.empty()) return PathsD();
     int error_code = 0;
@@ -259,16 +259,16 @@ namespace Clipper2Lib {
     if (error_code) return PathsD();
     const double scale = std::pow(10, precision);
     Rect64 r = ScaleRect<int64_t, double>(rect, scale);
-    RectClipLines rcl(r);
+    RectClipLines64 rcl(r);
     Paths64 p = ScalePaths<int64_t, double>(lines, scale, error_code);
     if (error_code) return PathsD();
     p = rcl.Execute(p);
     return ScalePaths<double, int64_t>(p, 1 / scale, error_code);
   }
 
-  inline PathsD ExecuteRectClipLines(const RectD& rect, const PathD& line, int precision = 2)
+  inline PathsD RectClipLines(const RectD& rect, const PathD& line, int precision = 2)
   {
-    return ExecuteRectClipLines(rect, PathsD{ line }, precision);
+    return RectClipLines(rect, PathsD{ line }, precision);
   }
 
   namespace details
@@ -488,6 +488,39 @@ namespace Clipper2Lib {
     details::MakePathGeneric(list, N, result);
     return result;
   }
+
+#ifdef USINGZ
+  template<typename T2, std::size_t N>
+  inline Path64 MakePathZ(const T2(&list)[N])
+  {
+    static_assert(N % 3 == 0 && std::numeric_limits<T2>::is_integer,
+      "MakePathZ requires integer values in multiples of 3");
+    std::size_t size = N / 3;
+    Path64 result(size);
+    for (size_t i = 0; i < size; ++i)
+      result[i] = Point64(list[i * 3], 
+        list[i * 3 + 1], list[i * 3 + 2]);
+    return result;
+  }
+
+  template<typename T2, std::size_t N>
+  inline PathD MakePathZD(const T2(&list)[N])
+  {
+    static_assert(N % 3 == 0,
+      "MakePathZD requires values in multiples of 3");
+    std::size_t size = N / 3;
+    PathD result(size);
+    if constexpr (std::numeric_limits<T2>::is_integer)
+      for (size_t i = 0; i < size; ++i)
+        result[i] = PointD(list[i * 3],
+          list[i * 3 + 1], list[i * 3 + 2]);
+    else
+      for (size_t i = 0; i < size; ++i)
+        result[i] = PointD(list[i * 3], list[i * 3 + 1], 
+          static_cast<int64_t>(list[i * 3 + 2]));
+    return result;
+  }
+#endif
 
   inline Path64 TrimCollinear(const Path64& p, bool is_open_path = false)
   {
