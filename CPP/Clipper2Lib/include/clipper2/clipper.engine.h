@@ -13,6 +13,7 @@
 constexpr auto CLIPPER2_VERSION = "1.2.2";
 
 #include <cstdlib>
+#include <stdint.h>
 #include <iostream>
 #include <queue>
 #include <vector>
