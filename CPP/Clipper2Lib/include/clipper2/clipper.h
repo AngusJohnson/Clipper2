@@ -201,24 +201,21 @@ namespace Clipper2Lib {
     return TranslatePaths<double>(paths, dx, dy);
   }
 
-  inline Paths64 RectClip(const Rect64& rect, 
-    const Paths64& paths, bool convex_only)
+  inline Paths64 RectClip(const Rect64& rect, const Paths64& paths)
   {
     if (rect.IsEmpty() || paths.empty()) return Paths64();
     RectClip64 rc(rect);
-    return rc.Execute(paths, convex_only);
+    return rc.Execute(paths);
   }
 
-  inline Paths64 RectClip(const Rect64& rect,
-    const Path64& path, bool convex_only)
+  inline Paths64 RectClip(const Rect64& rect, const Path64& path)
   {
     if (rect.IsEmpty() || path.empty()) return Paths64();
     RectClip64 rc(rect);
-    return rc.Execute(Paths64{ path }, convex_only);
+    return rc.Execute(Paths64{ path });
   }
 
-  inline PathsD RectClip(const RectD& rect,
-    const PathsD& paths, bool convex_only, int precision = 2)
+  inline PathsD RectClip(const RectD& rect, const PathsD& paths, int precision = 2)
   {
     if (rect.IsEmpty() || paths.empty()) return PathsD();
     int error_code = 0;
@@ -230,13 +227,12 @@ namespace Clipper2Lib {
     Paths64 pp = ScalePaths<int64_t, double>(paths, scale, error_code);
     if (error_code) return PathsD(); // ie: error_code result is lost 
     return ScalePaths<double, int64_t>(
-      rc.Execute(pp, convex_only), 1 / scale, error_code);
+      rc.Execute(pp), 1 / scale, error_code);
   }
 
-  inline PathsD RectClip(const RectD& rect,
-    const PathD& path, bool convex_only, int precision = 2)
+  inline PathsD RectClip(const RectD& rect, const PathD& path, int precision = 2)
   {
-    return RectClip(rect, PathsD{ path }, convex_only, precision);
+    return RectClip(rect, PathsD{ path }, precision);
   }
 
   inline Paths64 RectClipLines(const Rect64& rect, const Paths64& lines)

@@ -1,6 +1,6 @@
 ﻿/*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  8 April 2023                                                    *
+* Date      :  30 May 2023                                                     *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2023                                         *
 * Purpose   :  This module contains simple functions that will likely cover    *
@@ -159,25 +159,22 @@ namespace Clipper2Lib
       return ScalePathsD(tmp, 1 / scale);
     }
 
-    public static Paths64 RectClip(Rect64 rect, 
-      Paths64 paths, bool convexOnly = false)
+    public static Paths64 RectClip(Rect64 rect, Paths64 paths)
     {
       if (rect.IsEmpty() || paths.Count == 0) return new Paths64();
       RectClip64 rc = new RectClip64(rect);
-      return rc.Execute(paths, convexOnly);
+      return rc.Execute(paths);
     }
 
-    public static Paths64 RectClip(Rect64 rect, 
-      Path64 path, bool convexOnly = false)
+    public static Paths64 RectClip(Rect64 rect, Path64 path)
     {
       if (rect.IsEmpty() || path.Count == 0) return new Paths64();
       Paths64 tmp = new Paths64();
       tmp.Add(path);
-      return RectClip(rect, tmp, convexOnly);
+      return RectClip(rect, tmp);
     }
     
-    public static PathsD RectClip(RectD rect, PathsD paths, 
-      int precision = 2, bool convexOnly = false)
+    public static PathsD RectClip(RectD rect, PathsD paths, int precision = 2)
     {
       InternalClipper.CheckPrecision(precision);
       if (rect.IsEmpty() || paths.Count == 0) return new PathsD();
@@ -185,17 +182,16 @@ namespace Clipper2Lib
       Rect64 r = ScaleRect(rect, scale);
       Paths64 tmpPath = ScalePaths64(paths, scale);
       RectClip64 rc = new RectClip64(r);
-      tmpPath = rc.Execute(tmpPath, convexOnly);
+      tmpPath = rc.Execute(tmpPath);
       return ScalePathsD(tmpPath, 1 / scale);
     }
 
-    public static PathsD RectClip(RectD rect, PathD path, 
-      int precision = 2, bool convexOnly = false)
+    public static PathsD RectClip(RectD rect, PathD path, int precision = 2)
     {
       if (rect.IsEmpty() || path.Count == 0) return new PathsD();
       PathsD tmp = new PathsD();
       tmp.Add(path);
-      return RectClip(rect, tmp, precision, convexOnly);
+      return RectClip(rect, tmp, precision);
     }
     public static Paths64 RectClipLines(Rect64 rect, Paths64 paths)
     {

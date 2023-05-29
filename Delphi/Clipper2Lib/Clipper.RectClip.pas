@@ -2,7 +2,7 @@ unit Clipper.RectClip;
 
 (*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  26 May 2023                                                     *
+* Date      :  30 May 2023                                                     *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2023                                         *
 * Purpose   :  FAST rectangular clipping                                       *
@@ -57,8 +57,7 @@ type
   public
     constructor Create(const rect: TRect64);
     destructor Destroy; override;
-    function Execute(const paths: TPaths64;
-      convexOnly: Boolean = false): TPaths64;
+    function Execute(const paths: TPaths64): TPaths64;
   end;
 
   TRectClipLines64 = class(TRectClip64)
@@ -564,7 +563,7 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-function TRectClip64.Execute(const paths: TPaths64; convexOnly: Boolean): TPaths64;
+function TRectClip64.Execute(const paths: TPaths64): TPaths64;
 var
   i,j, len: integer;
   path: TPath64;
@@ -587,12 +586,9 @@ begin
     end;
 
     ExecuteInternal(path);
-    if not convexOnly then
-    begin
-      CheckEdges;
-      for j := 0 to 3 do
-        TidyEdgePair(j, fEdges[j*2], fEdges[j*2 +1]);
-    end;
+    CheckEdges;
+    for j := 0 to 3 do
+      TidyEdgePair(j, fEdges[j*2], fEdges[j*2 +1]);
 
     for j := 0 to fResults.Count -1 do
       AppendPath(Result, GetPath(j));

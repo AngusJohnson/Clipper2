@@ -1,6 +1,6 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  26 May 2023                                                     *
+* Date      :  30 May 2023                                                     *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2023                                         *
 * Purpose   :  FAST rectangular clipping                                       *
@@ -62,7 +62,7 @@ namespace Clipper2Lib
       rect_(rect),
       rect_as_path_(rect.AsPath()),
       rect_mp_(rect.MidPoint()) {}
-    Paths64 Execute(const Paths64& paths, bool convex_only = false);
+    Paths64 Execute(const Paths64& paths);
   };
 
   //------------------------------------------------------------------------------

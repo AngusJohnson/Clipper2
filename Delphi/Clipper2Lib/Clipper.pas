@@ -96,15 +96,10 @@ function InflatePaths(const paths: TPathsD; delta: Double;
   ArcTolerance: double = 0.0): TPathsD; overload;
 
 // RectClip: for closed paths only (otherwise use RectClipLines)
-//           much faster when only clipping convex polygons
-function RectClip(const rect: TRect64; const path: TPath64;
-  convexOnly: Boolean = false): TPath64; overload;
-function RectClip(const rect: TRect64; const paths: TPaths64;
-  convexOnly: Boolean = false): TPaths64; overload;
-function RectClip(const rect: TRectD; const path: TPathD;
-  convexOnly: Boolean = false; precision: integer = 2): TPathD; overload;
-function RectClip(const rect: TRectD; const paths: TPathsD;
-  convexOnly: Boolean = false; precision: integer = 2): TPathsD; overload;
+function RectClip(const rect: TRect64; const path: TPath64): TPath64; overload;
+function RectClip(const rect: TRect64; const paths: TPaths64): TPaths64; overload;
+function RectClip(const rect: TRectD; const path: TPathD; precision: integer = 2): TPathD; overload;
+function RectClip(const rect: TRectD; const paths: TPathsD; precision: integer = 2): TPathsD; overload;
 
 function RectClipLines(const rect: TRect64;
   const path: TPath64): TPaths64; overload;
@@ -414,35 +409,33 @@ end;
 //------------------------------------------------------------------------------
 
 function RectClip(const rect: TRect64;
-  const path: TPath64; convexOnly: Boolean): TPath64;
+  const path: TPath64): TPath64;
 var
   paths: TPaths64;
 begin
   SetLength(paths, 1);
   paths[0] := path;
-  paths := RectClip(rect, paths, convexOnly);
+  paths := RectClip(rect, paths);
   if Assigned(paths) then
     Result := paths[0] else
     Result := nil;
 end;
 //------------------------------------------------------------------------------
 
-function RectClip(const rect: TRect64;
-  const paths: TPaths64; convexOnly: Boolean): TPaths64;
+function RectClip(const rect: TRect64; const paths: TPaths64): TPaths64;
 begin
   Result := nil;
   if rect.IsEmpty then Exit;
   with TRectClip64.Create(rect) do
   try
-    Result := Execute(paths, convexOnly);
+    Result := Execute(paths);
   finally
     Free;
   end;
 end;
 //------------------------------------------------------------------------------
 
-function RectClip(const rect: TRectD; const path: TPathD;
-  convexOnly: Boolean; precision: integer): TPathD;
+function RectClip(const rect: TRectD; const path: TPathD; precision: integer): TPathD;
 var
   scale: double;
   tmpPath: TPath64;
@@ -454,13 +447,12 @@ begin
   scale := Math.Power(10, precision);
   rec := Rect64(ScaleRect(rect, scale));
   tmpPath := ScalePath(path, scale);
-  tmpPath := RectClip(rec, tmpPath, convexOnly);
+  tmpPath := RectClip(rec, tmpPath);
   Result := ScalePathD(tmpPath, 1/scale);
 end;
 //------------------------------------------------------------------------------
 
-function RectClip(const rect: TRectD; const paths: TPathsD;
-  convexOnly: Boolean; precision: integer): TPathsD;
+function RectClip(const rect: TRectD; const paths: TPathsD; precision: integer): TPathsD;
 var
   scale: double;
   tmpPaths: TPaths64;

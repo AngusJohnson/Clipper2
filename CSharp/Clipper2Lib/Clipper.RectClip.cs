@@ -1,6 +1,6 @@
 ﻿/*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  26 May 2023                                                     *
+* Date      :  30 May 2023                                                     *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2023                                         *
 * Purpose   :  FAST rectangular clipping                                       *
@@ -610,7 +610,7 @@ namespace Clipper2Lib
       }
     }
 
-    public Paths64 Execute(Paths64 paths, bool convexOnly)
+    public Paths64 Execute(Paths64 paths)
     {
       Paths64 result = new Paths64();
       if (rect_.IsEmpty()) return result;
@@ -627,12 +627,9 @@ namespace Clipper2Lib
           continue;
         }
         ExecuteInternal(path);
-        if (!convexOnly)
-        {
-          CheckEdges();
-          for (int i = 0; i < 4; ++i)
-            TidyEdgePair(i, edges_[i * 2], edges_[i * 2 + 1]);
-        }
+        CheckEdges();
+        for (int i = 0; i < 4; ++i)
+          TidyEdgePair(i, edges_[i * 2], edges_[i * 2 + 1]);
 
         foreach (OutPt2? op in results_)
         {

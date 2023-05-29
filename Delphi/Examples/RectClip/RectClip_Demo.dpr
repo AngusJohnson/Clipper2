@@ -39,7 +39,7 @@ const
 
     rec := Rect64(margin, margin, width - margin, height - margin);
     clp[0] := rec.AsPath;
-    sol := ExecuteRectClip(rec, sub);
+    sol := RectClip(rec, sub);
 
     //display
     with TSvgWriter.Create(fillrule) do
@@ -66,7 +66,7 @@ const
     clp[0] := rec.AsPath;
     SetLength(sub, 1);
     sub[0] := PathD(MakeRandomPath(width, height, count));
-    sol := ExecuteRectClip(rec, sub);
+    sol := RectClip(rec, sub);
 
     //display
     with TSvgWriter.Create(fillrule) do
@@ -95,7 +95,7 @@ const
     SetLength(sub, 1);
     sub[0] := MakeRandomPathD(width, height, lineLength);
 
-    sol := ExecuteRectClipLines(rec, sub);
+    sol := RectClipLines(rec, sub);
 
     //display
     with TSvgWriter.Create(fillrule) do
