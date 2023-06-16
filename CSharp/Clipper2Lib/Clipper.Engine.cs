@@ -3016,7 +3016,7 @@ private void DoHorizontal(Active horz)
       {
         OutRec? split = _outrecList[i];
         if (split == outrec || split == outrec.owner) continue;
-        else if (split!.splits != null && CheckSplitOwner(outrec, split.splits)) return true;
+        else if (split!.splits != null && split.splits != splits && CheckSplitOwner(outrec, split.splits)) return true;
         else if (CheckBounds(split) && split.bounds.Contains(outrec.bounds) &&
             Path1InsidePath2(outrec.pts!, split.pts!))
         {
