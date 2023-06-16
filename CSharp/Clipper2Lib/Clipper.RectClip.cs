@@ -916,7 +916,7 @@ namespace Clipper2Lib
   {
     internal RectClipLines64(Rect64 rect) : base(rect) { }
 
-    public Paths64 Execute(Paths64 paths)
+    public new Paths64 Execute(Paths64 paths)
     {
       Paths64 result = new Paths64();
       if (rect_.IsEmpty()) return result;
