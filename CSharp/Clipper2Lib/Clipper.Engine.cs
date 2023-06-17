@@ -1,6 +1,6 @@
 ﻿/*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  14 May 2023                                                     *
+* Date      :  17 June 2023                                                    *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2023                                         *
 * Purpose   :  This is the main polygon clipping module                        *
@@ -2269,6 +2269,7 @@ private void DoHorizontal(Active horz)
         //still more horizontals in bound to process ...
         if (IsHotEdge(horz))
           AddOutPt(horz, horz.top);
+
         UpdateEdgeIntoAEL(horz);
 
         if (PreserveCollinear && !horzIsOpen && HorzIsSpike(horz))
@@ -2279,7 +2280,12 @@ private void DoHorizontal(Active horz)
 
       } // end for loop and end of (possible consecutive) horizontals
 
-      if (IsHotEdge(horz)) AddOutPt(horz, horz.top);
+      if (IsHotEdge(horz)) 
+      {
+        OutPt op = AddOutPt(horz, horz.top);
+        AddToHorzSegList(op);
+      }
+
       UpdateEdgeIntoAEL(horz); // this is the end of an intermediate horiz.
     }
 
@@ -2550,8 +2556,8 @@ private void DoHorizontal(Active horz)
         for (int j = i + 1; j < k; j++)
         {
           HorzSegment hs2 = _horzSegList[j];
-          if (hs2.leftOp!.pt.X >= hs1.rightOp!.pt.X) break;
-          if (hs2.leftToRight == hs1.leftToRight ||
+          if ((hs2.leftOp!.pt.X >= hs1.rightOp!.pt.X) || 
+            (hs2.leftToRight == hs1.leftToRight) ||
             (hs2.rightOp!.pt.X <= hs1.leftOp!.pt.X)) continue;
           long curr_y = hs1.leftOp.pt.Y;
           if ((hs1).leftToRight)
@@ -3012,12 +3018,12 @@ private void DoHorizontal(Active horz)
 
     private bool CheckSplitOwner(OutRec outrec, List<int>? splits)
     {
-      foreach (int i in outrec.owner!.splits!)
+      foreach (int i in splits!)
       {
         OutRec? split = _outrecList[i];
         if (split == outrec || split == outrec.owner) continue;
-        else if (split!.splits != null && CheckSplitOwner(outrec, split.splits)) return true;
-        else if (CheckBounds(split) && split.bounds.Contains(outrec.bounds) &&
+        if (split!.splits != null && CheckSplitOwner(outrec, split.splits)) return true;
+        if (CheckBounds(split) && split.bounds.Contains(outrec.bounds) &&
             Path1InsidePath2(outrec.pts!, split.pts!))
         {
           outrec.owner = split; //found in split

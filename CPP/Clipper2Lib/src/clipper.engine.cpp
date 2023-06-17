@@ -1,6 +1,6 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  20 May 2023                                                     *
+* Date      :  17 June 2023                                                    *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2023                                         *
 * Purpose   :  This is the main polygon clipping module                        *
@@ -2126,8 +2126,8 @@ namespace Clipper2Lib {
     {
       for (hs2 = hs1 + 1; hs2 != hs_end; ++hs2)
       {
-        if (hs2->left_op->pt.x >= hs1->right_op->pt.x) break;
-        if (hs2->left_to_right == hs1->left_to_right ||
+        if ((hs2->left_op->pt.x >= hs1->right_op->pt.x) ||
+          (hs2->left_to_right == hs1->left_to_right) ||
           (hs2->right_op->pt.x <= hs1->left_op->pt.x)) continue;
         int64_t curr_y = hs1->left_op->pt.y;
         if (hs1->left_to_right)
@@ -2597,7 +2597,12 @@ namespace Clipper2Lib {
         ResetHorzDirection(horz, vertex_max, horz_left, horz_right);
     }
 
-    if (IsHotEdge(horz)) AddOutPt(horz, horz.top);
+    if (IsHotEdge(horz)) 
+    {
+      OutPt* op = AddOutPt(horz, horz.top);
+      AddTrialHorzJoin(op);
+    }
+
     UpdateEdgeIntoAEL(&horz); // end of an intermediate horiz.
   }
 

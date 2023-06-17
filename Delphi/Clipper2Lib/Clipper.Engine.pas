@@ -2,7 +2,7 @@ unit Clipper.Engine;
 
 (*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  16 May 2023                                                     *
+* Date      :  17 June 2023                                                    *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2023                                         *
 * Purpose   :  This is the main polygon clipping module                        *
@@ -2438,11 +2438,9 @@ begin
           SetSides(e3.outrec, e3, e1);
         Result := e3.outrec.pts;
         Exit;
-      end
-      else
+      end else
         Result := StartOpenPath(e1, pt);
-    end
-    else
+    end else
       Result := StartOpenPath(e1, pt);
 
     {$IFDEF USINGZ}
@@ -2692,7 +2690,7 @@ begin
     FBotY := Y;                       // FBotY == bottom of current scanbeam
     if not PopScanLine(Y) then Break; // Y     == top of current scanbeam
     DoIntersections(Y);
-     DoTopOfScanbeam(Y);
+    DoTopOfScanbeam(Y);
     while PopHorz(e) do DoHorizontal(e);
   end;
   if Succeeded then ProcessHorzJoins;
@@ -2954,8 +2952,8 @@ begin
     begin
       hs2 := FHorzSegList.UnsafeGet(j);
 
-      if hs2.leftOp.pt.X >= hs1.rightOp.pt.X then Break
-      else if (hs2.leftToRight = hs1.leftToRight) or
+      if (hs2.leftOp.pt.X >= hs1.rightOp.pt.X) or
+        (hs2.leftToRight = hs1.leftToRight) or
         (hs2.rightOp.pt.X <= hs1.leftOp.pt.X) then Continue;
 
       currY := hs1.leftOp.pt.Y;
@@ -3531,7 +3529,10 @@ begin
   end; // end while horizontal
 
   if IsHotEdge(horzEdge) then
-    AddOutPt(horzEdge, horzEdge.top);
+  begin
+    op := AddOutPt(horzEdge, horzEdge.top);
+    FHorzSegList.Add(op); // Disc.#546
+  end;
 
   UpdateEdgeIntoAEL(horzEdge); // this is the end of an intermediate horiz.
 end;
