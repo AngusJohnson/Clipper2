@@ -248,6 +248,7 @@ set(CLIPPER2_PCFILES "")
 foreach(lib ${CLIPPER2_LIBS})
   set(pc "${CMAKE_CURRENT_BINARY_DIR}/${lib}.pc")
   list(APPEND CLIPPER2_PCFILES ${pc})
+  string(REPLACE "Clipper2" "" PCFILE_LIB_SUFFIX "${lib}")
   CONFIGURE_FILE(Clipper2.pc.cmakein "${pc}" @ONLY)
 endforeach()
 
