@@ -248,11 +248,12 @@ namespace Clipper2Lib {
       }
     }
 
-    //draw red dots at all vertices - useful for debugging
+    ////draw red dots at all solution vertices - useful for debugging
     //for (PathInfo* pi : path_infos)
-    //  for (PathD& path : pi->paths_)
-    //    for (PointD& pt : path)
-    //      DrawCircle(file, pt.x * scale + offsetX, pt.y * scale + offsetY, 1);
+    //  if (!(pi->pen_color_ & 0x00FF00FF)) // ie any shade of green only
+    //    for (PathD& path : pi->paths_)
+    //      for (PointD& pt : path)
+    //        DrawCircle(file, pt.x * scale + offsetX, pt.y * scale + offsetY, 1.6);
 
     for (TextInfo* ti : text_infos) 
     {
@@ -410,8 +411,9 @@ namespace Clipper2Lib {
   bool SvgReader::LoadFromFile(const std::string &filename)
   {
       Clear();
-      std::ifstream file;
-      file.open(filename);      
+      std::ifstream file(filename);
+      if (!file.good()) return false;
+
       std::stringstream xml_buff;
       xml_buff << file.rdbuf();
       file.close();

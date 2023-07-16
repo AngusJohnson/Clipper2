@@ -1,6 +1,6 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  17 June 2023                                                    *
+* Date      :  16 July 2023                                                    *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2023                                         *
 * Purpose   :  This is the main polygon clipping module                        *
@@ -483,6 +483,105 @@ namespace Clipper2Lib {
     outrec->owner = new_owner;
   }
 
+  static PointInPolygonResult PointInOpPolygon(const Point64& pt, OutPt* op)
+  {
+    if (op == op->next || op->prev == op->next)
+      return PointInPolygonResult::IsOutside;
+
+    OutPt* op2 = op;
+    do
+    {
+      if (op->pt.y != pt.y) break;
+      op = op->next;
+    } while (op != op2);
+    if (op->pt.y == pt.y) // not a proper polygon
+      return PointInPolygonResult::IsOutside;
+
+    bool is_above = op->pt.y < pt.y, starting_above = is_above;
+    int val = 0;
+    op2 = op->next;
+    while (op2 != op)
+    {
+      if (is_above)
+        while (op2 != op && op2->pt.y < pt.y) op2 = op2->next;
+      else
+        while (op2 != op && op2->pt.y > pt.y) op2 = op2->next;
+      if (op2 == op) break;
+
+      // must have touched or crossed the pt.Y horizonal
+      // and this must happen an even number of times
+
+      if (op2->pt.y == pt.y) // touching the horizontal
+      {
+        if (op2->pt.x == pt.x || (op2->pt.y == op2->prev->pt.y &&
+          (pt.x < op2->prev->pt.x) != (pt.x < op2->pt.x)))
+          return PointInPolygonResult::IsOn;
+
+        op2 = op2->next;
+        if (op2 == op) break;
+        continue;
+      }
+
+      if (pt.x < op2->pt.x && pt.x < op2->prev->pt.x);
+      // do nothing because
+      // we're only interested in edges crossing on the left
+      else if ((pt.x > op2->prev->pt.x && pt.x > op2->pt.x))
+        val = 1 - val; // toggle val
+      else
+      {
+        double d = CrossProduct(op2->prev->pt, op2->pt, pt);
+        if (d == 0) return PointInPolygonResult::IsOn;
+        if ((d < 0) == is_above) val = 1 - val;
+      }
+      is_above = !is_above;
+      op2 = op2->next;
+    }
+
+    if (is_above != starting_above)
+    {
+      double d = CrossProduct(op2->prev->pt, op2->pt, pt);
+      if (d == 0) return PointInPolygonResult::IsOn;
+      if ((d < 0) == is_above) val = 1 - val;
+    }
+
+    if (val == 0) return PointInPolygonResult::IsOutside;
+    else return PointInPolygonResult::IsInside;
+  }
+
+  inline Rect64 GetBounds(OutPt* op)
+  {
+    Rect64 result(op->pt.x, op->pt.y, op->pt.x, op->pt.y);
+    OutPt* op2 = op->next;
+    while (op2 != op)
+    {
+      if (op2->pt.x < result.left) result.left = op2->pt.x;
+      else if (op2->pt.x > result.right) result.right = op2->pt.x;
+      if (op2->pt.y < result.top) result.top = op2->pt.y;
+      else if (op2->pt.y > result.bottom) result.bottom = op2->pt.y;
+      op2 = op2->next;
+    }
+    return result;
+  }
+
+  inline bool Path1InsidePath2(OutPt* op1, OutPt* op2)
+  {
+    // we need to make some accommodation for rounding errors
+    // so we won't jump if the first vertex is found outside
+    int outside_cnt = 0;
+    OutPt* op = op1;
+    do
+    {
+      PointInPolygonResult result = PointInOpPolygon(op->pt, op2);
+      if (result == PointInPolygonResult::IsOutside) ++outside_cnt;
+      else if (result == PointInPolygonResult::IsInside) --outside_cnt;
+      op = op->next;
+    } while (op != op1 && std::abs(outside_cnt) < 2);
+    if (std::abs(outside_cnt) > 1) return (outside_cnt < 0);
+    // since path1's location is still equivocal, check its midpoint
+    Point64 mp = GetBounds(op).MidPoint();
+    return  PointInOpPolygon(mp, op2) == PointInPolygonResult::IsInside;
+  }
+
   //------------------------------------------------------------------------------
   //------------------------------------------------------------------------------
 
@@ -599,8 +698,6 @@ namespace Clipper2Lib {
 
     vertexLists.emplace_back(vertices);
   }
-
-
 
   //------------------------------------------------------------------------------
   // ReuseableDataContainer64 methods ...
@@ -1298,7 +1395,7 @@ namespace Clipper2Lib {
         else
           SetOwner(&outrec, e->outrec);
         // nb: outRec.owner here is likely NOT the real
-        // owner but this will be checked in DeepCheckOwner()
+        // owner but this will be checked in RecursiveCheckOwners()
       }
 
       UncoupleOutRec(e1);
@@ -1472,11 +1569,6 @@ namespace Clipper2Lib {
       return;
     }
 
-    // nb: area1 is the path's area *before* splitting, whereas area2 is
-    // the area of the triangle containing splitOp & splitOp.next.
-    // So the only way for these areas to have the same sign is if
-    // the split triangle is larger than the path containing prevOp or
-    // if there's more than one self=intersection.
     double area2 = AreaTriangle(ip, splitOp->pt, splitOp->next->pt);
     double absArea2 = std::fabs(area2);
 
@@ -1496,18 +1588,17 @@ namespace Clipper2Lib {
       prevOp->next = newOp2;
     }
 
+    // area1 is the path's area *before* splitting, whereas area2 is
+    // the area of the triangle containing splitOp & splitOp.next.
+    // So the only way for these areas to have the same sign is if
+    // the split triangle is larger than the path containing prevOp or
+    // if there's more than one self-intersection.
     if (absArea2 >= 1 &&
       (absArea2 > absArea1 || (area2 > 0) == (area1 > 0)))
     {
       OutRec* newOr = NewOutRec();
       newOr->owner = outrec->owner;
       
-      if (using_polytree_)
-      {
-        if (!outrec->splits) outrec->splits = new OutRecList();
-        outrec->splits->push_back(newOr);
-      }
-
       splitOp->outrec = newOr;
       splitOp->next->outrec = newOr;
       OutPt* newOp = new OutPt(ip, newOr);
@@ -1516,6 +1607,20 @@ namespace Clipper2Lib {
       newOr->pts = newOp;
       splitOp->prev = newOp;
       splitOp->next->next = newOp;
+
+      if (using_polytree_)
+      {
+        if (Path1InsidePath2(prevOp, newOp))
+        {
+          newOr->splits = new OutRecList();
+          newOr->splits->push_back(outrec);
+        }
+        else
+        {
+          if (!outrec->splits) outrec->splits = new OutRecList();
+          outrec->splits->push_back(newOr);
+        }
+      }
     }
     else
     {
@@ -1960,105 +2065,6 @@ namespace Clipper2Lib {
     } while (op != outrec->pts);
   }
 
-  inline Rect64 GetBounds(OutPt* op)
-  {
-    Rect64 result(op->pt.x, op->pt.y, op->pt.x, op->pt.y);
-    OutPt* op2 = op->next;
-    while (op2 != op)
-    {
-      if (op2->pt.x < result.left) result.left = op2->pt.x;
-      else if (op2->pt.x > result.right) result.right = op2->pt.x;
-      if (op2->pt.y < result.top) result.top = op2->pt.y;
-      else if (op2->pt.y > result.bottom) result.bottom = op2->pt.y;
-      op2 = op2->next;
-    }
-    return result;
-  }
-
-  static PointInPolygonResult PointInOpPolygon(const Point64& pt, OutPt* op)
-  {
-    if (op == op->next || op->prev == op->next)
-      return PointInPolygonResult::IsOutside;
-  
-    OutPt* op2 = op;
-    do
-    {
-      if (op->pt.y != pt.y) break;
-      op = op->next;
-    } while (op != op2);
-    if (op->pt.y == pt.y) // not a proper polygon
-      return PointInPolygonResult::IsOutside;
-
-    bool is_above = op->pt.y < pt.y, starting_above = is_above;
-    int val = 0;
-    op2 = op->next;
-    while (op2 != op)
-    {
-      if (is_above)
-        while (op2 != op && op2->pt.y < pt.y) op2 = op2->next;
-      else
-        while (op2 != op && op2->pt.y > pt.y) op2 = op2->next;
-      if (op2 == op) break;
-
-      // must have touched or crossed the pt.Y horizonal
-      // and this must happen an even number of times
-
-      if (op2->pt.y == pt.y) // touching the horizontal
-      {
-        if (op2->pt.x == pt.x || (op2->pt.y == op2->prev->pt.y &&
-          (pt.x < op2->prev->pt.x) != (pt.x < op2->pt.x)))
-          return PointInPolygonResult::IsOn;
-
-        op2 = op2->next;
-        if (op2 == op) break;
-        continue;
-      }
-
-      if (pt.x < op2->pt.x && pt.x < op2->prev->pt.x);
-      // do nothing because
-      // we're only interested in edges crossing on the left
-      else if ((pt.x > op2->prev->pt.x && pt.x > op2->pt.x))
-        val = 1 - val; // toggle val
-      else
-      {
-        double d = CrossProduct(op2->prev->pt, op2->pt, pt);
-        if (d == 0) return PointInPolygonResult::IsOn;
-        if ((d < 0) == is_above) val = 1 - val;
-      }
-      is_above = !is_above;
-      op2 = op2->next;
-    }
-
-    if (is_above != starting_above)
-    {
-      double d = CrossProduct(op2->prev->pt, op2->pt, pt);
-      if (d == 0) return PointInPolygonResult::IsOn;
-      if ((d < 0) == is_above) val = 1 - val;
-    }
-
-    if (val == 0) return PointInPolygonResult::IsOutside;
-    else return PointInPolygonResult::IsInside;
-  }
-
-  inline bool Path1InsidePath2(OutPt* op1, OutPt* op2)
-  {
-    // we need to make some accommodation for rounding errors
-    // so we won't jump if the first vertex is found outside
-    int outside_cnt = 0;
-    OutPt* op = op1;
-    do
-    {
-      PointInPolygonResult result = PointInOpPolygon(op->pt, op2);
-      if (result == PointInPolygonResult::IsOutside) ++outside_cnt;
-      else if (result == PointInPolygonResult::IsInside) --outside_cnt;
-      op = op->next;
-    } while (op != op1 && std::abs(outside_cnt) < 2);
-    if (std::abs(outside_cnt) > 1) return (outside_cnt < 0);
-    // since path1's location is still equivocal, check its midpoint
-    Point64 mp = GetBounds(op).MidPoint();
-    return  PointInOpPolygon(mp, op2) == PointInPolygonResult::IsInside;
-  }
-
   inline bool SetHorzSegHeadingForward(HorzSegment& hs, OutPt* opP, OutPt* opN)
   {
     if (opP->pt.x == opN->pt.x) return false;
@@ -2174,7 +2180,7 @@ namespace Clipper2Lib {
       op1b->prev = op2b;
       op2b->next = op1b;
 
-      if (or1 == or2)
+      if (or1 == or2) // 'join' is really a split
       {
         or2 = NewOutRec();
         or2->pts = op1b;
@@ -2185,21 +2191,18 @@ namespace Clipper2Lib {
           or1->pts->outrec = or1;
         }
 
-        if (using_polytree_)
+        if (using_polytree_) //#498, #520, #584, D#576
         {
-          if (Path1InsidePath2(or2->pts, or1->pts))
+          if (Path1InsidePath2(or1->pts, or2->pts))
+          {
+            or2->owner = or1->owner;
+            SetOwner(or1, or2);
+          }
+          else
           {
             SetOwner(or2, or1);
             if (!or1->splits) or1->splits = new OutRecList();
-            or1->splits->push_back(or2); //(#520)
-          }
-          else if (Path1InsidePath2(or1->pts, or2->pts))
-            SetOwner(or1, or2);
-          else
-          {
-            if (!or1->splits) or1->splits = new OutRecList(); 
-            or1->splits->push_back(or2); //(#498)
-            or2->owner = or1;
+            or1->splits->push_back(or2);
           }
         }
         else

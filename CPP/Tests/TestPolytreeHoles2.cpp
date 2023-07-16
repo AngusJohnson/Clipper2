@@ -46,14 +46,14 @@ double GetPolytreeArea(const PolyPath64& pp)
 TEST(Clipper2Tests, TestPolytreeHoles2)
 {
   std::ifstream ifs("PolytreeHoleOwner2.txt");
-
+  //if (!ifs.good()) return;
   ASSERT_TRUE(ifs);
   ASSERT_TRUE(ifs.good());
 
   Paths64 subject, subject_open, clip;
-  ClipType ct;
-  FillRule fr;
-  int64_t area, count;
+  ClipType ct = ClipType::None;
+  FillRule fr = FillRule::EvenOdd;
+  int64_t area = 0, count = 0;
 
   ASSERT_TRUE(LoadTestNum(ifs, 1, subject, subject_open, clip, area, count, ct, fr));
 

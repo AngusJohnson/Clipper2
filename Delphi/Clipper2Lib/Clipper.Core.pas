@@ -2,7 +2,7 @@ unit Clipper.Core;
 
 (*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  19 February 2023                                                *
+* Date      :  16 July 2023                                                    *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2023                                         *
 * Purpose   :  Core Clipper Library module                                     *
@@ -120,6 +120,7 @@ type
   protected
     function UnsafeGet(idx: integer): Pointer; // no range checking
     procedure UnsafeSet(idx: integer; val: Pointer);
+    procedure UnsafeDelete(index: integer); virtual;
   public
     constructor Create(capacity: integer = 0); virtual;
     destructor Destroy; override;
@@ -346,6 +347,9 @@ const
 
   NullRectD   : TRectD = (left: 0; top: 0; right: 0; Bottom: 0);
   Tolerance   : Double = 1.0E-12;
+
+  //https://github.com/AngusJohnson/Clipper2/discussions/564
+  MaxDecimalPrecision = 8;
 
 implementation
 
@@ -608,6 +612,14 @@ begin
 end;
 //------------------------------------------------------------------------------
 
+procedure TListEx.UnsafeDelete(index: integer);
+begin
+  dec(fCount);
+  if index < fCount then
+    Move(fList[index +1], fList[index], (fCount - index) * SizeOf(Pointer));
+end;
+//------------------------------------------------------------------------------
+
 procedure TListEx.Swap(idx1, idx2: integer);
 var
   p: Pointer;
@@ -623,7 +635,7 @@ end;
 
 procedure CheckPrecisionRange(var precision: integer);
 begin
-  if (precision < -8) or (precision > 8) then
+  if (precision < -MaxDecimalPrecision) or (precision > MaxDecimalPrecision) then
       Raise EClipper2LibException(rsClipper_PrecisonErr);
 end;
 //------------------------------------------------------------------------------
@@ -1922,19 +1934,10 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-function CheckCastInt64(val: double): Int64; {$IFDEF INLINE} inline; {$ENDIF}
-begin
-  if (val >= MaxCoord) or (val <= MinCoord) then
-    Raise EClipper2LibException.Create('overflow error.');
-  Result := Trunc(val);
-  //Result := __Trunc(val);
-end;
-//------------------------------------------------------------------------------
-
 function GetIntersectPoint(const ln1a, ln1b, ln2a, ln2b: TPoint64;
   out ip: TPoint64): Boolean;
 var
-  dx1,dy1, dx2,dy2, qx,qy, cp: double;
+  dx1,dy1, dx2,dy2, t, cp: double;
 begin
   // https://en.wikipedia.org/wiki/Line%E2%80%93line_intersection
   dy1 := (ln1b.y - ln1a.y);
@@ -1942,16 +1945,13 @@ begin
   dy2 := (ln2b.y - ln2a.y);
   dx2 := (ln2b.x - ln2a.x);
   cp  := dy1 * dx2 - dy2 * dx1;
-  if (cp = 0.0) then
-  begin
-    Result := false;
-    Exit;
-  end;
-  qx := dx1 * ln1a.y - dy1 * ln1a.x;
-  qy := dx2 * ln2a.y - dy2 * ln2a.x;
-  ip.X := CheckCastInt64((dx1 * qy - dx2 * qx) / cp);
-  ip.Y := CheckCastInt64((dy1 * qy - dy2 * qx) / cp);
-  Result := (ip.x <> invalid64) and (ip.y <> invalid64);
+  Result := (cp <> 0.0);
+  if not Result then Exit;
+  t := ((ln1a.x-ln2a.x) * dy2 - (ln1a.y-ln2a.y) * dx2) / cp;
+  if t <= 0.0 then ip := ln1a
+  else if t >= 1.0 then ip := ln2a;
+  ip.X :=  Trunc(ln1a.X + t * dx1);
+  ip.Y :=  Trunc(ln1a.Y + t * dy1);
 end;
 //------------------------------------------------------------------------------
 

@@ -3,31 +3,32 @@
 #include "ClipFileLoad.h"
 #include <algorithm>
 
+using namespace Clipper2Lib;
 TEST(Clipper2Tests, TestOffsets) { 
-
   std::ifstream ifs("Offsets.txt");
+  if(!ifs.good()) return;
 
   for (int test_number = 1; test_number <= 2; ++test_number)
   {
-    Clipper2Lib::ClipperOffset co;
+    ClipperOffset co;
 
-    Clipper2Lib::Paths64 subject, subject_open, clip;
-    Clipper2Lib::Paths64 solution, solution_open;
-    Clipper2Lib::ClipType ct = Clipper2Lib::ClipType::None;
-    Clipper2Lib::FillRule fr = Clipper2Lib::FillRule::NonZero;
+    Paths64 subject, subject_open, clip;
+    Paths64 solution, solution_open;
+    ClipType ct = ClipType::None;
+    FillRule fr = FillRule::NonZero;
     int64_t stored_area = 0, stored_count = 0;
 
     ASSERT_TRUE(LoadTestNum(ifs, test_number, subject, subject_open, clip, stored_area, stored_count, ct, fr));
 
-    co.AddPaths(subject, Clipper2Lib::JoinType::Round, Clipper2Lib::EndType::Polygon);
-    Clipper2Lib::Paths64 outputs;
+    co.AddPaths(subject, JoinType::Round, EndType::Polygon);
+    Paths64 outputs;
     co.Execute(1, outputs);
 
     // is the sum total area of the solution is positive
-    const auto outer_is_positive = Clipper2Lib::Area(outputs) > 0;
+    const auto outer_is_positive = Area(outputs) > 0;
 
     // there should be exactly one exterior path
-    const auto is_positive_func = Clipper2Lib::IsPositive<int64_t>;
+    const auto is_positive_func = IsPositive<int64_t>;
     const auto is_positive_count = std::count_if(
       outputs.begin(), outputs.end(), is_positive_func);
     const auto is_negative_count =
@@ -37,12 +38,13 @@ TEST(Clipper2Tests, TestOffsets) {
     else
       EXPECT_EQ(is_negative_count, 1);
   }
+  ifs.close();
 }
 
 
-Clipper2Lib::Point64 MidPoint(const Clipper2Lib::Point64& p1, const Clipper2Lib::Point64& p2)
+Point64 MidPoint(const Point64& p1, const Point64& p2)
 {
-  Clipper2Lib::Point64 result;
+  Point64 result;
   result.x = (p1.x + p2.x) / 2;
   result.y = (p1.y + p2.y) / 2;
   return result;
@@ -52,25 +54,25 @@ TEST(Clipper2Tests, TestOffsets2) { // see #448 & #456
 
   double scale = 10, delta = 10 * scale, arc_tol = 0.25 * scale;
 
-  Clipper2Lib::Paths64 subject, solution;
-  Clipper2Lib::ClipperOffset c;
-  subject.push_back(Clipper2Lib::MakePath({ 50,50, 100,50, 100,150, 50,150, 0,100 }));
+  Paths64 subject, solution;
+  ClipperOffset c;
+  subject.push_back(MakePath({ 50,50, 100,50, 100,150, 50,150, 0,100 }));
 
   int err;
-  subject = Clipper2Lib::ScalePaths<int64_t, int64_t>(subject, scale, err);
+  subject = ScalePaths<int64_t, int64_t>(subject, scale, err);
 
-  c.AddPaths(subject, Clipper2Lib::JoinType::Round, Clipper2Lib::EndType::Polygon);
+  c.AddPaths(subject, JoinType::Round, EndType::Polygon);
   c.ArcTolerance(arc_tol);
   c.Execute(delta, solution);
 
   double min_dist = delta * 2, max_dist = 0;
-  for (auto subjPt : subject[0])
+  for (const Point64& subjPt : subject[0])
   {
-    Clipper2Lib::Point64 prevPt = solution[0][solution[0].size() - 1];
-    for (auto pt : solution[0])
+    Point64 prevPt = solution[0][solution[0].size() - 1];
+    for (const Point64& pt : solution[0])
     {
-      Clipper2Lib::Point64 mp = MidPoint(prevPt, pt);
-      double d = Clipper2Lib::Distance(mp, subjPt);
+      Point64 mp = MidPoint(prevPt, pt);
+      double d = Distance(mp, subjPt);
       if (d < delta * 2)
       {
         if (d < min_dist) min_dist = d;
@@ -87,7 +89,7 @@ TEST(Clipper2Tests, TestOffsets2) { // see #448 & #456
 TEST(Clipper2Tests, TestOffsets3) // see #424
 {
 
-  Clipper2Lib::Paths64 subjects = {{
+  Paths64 subjects = {{
     {1525311078, 1352369439},
     {1526632284, 1366692987},
     {1519397110, 1367437476},
@@ -145,42 +147,42 @@ TEST(Clipper2Tests, TestOffsets3) // see #424
     {1596698132, 1348993024},
     {1595775386, 1342722540} }};
 
-  Clipper2Lib::Paths64 solution = InflatePaths(subjects, -209715,
-    Clipper2Lib::JoinType::Miter, Clipper2Lib::EndType::Polygon);
+  Paths64 solution = InflatePaths(subjects, -209715,
+    JoinType::Miter, EndType::Polygon);
 
   EXPECT_LE(solution[0].size() - subjects[0].size(), 1);
 }
 
 TEST(Clipper2Tests, TestOffsets4) // see #482
 {
-  Clipper2Lib::Paths64 paths = { { {0, 0}, {20000, 200},
+  Paths64 paths = { { {0, 0}, {20000, 200},
     {40000, 0}, {40000, 50000}, {0, 50000}, {0, 0}} };
-  Clipper2Lib::Paths64 solution = Clipper2Lib::InflatePaths(paths, -5000,
-    Clipper2Lib::JoinType::Square, Clipper2Lib::EndType::Polygon);
+  Paths64 solution = InflatePaths(paths, -5000,
+    JoinType::Square, EndType::Polygon);
   std::cout << solution[0].size() << std::endl;
 
   EXPECT_EQ(solution[0].size(), 5);
 
   paths = { { {0, 0}, {20000, 400},
     {40000, 0}, {40000, 50000}, {0, 50000}, {0, 0}} };
-  solution = Clipper2Lib::InflatePaths(paths, -5000,
-    Clipper2Lib::JoinType::Square, Clipper2Lib::EndType::Polygon);
+  solution = InflatePaths(paths, -5000,
+    JoinType::Square, EndType::Polygon);
   std::cout << solution[0].size() << std::endl;
 
   EXPECT_EQ(solution[0].size(), 5);
 
   paths = { { {0, 0}, {20000, 400},
     {40000, 0}, {40000, 50000}, {0, 50000}, {0, 0}} };
-  solution = Clipper2Lib::InflatePaths(paths, -5000,
-    Clipper2Lib::JoinType::Round, Clipper2Lib::EndType::Polygon);
+  solution = InflatePaths(paths, -5000,
+    JoinType::Round, EndType::Polygon);
   std::cout << solution[0].size() << std::endl;
 
   EXPECT_EQ(solution[0].size(), 5);
 
   paths = { { {0, 0}, {20000, 1500},
     {40000, 0}, {40000, 50000}, {0, 50000}, {0, 0}} };
-  solution = Clipper2Lib::InflatePaths(paths, -5000,
-    Clipper2Lib::JoinType::Round, Clipper2Lib::EndType::Polygon);
+  solution = InflatePaths(paths, -5000,
+    JoinType::Round, EndType::Polygon);
   std::cout << solution[0].size() << std::endl;
 
   EXPECT_GT(solution[0].size(), 6);

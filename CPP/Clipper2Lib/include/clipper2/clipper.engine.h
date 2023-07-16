@@ -1,6 +1,6 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  15 May 2023                                                     *
+* Date      :  16 July 2023                                                    *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2023                                         *
 * Purpose   :  This is the main polygon clipping module                        *
@@ -13,7 +13,7 @@
 constexpr auto CLIPPER2_VERSION = "1.2.2";
 
 #include <cstdlib>
-#include <stdint.h>
+#include <stdint.h> //#541
 #include <iostream>
 #include <queue>
 #include <vector>
@@ -95,7 +95,6 @@ namespace Clipper2Lib {
 		Rect64 bounds = {};
 		Path64 path;
 		bool is_open = false;
-		bool horz_done = false;
 		~OutRec() { 
 			if (splits) delete splits;
 			// nb: don't delete the split pointers

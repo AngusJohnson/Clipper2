@@ -2,7 +2,7 @@ unit Clipper.Engine;
 
 (*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  17 June 2023                                                    *
+* Date      :  16 July 2023                                                    *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2023                                         *
 * Purpose   :  This is the main polygon clipping module                        *
@@ -251,7 +251,7 @@ type
     procedure ProcessIntersectList;
     procedure SwapPositionsInAEL(e1, e2: PActive);
     function  AddOutPt(e: PActive; const pt: TPoint64): POutPt;
-    procedure Split(e: PActive; const currPt: TPoint64);
+    procedure UndoJoin(e: PActive; const currPt: TPoint64);
     procedure CheckJoinLeft(e: PActive;
       const pt: TPoint64; checkCurrX: Boolean = false);
       {$IFDEF INLINING} inline; {$ENDIF}
@@ -550,13 +550,6 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-//function IsOpenEnd(e: PActive): Boolean; overload; {$IFDEF INLINING} inline; {$ENDIF}
-//begin
-//  Result := e.locMin.isOpen and
-//    (e.vertTop.flags * [vfOpenStart, vfOpenEnd] <> []);
-//end;
-//------------------------------------------------------------------------------
-
 function IsOpenEnd(v: PVertex): Boolean; overload; {$IFDEF INLINING} inline; {$ENDIF}
 begin
   Result := (v.flags * [vfOpenStart, vfOpenEnd] <> []);
@@ -820,6 +813,120 @@ begin
     Result := Result.nextInAEL;
   end;
   Result := nil;
+end;
+//------------------------------------------------------------------------------
+
+function GetBounds(op: POutPt): TRect64;
+var
+  op2: POutPt;
+begin
+  result.Left := op.pt.X;
+  result.Right := op.pt.X;
+  result.Top := op.pt.Y;
+  result.Bottom := op.pt.Y;
+  op2 := op.next;
+  while op2 <> op do
+  begin
+    if op2.pt.X < result.Left then result.Left := op2.pt.X
+    else if op2.pt.X > result.Right then result.Right := op2.pt.X;
+    if op2.pt.Y < result.Top then result.Top := op2.pt.Y
+    else if op2.pt.Y > result.Bottom then result.Bottom := op2.pt.Y;
+    op2 := op2.next;
+  end;
+end;
+//------------------------------------------------------------------------------
+
+function PointInOpPolygon(const pt: TPoint64; op: POutPt): TPointInPolygonResult;
+var
+  val: Integer;
+  op2: POutPt;
+  isAbove, startingAbove: Boolean;
+  d: double; // avoids integer overflow
+begin
+  result := pipOutside;
+  if (op = op.next) or (op.prev = op.next) then Exit;
+
+  op2 := op;
+  repeat
+    if (op.pt.Y <> pt.Y) then break;
+    op := op.next;
+  until op = op2;
+  if (op.pt.Y = pt.Y) then Exit; // not a proper polygon
+
+  isAbove := op.pt.Y < pt.Y;
+  startingAbove := isAbove;
+  Result := pipOn;
+  val := 0;
+  op2 := op.next;
+  while (op2 <> op) do
+  begin
+    if isAbove then
+      while (op2 <> op) and (op2.pt.Y < pt.Y) do op2 := op2.next
+    else
+      while (op2 <> op) and (op2.pt.Y > pt.Y) do op2 := op2.next;
+    if (op2 = op) then break;
+
+    // must have touched or crossed the pt.Y horizonal
+    // and this must happen an even number of times
+
+    if (op2.pt.Y = pt.Y) then // touching the horizontal
+    begin
+      if (op2.pt.X = pt.X) or ((op2.pt.Y = op2.prev.pt.Y) and
+        ((pt.X < op2.prev.pt.X) <> (pt.X < op2.pt.X))) then Exit;
+      op2 := op2.next;
+      if (op2 = op) then break;
+      Continue;
+    end;
+
+    if (pt.X < op2.pt.X) and (pt.X < op2.prev.pt.X) then
+      // do nothing because
+      // we're only interested in edges crossing on the left
+    else if((pt.X > op2.prev.pt.X) and (pt.X > op2.pt.X)) then
+      val := 1 - val // toggle val
+    else
+    begin
+      d := CrossProduct(op2.prev.pt, op2.pt, pt);
+      if d = 0 then Exit; // ie point on path
+      if (d < 0) = isAbove then val := 1 - val;
+    end;
+    isAbove := not isAbove;
+    op2 := op2.next;
+  end;
+
+  if (isAbove <> startingAbove) then
+  begin
+    d := CrossProduct(op2.prev.pt, op2.pt, pt);
+    if d = 0 then Exit; // ie point on path
+    if (d < 0) = isAbove then val := 1 - val;
+  end;
+
+  if val = 0 then
+     result := pipOutside else
+     result := pipInside;
+end;
+//------------------------------------------------------------------------------
+
+function Path1InsidePath2(const op1, op2: POutPt): Boolean;
+var
+  op: POutPt;
+  pipResult: TPointInPolygonResult;
+  outsideCnt: integer;
+begin
+  // precondition - the twi paths or1 & pr2 don't intersect
+  // we need to make some accommodation for rounding errors
+  // so we won't jump if the first vertex is found outside
+  outsideCnt := 0;
+  op := op1;
+  repeat
+    pipResult := PointInOpPolygon(op.pt, op2);
+    if pipResult = pipOutside then inc(outsideCnt)
+    else if pipResult = pipInside then dec(outsideCnt);
+    op := op.next;
+  until (op = op1) or (Abs(outsideCnt) = 2);
+  // if path1's location is still equivocal then check its midpoint
+  if Abs(outsideCnt) > 1 then
+    Result := outsideCnt < 0 else
+    Result := PointInOpPolygon(GetBounds(op).MidPoint, op2) = pipInside;
 end;
 //------------------------------------------------------------------------------
 
@@ -2035,11 +2142,6 @@ begin
     Exit;
   end;
 
-  // nb: area1 is the path's area *before* splitting, whereas area2 is
-  // the area of the triangle containing splitOp & splitOp.next.
-  // So the only way for these areas to have the same sign is if
-  // the split triangle is larger than the path containing prevOp or
-  // if there's more than one self-intersection.
   area2 := AreaTriangle(ip, splitOp.pt, splitOp.next.pt);
   absArea2 := abs(area2);
 
@@ -2057,6 +2159,11 @@ begin
     prevOp.next := newOp2;
   end;
 
+  // nb: area1 is the path's area *before* splitting, whereas area2 is
+  // the area of the triangle containing splitOp & splitOp.next.
+  // So the only way for these areas to have the same sign is if
+  // the split triangle is larger than the path containing prevOp or
+  // if there's more than one self-intersection.
   if (absArea2 > 1) and
     ((absArea2 > absArea1) or
     ((area2 > 0) = (area1 > 0))) then
@@ -2064,15 +2171,20 @@ begin
     newOutRec := FOutRecList.Add;
     newOutRec.owner := outrec.owner;
 
-    if FUsingPolytree then
-      AddSplit(outrec, newOutRec);
-
     splitOp.outrec := newOutRec;
     splitOp.next.outrec := newOutRec;
     newOp := NewOutPt(ip, newOutRec, splitOp.next, splitOp);
     splitOp.prev := newOp;
     splitOp.next.next := newOp;
     newOutRec.pts := newOp;
+
+    if FUsingPolytree then
+    begin
+      if (Path1InsidePath2(prevOp, newOp)) then
+        AddSplit(newOutRec, outrec) else
+        AddSplit(outrec, newOutRec);
+    end;
+
   end else
   begin
     Dispose(splitOp.next);
@@ -2111,8 +2223,8 @@ var
   outRec: POutRec;
 begin
 
-  if IsJoined(e1) then Split(e1, pt);
-  if IsJoined(e2) then Split(e2, pt);
+  if IsJoined(e1) then UndoJoin(e1, pt);
+  if IsJoined(e2) then UndoJoin(e2, pt);
 
   if (IsFront(e1) = IsFront(e2)) then
   begin
@@ -2197,12 +2309,25 @@ begin
   e2.outrec.frontE := nil;
   e2.outrec.backE := nil;
   e2.outrec.pts := nil;
-  SetOwner(e2.outrec, e1.outrec);
 
   if IsOpenEnd(e1.vertTop) then
   begin
     e2.outrec.pts := e1.outrec.pts;
     e1.outrec.pts := nil;
+  end else
+  begin
+    SetOwner(e2.outrec, e1.outrec);
+
+//    if FUsingPolytree then
+//    begin
+//      e := GetPrevHotEdge(e1);
+//      if not Assigned(e) then
+//        outRec.owner := nil else
+//        SetOwner(outRec, e.outrec);
+//      // nb: outRec.owner here is likely NOT the real
+//      // owner but this will be checked in DeepCheckOwner()
+//    end;
+
   end;
 
   // and e1 and e2 are maxima and are about to be dropped from the Actives list.
@@ -2211,7 +2336,7 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-procedure TClipperBase.Split(e: PActive; const currPt: TPoint64);
+procedure TClipperBase.UndoJoin(e: PActive; const currPt: TPoint64);
 begin
   if e.joinedWith = jwRight then
   begin
@@ -2347,7 +2472,7 @@ begin
   e.currX := e.bot.X;
   SetDx(e);
 
-  if IsJoined(e) then Split(e, e.bot);
+  if IsJoined(e) then UndoJoin(e, e.bot);
 
   if IsHorizontal(e) then Exit;
   InsertScanLine(e.top.Y);
@@ -2399,7 +2524,7 @@ begin
 
     // e1 is open and e2 is closed
 
-    if IsJoined(e2) then Split(e2, pt); // needed for safety
+    if IsJoined(e2) then UndoJoin(e2, pt); // needed for safety
 
     case FClipType of
       ctUnion: if not IsHotEdge(e2) then Exit;
@@ -2450,8 +2575,8 @@ begin
   end;
 
   // MANAGING CLOSED PATHS FROM HERE ON
-  if IsJoined(e1) then Split(e1, pt);
-  if IsJoined(e2) then Split(e2, pt);
+  if IsJoined(e1) then UndoJoin(e1, pt);
+  if IsJoined(e2) then UndoJoin(e2, pt);
 
   // FIRST, UPDATE WINDING COUNTS
   if IsSamePolyType(e1, e2) then
@@ -2723,120 +2848,6 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-function GetBounds(op: POutPt): TRect64;
-var
-  op2: POutPt;
-begin
-  result.Left := op.pt.X;
-  result.Right := op.pt.X;
-  result.Top := op.pt.Y;
-  result.Bottom := op.pt.Y;
-  op2 := op.next;
-  while op2 <> op do
-  begin
-    if op2.pt.X < result.Left then result.Left := op2.pt.X
-    else if op2.pt.X > result.Right then result.Right := op2.pt.X;
-    if op2.pt.Y < result.Top then result.Top := op2.pt.Y
-    else if op2.pt.Y > result.Bottom then result.Bottom := op2.pt.Y;
-    op2 := op2.next;
-  end;
-end;
-//------------------------------------------------------------------------------
-
-function PointInOpPolygon(const pt: TPoint64; op: POutPt): TPointInPolygonResult;
-var
-  val: Integer;
-  op2: POutPt;
-  isAbove, startingAbove: Boolean;
-  d: double; // avoids integer overflow
-begin
-  result := pipOutside;
-  if (op = op.next) or (op.prev = op.next) then Exit;
-
-  op2 := op;
-  repeat
-    if (op.pt.Y <> pt.Y) then break;
-    op := op.next;
-  until op = op2;
-  if (op.pt.Y = pt.Y) then Exit; // not a proper polygon
-
-  isAbove := op.pt.Y < pt.Y;
-  startingAbove := isAbove;
-  Result := pipOn;
-  val := 0;
-  op2 := op.next;
-  while (op2 <> op) do
-  begin
-    if isAbove then
-      while (op2 <> op) and (op2.pt.Y < pt.Y) do op2 := op2.next
-    else
-      while (op2 <> op) and (op2.pt.Y > pt.Y) do op2 := op2.next;
-    if (op2 = op) then break;
-
-    // must have touched or crossed the pt.Y horizonal
-    // and this must happen an even number of times
-
-    if (op2.pt.Y = pt.Y) then // touching the horizontal
-    begin
-      if (op2.pt.X = pt.X) or ((op2.pt.Y = op2.prev.pt.Y) and
-        ((pt.X < op2.prev.pt.X) <> (pt.X < op2.pt.X))) then Exit;
-      op2 := op2.next;
-      if (op2 = op) then break;
-      Continue;
-    end;
-
-    if (pt.X < op2.pt.X) and (pt.X < op2.prev.pt.X) then
-      // do nothing because
-      // we're only interested in edges crossing on the left
-    else if((pt.X > op2.prev.pt.X) and (pt.X > op2.pt.X)) then
-      val := 1 - val // toggle val
-    else
-    begin
-      d := CrossProduct(op2.prev.pt, op2.pt, pt);
-      if d = 0 then Exit; // ie point on path
-      if (d < 0) = isAbove then val := 1 - val;
-    end;
-    isAbove := not isAbove;
-    op2 := op2.next;
-  end;
-
-  if (isAbove <> startingAbove) then
-  begin
-    d := CrossProduct(op2.prev.pt, op2.pt, pt);
-    if d = 0 then Exit; // ie point on path
-    if (d < 0) = isAbove then val := 1 - val;
-  end;
-
-  if val = 0 then
-     result := pipOutside else
-     result := pipInside;
-end;
-//------------------------------------------------------------------------------
-
-function Path1InsidePath2(const op1, op2: POutPt): Boolean;
-var
-  op: POutPt;
-  pipResult: TPointInPolygonResult;
-  outsideCnt: integer;
-begin
-  // precondition - the twi paths or1 & pr2 don't intersect
-  // we need to make some accommodation for rounding errors
-  // so we won't jump if the first vertex is found outside
-  outsideCnt := 0;
-  op := op1;
-  repeat
-    pipResult := PointInOpPolygon(op.pt, op2);
-    if pipResult = pipOutside then inc(outsideCnt)
-    else if pipResult = pipInside then dec(outsideCnt);
-    op := op.next;
-  until (op = op1) or (Abs(outsideCnt) = 2);
-  // if path1's location is still equivocal then check its midpoint
-  if Abs(outsideCnt) > 1 then
-    Result := outsideCnt < 0 else
-    Result := PointInOpPolygon(GetBounds(op).MidPoint, op2) = pipInside;
-end;
-//------------------------------------------------------------------------------
-
 function HorzOverlapWithLRSet(const left1, right1, left2, right2: TPoint64): boolean;
   {$IFDEF INLINING} inline; {$ENDIF}
 begin
@@ -3006,32 +3017,31 @@ begin
     op1b.prev := op2b;
     op2b.next := op1b;
 
-    if or1 = or2 then
+    if or1 = or2 then // 'join' is really a split
     begin
       or2 := FOutRecList.Add;
       or2.pts := op1b;
       FixOutRecPts(or2);
+
       if or1.pts.outrec = or2 then
       begin
         or1.pts := op1;
         or1.pts.outrec := or1;
       end;
 
-      if FUsingPolytree then
+      if FUsingPolytree then //#498, #520, #584, D#576
       begin
-        if Path1InsidePath2(or2.pts, or1.pts) then
+        if Path1InsidePath2(or1.pts, or2.pts) then
+        begin
+          or2.owner := or1.owner;
+          SetOwner(or1, or2);
+        end else
         begin
           SetOwner(or2, or1);
-          AddSplit(or1, or2); //(#520)
-        end
-        else if Path1InsidePath2(or1.pts, or2.pts) then
-          SetOwner(or1, or2)
-        else
-        begin
-          AddSplit(or1, or2); //(#498)
-          or2.owner := or1;
+          AddSplit(or1, or2);
         end;
-      end else
+      end
+      else
         or2.owner := or1;
     end else
     begin
@@ -3424,7 +3434,7 @@ begin
       if (e.vertTop = maxVertex) then
       begin
         if IsHotEdge(horzEdge) and IsJoined(e) then
-          Split(e, e.top);
+          UndoJoin(e, e.top);
 
         if IsHotEdge(horzEdge) then
         begin
@@ -3600,8 +3610,8 @@ begin
     if not assigned(eMaxPair) then Exit; // EMaxPair is a horizontal ...
   end;
 
-  if IsJoined(e) then Split(e, e.top);
-  if IsJoined(eMaxPair) then Split(eMaxPair, eMaxPair.top);
+  if IsJoined(e) then UndoJoin(e, e.top);
+  if IsJoined(eMaxPair) then UndoJoin(eMaxPair, eMaxPair.top);
 
   // only non-horizontal maxima here.
   // process any edges between maxima pair ...

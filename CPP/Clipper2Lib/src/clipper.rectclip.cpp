@@ -1,6 +1,6 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  30 May 2023                                                     *
+* Date      :  16 July 2023                                                    *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2023                                         *
 * Purpose   :  FAST rectangular clipping                                       *
@@ -847,7 +847,7 @@ namespace Clipper2Lib {
       //clean up after every loop
       op_container_ = std::deque<OutPt2>();
       results_.clear();
-      for (OutPt2List edge : edges_) edge.clear();
+      for (OutPt2List &edge : edges_) edge.clear();
       start_locs_.clear();
     }
     return result;

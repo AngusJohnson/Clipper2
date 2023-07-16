@@ -5,8 +5,7 @@
 TEST(Clipper2Tests, TestMultipleLines) {
 
   std::ifstream ifs("Lines.txt");
-
-
+  //if (!ifs.good()) return;
   ASSERT_TRUE(ifs);
   ASSERT_TRUE(ifs.good());
 
@@ -61,5 +60,6 @@ TEST(Clipper2Tests, TestMultipleLines) {
     }
     ++test_number;
   }
+  ifs.close();
   EXPECT_GE(test_number, 17);
 }

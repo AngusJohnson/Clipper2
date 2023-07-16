@@ -2,7 +2,9 @@ cmake_minimum_required(VERSION 3.15)
 project(Clipper2 VERSION 1.2.2 LANGUAGES C CXX)
 
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
-set(CMAKE_CXX_STANDARD 17)
+if(NOT DEFINED CMAKE_CXX_STANDARD OR CMAKE_CXX_STANDARD LESS 17)
+    set(CMAKE_CXX_STANDARD 17)
+endif()
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
@@ -35,7 +37,7 @@ set(CLIPPER2_SRC
 
 set(CLIPPER2_LIBS "") # one or both of Clipper2/Clipper2Z
 
-# 2d version of Clipper2
+# primary Clipper2 library
 if (NOT (CLIPPER2_USINGZ STREQUAL "ONLY"))
   list(APPEND CLIPPER2_LIBS Clipper2)
   add_library(Clipper2 ${CLIPPER2_INC} ${CLIPPER2_SRC})
@@ -52,7 +54,7 @@ if (NOT (CLIPPER2_USINGZ STREQUAL "ONLY"))
   endif()
 endif()
 
-# Clipper2 but with USINGZ defined
+# secondary Clipper2 library with USINGZ defined (if required)
 if (NOT (CLIPPER2_USINGZ STREQUAL "OFF"))
   list(APPEND CLIPPER2_LIBS Clipper2Z)
   add_library(Clipper2Z ${CLIPPER2_INC} ${CLIPPER2_SRC})
@@ -207,7 +209,7 @@ endif()
     target_link_libraries(ClipperTests gtest gtest_main Clipper2 Clipper2utils)
 
     gtest_discover_tests(ClipperTests
-      # set a working directory so your project root so that you can find test data via paths relative to the project root
+      # set a working directory to your project root so that you can find test data via paths relative to the project root
       WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}/../Tests
       PROPERTIES VS_DEBUGGER_WORKING_DIRECTORY "${PROJECT_DIR}"
     )

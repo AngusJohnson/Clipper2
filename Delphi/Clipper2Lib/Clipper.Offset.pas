@@ -2,7 +2,7 @@ unit Clipper.Offset;
 
 (*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  15 May 2023                                                     *
+* Date      :  16 July 2023                                                    *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2023                                         *
 * Purpose   :  Path Offset (Inflate/Shrink)                                    *
@@ -460,7 +460,7 @@ var
 begin
   highI := high(fInPath);
 
-	if Assigned(fDeltaCallback64) then
+  if Assigned(fDeltaCallback64) then
     fGroupDelta := fDeltaCallback64(fInPath, fNorms, 0, 0);
 
   // do the line start cap
@@ -502,7 +502,7 @@ begin
 
  // do the line end cap
 
-	if Assigned(fDeltaCallback64) then
+ if Assigned(fDeltaCallback64) then
     fGroupDelta := fDeltaCallback64(fInPath, fNorms, highI, highI);
   if Abs(fGroupDelta) < Tolerance then
   begin
@@ -807,8 +807,8 @@ begin
 
   if Assigned(fDeltaCallback64) then
   begin
-	  // when fDeltaCallback64 is assigned, fGroupDelta won't be constant,
-		// so we'll need to do the following calculations for *every* vertex.
+    // when fDeltaCallback64 is assigned, fGroupDelta won't be constant,
+    // so we'll need to do the following calculations for *every* vertex.
     absDelta := Abs(fGroupDelta);
     if fArcTolerance > 0.01 then
       arcTol := Min(absDelta, fArcTolerance) else
@@ -867,14 +867,17 @@ begin
   if (sinA > 1.0) then sinA := 1.0
   else if (sinA < -1.0) then sinA := -1.0;
 
-	if Assigned(fDeltaCallback64) then
+  if Assigned(fDeltaCallback64) then
+  begin
     fGroupDelta := fDeltaCallback64(fInPath, fNorms, j, k);
+    if TGroup(fGroupList[0]).reversed then fGroupDelta := -fGroupDelta;
+  end;
 
-	if Abs(fGroupDelta) <= Tolerance then
-	begin
-		AddPoint(fInPath[j]);
-		Exit;
-	end;
+  if Abs(fGroupDelta) <= Tolerance then
+  begin
+    AddPoint(fInPath[j]);
+    Exit;
+  end;
 
   if (cosA > 0.999) then // almost straight - less than 2.5 degree (#424, #526)
     DoMiter(j, k, cosA)

@@ -1,6 +1,6 @@
 ﻿/*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  1 May 2023                                                      *
+* Date      :  16 July 2023                                                    *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2023                                         *
 * Purpose   :  Core structures and functions for the Clipper Library           *
@@ -647,25 +647,25 @@ namespace Clipper2Lib
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static bool GetIntersectPoint(Point64 ln1a,
-      Point64 ln1b, Point64 ln2a, Point64 ln2b, out PointD ip)
+      Point64 ln1b, Point64 ln2a, Point64 ln2b, out Point64 ip)
     {
       double dy1 = (ln1b.Y - ln1a.Y);
       double dx1 = (ln1b.X - ln1a.X);
       double dy2 = (ln2b.Y - ln2a.Y);
       double dx2 = (ln2b.X - ln2a.X);
-      double q1 = dy1 * ln1a.X - dx1 * ln1a.Y;
-      double q2 = dy2 * ln2a.X - dx2 * ln2a.Y;
-      double cross_prod = dy1 * dx2 - dy2 * dx1;
-      if (cross_prod == 0.0)
+      double det = dy1 * dx2 - dy2 * dx1;
+      if (det == 0.0)
       {
-        ip = new PointD();
+        ip = new Point64();
         return false;
       }
-      ip = new PointD(
-        (dx2 * q1 - dx1 * q2) / cross_prod,
-        (dy2 * q1 - dy1 * q2) / cross_prod);
+      double t = ((ln1a.X - ln2a.X) * dy2 - (ln1a.Y - ln2a.Y) * dx2) / det;
+      if (t <= 0.0) ip = ln1a;        // ?? check further (see also #568)
+      else if (t >= 1.0) ip = ln2a;   // ?? check further
+      else ip = new Point64 (ln1a.X + t * dx1, ln1a.Y + t * dy1);
       return true;
     }
+
     internal static bool SegsIntersect(Point64 seg1a, 
       Point64 seg1b, Point64 seg2a, Point64 seg2b, bool inclusive = false)
     {
