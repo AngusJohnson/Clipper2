@@ -2,7 +2,7 @@ unit Clipper;
 
 (*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  16 July 2023                                                    *
+* Date      :  17 July 2023                                                    *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2023                                         *
 * Purpose   :  This module provides a simple interface to the Clipper Library  *
@@ -814,8 +814,13 @@ end;
 
 function DistanceSqrd(const pt1, pt2: TPoint64): double;
   {$IFDEF INLINE} inline; {$ENDIF}
+var
+  x1,y1,x2,y2: double;
 begin
-  result := Sqr(double(pt1.X) - pt2.X) + Sqr(double(pt1.Y) - pt2.Y);
+  // nb: older versions of Delphi don't allow explicit typcasting
+  x1 := pt1.X; y1 := pt1.Y;
+  x2 := pt2.X; y2 := pt2.Y;
+  result := Sqr(x1 - x2) + Sqr(y1 - y2);
 end;
 //------------------------------------------------------------------------------
 

@@ -2,7 +2,7 @@ unit Clipper.Core;
 
 (*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  16 July 2023                                                    *
+* Date      :  17 July 2023                                                    *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2023                                         *
 * Purpose   :  Core Clipper Library module                                     *
@@ -1949,7 +1949,7 @@ begin
   if not Result then Exit;
   t := ((ln1a.x-ln2a.x) * dy2 - (ln1a.y-ln2a.y) * dx2) / cp;
   if t <= 0.0 then ip := ln1a
-  else if t >= 1.0 then ip := ln2a;
+  else if t >= 1.0 then ip := ln1b;
   ip.X :=  Trunc(ln1a.X + t * dx1);
   ip.Y :=  Trunc(ln1a.Y + t * dy1);
 end;

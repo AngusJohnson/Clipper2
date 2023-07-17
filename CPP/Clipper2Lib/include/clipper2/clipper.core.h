@@ -693,7 +693,7 @@ namespace Clipper2Lib
     if (det == 0.0) return false;
     double t = ((ln1a.x - ln2a.x) * dy2 - (ln1a.y - ln2a.y) * dx2) / det;
     if (t <= 0.0) ip = ln1a;        // ?? check further (see also #568)
-    else if (t >= 1.0) ip = ln2a;   // ?? check further
+    else if (t >= 1.0) ip = ln1b;   // ?? check further
     else
     {
       ip.x = static_cast<int64_t>(ln1a.x + t * dx1);

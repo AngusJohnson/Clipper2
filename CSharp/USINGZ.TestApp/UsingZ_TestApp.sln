@@ -1,0 +1,31 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.4.33205.214
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "UsingZTestApp", "UsingZTestApp.csproj", "{34A93225-8048-4A5A-8741-BC619C13C7B0}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Clipper2LibZ", "..\USINGZ\Clipper2LibZ.csproj", "{C50EB9B5-CE07-49DE-B147-941DBFB4FA4E}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{34A93225-8048-4A5A-8741-BC619C13C7B0}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{34A93225-8048-4A5A-8741-BC619C13C7B0}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{34A93225-8048-4A5A-8741-BC619C13C7B0}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{34A93225-8048-4A5A-8741-BC619C13C7B0}.Release|Any CPU.Build.0 = Release|Any CPU
+		{C50EB9B5-CE07-49DE-B147-941DBFB4FA4E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C50EB9B5-CE07-49DE-B147-941DBFB4FA4E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C50EB9B5-CE07-49DE-B147-941DBFB4FA4E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C50EB9B5-CE07-49DE-B147-941DBFB4FA4E}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {0E1221D6-32D4-4974-9205-DE97EC5F4937}
+	EndGlobalSection
+EndGlobal

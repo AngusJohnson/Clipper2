@@ -1,6 +1,6 @@
 ﻿/*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  16 July 2023                                                    *
+* Date      :  17 July 2023                                                    *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2023                                         *
 * Purpose   :  Core structures and functions for the Clipper Library           *
@@ -631,18 +631,18 @@ namespace Clipper2Lib
       double dx1 = (ln1b.X - ln1a.X);
       double dy2 = (ln2b.Y - ln2a.Y);
       double dx2 = (ln2b.X - ln2a.X);
-      double cp = dy1 * dx2 - dy2 * dx1;
-      if (cp == 0.0)
+      double det = dy1 * dx2 - dy2 * dx1;
+      if (det == 0.0)
       {
         ip = new Point64();
         return false;
       }
-      double qx = dx1 * ln1a.Y - dy1 * ln1a.X;
-      double qy = dx2 * ln2a.Y - dy2 * ln2a.X;
-      ip = new Point64(
-        CheckCastInt64((dx1 * qy - dx2 * qx) / cp),
-        CheckCastInt64((dy1 * qy - dy2 * qx) / cp));
-      return (ip.X != Invalid64 && ip.Y != Invalid64);
+
+      double t = ((ln1a.X - ln2a.X) * dy2 - (ln1a.Y - ln2a.Y) * dx2) / det;
+      if (t <= 0.0) ip = ln1a;
+      else if (t >= 1.0) ip = ln1b;
+      else ip = new Point64(ln1a.X + t * dx1, ln1a.Y + t * dy1);
+      return true;
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]

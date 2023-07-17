@@ -14,4 +14,12 @@
     <DefineConstants>TRACE;DEBUG;USINGZ;</DefineConstants>
   </PropertyGroup>
 
+  <ItemGroup>
+    <Compile Include="..\Clipper2Lib\Clipper.cs" Link="Clipper.cs" />
+    <Compile Include="..\Clipper2Lib\Clipper.Engine.cs" Link="Clipper.Engine.cs" />
+    <Compile Include="..\Clipper2Lib\Clipper.Offset.cs" Link="Clipper.Offset.cs" />
+    <Compile Include="..\Clipper2Lib\Clipper.Core.cs" Link="Clipper.Core.cs" />
+    <Compile Include="..\Clipper2Lib\Clipper.RectClip.cs" Link="Clipper.RectClip.cs" />
+    <Compile Include="..\Clipper2Lib\Clipper.Minkowski.cs" Link="Clipper.Minkowski.cs" />
+  </ItemGroup>
 </Project>

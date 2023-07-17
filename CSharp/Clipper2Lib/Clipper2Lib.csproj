@@ -25,12 +25,4 @@
     <DefineConstants>TRACE</DefineConstants>
   </PropertyGroup>
 
-  <ItemGroup>
-    <None Remove="*.ico" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <Compile Remove="Clipper.Offset_GOLD.cs" />
-  </ItemGroup>
-
 </Project>
