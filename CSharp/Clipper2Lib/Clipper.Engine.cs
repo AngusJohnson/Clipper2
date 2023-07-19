@@ -1,6 +1,6 @@
 ﻿/*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  16 July 2023                                                    *
+* Date      :  19 July 2023                                                    *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2023                                         *
 * Purpose   :  This is the main polygon clipping module                        *
@@ -3022,8 +3022,8 @@ private void DoHorizontal(Active horz)
     {
       foreach (int i in splits!)
       {
-        OutRec? split = _outrecList[i];
-        if (split == outrec || split == outrec.owner) continue;
+        OutRec? split = GetRealOutRec(_outrecList[i]);
+        if (split == null || split == outrec || split == outrec.owner) continue;
         if (split!.splits != null && CheckSplitOwner(outrec, split.splits)) return true;
         if (CheckBounds(split) && split.bounds.Contains(outrec.bounds) &&
             Path1InsidePath2(outrec.pts!, split.pts!))

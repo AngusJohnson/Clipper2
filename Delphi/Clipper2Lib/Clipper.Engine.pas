@@ -2,7 +2,7 @@ unit Clipper.Engine;
 
 (*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  16 July 2023                                                    *
+* Date      :  19 July 2023                                                    *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2023                                         *
 * Purpose   :  This is the main polygon clipping module                        *
@@ -3716,8 +3716,9 @@ begin
   Result := false;
   for i := 0 to High(splits) do
   begin
-    split := splits[i];
-    if (split = outrec) or (split = outrec.owner) then Continue
+    split := GetRealOutRec(splits[i]);
+    if not assigned(split) or (split = outrec) or (split = outrec.owner) then
+        Continue
     else if Assigned(split.splits) and
       CheckSplitOwner(outrec, split.splits) then
     begin

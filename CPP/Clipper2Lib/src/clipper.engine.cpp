@@ -1,6 +1,6 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  16 July 2023                                                    *
+* Date      :  19 July 2023                                                    *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2023                                         *
 * Purpose   :  This is the main polygon clipping module                        *
@@ -2842,7 +2842,8 @@ namespace Clipper2Lib {
   {
     for (auto split : *splits)
     {
-      if(split == outrec || split == outrec->owner) continue;
+      split = GetRealOutRec(split);
+      if(!split || split == outrec || split == outrec->owner) continue;
       else if (split->splits && CheckSplitOwner(outrec, split->splits)) return true;
       else if (CheckBounds(split) && split->bounds.Contains(outrec->bounds) &&
         Path1InsidePath2(outrec->pts, split->pts))

@@ -39,11 +39,12 @@ void test1() {
   Paths64 solution;
   co.Execute(1.0, solution);
 
+  std::string filename = "test1.svg";
   SvgWriter svg;
   SvgAddOpenSubject(svg, subject, FillRule::NonZero);
   SvgAddSolution(svg, solution, FillRule::NonZero, false);
-  SvgSaveToFile(svg, "c:\\temp\\tmp1.svg", 400, 400);
-  System("c:\\temp\\tmp1.svg");
+  SvgSaveToFile(svg, filename, 400, 400);
+  System(filename);
 }
 
 void test2() {
@@ -68,11 +69,12 @@ void test2() {
   Paths64 solution;
   co.Execute(1.0, solution);
 
+  std::string filename = "test2.svg";
   SvgWriter svg;
   SvgAddOpenSubject(svg, subject, FillRule::NonZero);
   SvgAddSolution(svg, solution, FillRule::NonZero, false);
-  SvgSaveToFile(svg, "c:\\temp\\tmp2.svg", 400, 400);
-  System("c:\\temp\\tmp2.svg");
+  SvgSaveToFile(svg, filename, 400, 400);
+  System(filename);
 }
 
 void test3() {
@@ -95,11 +97,12 @@ void test3() {
   Paths64 solution;
   co.Execute(1.0, solution);
 
+  std::string filename = "test3.svg";
   SvgWriter svg;
   SvgAddSubject(svg, subject, FillRule::NonZero);
   SvgAddSolution(svg, solution, FillRule::NonZero, false);
-  SvgSaveToFile(svg, "c:\\temp\\tmp3.svg", 400, 400);
-  System("c:\\temp\\tmp3.svg");
+  SvgSaveToFile(svg, filename, 400, 400);
+  System(filename);
 }
 
 void test4() {
@@ -118,14 +121,36 @@ void test4() {
         //double vertex_angle = std::atan2(vertex_sin_a, vertex_cos_a);
         //double edge_angle = std::atan2(path_norms[curr_idx].y, path_norms[curr_idx].x);
         double sin_edge = path_norms[curr_idx].y;
-      return Sqr(sin_edge) * 3 * scale; }
+        return Sqr(sin_edge) * 3 * scale; }
   , solution);
 
+  std::string filename = "test4.svg";
   SvgWriter svg;
   SvgAddOpenSubject(svg, subject, FillRule::NonZero);
   SvgAddSolution(svg, solution, FillRule::NonZero, false);
-  SvgSaveToFile(svg, "c:\\temp\\tmp4.svg", 400, 400);
-  System("c:\\temp\\tmp4.svg");
+  SvgSaveToFile(svg, filename, 400, 400);
+  System(filename);
+}
+
+void test5() {
+
+  Paths64 solution;
+  Paths64 subject = { MakePath({0,0, 20,0, 40,0, 60,0, 80,0, 100,0}) };
+
+  ClipperOffset co;
+  co.AddPaths(subject, JoinType::Round, EndType::Butt);
+  co.Execute(
+    [](const Path64& path,
+      const PathD& path_norms, size_t curr_idx, size_t prev_idx) {
+        return double(curr_idx * curr_idx + 10); }
+  , solution);
+
+  SvgWriter svg;
+  std::string filename = "test5.svg";
+  SvgAddOpenSubject(svg, subject, FillRule::NonZero);
+  SvgAddSolution(svg, solution, FillRule::NonZero, false);
+  SvgSaveToFile(svg, filename, 400, 400);
+  System(filename);
 }
 
 
@@ -135,5 +160,6 @@ int main() {
   test2();
   test3();
   test4();
+  test5();
   return 0;
 }
