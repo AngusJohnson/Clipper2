@@ -257,8 +257,8 @@ namespace Clipper2Lib
       }
       else
       {
-        left = top = std::numeric_limits<T>::max();
-        right = bottom = -std::numeric_limits<int64_t>::max();
+        left = top = (std::numeric_limits<T>::max)();
+        right = bottom = -(std::numeric_limits<int64_t>::max)();
       }
     }
 
@@ -348,8 +348,8 @@ namespace Clipper2Lib
   template <typename T>
   Rect<T> GetBounds(const Path<T>& path)
   {
-    auto xmin = std::numeric_limits<T>::max();
-    auto ymin = std::numeric_limits<T>::max();
+    auto xmin = (std::numeric_limits<T>::max)();
+    auto ymin = (std::numeric_limits<T>::max)();
     auto xmax = std::numeric_limits<T>::lowest();
     auto ymax = std::numeric_limits<T>::lowest();
     for (const auto& p : path)
@@ -365,8 +365,8 @@ namespace Clipper2Lib
   template <typename T>
   Rect<T> GetBounds(const Paths<T>& paths)
   {
-    auto xmin = std::numeric_limits<T>::max();
-    auto ymin = std::numeric_limits<T>::max();
+    auto xmin = (std::numeric_limits<T>::max)();
+    auto ymin = (std::numeric_limits<T>::max)();
     auto xmax = std::numeric_limits<T>::lowest();
     auto ymax = std::numeric_limits<T>::lowest();
     for (const Path<T>& path : paths)

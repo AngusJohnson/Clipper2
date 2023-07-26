@@ -199,6 +199,7 @@ endif()
     Tests/TestRandomPaths.cpp
     Tests/TestRectClip.cpp
     Tests/TestTrimCollinear.cpp
+    Tests/TestWindows.cpp
   )
 
   set(CLIPPER2_TESTS "") # one or both of ClipperTests/ClipperTestsZ
