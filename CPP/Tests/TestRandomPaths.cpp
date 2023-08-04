@@ -78,7 +78,6 @@ TEST(Clipper2Tests, TestRandomPaths)
     const int64_t count_paths = solution.size() + solution_open.size();
 
  
-/*  TEMPORARILY DISABLE POLYPATH TESTING - STILL IN THE PROCESS OF FIXING
     Clipper2Lib::PolyTree64 solution_polytree;
     Clipper2Lib::Paths64 solution_polytree_open;
     Clipper2Lib::Clipper64 clipper_polytree;
@@ -90,7 +89,7 @@ TEST(Clipper2Tests, TestRandomPaths)
     const int64_t area_polytree = static_cast<int64_t>(Area(solution_polytree_paths));
     const int64_t count_polytree = solution_polytree_paths.size() + solution_polytree_open.size();
     EXPECT_EQ(area_paths, area_polytree);
-*/
+
     // polytree does an additional bounds check on each path
     // and discards paths with empty bounds, so count_polytree
     // may on occasions be slightly less than count_paths even

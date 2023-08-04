@@ -77,8 +77,8 @@ namespace Clipper2Lib
 #if USINGZ
     public ClipperBase.ZCallback64? ZCallback { get; set; }
 #endif
-    public ClipperOffset(double miterLimit = 2.0, 
-      double arcTolerance = 0.0, bool 
+    public ClipperOffset(double miterLimit = 2.0,
+      double arcTolerance = 0.0, bool
       preserveCollinear = false, bool reverseSolution = false)
     {
       MiterLimit = miterLimit;
@@ -90,7 +90,6 @@ namespace Clipper2Lib
       ZCallback = null;
 #endif
     }
-
     public void Clear()
     {
       _groupList.Clear();

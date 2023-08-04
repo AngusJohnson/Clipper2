@@ -1,6 +1,6 @@
 ﻿/*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  17 July 2023                                                    *
+* Date      :  26 July 2023                                                    *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2023                                         *
 * Purpose   :  Core structures and functions for the Clipper Library           *
@@ -145,20 +145,24 @@ namespace Clipper2Lib
     {
       return new Point64(lhs.X - rhs.X, lhs.Y - rhs.Y);
     }
-    public override string ToString()
+    public override readonly string ToString()
     {
       return $"{X},{Y} "; // nb: trailing space
     }
 
 #endif
-    public override bool Equals(object? obj)
+    public override readonly bool Equals(object? obj)
     {
       if (obj != null && obj is Point64 p)
         return this == p;
       return false;
     }
 
-    public override int GetHashCode() { return 0; }
+    public override readonly int GetHashCode()
+    {
+      return HashCode.Combine(X, Y); //#599
+    }
+
   }
 
   public struct PointD
@@ -253,7 +257,7 @@ namespace Clipper2Lib
       this.y = y;
     }
 
-    public string ToString(int precision = 2)
+    public readonly string ToString(int precision = 2)
     {
       return string.Format($"{{0:F{precision}}},{{1:F{precision}}}", x,y);
     }
@@ -271,7 +275,7 @@ namespace Clipper2Lib
         !InternalClipper.IsAlmostZero(lhs.y - rhs.y);
     }
 
-    public override bool Equals(object? obj)
+    public override readonly bool Equals(object? obj)
     {
       if (obj != null && obj is PointD p)
         return this == p;
@@ -280,7 +284,11 @@ namespace Clipper2Lib
 
     public void Negate() { x = -x; y = -y; }
 
-    public override int GetHashCode() { return 0; }
+    public override readonly int GetHashCode()
+    {
+      return HashCode.Combine(x, y); //#599
+    }
+
   }
 
   public struct Rect64
@@ -320,46 +328,44 @@ namespace Clipper2Lib
     }
 
     public long Width
-    {
-      get => right - left;
+    { readonly get => right - left;
       set => right = left + value;
     }
 
     public long Height
-    {
-      get => bottom - top;
+    { readonly get => bottom - top;
       set => bottom = top + value;
     }
 
-    public bool IsEmpty()
+    public readonly bool IsEmpty()
     {
       return bottom <= top || right <= left;
     }
 
-    public Point64 MidPoint()
+    public readonly Point64 MidPoint()
     {
       return new Point64((left + right) /2, (top + bottom)/2);
     }
 
-    public bool Contains(Point64 pt)
+    public readonly bool Contains(Point64 pt)
     {
       return pt.X > left && pt.X < right &&
         pt.Y > top && pt.Y < bottom;
     }
 
-    public bool Contains(Rect64 rec)
+    public readonly bool Contains(Rect64 rec)
     {
       return rec.left >= left && rec.right <= right &&
         rec.top >= top && rec.bottom <= bottom;
     }
 
-    public bool Intersects(Rect64 rec)
+    public readonly bool Intersects(Rect64 rec)
     {
       return (Math.Max(left, rec.left) <= Math.Min(right, rec.right)) &&
         (Math.Max(top, rec.top) <= Math.Min(bottom, rec.bottom));
     }
 
-    public Path64 AsPath()
+    public readonly Path64 AsPath()
     {
       Path64 result = new Path64(4)
       {
@@ -409,46 +415,44 @@ namespace Clipper2Lib
       }
     }
     public double Width
-    {
-      get => right - left;
+    { readonly get => right - left;
       set => right = left + value;
     }
 
     public double Height
-    {
-      get => bottom - top;
+    { readonly get => bottom - top;
       set => bottom = top + value;
     }
 
-    public bool IsEmpty()
+    public readonly bool IsEmpty()
     {
       return bottom <= top || right <= left;
     }
 
-    public PointD MidPoint()
+    public readonly PointD MidPoint()
     {
       return new PointD((left + right) / 2, (top + bottom) / 2);
     }
 
-    public bool Contains(PointD pt)
+    public readonly bool Contains(PointD pt)
     {
       return pt.x > left && pt.x < right &&
         pt.y > top && pt.y < bottom;
     }
 
-    public bool Contains(RectD rec)
+    public readonly bool Contains(RectD rec)
     {
       return rec.left >= left && rec.right <= right &&
         rec.top >= top && rec.bottom <= bottom;
     }
 
-    public bool Intersects(RectD rec)
+    public readonly bool Intersects(RectD rec)
     {
       return (Math.Max(left, rec.left) < Math.Min(right, rec.right)) &&
         (Math.Max(top, rec.top) < Math.Min(bottom, rec.bottom));
     }
 
-    public PathD AsPath()
+    public readonly PathD AsPath()
     {
       PathD result = new PathD(4)
       {
