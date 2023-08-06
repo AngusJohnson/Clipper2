@@ -2,7 +2,7 @@ unit Clipper.Offset;
 
 (*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  16 July 2023                                                    *
+* Date      :  7 August 2023                                                   *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2023                                         *
 * Purpose   :  Path Offset (Inflate/Shrink)                                    *
@@ -429,7 +429,19 @@ end;
 procedure TClipperOffset.OffsetPolygon;
 var
   i,j: integer;
+  a: double;
+  rec: TRect64;
 begin
+  //when the path is contracting, make sure
+  //there is sufficient space to do so.                //#593
+  //nb: this will have a small impact on performance
+  a := Area(fInPath);
+  if (a < 0) <> (fGroupDelta < 0) then
+  begin
+    rec := GetBounds(fInPath);
+    if Abs(fGroupDelta) * 2 >= rec.Width then Exit;
+  end;
+
   j := high(fInPath);
   for i := 0 to high(fInPath) do
     OffsetPoint(i, j);

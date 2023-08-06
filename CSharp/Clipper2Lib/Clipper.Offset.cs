@@ -1,6 +1,6 @@
 ﻿/*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  16 July 2023                                                    *
+* Date      :  7 August 2023                                                   *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2023                                         *
 * Purpose   :  Path Offset (Inflate/Shrink)                                    *
@@ -498,6 +498,16 @@ namespace Clipper2Lib
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private void OffsetPolygon(Group group, Path64 path)
     {
+      // when the path is contracting, make sure 
+      // there is sufficient space to do so.              //#593
+      //nb: this will have a small impact on performance
+      double a = Clipper.Area(path);
+      if ((a < 0) != (_groupDelta < 0))
+      {
+        Rect64 rec = Clipper.GetBounds(path);
+        if (Math.Abs(_groupDelta) * 2 > rec.Width) return;
+      }
+
       group.outPath = new Path64();
       int cnt = path.Count, prev = cnt - 1;
       for (int i = 0; i < cnt; i++)
