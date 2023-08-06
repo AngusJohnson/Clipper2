@@ -2,7 +2,7 @@ unit Clipper.RectClip;
 
 (*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  30 May 2023                                                     *
+* Date      :  6 August 2023                                                   *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2023                                         *
 * Purpose   :  FAST rectangular clipping                                       *
@@ -700,7 +700,7 @@ begin
       // intersect pt but we'll also need the first intersect pt (ip2)
       loc := prevLoc;
       GetIntersection(fRectPath, prevPt, path[i], loc, ip2);
-      if (prevCrossLoc <> locInside) then
+      if (prevCrossLoc <> locInside) and (prevCrossLoc <> loc) then //#579
         AddCorner(prevCrossLoc, loc);
 
       if (firstCrossLoc = locInside) then

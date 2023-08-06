@@ -2499,7 +2499,6 @@ namespace Clipper2Lib {
 #endif
       AddTrialHorzJoin(op);
     }
-    OutRec* currHorzOutrec = horz.outrec;
 
     while (true) // loop through consec. horizontal edges
     {
@@ -2579,9 +2578,8 @@ namespace Clipper2Lib {
           e = horz.prev_in_ael;
         }
 
-        if (horz.outrec && horz.outrec != currHorzOutrec)
+        if (horz.outrec)
         {
-          currHorzOutrec = horz.outrec;
           //nb: The outrec containining the op returned by IntersectEdges
           //above may no longer be associated with horzEdge.
           AddTrialHorzJoin(GetLastOp(horz));

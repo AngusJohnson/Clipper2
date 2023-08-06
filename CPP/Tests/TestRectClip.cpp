@@ -56,3 +56,14 @@ TEST(Clipper2Tests, TestRectClip)
   EXPECT_EQ(solBounds.Height(), rect.Height());
 
 }
+
+TEST(Clipper2Tests, TestRectClip2) //#597
+{
+  Clipper2Lib::Rect64 rect(54690, 0, 65628, 6000);
+  Clipper2Lib::Paths64 subject {{{700000, 6000}, { 0, 6000 }, { 0, 5925 }, { 700000, 5925 }}};
+
+  Clipper2Lib::Paths64 solution = Clipper2Lib::RectClip(rect, subject);
+
+  //std::cout << solution << std::endl;
+  EXPECT_TRUE(solution.size() == 1 && solution[0].size() == 4);
+}

@@ -2,7 +2,7 @@ unit Clipper.Engine;
 
 (*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  26 July 2023                                                    *
+* Date      :  6 August 2023                                                   *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2023                                         *
 * Purpose   :  This is the main polygon clipping module                        *
@@ -3401,7 +3401,6 @@ var
   e: PActive;
   pt: TPoint64;
   op: POutPt;
-  currOr: POutRec;
   isLeftToRight, horzIsOpen: Boolean;
 begin
 (*******************************************************************************
@@ -3443,7 +3442,6 @@ begin
   {$ENDIF}
     FHorzSegList.Add(op);
   end;
-  currOr := horzEdge.outrec;
 
   while true do // loop through consec. horizontal edges
   begin
@@ -3520,9 +3518,8 @@ begin
         horzEdge.currX := e.currX;
         e := horzEdge.prevInAEL;
       end;
-      if IsHotEdge(horzEdge) and (horzEdge.outrec <> currOr) then
+      if IsHotEdge(horzEdge) then
       begin
-        currOr := horzEdge.outrec;
         //nb: The outrec containining the op returned by IntersectEdges
         //above may no longer be associated with horzEdge.
         FHorzSegList.Add(GetLastOp(horzEdge));

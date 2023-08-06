@@ -1,6 +1,6 @@
 ﻿/*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  30 May 2023                                                     *
+* Date      :  6 August 2023                                                   *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2023                                         *
 * Purpose   :  FAST rectangular clipping                                       *
@@ -544,7 +544,7 @@ namespace Clipper2Lib
           loc = prev;
           GetIntersection(rectPath_, 
             prevPt, path[i], ref loc, out Point64 ip2);
-          if (prevCrossLoc != Location.inside)
+          if (prevCrossLoc != Location.inside && prevCrossLoc != loc) //#597
             AddCorner(prevCrossLoc, loc);
 
           if (firstCross == Location.inside)

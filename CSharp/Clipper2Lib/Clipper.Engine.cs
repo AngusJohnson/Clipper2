@@ -1,6 +1,6 @@
 ﻿/*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  26 July 2023                                                    *
+* Date      :  6 August 2023                                                   *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2023                                         *
 * Purpose   :  This is the main polygon clipping module                        *
@@ -2173,7 +2173,6 @@ private void DoHorizontal(Active horz)
 #endif
         AddToHorzSegList(op);
       }
-      OutRec? currOutrec = horz.outrec!;
 
       for (; ; )
       {
@@ -2248,11 +2247,8 @@ private void DoHorizontal(Active horz)
             ae = horz.prevInAEL;
           }
 
-          if (IsHotEdge(horz) && (horz.outrec != currOutrec))
-          {
-            currOutrec = horz.outrec;
+          if (IsHotEdge(horz))
             AddToHorzSegList(GetLastOp(horz));
-          }
 
         } // we've reached the end of this horizontal
 
