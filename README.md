@@ -46,5 +46,5 @@ Delphi: Compiles with any version of Delphi back to Delphi 7.
 
 ### Ports to other languages
 **Java**: https://github.com/micycle1/Clipper2-java/<br>
-**Kotlin**: https://github.com/Monkey-Maestro/clipper2-kotlin
-
+**Kotlin**: https://github.com/Monkey-Maestro/clipper2-kotlin<br>
+**golang**: https://github.com/epit3d/goclipper2
