@@ -67,3 +67,25 @@ TEST(Clipper2Tests, TestRectClip2) //#597
   //std::cout << solution << std::endl;
   EXPECT_TRUE(solution.size() == 1 && solution[0].size() == 4);
 }
+
+
+TEST(Clipper2Tests, TestRectClipWithHole) //#619
+{
+    Paths64 sub, clp, sol;
+    Rect64 rect = Rect64(5, 5, 7, 7);
+    clp.push_back(rect.AsPath());
+
+
+    sub.push_back(MakePath({ 0, 0, 0, 16, 16, 16, 16, 0 })); // hole
+    sol = RectClip(rect, sub);
+    EXPECT_FLOAT_EQ(-4, Area(sol));
+
+    sub.clear();
+    sub.push_back(MakePath({ 0, 0, 16, 0, 16, 16, 0, 16 })); // poly
+    sub.push_back(MakePath({ 2, 2, 2, 14, 14, 14, 14, 2 })); // hole
+    sol = RectClip(rect, sub);
+
+    EXPECT_EQ(2, sol.size());
+
+    EXPECT_FLOAT_EQ(0, Area(sol)); // sol: one poly and one poly with same size
+}

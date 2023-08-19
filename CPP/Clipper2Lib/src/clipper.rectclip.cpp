@@ -831,6 +831,10 @@ namespace Clipper2Lib {
         result.push_back(path);
         continue;
       }
+      else if (path_bounds_.Contains(rect_) && !IsPositive(path)) {
+          result.push_back(rect_.AsCounterClockwisePath());
+          continue;
+      }
 
       ExecuteInternal(path);
       CheckEdges();

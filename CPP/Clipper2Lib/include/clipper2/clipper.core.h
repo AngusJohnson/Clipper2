@@ -283,6 +283,19 @@ namespace Clipper2Lib
       return result;
     }
 
+
+    Path<T> AsCounterClockwisePath() const
+    {
+        Path<T> result;
+        result.reserve(4);
+        result.push_back(Point<T>(left, top));
+        result.push_back(Point<T>(left, bottom));
+        result.push_back(Point<T>(right, bottom));
+        result.push_back(Point<T>(right, top));
+
+        return result;
+    }
+
     bool Contains(const Point<T>& pt) const
     {
       return pt.x > left && pt.x < right&& pt.y > top && pt.y < bottom;
