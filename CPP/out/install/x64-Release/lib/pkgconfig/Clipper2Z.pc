@@ -1,0 +1,12 @@
+prefix=C:/Users/giggl/source/repos/Clipper2/CPP/out/install/x64-Release
+exec_prefix=${prefix}
+libdir=${prefix}/lib
+includedir=${prefix}/include
+
+Name: Clipper2
+Description: A Polygon Clipping and Offsetting library in C++
+Version: 1.2.2
+URL: https://github.com/AngusJohnson/Clipper2
+Requires:
+Libs: -L${libdir} -lClipper2
+Cflags: -I${includedir}
