@@ -2,7 +2,7 @@ unit Clipper.Engine;
 
 (*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  6 August 2023                                                   *
+* Date      :  27 August 2023                                                  *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2023                                         *
 * Purpose   :  This is the main polygon clipping module                        *
@@ -3018,11 +3018,22 @@ begin
 end;
 //------------------------------------------------------------------------------
 
+procedure MoveSplits(fromOr, toOr: POutRec);
+var
+  i: integer;
+begin
+  if not assigned(fromOr.splits) then Exit;
+  for i := 0 to High(fromOr.splits) do
+    AddSplit(toOr, fromOr.splits[i]);
+  fromOr.splits := nil;
+end;
+//------------------------------------------------------------------------------
+
 procedure TClipperBase.ProcessHorzJoins;
 var
   i: integer;
   or1, or2: POutRec;
-  op1b, op2b: POutPt;
+  op1b, op2b, tmp: POutPt;
 begin
   for i := 0 to FHorzJoinList.Count -1 do
     with PHorzJoin(FHorzJoinList[i])^ do
@@ -3045,32 +3056,45 @@ begin
       or2.pts := op1b;
       FixOutRecPts(or2);
 
+      //if or1->pts has moved to or2 then update or1->pts!!
       if or1.pts.outrec = or2 then
       begin
         or1.pts := op1;
         or1.pts.outrec := or1;
       end;
 
-      if FUsingPolytree then //#498, #520, #584, D#576
+      if FUsingPolytree then //#498, #520, #584, D#576, #618
       begin
         if Path1InsidePath2(or1.pts, or2.pts) then
         begin
-          or2.owner := or1.owner;
-          SetOwner(or1, or2);
-        end else
+          //swap or1's & or2's pts
+          tmp := or1.pts;
+          or1.pts := or2.pts;
+          or2.pts := tmp;
+          FixOutRecPts(or1);
+          FixOutRecPts(or2);
+          //or2 is now inside or1
+          or2.owner := or1;
+        end
+        else if Path1InsidePath2(or2.pts, or1.pts) then
         begin
-          SetOwner(or2, or1);
-          AddSplit(or1, or2);
-        end;
+          or2.owner := or1;
+        end 
+        else
+          or2.owner := or1.owner;
+
+        AddSplit(or1, or2);
       end
       else
         or2.owner := or1;
     end else
     begin
       or2.pts := nil;
-      if FUsingPolytree then
-        SetOwner(or2, or1)
-      else
+      if FUsingPolytree then   
+      begin
+        SetOwner(or2, or1);
+        MoveSplits(or2, or1); //#618
+      end else
         or2.owner := or1;
     end;
   end;
@@ -3738,9 +3762,11 @@ begin
   for i := 0 to High(splits) do
   begin
     split := GetRealOutRec(splits[i]);
-    if (split = nil) or (split.recursiveCheck = outrec) then Continue;
+    if (split = nil) or 
+       (split = outrec) or 
+       (split.recursiveCheck = outrec) then Continue;
+       
     split.recursiveCheck := outrec; // prevent infinite loops
-
     if Assigned(split.splits) and
       CheckSplitOwner(outrec, split.splits) then Exit
     else if IsValidOwner(outrec, split) and

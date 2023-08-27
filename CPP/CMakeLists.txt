@@ -190,10 +190,7 @@ endif()
     Tests/TestOffsetOrientation.cpp
     Tests/TestOrientation.cpp
     Tests/TestPolygons.cpp
-    Tests/TestPolytreeHoles1.cpp
-    Tests/TestPolytreeHoles2.cpp
-    Tests/TestPolytreeHoles3.cpp
-    Tests/TestPolytreeHoles4.cpp
+    Tests/TestPolytreeHoles.cpp
     Tests/TestPolytreeIntersection.cpp
     Tests/TestPolytreeUnion.cpp
     Tests/TestRandomPaths.cpp

@@ -1,6 +1,6 @@
 ﻿/*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  6 August 2023                                                   *
+* Date      :  27 August 2023                                                  *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2023                                         *
 * Purpose   :  This is the main polygon clipping module                        *
@@ -2708,6 +2708,15 @@ private void DoHorizontal(Active horz)
       return InternalClipper.PointInPolygon(mp, path2) != PointInPolygonResult.IsOutside;
     }
 
+    private void MoveSplits(OutRec fromOr, OutRec toOr)
+    {
+      if (fromOr.splits == null) return;
+      toOr.splits ??= new List<int>();
+      foreach (int i in fromOr.splits)
+        toOr.splits.Add(i);
+      fromOr.splits = null;
+    }
+
     private void ProcessHorzJoins()
     {
       foreach (HorzJoin j in _horzJoinList)
@@ -2726,27 +2735,35 @@ private void DoHorizontal(Active horz)
         {
           or2 = NewOutRec();
           or2.pts = op1b;
-
           FixOutRecPts(or2);
+
+          //if or1->pts has moved to or2 then update or1->pts!!
           if (or1.pts!.outrec == or2)
           {
             or1.pts = j.op1;
             or1.pts.outrec = or1;
           }
 
-          if (_using_polytree)  //#498, #520, #584, D#576
+          if (_using_polytree)  //#498, #520, #584, D#576, #618
           {
             if (Path1InsidePath2(or1.pts, or2.pts))
             {
+              //swap or1's & or2's pts
+              OutPt tmp = or1.pts;
+              or1.pts = or2.pts;
+              or2.pts = tmp;
+              FixOutRecPts(or1);
+              FixOutRecPts(or2);
+              //or2 is now inside or1
               or2.owner = or1.owner;
-              SetOwner(or1, or2);
             }
+            else if (Path1InsidePath2(or2.pts, or1.pts))
+              or2.owner = or1;
             else
-            {
-              SetOwner(or2, or1);
-              or1.splits ??= new List<int>();
-              or1.splits.Add(or2.idx); 
-            }
+              or2.owner = or1.owner;
+
+            or1.splits ??= new List<int>();
+            or1.splits.Add(or2.idx);
           }
           else
             or2.owner = or1;
@@ -2755,7 +2772,10 @@ private void DoHorizontal(Active horz)
         {
           or2.pts = null;
           if (_using_polytree)
+          {
             SetOwner(or2, or1);
+            MoveSplits(or2, or1); //#618
+          }
           else
             or2.owner = or1;
         }
@@ -3040,7 +3060,7 @@ private void DoHorizontal(Active horz)
       foreach (int i in splits!)
       {
         OutRec? split = GetRealOutRec(_outrecList[i]);
-        if (split == null || split.recursiveSplit == outrec) continue;
+        if (split == null || split == outrec || split.recursiveSplit == outrec) continue;
         split.recursiveSplit = outrec; //#599
         if (split!.splits != null && CheckSplitOwner(outrec, split.splits)) return true;
         if (IsValidOwner(outrec, split) && 
