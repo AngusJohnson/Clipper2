@@ -1,6 +1,6 @@
 ﻿/*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  27 August 2023                                                  *
+* Date      :  3 September 2023                                                *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2023                                         *
 * Purpose   :  This is the main polygon clipping module                        *
@@ -13,6 +13,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Reflection.Emit;
 using System.Runtime.CompilerServices;
 
 namespace Clipper2Lib
@@ -2755,7 +2756,7 @@ private void DoHorizontal(Active horz)
               FixOutRecPts(or1);
               FixOutRecPts(or2);
               //or2 is now inside or1
-              or2.owner = or1.owner;
+              or2.owner = or1;
             }
             else if (Path1InsidePath2(or2.pts, or1.pts))
               or2.owner = or1;
@@ -3500,9 +3501,38 @@ private void DoHorizontal(Active horz)
     {
       _childs.Clear();
     }
-  } // PolyPathBase class
 
-  public class PolyPath64 : PolyPathBase
+    internal string ToStringInternal(int idx, int level)
+    {
+      string result = "", padding = "", plural = "s";
+      if (_childs.Count == 1) plural = "";
+      padding = padding.PadLeft(level * 2);
+      if ((level & 1) == 0)
+        result += string.Format("{0}+- hole ({1}) contains {2} nested polygon{3}.\n", padding, idx, _childs.Count, plural);
+      else
+        result += string.Format("{0}+- polygon ({1}) contains {2} hole{3}.\n", padding, idx, _childs.Count, plural);
+
+      for (int i = 0; i < Count; i++)
+        if (_childs[i].Count > 0)
+          result += _childs[i].ToStringInternal(i, level +1);
+      return result;
+    }
+
+    public override string ToString()
+    {
+      if (Level > 0) return ""; //only accept tree root 
+      string plural = "s";
+      if (_childs.Count == 1) plural = "";
+      string result = string.Format("Polytree with {0} polygon{1}.\n", _childs.Count, plural);
+      for (int i = 0; i < Count; i++)
+        if (_childs[i].Count > 0)
+          result += _childs[i].ToStringInternal(i, 1);
+      return result + '\n';
+    }
+
+} // PolyPathBase class
+
+public class PolyPath64 : PolyPathBase
   {
     public Path64? Polygon { get; private set; } // polytree root's polygon == null
 
@@ -3547,7 +3577,6 @@ private void DoHorizontal(Active horz)
       return result;
     }
   }
-
   public class PolyPathD : PolyPathBase
   {
     internal double Scale { get; set; }
