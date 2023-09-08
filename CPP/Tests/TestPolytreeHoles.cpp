@@ -247,7 +247,27 @@ TEST(Clipper2Tests, TestPolytreeHoles6) //#618
   //  + -Polygon (2) contains 1 holes.
 
   EXPECT_TRUE(tree.Count() == 3 && tree[2]->Count() == 1);
-
 }
+
+
+TEST(Clipper2Tests, TestPolytreeHoles7) //#618
+{
+  Paths64 subject;
+  subject.push_back(MakePath({ 0, 0, 100000, 0, 100000, 100000, 200000, 100000, 
+    200000, 0, 300000, 0, 300000, 200000, 0, 200000 }));
+  subject.push_back(MakePath({ 0, 0, 0, -100000, 250000, -100000, 250000, 0 }));
+
+  PolyTree64 polytree;
+  Clipper64 c;
+  c.AddSubject(subject);
+
+  c.Execute(ClipType::Union, FillRule::NonZero, polytree);
+  //std::cout << polytree << std::endl;
+
+  EXPECT_TRUE(polytree.Count() == 1 && polytree[0]->Count() == 1);
+}
+
+
+
 
 

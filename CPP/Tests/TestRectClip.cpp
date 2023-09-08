@@ -67,3 +67,16 @@ TEST(Clipper2Tests, TestRectClip2) //#597
   //std::cout << solution << std::endl;
   EXPECT_TRUE(solution.size() == 1 && solution[0].size() == 4);
 }
+
+TEST(Clipper2Tests, TestRectClip3) //#637
+{
+  Rect64 r(-1800000000LL, -137573171LL, -1741475021LL, 3355443LL);
+  Paths64 subject, clip, solution;
+  subject.push_back(MakePath({ -1800000000LL, 10005000LL,
+    -1800000000LL, -5000LL, -1789994999LL, -5000LL, -1789994999LL, 10005000LL }));
+  clip.push_back(r.AsPath());
+
+  solution = RectClip(r, subject);
+  //std::cout << solution << std::endl;
+  EXPECT_TRUE(solution.size() == 1);
+}
