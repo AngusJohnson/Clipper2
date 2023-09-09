@@ -2,7 +2,7 @@ unit Clipper.Offset;
 
 (*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  7 August 2023                                                   *
+* Date      :  9 September 2023                                                *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2023                                         *
 * Purpose   :  Path Offset (Inflate/Shrink)                                    *
@@ -298,7 +298,7 @@ end;
 
 procedure TClipperOffset.DoGroupOffset(group: TGroup);
 var
-  i,j, len, lowestIdx: Integer;
+  i,j, len, lowestIdx, steps: Integer;
   r, stepsPer360, arcTol, area: Double;
   absDelta: double;
   rec: TRect64;
@@ -369,7 +369,8 @@ begin
         r := absDelta;
         with fInPath[0] do
         begin
-          fOutPath := Path64(Ellipse(RectD(X-r, Y-r, X+r, Y+r)));
+          steps := Ceil(fStepsPerRad * TwoPi); //#617
+          fOutPath := Path64(Ellipse(RectD(X-r, Y-r, X+r, Y+r), steps));
 {$IFDEF USINGZ}
           for j := 0 to high(fOutPath) do
             fOutPath[j].Z := Z;

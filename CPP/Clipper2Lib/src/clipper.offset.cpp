@@ -1,6 +1,6 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  7 August 2023                                                   *
+* Date      :  9 September 2023                                                *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2023                                         *
 * Purpose   :  Path Offset (Inflate/Shrink)                                    *
@@ -539,7 +539,8 @@ void ClipperOffset::DoGroupOffset(Group& group)
 			if (group.join_type == JoinType::Round)
 			{
 				double radius = abs_delta;
-				group.path = Ellipse(path[0], radius, radius);
+				int steps = static_cast<int>(std::ceil(steps_per_rad_ * 2 * PI)); //#617
+				group.path = Ellipse(path[0], radius, radius, steps);
 #ifdef USINGZ
 				for (auto& p : group.path) p.z = path[0].z;
 #endif

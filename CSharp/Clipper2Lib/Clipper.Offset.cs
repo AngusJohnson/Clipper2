@@ -1,6 +1,6 @@
 ﻿/*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  7 August 2023                                                   *
+* Date      :  9 September 2023                                                *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2023                                         *
 * Purpose   :  Path Offset (Inflate/Shrink)                                    *
@@ -664,7 +664,8 @@ namespace Clipper2Lib
           if (group.endType == EndType.Round)
           {
             double r = absDelta;
-            group.outPath = Clipper.Ellipse(path[0], r, r);
+            int steps = (int)Math.Ceiling(_stepsPerRad * 2 * Math.PI);
+            group.outPath = Clipper.Ellipse(path[0], r, r, steps);
 #if USINGZ
             group.outPath = InternalClipper.SetZ(group.outPath, path[0].Z);
 #endif      
