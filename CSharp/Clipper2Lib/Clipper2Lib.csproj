@@ -10,11 +10,14 @@
     <Title>Clipper2</Title>
     <PackageId>Clipper2</PackageId>
     <PackageProjectUrl>http://www.angusj.com/clipper2/Docs/Overview.htm</PackageProjectUrl>
-    <Copyright>Copyright © 2010-2022</Copyright>
+    <Copyright>Copyright © 2010-2023</Copyright>
     <RepositoryType>git</RepositoryType>
     <RepositoryUrl>https://github.com/AngusJohnson/Clipper2</RepositoryUrl>
     <PackageReleaseNotes>Major revision to merging polygons in clipping solutions</PackageReleaseNotes>
     <Platforms>AnyCPU;x86</Platforms>
+    <SignAssembly>true</SignAssembly>
+    <AssemblyOriginatorKeyFile>Clipper2.snk</AssemblyOriginatorKeyFile>
+    <DelaySign>false</DelaySign>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
