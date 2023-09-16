@@ -1,6 +1,6 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  9 September 2023                                                *
+* Date      :  16 September 2023                                               *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2023                                         *
 * Purpose   :  Path Offset (Inflate/Shrink)                                    *
@@ -327,11 +327,7 @@ void ClipperOffset::OffsetPoint(Group& group, Path64& path, size_t j, size_t k)
 		return;
 	}
 
-	if (cos_a > 0.999) // almost straight - less than 2.5 degree (#424, #526) 
-	{
-		DoMiter(group, path, j, k, cos_a);
-	}
-	else if (cos_a > -0.99 && (sin_a * group_delta_ < 0))
+	if (cos_a > -0.99 && (sin_a * group_delta_ < 0)) // test for concavity first (#593)
 	{
 		// is concave
 		group.path.push_back(GetPerpendic(path[j], norms[k], group_delta_));
@@ -339,6 +335,10 @@ void ClipperOffset::OffsetPoint(Group& group, Path64& path, size_t j, size_t k)
 	  // path reversals are fully cleaned with the trailing clipper		
 		group.path.push_back(path[j]); // (#405)
 		group.path.push_back(GetPerpendic(path[j], norms[j], group_delta_));
+	}
+	else if (cos_a > 0.999) // almost straight - less than 2.5 degree (#424, #526) 
+	{
+		DoMiter(group, path, j, k, cos_a);
 	}
 	else if (join_type_ == JoinType::Miter)
 	{

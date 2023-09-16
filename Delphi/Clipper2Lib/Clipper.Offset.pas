@@ -2,7 +2,7 @@ unit Clipper.Offset;
 
 (*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  9 September 2023                                                *
+* Date      :  16 September 2023                                               *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2023                                         *
 * Purpose   :  Path Offset (Inflate/Shrink)                                    *
@@ -892,9 +892,8 @@ begin
     Exit;
   end;
 
-  if (cosA > 0.999) then // almost straight - less than 2.5 degree (#424, #526)
-    DoMiter(j, k, cosA)
-  else if (cosA > -0.99) and (sinA * fGroupDelta < 0) then
+  //test for concavity first (#593)
+  if (cosA > -0.99) and (sinA * fGroupDelta < 0) then
   begin
     // is concave
     AddPoint(GetPerpendic(fInPath[j], fNorms[k], fGroupDelta));
@@ -903,6 +902,9 @@ begin
     AddPoint(fInPath[j]); // (#405)
     AddPoint(GetPerpendic(fInPath[j], fNorms[j], fGroupDelta));
   end
+  else if (cosA > 0.999) then
+    // almost straight - less than 2.5 degree (#424, #526)
+    DoMiter(j, k, cosA)
   else if (fJoinType = jtMiter) then
   begin
     // miter unless the angle is so acute the miter would exceeds ML

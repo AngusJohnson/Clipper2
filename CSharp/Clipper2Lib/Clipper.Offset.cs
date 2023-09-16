@@ -1,6 +1,6 @@
 ﻿/*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  9 September 2023                                                *
+* Date      :  16 September 2023                                               *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2023                                         *
 * Purpose   :  Path Offset (Inflate/Shrink)                                    *
@@ -469,9 +469,7 @@ namespace Clipper2Lib
         return;
       }
 
-      if (cosA > 0.999)
-        DoMiter(group, path, j, k, cosA);
-      else if (cosA > -0.99 && (sinA * _groupDelta < 0)) 
+      if (cosA > -0.99 && (sinA * _groupDelta < 0)) // test for concavity first (#593)
       {
         // is concave
         group.outPath.Add(GetPerpendic(path[j], _normals[k]));
@@ -480,6 +478,8 @@ namespace Clipper2Lib
         group.outPath.Add(path[j]); // (#405)
         group.outPath.Add(GetPerpendic(path[j], _normals[j]));
       }
+      else if (cosA > 0.999)
+        DoMiter(group, path, j, k, cosA);
       else if (_joinType == JoinType.Miter)
       {
         // miter unless the angle is so acute the miter would exceeds ML
