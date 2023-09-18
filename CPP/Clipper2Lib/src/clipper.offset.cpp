@@ -1,6 +1,6 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  16 September 2023                                               *
+* Date      :  19 September 2023                                               *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2023                                         *
 * Purpose   :  Path Offset (Inflate/Shrink)                                    *
@@ -284,20 +284,16 @@ void ClipperOffset::DoRound(Group& group, const Path64& path, size_t j, size_t k
 #else
 	group.path.push_back(Point64(pt.x + offsetVec.x, pt.y + offsetVec.y));
 #endif
-	if (angle > -PI + 0.01)	// avoid 180deg concave
+	int steps = static_cast<int>(std::ceil(steps_per_rad_ * std::abs(angle))); // #448, #456
+	for (int i = 1; i < steps; ++i) // ie 1 less than steps
 	{
-		int steps = static_cast<int>(std::ceil(steps_per_rad_ * std::abs(angle))); // #448, #456
-		for (int i = 1; i < steps; ++i) // ie 1 less than steps
-		{
-			offsetVec = PointD(offsetVec.x * step_cos_ - step_sin_ * offsetVec.y,
-				offsetVec.x * step_sin_ + offsetVec.y * step_cos_);
+		offsetVec = PointD(offsetVec.x * step_cos_ - step_sin_ * offsetVec.y,
+			offsetVec.x * step_sin_ + offsetVec.y * step_cos_);
 #ifdef USINGZ
-			group.path.push_back(Point64(pt.x + offsetVec.x, pt.y + offsetVec.y, pt.z));
+		group.path.push_back(Point64(pt.x + offsetVec.x, pt.y + offsetVec.y, pt.z));
 #else
-			group.path.push_back(Point64(pt.x + offsetVec.x, pt.y + offsetVec.y));
+		group.path.push_back(Point64(pt.x + offsetVec.x, pt.y + offsetVec.y));
 #endif
-
-		}
 	}
 	group.path.push_back(GetPerpendic(path[j], norms[j], group_delta_));
 }

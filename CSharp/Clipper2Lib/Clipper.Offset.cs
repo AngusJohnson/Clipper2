@@ -1,6 +1,6 @@
 ﻿/*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  16 September 2023                                               *
+* Date      :  19 September 2023                                               *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2023                                         *
 * Purpose   :  Path Offset (Inflate/Shrink)                                    *
@@ -417,19 +417,16 @@ namespace Clipper2Lib
 #else
       group.outPath.Add(new Point64(pt.X + offsetVec.x, pt.Y + offsetVec.y));
 #endif
-      if (angle > -Math.PI + 0.01) // avoid 180deg concave
+      int steps = (int) Math.Ceiling(_stepsPerRad * Math.Abs(angle));
+      for (int i = 1; i < steps; i++) // ie 1 less than steps
       {
-        int steps = (int) Math.Ceiling(_stepsPerRad * Math.Abs(angle));
-        for (int i = 1; i < steps; i++) // ie 1 less than steps
-        {
-          offsetVec = new PointD(offsetVec.x * _stepCos - _stepSin * offsetVec.y,
-              offsetVec.x * _stepSin + offsetVec.y * _stepCos);
+        offsetVec = new PointD(offsetVec.x * _stepCos - _stepSin * offsetVec.y,
+            offsetVec.x * _stepSin + offsetVec.y * _stepCos);
 #if USINGZ
-          group.outPath.Add(new Point64(pt.X + offsetVec.x, pt.Y + offsetVec.y, pt.Z));
+        group.outPath.Add(new Point64(pt.X + offsetVec.x, pt.Y + offsetVec.y, pt.Z));
 #else
-          group.outPath.Add(new Point64(pt.X + offsetVec.x, pt.Y + offsetVec.y));
+        group.outPath.Add(new Point64(pt.X + offsetVec.x, pt.Y + offsetVec.y));
 #endif
-        }
       }
       group.outPath.Add(GetPerpendic(pt, _normals[j]));
     }
