@@ -1,6 +1,6 @@
 ﻿/*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  26 July 2023                                                    *
+* Date      :  19 September 2023                                               *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2023                                         *
 * Purpose   :  Core structures and functions for the Clipper Library           *
@@ -627,8 +627,9 @@ namespace Clipper2Lib
       return (long)Math.Round(val);
     }
 
+
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    internal static bool GetIntersectPt(Point64 ln1a,
+    public static bool GetIntersectPoint(Point64 ln1a,
       Point64 ln1b, Point64 ln2a, Point64 ln2b, out Point64 ip)
     {
       double dy1 = (ln1b.Y - ln1a.Y);
@@ -643,30 +644,9 @@ namespace Clipper2Lib
       }
 
       double t = ((ln1a.X - ln2a.X) * dy2 - (ln1a.Y - ln2a.Y) * dx2) / det;
-      if (t <= 0.0) ip = ln1a;
+      if (t <= 0.0) ip = ln1a;    
       else if (t >= 1.0) ip = ln1b;
       else ip = new Point64(ln1a.X + t * dx1, ln1a.Y + t * dy1);
-      return true;
-    }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    internal static bool GetIntersectPoint(Point64 ln1a,
-      Point64 ln1b, Point64 ln2a, Point64 ln2b, out Point64 ip)
-    {
-      double dy1 = (ln1b.Y - ln1a.Y);
-      double dx1 = (ln1b.X - ln1a.X);
-      double dy2 = (ln2b.Y - ln2a.Y);
-      double dx2 = (ln2b.X - ln2a.X);
-      double det = dy1 * dx2 - dy2 * dx1;
-      if (det == 0.0)
-      {
-        ip = new Point64();
-        return false;
-      }
-      double t = ((ln1a.X - ln2a.X) * dy2 - (ln1a.Y - ln2a.Y) * dx2) / det;
-      if (t <= 0.0) ip = ln1a;        // ?? check further (see also #568)
-      else if (t >= 1.0) ip = ln2a;   // ?? check further
-      else ip = new Point64 (ln1a.X + t * dx1, ln1a.Y + t * dy1);
       return true;
     }
 
