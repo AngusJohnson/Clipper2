@@ -358,7 +358,8 @@ void ClipperOffset::OffsetPolygon(Group& group, Path64& path)
 	if ((a < 0) != (group_delta_ < 0)) 
 	{
 		Rect64 rec = GetBounds(path);
-		if (std::fabs(group_delta_) * 2 > rec.Width()) return;
+		double offsetMinDim = std::fabs(group_delta_) * 2;
+		if (offsetMinDim > rec.Width() || offsetMinDim > rec.Height()) return;
 	}
 
 	for (Path64::size_type j = 0, k = path.size() -1; j < path.size(); k = j, ++j)

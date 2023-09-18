@@ -502,7 +502,8 @@ namespace Clipper2Lib
       if ((a < 0) != (_groupDelta < 0))
       {
         Rect64 rec = Clipper.GetBounds(path);
-        if (Math.Abs(_groupDelta) * 2 > rec.Width) return;
+        double offsetMinDim = Math.Abs(_groupDelta) * 2;
+        if (offsetMinDim > rec.Width || offsetMinDim > rec.Height) return;
       }
 
       group.outPath = new Path64();
