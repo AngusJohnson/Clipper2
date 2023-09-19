@@ -1,6 +1,6 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  9 September 2023                                                *
+* Date      :  19 September 2023                                               *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2023                                         *
 * Purpose   :  Path Offset (Inflate/Shrink)                                    *
@@ -284,20 +284,16 @@ void ClipperOffset::DoRound(Group& group, const Path64& path, size_t j, size_t k
 #else
 	group.path.push_back(Point64(pt.x + offsetVec.x, pt.y + offsetVec.y));
 #endif
-	if (angle > -PI + 0.01)	// avoid 180deg concave
+	int steps = static_cast<int>(std::ceil(steps_per_rad_ * std::abs(angle))); // #448, #456
+	for (int i = 1; i < steps; ++i) // ie 1 less than steps
 	{
-		int steps = static_cast<int>(std::ceil(steps_per_rad_ * std::abs(angle))); // #448, #456
-		for (int i = 1; i < steps; ++i) // ie 1 less than steps
-		{
-			offsetVec = PointD(offsetVec.x * step_cos_ - step_sin_ * offsetVec.y,
-				offsetVec.x * step_sin_ + offsetVec.y * step_cos_);
+		offsetVec = PointD(offsetVec.x * step_cos_ - step_sin_ * offsetVec.y,
+			offsetVec.x * step_sin_ + offsetVec.y * step_cos_);
 #ifdef USINGZ
-			group.path.push_back(Point64(pt.x + offsetVec.x, pt.y + offsetVec.y, pt.z));
+		group.path.push_back(Point64(pt.x + offsetVec.x, pt.y + offsetVec.y, pt.z));
 #else
-			group.path.push_back(Point64(pt.x + offsetVec.x, pt.y + offsetVec.y));
+		group.path.push_back(Point64(pt.x + offsetVec.x, pt.y + offsetVec.y));
 #endif
-
-		}
 	}
 	group.path.push_back(GetPerpendic(path[j], norms[j], group_delta_));
 }
@@ -327,11 +323,7 @@ void ClipperOffset::OffsetPoint(Group& group, Path64& path, size_t j, size_t k)
 		return;
 	}
 
-	if (cos_a > 0.999) // almost straight - less than 2.5 degree (#424, #526) 
-	{
-		DoMiter(group, path, j, k, cos_a);
-	}
-	else if (cos_a > -0.99 && (sin_a * group_delta_ < 0))
+	if (cos_a > -0.99 && (sin_a * group_delta_ < 0)) // test for concavity first (#593)
 	{
 		// is concave
 		group.path.push_back(GetPerpendic(path[j], norms[k], group_delta_));
@@ -339,6 +331,10 @@ void ClipperOffset::OffsetPoint(Group& group, Path64& path, size_t j, size_t k)
 	  // path reversals are fully cleaned with the trailing clipper		
 		group.path.push_back(path[j]); // (#405)
 		group.path.push_back(GetPerpendic(path[j], norms[j], group_delta_));
+	}
+	else if (cos_a > 0.999) // almost straight - less than 2.5 degree (#424, #526) 
+	{
+		DoMiter(group, path, j, k, cos_a);
 	}
 	else if (join_type_ == JoinType::Miter)
 	{
@@ -362,7 +358,8 @@ void ClipperOffset::OffsetPolygon(Group& group, Path64& path)
 	if ((a < 0) != (group_delta_ < 0)) 
 	{
 		Rect64 rec = GetBounds(path);
-		if (std::fabs(group_delta_) * 2 > rec.Width()) return;
+		double offsetMinDim = std::fabs(group_delta_) * 2;
+		if (offsetMinDim > rec.Width() || offsetMinDim > rec.Height()) return;
 	}
 
 	for (Path64::size_type j = 0, k = path.size() -1; j < path.size(); k = j, ++j)
