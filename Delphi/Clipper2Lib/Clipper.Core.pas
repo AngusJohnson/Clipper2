@@ -1950,8 +1950,8 @@ begin
   t := ((ln1a.x-ln2a.x) * dy2 - (ln1a.y-ln2a.y) * dx2) / cp;
   if t <= 0.0 then ip := ln1a
   else if t >= 1.0 then ip := ln1b;
-  ip.X :=  Trunc(ln1a.X + t * dx1);
-  ip.Y :=  Trunc(ln1a.Y + t * dy1);
+  ip.X := Round(ln1a.X + t * dx1);
+  ip.Y := Round(ln1a.Y + t * dy1);
 end;
 //------------------------------------------------------------------------------
 
