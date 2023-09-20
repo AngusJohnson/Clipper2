@@ -696,8 +696,8 @@ namespace Clipper2Lib
     else if (t >= 1.0) ip = ln1b;   // ?? check further
     else
     {
-      ip.x = static_cast<int64_t>(ln1a.x + t * dx1);
-      ip.y = static_cast<int64_t>(ln1a.y + t * dy1);
+      ip.x = static_cast<int64_t>(std::round(ln1a.x + t * dx1));
+      ip.y = static_cast<int64_t>(std::round(ln1a.y + t * dy1));
     }
     return true;
   }
