@@ -52,9 +52,6 @@ TEST(Clipper2Tests, TestMultiplePolygons)
 
     const int64_t measured_area = static_cast<int64_t>(Area(solution));
     const int64_t measured_count = static_cast<int64_t>(solution.size() + solution_open.size());    
-    const int64_t count_diff = stored_count <= 0 ? 0 : std::abs(measured_count - stored_count);
-    const int64_t area_diff = stored_area <= 0 ? 0 : std::abs(measured_area - stored_area);
-    double area_diff_ratio = (area_diff == 0) ? 0 : std::fabs((double)(area_diff) / measured_area);
     
     // check the polytree variant too
     Clipper2Lib::PolyTree64 solution_polytree;
@@ -76,33 +73,33 @@ TEST(Clipper2Tests, TestMultiplePolygons)
       ; // skip count
     else if (IsInList(test_number, { 120, 121, 130, 138,
       140, 148, 163, 165, 166, 167, 168, 172, 175, 178, 180 }))
-      EXPECT_LE(count_diff, 5) << " in test " << test_number;
+      EXPECT_NEAR(measured_count, stored_count, 5) << " in test " << test_number;
     else if (IsInList(test_number, { 27, 181 }))
-      EXPECT_LE(count_diff, 2) << " in test " << test_number;
+      EXPECT_NEAR(measured_count, stored_count, 2) << " in test " << test_number;
     else if (test_number >= 120 && test_number <= 184)
-      EXPECT_LE(count_diff, 2) << " in test " << test_number;
+      EXPECT_NEAR(measured_count, stored_count, 2) << " in test " << test_number;
     else if (IsInList(test_number, { 23, 45, 87, 102, 111, 113, 191 }))
-      EXPECT_LE(count_diff, 1) << " in test " << test_number;
+      EXPECT_NEAR(measured_count, stored_count, 1) << " in test " << test_number;
     else
-      EXPECT_EQ(count_diff, 0) << " in test " << test_number;
+      EXPECT_EQ(measured_count, stored_count) << " in test " << test_number;
 
     // check polygon areas
     if (stored_area <= 0)
       ; // skip area
     else if (IsInList(test_number, { 19, 22, 23, 24 }))
-      EXPECT_LE((double)area_diff_ratio, 0.5) << " in test " << test_number;
+      EXPECT_NEAR(measured_area, stored_area, 0.5 * measured_area) << " in test " << test_number;
     else if (test_number == 193)
-      EXPECT_LE((double)area_diff_ratio, 0.2) << " in test " << test_number;
+      EXPECT_NEAR(measured_area, stored_area, 0.2 * measured_area) << " in test " << test_number;
     else if (test_number == 63)
-      EXPECT_LE((double)area_diff_ratio, 0.1) << " in test " << test_number;
+      EXPECT_NEAR(measured_area, stored_area, 0.1 * measured_area) << " in test " << test_number;
     else if (test_number == 16)
-      EXPECT_LE((double)area_diff_ratio, 0.075) << " in test " << test_number;
+      EXPECT_NEAR(measured_area, stored_area, 0.075 * measured_area) << " in test " << test_number;
     else if (test_number == 26)
-      EXPECT_LE((double)area_diff_ratio, 0.05) << " in test " << test_number;
+      EXPECT_NEAR(measured_area, stored_area, 0.05 * measured_area) << " in test " << test_number;
     else if (IsInList(test_number, { 15, 52, 53, 54, 59, 60, 64, 117, 119, 184 }))
-      EXPECT_LE((double)area_diff_ratio, 0.02) << " in test " << test_number;
+      EXPECT_NEAR(measured_area, stored_area, 0.02 * measured_area) << " in test " << test_number;
     else
-      EXPECT_LE((double)area_diff_ratio, 0.01) << " in test " << test_number;
+      EXPECT_NEAR(measured_area, stored_area, 0.01 * measured_area) << " in test " << test_number;
 
     EXPECT_EQ(measured_count, measured_count_polytree) 
       << " in test " << test_number;
