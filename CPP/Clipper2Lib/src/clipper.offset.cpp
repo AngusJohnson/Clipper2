@@ -1,6 +1,6 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  19 September 2023                                               *
+* Date      :  24 September 2023                                               *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2023                                         *
 * Purpose   :  Path Offset (Inflate/Shrink)                                    *
@@ -200,6 +200,24 @@ PointD IntersectPoint(const PointD& pt1a, const PointD& pt1b,
 	}
 }
 
+void ClipperOffset::DoBevel(Group& group, const Path64& path, size_t j, size_t k)
+{
+	PointD pt1, pt2;
+	if (j == k)
+	{
+		double abs_delta = std::abs(group_delta_);
+		pt1 = PointD(path[j].x - abs_delta * norms[j].x, path[j].y - abs_delta * norms[j].y);
+		pt2 = PointD(path[j].x + abs_delta * norms[j].x, path[j].y + abs_delta * norms[j].y);
+	} 
+	else
+	{
+		pt1 = PointD(path[j].x + group_delta_ * norms[k].x, path[j].y + group_delta_ * norms[k].y);
+		pt2 = PointD(path[j].x + group_delta_ * norms[j].x, path[j].y + group_delta_ * norms[j].y);
+	}
+	group.path.push_back(Point64(pt1));
+	group.path.push_back(Point64(pt2));
+}
+
 void ClipperOffset::DoSquare(Group& group, const Path64& path, size_t j, size_t k)
 {
 	PointD vec;
@@ -342,10 +360,13 @@ void ClipperOffset::OffsetPoint(Group& group, Path64& path, size_t j, size_t k)
 		if (cos_a > temp_lim_ - 1) DoMiter(group, path, j, k, cos_a);
 		else DoSquare(group, path, j, k);
 	}
-	else if (cos_a > 0.99 || join_type_ == JoinType::Square) // 0.99 ~= 8.1 deg.
-		DoSquare(group, path, j, k);
-	else
+	else if (cos_a > 0.99 || join_type_ == JoinType::Bevel) 
+		// ie > 2.5 deg (see above) but less than ~8 deg ( acos(0.99) )
+		DoBevel(group, path, j, k);
+	else if (join_type_ == JoinType::Round)
 		DoRound(group, path, j, k, std::atan2(sin_a, cos_a));
+	else
+		DoSquare(group, path, j, k);
 }
 
 void ClipperOffset::OffsetPolygon(Group& group, Path64& path)
@@ -394,17 +415,7 @@ void ClipperOffset::OffsetOpenPath(Group& group, Path64& path)
 		switch (end_type_)
 		{
 		case EndType::Butt:
-#ifdef USINGZ
-			group.path.push_back(Point64(
-				path[0].x - norms[0].x * group_delta_,
-				path[0].y - norms[0].y * group_delta_,
-				path[0].z));
-#else
-			group.path.push_back(Point64(
-				path[0].x - norms[0].x * group_delta_,
-				path[0].y - norms[0].y * group_delta_));
-#endif
-			group.path.push_back(GetPerpendic(path[0], norms[0], group_delta_));
+			DoBevel(group, path, 0, 0);
 			break;
 		case EndType::Round:
 			DoRound(group, path, 0, 0, PI);
@@ -436,17 +447,7 @@ void ClipperOffset::OffsetOpenPath(Group& group, Path64& path)
 		switch (end_type_)
 		{
 		case EndType::Butt:
-#ifdef USINGZ
-			group.path.push_back(Point64(
-				path[highI].x - norms[highI].x * group_delta_,
-				path[highI].y - norms[highI].y * group_delta_,
-				path[highI].z));
-#else
-			group.path.push_back(Point64(
-				path[highI].x - norms[highI].x * group_delta_,
-				path[highI].y - norms[highI].y * group_delta_));
-#endif
-			group.path.push_back(GetPerpendic(path[highI], norms[highI], group_delta_));
+			DoBevel(group, path, highI, highI);
 			break;
 		case EndType::Round:
 			DoRound(group, path, highI, highI, PI);

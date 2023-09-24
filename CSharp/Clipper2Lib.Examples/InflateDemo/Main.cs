@@ -1,8 +1,8 @@
 ﻿/*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  19 July 2023                                                    *
+* Date      :  24 September 2023                                               *
 * Website   :  http://www.angusj.com                                           *
-* Copyright :  Angus Johnson 2010-2022                                         *
+* Copyright :  Angus Johnson 2010-2023                                         *
 * License   :  http://www.boost.org/LICENSE_1_0.txt                            *
 *******************************************************************************/
 
@@ -32,28 +32,39 @@ namespace ClipperDemo1
 
       for (int i = 0; i < 5; ++i)
       {
-        //nb: the following '10' parameter greatly increases miter limit
+        //nb: the last parameter here (10) greatly increases miter limit
         p = Clipper.InflatePaths(p, 5, JoinType.Miter, EndType.Polygon, 10);
         pp.AddRange(p);
       }
 
       //rectangle offset - both squared and rounded
       p.Clear();
-      p.Add(Clipper.MakePath(new int[] { 100, 0, 340, 0, 340, 200, 100, 200 }));
-      pp.AddRange(p);
+      ClipperOffset co = new();
+
       //nb: using the ClipperOffest class directly here to control 
       //different join types within the same offset operation
-      ClipperOffset co = new();
+      p.Add(Clipper.MakePath(new int[] { 100, 0, 340, 0, 340, 200, 100, 200 }));
+      pp.AddRange(p);
+      co.AddPaths(p, JoinType.Bevel, EndType.Joined);
+
+      p = Clipper.TranslatePaths(p, 60, 50);
+      pp.AddRange(p);
       co.AddPaths(p, JoinType.Square, EndType.Joined);
-      p = Clipper.TranslatePaths(p, 120, 100);
+
+      p = Clipper.TranslatePaths(p, 60, 50);
       pp.AddRange(p);
       co.AddPaths(p, JoinType.Round, EndType.Joined);
+
+
       co.Execute(20, p);
       pp.AddRange(p);
 
       string filename = "../../../inflate.svg";
       SvgWriter svg = new();
       SvgUtils.AddSolution(svg, pp, false);
+      SvgUtils.AddCaption(svg, "Beveled join", 100, -27);
+      SvgUtils.AddCaption(svg, "Squared join", 160, 23);
+      SvgUtils.AddCaption(svg, "Rounded join", 220, 73);
       SvgUtils.SaveToFile(svg, filename, FillRule.EvenOdd, 800, 600, 20);
       ClipperFileIO.OpenFileWithDefaultApp(filename);
     }
@@ -69,7 +80,7 @@ namespace ClipperDemo1
         pd = Clipper.InflatePaths(pd, -2.5, JoinType.Round, EndType.Polygon);
         // SimplifyPaths - is not essential but it not only 
         // speeds up the loop but it also tidies the result
-        pd = Clipper.SimplifyPaths(pd, 0.2);
+        pd = Clipper.SimplifyPaths(pd, 0.25);
         solution.AddRange(pd);
       }
 

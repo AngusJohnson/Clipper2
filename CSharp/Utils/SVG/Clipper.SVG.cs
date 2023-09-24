@@ -305,7 +305,7 @@ namespace Clipper2Lib
       {
         writer.Write("<g font-family=\"Verdana\" font-style=\"normal\" " +
                      "font-weight=\"normal\" font-size=\"{0}\" fill=\"{1}\">\n", captionInfo.fontSize, ColorToHtml(captionInfo.fontColor));
-        writer.Write("<text x=\"{0}\" y=\"{1}\">{2}</text>\n</g>\n", captionInfo.posX + margin, captionInfo.posY + margin, captionInfo.text);
+        writer.Write("<text x=\"{0}\" y=\"{1}\">{2}</text>\n</g>\n", captionInfo.posX * scale + offsetX, captionInfo.posY * scale + offsetX, captionInfo.text);
       }
 
       writer.Write("</svg>\n");

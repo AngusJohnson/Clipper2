@@ -1,6 +1,6 @@
 ﻿/*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  19 September 2023                                               *
+* Date      :  24 September 2023                                               *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2023                                         *
 * Purpose   :  Path Offset (Inflate/Shrink)                                    *
@@ -15,9 +15,10 @@ namespace Clipper2Lib
 {
   public enum JoinType
   {
+    Miter,
     Square,
-    Round,
-    Miter
+    Bevel,
+    Round
   };
 
   public enum EndType
@@ -324,6 +325,25 @@ namespace Clipper2Lib
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private void DoBevel(Group group, Path64 path, int j, int k)
+    {
+      Point64 pt1, pt2;
+      if (j == k)
+      {
+        double absDelta = Math.Abs(_groupDelta);
+        pt1 = new Point64(path[j].X - absDelta * _normals[j].x, path[j].Y - absDelta * _normals[j].y);
+        pt2 = new Point64(path[j].X + absDelta * _normals[j].x, path[j].Y + absDelta * _normals[j].y);
+      }
+      else
+      {
+        pt1 = new Point64(path[j].X + _groupDelta * _normals[k].x, path[j].Y + _groupDelta * _normals[k].y);
+        pt2 = new Point64(path[j].X + _groupDelta * _normals[j].x, path[j].Y + _groupDelta * _normals[j].y);
+      }
+      group.outPath.Add(pt1);
+      group.outPath.Add(pt2);
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private void DoSquare(Group group, Path64 path, int j, int k)
     {
       PointD vec;
@@ -483,12 +503,14 @@ namespace Clipper2Lib
         if (cosA > _mitLimSqr - 1) DoMiter(group, path, j, k, cosA);
         else DoSquare(group, path, j, k);
       }
-      else if (cosA > 0.99 || _joinType == JoinType.Square)
+      else if (cosA > 0.99 || _joinType == JoinType.Bevel)
         //angle less than 8 degrees or a squared join
-        DoSquare(group, path, j, k);
-      else
+        DoBevel(group, path, j, k);
+      else if (_joinType == JoinType.Round)
         DoRound(group, path, j, k, Math.Atan2(sinA, cosA));
-        
+      else
+        DoSquare(group, path, j, k);
+
       k = j;
     }
 
@@ -537,17 +559,7 @@ namespace Clipper2Lib
         switch (_endType)
         {
           case EndType.Butt:
-#if USINGZ
-            group.outPath.Add(new Point64(
-                path[0].X - _normals[0].x * _groupDelta,
-                path[0].Y - _normals[0].y * _groupDelta,
-                path[0].Z));
-#else
-            group.outPath.Add(new Point64(
-                path[0].X - _normals[0].x * _groupDelta,
-                path[0].Y - _normals[0].y * _groupDelta));
-#endif
-            group.outPath.Add(GetPerpendic(path[0], _normals[0]));
+            DoBevel(group, path, 0, 0);
             break;
           case EndType.Round:
             DoRound(group, path, 0, 0, Math.PI);
@@ -575,17 +587,7 @@ namespace Clipper2Lib
         switch (_endType)
         {
           case EndType.Butt:
-#if USINGZ
-            group.outPath.Add(new Point64(
-                path[highI].X - _normals[highI].x * _groupDelta,
-                path[highI].Y - _normals[highI].y * _groupDelta,
-                path[highI].Z));
-#else
-            group.outPath.Add(new Point64(
-                path[highI].X - _normals[highI].x * _groupDelta,
-                path[highI].Y - _normals[highI].y * _groupDelta));
-#endif
-            group.outPath.Add(GetPerpendic(path[highI], _normals[highI]));
+            DoBevel(group, path, highI, highI);
             break;
           case EndType.Round:
             DoRound(group, path, highI, highI, Math.PI);

@@ -1,6 +1,6 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  15 May 2023                                                     *
+* Date      :  24 September 2023                                               *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2023                                         *
 * Purpose   :  Path Offset (Inflate/Shrink)                                    *
@@ -15,7 +15,9 @@
 
 namespace Clipper2Lib {
 
-enum class JoinType { Square, Round, Miter };
+enum class JoinType { Square, Bevel, Round, Miter };
+//Square : Joins are 'squared' at exactly the offset distance (more complex code)
+//Bevel  : Similar to Square, but the offset distance varies with angle (simple code & faster)
 
 enum class EndType {Polygon, Joined, Butt, Square, Round};
 //Butt   : offsets both sides of a path, with square blunt ends
@@ -51,7 +53,7 @@ private:
 	PathD norms;
 	Paths64 solution;
 	std::vector<Group> groups_;
-	JoinType join_type_ = JoinType::Square;
+	JoinType join_type_ = JoinType::Bevel;
 	EndType end_type_ = EndType::Polygon;
 
 	double miter_limit_ = 0.0;
@@ -64,6 +66,7 @@ private:
 #endif
 	DeltaCallback64 deltaCallback64_ = nullptr;
 
+	void DoBevel(Group& group, const Path64& path, size_t j, size_t k);
 	void DoSquare(Group& group, const Path64& path, size_t j, size_t k);
 	void DoMiter(Group& group, const Path64& path, size_t j, size_t k, double cos_a);
 	void DoRound(Group& group, const Path64& path, size_t j, size_t k, double angle);

@@ -48,4 +48,37 @@ begin
   end;
   ShellExecute(0, 'open','Sample1.svg', nil, nil, SW_SHOW);
 
+  setLength(subj, 1);
+  subj[0] := MakePath([40,60, 20,20, 180,20, 180,70, 25,150, 20,180, 180,180]);
+  solution := InflatePaths(subj, 20, jtMiter, etSquare, 3);
+
+  with TSvgWriter.Create(fillRule) do
+  try
+    AddPaths(subj, true, $2000BBFF, $800033FF, 0.8);
+    AddPaths( solution, false, $2000FF00, $FF006600, 1.2, false);
+    AddText('Miter Joins; Square Ends', 10, 210);
+
+    subj := Clipper.TranslatePaths(subj, 210, 0);
+    solution := InflatePaths(subj, 20, jtSquare, etSquare, 3);
+    AddPaths(subj, true, $2000BBFF, $800033FF, 0.8);
+    AddPaths( solution, false, $2000FF00, $FF006600, 1.2, false);
+    AddText('Square Joins; Square Ends', 220, 210);
+
+    subj := Clipper.TranslatePaths(subj, 210, 0);
+    solution := InflatePaths(subj, 20, jtBevel, etButt, 3);
+    AddPaths(subj, true, $2000BBFF, $800033FF, 0.8);
+    AddPaths( solution, false, $2000FF00, $FF006600, 1.2, false);
+    AddText('Bevel Joins; Butt Ends', 430, 210);
+
+    subj := Clipper.TranslatePaths(subj, 210, 0);
+    solution := InflatePaths(subj, 20, jtRound, etRound, 3);
+    AddPaths(subj, true, $2000BBFF, $800033FF, 0.8);
+    AddPaths( solution, false, $2000FF00, $FF006600, 1.2, false);
+    AddText('Round Joins; Round Ends', 640, 210);
+    SaveToFile('offsets.svg', 800,600, 40);
+  finally
+    free;
+  end;
+  ShellExecute(0, 'open','offsets.svg', nil, nil, SW_SHOW);
+
 end.
