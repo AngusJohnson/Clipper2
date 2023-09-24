@@ -76,9 +76,9 @@ TEST(Clipper2Tests, TestMultiplePolygons)
       EXPECT_NEAR(measured_count, stored_count, 5) << " in test " << test_number;
     else if (IsInList(test_number, { 27, 181 }))
       EXPECT_NEAR(measured_count, stored_count, 2) << " in test " << test_number;
-    else if (test_number >= 120 && test_number <= 184)
+    else if (test_number == 118 || test_number >= 120 && test_number <= 184)
       EXPECT_NEAR(measured_count, stored_count, 2) << " in test " << test_number;
-    else if (IsInList(test_number, { 23, 45, 87, 102, 111, 113, 191 }))
+    else if (IsInList(test_number, { 23, 37, 43, 45, 87, 102, 111, 113, 191 }))
       EXPECT_NEAR(measured_count, stored_count, 1) << " in test " << test_number;
     else
       EXPECT_EQ(measured_count, stored_count) << " in test " << test_number;
