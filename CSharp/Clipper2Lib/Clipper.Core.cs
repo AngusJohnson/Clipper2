@@ -644,9 +644,13 @@ namespace Clipper2Lib
       }
 
       double t = ((ln1a.X - ln2a.X) * dy2 - (ln1a.Y - ln2a.Y) * dx2) / det;
-      if (t <= 0.0) ip = ln1a;    
+      if (t <= 0.0) ip = ln1a;
       else if (t >= 1.0) ip = ln1b;
-      else ip = new Point64(ln1a.X + t * dx1, ln1a.Y + t * dy1);
+      else {
+        // NB: truncate the result instead of rounding it, to make the C# version work similarly to the C++ and Delphi versions
+        ip.X = (long) (ln1a.X + t * dx1);
+        ip.Y = (long) (ln1a.Y + t * dy1);
+      }
       return true;
     }
 
