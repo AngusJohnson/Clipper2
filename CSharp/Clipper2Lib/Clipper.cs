@@ -1,6 +1,6 @@
 ﻿/*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  16 July 2023                                                    *
+* Date      :  1 October 2023                                                  *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2023                                         *
 * Purpose   :  This module contains simple functions that will likely cover    *
@@ -169,8 +169,7 @@ namespace Clipper2Lib
     public static Paths64 RectClip(Rect64 rect, Path64 path)
     {
       if (rect.IsEmpty() || path.Count == 0) return new Paths64();
-      Paths64 tmp = new Paths64();
-      tmp.Add(path);
+      Paths64 tmp = new Paths64 { path };
       return RectClip(rect, tmp);
     }
     
@@ -189,8 +188,7 @@ namespace Clipper2Lib
     public static PathsD RectClip(RectD rect, PathD path, int precision = 2)
     {
       if (rect.IsEmpty() || path.Count == 0) return new PathsD();
-      PathsD tmp = new PathsD();
-      tmp.Add(path);
+      PathsD tmp = new PathsD { path };
       return RectClip(rect, tmp, precision);
     }
     public static Paths64 RectClipLines(Rect64 rect, Paths64 paths)
@@ -203,8 +201,7 @@ namespace Clipper2Lib
     public static Paths64 RectClipLines(Rect64 rect, Path64 path)
     {
       if (rect.IsEmpty() || path.Count == 0) return new Paths64();
-      Paths64 tmp = new Paths64();
-      tmp.Add(path);
+      Paths64 tmp = new Paths64 { path };
       return RectClipLines(rect, tmp);
     }
 
@@ -223,8 +220,7 @@ namespace Clipper2Lib
     public static PathsD RectClipLines(RectD rect, PathD path, int precision = 2)
     {
       if (rect.IsEmpty() || path.Count == 0) return new PathsD();
-      PathsD tmp = new PathsD();
-      tmp.Add(path);
+      PathsD tmp = new PathsD { path };
       return RectClipLines(rect, tmp, precision);
     }
     public static Paths64 MinkowskiSum(Path64 pattern, Path64 path, bool isClosed)
@@ -863,7 +859,7 @@ namespace Clipper2Lib
 
       bool[] flags = new bool[len];
       double[] dsq = new double[len];
-      int prev = high, curr = 0, start, next, prior2, next2;
+      int curr = 0, prev, start, next, prior2, next2;
 
       if (isClosedPath)
       {
@@ -940,7 +936,7 @@ namespace Clipper2Lib
 
       bool[] flags = new bool[len];
       double[] dsq = new double[len];
-      int prev = high, curr = 0, start, next, prior2, next2;
+      int curr = 0, prev, start, next, prior2, next2;
       if (isOpenPath)
       {
         dsq[0] = double.MaxValue;

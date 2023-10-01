@@ -1,6 +1,6 @@
 ﻿/*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  19 September 2023                                               *
+* Date      :  1 October 2023                                                  *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2023                                         *
 * Purpose   :  Core structures and functions for the Clipper Library           *
@@ -145,20 +145,20 @@ namespace Clipper2Lib
     {
       return new Point64(lhs.X - rhs.X, lhs.Y - rhs.Y);
     }
-    public override readonly string ToString()
+    public readonly override string ToString()
     {
       return $"{X},{Y} "; // nb: trailing space
     }
 
 #endif
-    public override readonly bool Equals(object? obj)
+    public readonly override bool Equals(object? obj)
     {
       if (obj != null && obj is Point64 p)
         return this == p;
       return false;
     }
 
-    public override readonly int GetHashCode()
+    public readonly override int GetHashCode()
     {
       return HashCode.Combine(X, Y); //#599
     }
@@ -275,7 +275,7 @@ namespace Clipper2Lib
         !InternalClipper.IsAlmostZero(lhs.y - rhs.y);
     }
 
-    public override readonly bool Equals(object? obj)
+    public readonly override bool Equals(object? obj)
     {
       if (obj != null && obj is PointD p)
         return this == p;
@@ -284,7 +284,7 @@ namespace Clipper2Lib
 
     public void Negate() { x = -x; y = -y; }
 
-    public override readonly int GetHashCode()
+    public readonly override int GetHashCode()
     {
       return HashCode.Combine(x, y); //#599
     }
@@ -647,9 +647,12 @@ namespace Clipper2Lib
       if (t <= 0.0) ip = ln1a;
       else if (t >= 1.0) ip = ln1b;
       else {
-        // NB: truncate the result instead of rounding it, to make the C# version work similarly to the C++ and Delphi versions
+        // avoid using constructor (and rounding too) as they affect performance //664
         ip.X = (long) (ln1a.X + t * dx1);
         ip.Y = (long) (ln1a.Y + t * dy1);
+#if USINGZ
+        ip.Z = 0;
+#endif
       }
       return true;
     }
