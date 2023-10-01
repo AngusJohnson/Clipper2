@@ -508,7 +508,9 @@ namespace Clipper2Lib
     {
       if ((currentY == ae.top.Y) || (ae.top.X == ae.bot.X)) return ae.top.X;
       if (currentY == ae.bot.Y) return ae.bot.X;
-      return ae.bot.X + (long) Math.Round(ae.dx * (currentY - ae.bot.Y));
+
+      // use MidpointRounding.ToEven in order to explicitly match the nearbyint behaviour on the C++ side
+      return ae.bot.X + (long) Math.Round(ae.dx * (currentY - ae.bot.Y), MidpointRounding.ToEven);
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]

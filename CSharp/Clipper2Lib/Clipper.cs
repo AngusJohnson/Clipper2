@@ -345,10 +345,10 @@ namespace Clipper2Lib
     {
       Point64 result = new Point64()
       {
-        X = (long) (pt.X * scale),
-        Y = (long) (pt.Y * scale),
+        X = (long) Math.Round(pt.X * scale, MidpointRounding.AwayFromZero),
+        Y = (long) Math.Round(pt.Y * scale, MidpointRounding.AwayFromZero),
 #if USINGZ
-        Z = (long) (pt.Z),
+        Z = (long) Math.Round(pt.Z, MidpointRounding.AwayFromZero),
 #endif
       };
       return result;
