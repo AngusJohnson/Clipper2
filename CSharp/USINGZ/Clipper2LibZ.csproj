@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>netstandard2.1</TargetFramework>
+    <TargetFramework>netstandard2.0</TargetFramework>
     <Nullable>enable</Nullable>
     <LangVersion>8</LangVersion>
   </PropertyGroup>
@@ -15,6 +15,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Include="..\Clipper2Lib\HashCode.cs" Link="HashCode.cs" />
     <Compile Include="..\Clipper2Lib\Clipper.cs" Link="Clipper.cs" />
     <Compile Include="..\Clipper2Lib\Clipper.Engine.cs" Link="Clipper.Engine.cs" />
     <Compile Include="..\Clipper2Lib\Clipper.Offset.cs" Link="Clipper.Offset.cs" />

@@ -13,10 +13,10 @@ void System(const std::string& filename);
 
 int main(int argc, char* argv[])
 {
-  //DoSimpleShapes();
+  DoSimpleShapes();
   DoRabbit();
 
-  std::getchar();
+  //std::getchar();
 }
 
 void DoSimpleShapes() 
@@ -26,23 +26,29 @@ void DoSimpleShapes()
 
   FillRule fr2 = FillRule::EvenOdd;
   SvgWriter svg2;
-  op1.push_back(MakePath({ 80,60, 20,20, 180,20, 180,80, 20,180, 180,180 }));
-  op2 = InflatePaths(op1, 20, JoinType::Square, EndType::Butt);
-  SvgAddOpenSubject(svg2, op1, fr2, false);
-  SvgAddSolution(svg2, Paths64ToPathsD(op2), fr2, false);
-  SvgAddCaption(svg2, "Square Joins; Butt Ends", 20, 220);
-
-  op1 = TranslatePaths(op1, 250, 0);
+  op1.push_back(MakePath({ 80,60, 20,20, 180,20, 180,70, 25,150, 20,180, 180,180 }));
   op2 = InflatePaths(op1, 20, JoinType::Miter, EndType::Square, 3);
   SvgAddOpenSubject(svg2, op1, fr2, false);
   SvgAddSolution(svg2, Paths64ToPathsD(op2), fr2, false);
-  SvgAddCaption(svg2, "Miter Joins; Square Ends", 300, 220);
+  SvgAddCaption(svg2, "Miter Joins; Square Ends", 20, 210);
 
-  op1 = TranslatePaths(op1, 250, 0);
+  op1 = TranslatePaths<int64_t>(op1, 210, 0);
+  op2 = InflatePaths(op1, 20, JoinType::Square, EndType::Square);
+  SvgAddOpenSubject(svg2, op1, fr2, false);
+  SvgAddSolution(svg2, Paths64ToPathsD(op2), fr2, false);
+  SvgAddCaption(svg2, "Square Joins; Square Ends", 230, 210);
+
+  op1 = TranslatePaths<int64_t>(op1, 210, 0);
+  op2 = InflatePaths(op1, 20, JoinType::Bevel, EndType::Butt, 3);
+  SvgAddOpenSubject(svg2, op1, fr2, false);
+  SvgAddSolution(svg2, Paths64ToPathsD(op2), fr2, false);
+  SvgAddCaption(svg2, "Bevel Joins; Butt Ends", 440, 210);
+
+  op1 = TranslatePaths<int64_t>(op1, 210, 0);
   op2 = InflatePaths(op1, 20, JoinType::Round, EndType::Round);
   SvgAddOpenSubject(svg2, op1, fr2, false);
   SvgAddSolution(svg2, Paths64ToPathsD(op2), fr2, false);
-  SvgAddCaption(svg2, "Round Joins; Round Ends", 580, 220);
+  SvgAddCaption(svg2, "Round Joins; Round Ends", 650, 210);
 
   SvgSaveToFile(svg2, "open_paths.svg", 800, 600, 20);
   System("open_paths.svg");
@@ -68,7 +74,7 @@ void DoSimpleShapes()
   //different join types within the same offset operation
   ClipperOffset co;
   co.AddPaths(p, JoinType::Miter, EndType::Joined);
-  p = TranslatePaths(p, 120, 100);
+  p = TranslatePaths<int64_t>(p, 120, 100);
   pp.insert(pp.end(), p.begin(), p.end());
   co.AddPaths(p, JoinType::Round, EndType::Joined);
   co.Execute(20, p);

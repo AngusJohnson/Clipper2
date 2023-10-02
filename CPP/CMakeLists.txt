@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.15)
-project(Clipper2 VERSION 1.2.2 LANGUAGES C CXX)
+project(Clipper2 VERSION 1.2.3 LANGUAGES C CXX)
 
 if (APPLE)
     set(CMAKE_SHARED_LIBRARY_SUFFIX ".so")

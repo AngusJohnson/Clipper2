@@ -1,6 +1,6 @@
 ﻿/*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  26 July 2023                                                    *
+* Date      :  1 October 2023                                                  *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2023                                         *
 * Purpose   :  Core structures and functions for the Clipper Library           *
@@ -31,9 +31,9 @@ namespace Clipper2Lib
 
     public Point64(Point64 pt, double scale)
     {
-      X = (long) Math.Round(pt.X * scale);
-      Y = (long) Math.Round(pt.Y * scale);
-      Z = (long) Math.Round(pt.Z * scale);
+      X = (long) Math.Round(pt.X * scale, MidpointRounding.AwayFromZero);
+      Y = (long) Math.Round(pt.Y * scale, MidpointRounding.AwayFromZero);
+      Z = (long) Math.Round(pt.Z * scale, MidpointRounding.AwayFromZero);
     }
     
     public Point64(long x, long y, long z = 0)
@@ -45,22 +45,22 @@ namespace Clipper2Lib
 
     public Point64(double x, double y, double z = 0.0)
     {
-      X = (long) Math.Round(x);
-      Y = (long) Math.Round(y);
-      Z = (long) Math.Round(z);
+      X = (long) Math.Round(x, MidpointRounding.AwayFromZero);
+      Y = (long) Math.Round(y, MidpointRounding.AwayFromZero);
+      Z = (long) Math.Round(z, MidpointRounding.AwayFromZero);
     }
 
     public Point64(PointD pt)
     {
-      X = (long) Math.Round(pt.x);
-      Y = (long) Math.Round(pt.y);
+      X = (long) Math.Round(pt.x, MidpointRounding.AwayFromZero);
+      Y = (long) Math.Round(pt.y, MidpointRounding.AwayFromZero);
       Z = pt.z;
     }
 
     public Point64(PointD pt, double scale)
     {
-      X = (long) Math.Round(pt.x * scale);
-      Y = (long) Math.Round(pt.y * scale);
+      X = (long) Math.Round(pt.x * scale, MidpointRounding.AwayFromZero);
+      Y = (long) Math.Round(pt.y * scale, MidpointRounding.AwayFromZero);
       Z = pt.z;
     }
 
@@ -104,26 +104,26 @@ namespace Clipper2Lib
 
     public Point64(double x, double y)
     {
-      X = (long) Math.Round(x);
-      Y = (long) Math.Round(y);
+      X = (long) Math.Round(x, MidpointRounding.AwayFromZero);
+      Y = (long) Math.Round(y, MidpointRounding.AwayFromZero);
     }
 
     public Point64(PointD pt)
     {
-      X = (long) Math.Round(pt.x);
-      Y = (long) Math.Round(pt.y);
+      X = (long) Math.Round(pt.x, MidpointRounding.AwayFromZero);
+      Y = (long) Math.Round(pt.y, MidpointRounding.AwayFromZero);
     }
 
     public Point64(Point64 pt, double scale)
     {
-      X = (long) Math.Round(pt.X * scale);
-      Y = (long) Math.Round(pt.Y * scale);
+      X = (long) Math.Round(pt.X * scale, MidpointRounding.AwayFromZero);
+      Y = (long) Math.Round(pt.Y * scale, MidpointRounding.AwayFromZero);
     }
 
     public Point64(PointD pt, double scale)
     {
-      X = (long) Math.Round(pt.x * scale);
-      Y = (long) Math.Round(pt.y * scale);
+      X = (long) Math.Round(pt.x * scale, MidpointRounding.AwayFromZero);
+      Y = (long) Math.Round(pt.y * scale, MidpointRounding.AwayFromZero);
     }
 
     public static bool operator ==(Point64 lhs, Point64 rhs)
@@ -145,20 +145,20 @@ namespace Clipper2Lib
     {
       return new Point64(lhs.X - rhs.X, lhs.Y - rhs.Y);
     }
-    public override readonly string ToString()
+    public readonly override string ToString()
     {
       return $"{X},{Y} "; // nb: trailing space
     }
 
 #endif
-    public override readonly bool Equals(object? obj)
+    public readonly override bool Equals(object? obj)
     {
       if (obj != null && obj is Point64 p)
         return this == p;
       return false;
     }
 
-    public override readonly int GetHashCode()
+    public readonly override int GetHashCode()
     {
       return HashCode.Combine(X, Y); //#599
     }
@@ -275,7 +275,7 @@ namespace Clipper2Lib
         !InternalClipper.IsAlmostZero(lhs.y - rhs.y);
     }
 
-    public override readonly bool Equals(object? obj)
+    public readonly override bool Equals(object? obj)
     {
       if (obj != null && obj is PointD p)
         return this == p;
@@ -284,7 +284,7 @@ namespace Clipper2Lib
 
     public void Negate() { x = -x; y = -y; }
 
-    public override readonly int GetHashCode()
+    public readonly override int GetHashCode()
     {
       return HashCode.Combine(x, y); //#599
     }
@@ -624,11 +624,12 @@ namespace Clipper2Lib
     internal static long CheckCastInt64(double val)
     {
       if ((val >= max_coord) || (val <= min_coord)) return Invalid64;
-      return (long)Math.Round(val);
+      return (long)Math.Round(val, MidpointRounding.AwayFromZero);
     }
 
+
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    internal static bool GetIntersectPt(Point64 ln1a,
+    public static bool GetIntersectPoint(Point64 ln1a,
       Point64 ln1b, Point64 ln2a, Point64 ln2b, out Point64 ip)
     {
       double dy1 = (ln1b.Y - ln1a.Y);
@@ -645,28 +646,14 @@ namespace Clipper2Lib
       double t = ((ln1a.X - ln2a.X) * dy2 - (ln1a.Y - ln2a.Y) * dx2) / det;
       if (t <= 0.0) ip = ln1a;
       else if (t >= 1.0) ip = ln1b;
-      else ip = new Point64(ln1a.X + t * dx1, ln1a.Y + t * dy1);
-      return true;
-    }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    internal static bool GetIntersectPoint(Point64 ln1a,
-      Point64 ln1b, Point64 ln2a, Point64 ln2b, out Point64 ip)
-    {
-      double dy1 = (ln1b.Y - ln1a.Y);
-      double dx1 = (ln1b.X - ln1a.X);
-      double dy2 = (ln2b.Y - ln2a.Y);
-      double dx2 = (ln2b.X - ln2a.X);
-      double det = dy1 * dx2 - dy2 * dx1;
-      if (det == 0.0)
-      {
-        ip = new Point64();
-        return false;
+      else {
+        // avoid using constructor (and rounding too) as they affect performance //664
+        ip.X = (long) (ln1a.X + t * dx1);
+        ip.Y = (long) (ln1a.Y + t * dy1);
+#if USINGZ
+        ip.Z = 0;
+#endif
       }
-      double t = ((ln1a.X - ln2a.X) * dy2 - (ln1a.Y - ln2a.Y) * dx2) / det;
-      if (t <= 0.0) ip = ln1a;        // ?? check further (see also #568)
-      else if (t >= 1.0) ip = ln2a;   // ?? check further
-      else ip = new Point64 (ln1a.X + t * dx1, ln1a.Y + t * dy1);
       return true;
     }
 
@@ -702,7 +689,10 @@ namespace Clipper2Lib
         (offPt.Y - seg1.Y) * dy) / ((dx*dx) + (dy*dy));
       if (q < 0) q = 0; else if (q > 1) q = 1;
       return new Point64(
-        seg1.X + Math.Round(q * dx), seg1.Y + Math.Round(q* dy));
+        // use MidpointRounding.ToEven in order to explicitly match the nearbyint behaviour on the C++ side
+        seg1.X + Math.Round(q * dx, MidpointRounding.ToEven),
+        seg1.Y + Math.Round(q * dy, MidpointRounding.ToEven)
+      );
     }
 
     public static PointInPolygonResult PointInPolygon(Point64 pt, Path64 polygon)

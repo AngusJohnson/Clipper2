@@ -1,6 +1,6 @@
 ﻿/*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  3 September 2023                                                *
+* Date      :  1 October 2023                                                  *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2023                                         *
 * Purpose   :  This is the main polygon clipping module                        *
@@ -508,7 +508,9 @@ namespace Clipper2Lib
     {
       if ((currentY == ae.top.Y) || (ae.top.X == ae.bot.X)) return ae.top.X;
       if (currentY == ae.bot.Y) return ae.bot.X;
-      return ae.bot.X + (long) Math.Round(ae.dx * (currentY - ae.bot.Y));
+
+      // use MidpointRounding.ToEven in order to explicitly match the nearbyint behaviour on the C++ side
+      return ae.bot.X + (long) Math.Round(ae.dx * (currentY - ae.bot.Y), MidpointRounding.ToEven);
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -845,17 +847,6 @@ namespace Clipper2Lib
     private LocalMinima PopLocalMinima()
     {
       return _minimaList[_currentLocMin++];
-    }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private void AddLocMin(Vertex vert, PathType polytype, bool isOpen)
-    {
-      // make sure the vertex is added only once ...
-      if ((vert.flags & VertexFlags.LocalMin) != VertexFlags.None) return;
-      vert.flags |= VertexFlags.LocalMin;
-
-      LocalMinima lm = new LocalMinima(vert, polytype, isOpen);
-      _minimaList.Add(lm);
     }
    
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -1899,9 +1890,9 @@ namespace Clipper2Lib
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private void AddNewIntersectNode(Active ae1, Active ae2, long topY)
     {
-      if (!InternalClipper.GetIntersectPt(
+      if (!InternalClipper.GetIntersectPoint(
         ae1.bot, ae1.top, ae2.bot, ae2.top, out Point64 ip))
-        ip = new Point64(ae1.curX, topY);
+          ip = new Point64(ae1.curX, topY);
 
       if (ip.Y > _currentBotY || ip.Y < topY)
       {
@@ -2750,9 +2741,7 @@ private void DoHorizontal(Active horz)
             if (Path1InsidePath2(or1.pts, or2.pts))
             {
               //swap or1's & or2's pts
-              OutPt tmp = or1.pts;
-              or1.pts = or2.pts;
-              or2.pts = tmp;
+              (or2.pts, or1.pts) = (or1.pts, or2.pts);
               FixOutRecPts(or1);
               FixOutRecPts(or2);
               //or2 is now inside or1
