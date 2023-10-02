@@ -315,6 +315,10 @@ namespace Clipper2Lib
         << ")";
       return os;
     }
+
+    bool operator==(const Rect<T>& other) const {
+        return left == other.left && right == other.right && top == other.top && bottom == other.bottom;
+    }
   };
 
   template <typename T1, typename T2>
