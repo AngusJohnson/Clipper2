@@ -1,6 +1,6 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  26 July 2023                                                    *
+* Date      :  4 October 2023                                                  *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2023                                         *
 * Purpose   :  Core Clipper Library structures and functions                   *
@@ -19,6 +19,8 @@
 #include <algorithm>
 #include <climits>
 #include <numeric>
+
+#include "clipper2/clipper.version.h"
 
 namespace Clipper2Lib
 {
@@ -308,6 +310,11 @@ namespace Clipper2Lib
       return ((std::max)(left, rec.left) <= (std::min)(right, rec.right)) &&
         ((std::max)(top, rec.top) <= (std::min)(bottom, rec.bottom));
     };
+
+    bool operator==(const Rect<T>& other) const {
+      return left == other.left && right == other.right && 
+        top == other.top && bottom == other.bottom;
+    }
 
     friend std::ostream& operator<<(std::ostream& os, const Rect<T>& rect) {
       os << "("

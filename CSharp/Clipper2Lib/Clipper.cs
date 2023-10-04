@@ -344,7 +344,7 @@ namespace Clipper2Lib
         X = (long) Math.Round(pt.X * scale, MidpointRounding.AwayFromZero),
         Y = (long) Math.Round(pt.Y * scale, MidpointRounding.AwayFromZero),
 #if USINGZ
-        Z = pt.Z,
+        Z = pt.Z
 #endif
       };
       return result;

@@ -17,16 +17,24 @@ option(USE_EXTERNAL_GBENCHMARK "Use the googlebenchmark" OFF)
 option(BUILD_SHARED_LIBS "Build shared libs" OFF)
 set(CLIPPER2_USINGZ "ON" CACHE STRING "Build Clipper2Z, either \"ON\" or \"OFF\" or \"ONLY\"")
 
+if (APPLE)
+    set(CMAKE_SHARED_LIBRARY_SUFFIX ".so")
+endif ()
+
 include(GNUInstallDirs)
 
+set(CLIPPER2_INC_FOLDER ${PROJECT_SOURCE_DIR}/Clipper2Lib/include/clipper2)
+configure_file(clipper.version.in ${CLIPPER2_INC_FOLDER}/clipper.version.h)
+
 set(CLIPPER2_INC
-  Clipper2Lib/include/clipper2/clipper.h
-  Clipper2Lib/include/clipper2/clipper.core.h
-  Clipper2Lib/include/clipper2/clipper.engine.h
-  Clipper2Lib/include/clipper2/clipper.export.h
-  Clipper2Lib/include/clipper2/clipper.minkowski.h
-  Clipper2Lib/include/clipper2/clipper.offset.h
-  Clipper2Lib/include/clipper2/clipper.rectclip.h
+  ${CLIPPER2_INC_FOLDER}/clipper.h
+  ${CLIPPER2_INC_FOLDER}/clipper.version.h
+  ${CLIPPER2_INC_FOLDER}/clipper.core.h
+  ${CLIPPER2_INC_FOLDER}/clipper.engine.h
+  ${CLIPPER2_INC_FOLDER}/clipper.export.h
+  ${CLIPPER2_INC_FOLDER}/clipper.minkowski.h
+  ${CLIPPER2_INC_FOLDER}/clipper.offset.h
+  ${CLIPPER2_INC_FOLDER}/clipper.rectclip.h
 )
 
 set(CLIPPER2_SRC
