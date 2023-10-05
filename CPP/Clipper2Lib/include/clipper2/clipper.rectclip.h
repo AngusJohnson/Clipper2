@@ -13,7 +13,6 @@
 #include <cstdlib>
 #include <vector>
 #include <queue>
-#include "clipper.h"
 #include "clipper.core.h"
 
 namespace Clipper2Lib
