@@ -2,7 +2,7 @@ unit Clipper.Engine;
 
 (*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  27 August 2023                                                  *
+* Date      :  6 October 2023                                                  *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2023                                         *
 * Purpose   :  This is the main polygon clipping module                        *
@@ -862,6 +862,7 @@ begin
       ((op2.pt.Y <> op2.next.pt.Y) or (op2.pt.Y <> prevOp.pt.Y))) then
     begin
       result[cnt] := op2.pt;
+      inc(cnt);
       prevOp := op2;
     end;
     op2 := op2.next;
