@@ -2,7 +2,7 @@ unit Clipper.Engine;
 
 (*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  6 October 2023                                                  *
+* Date      :  16 October 2023                                                 *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2023                                         *
 * Purpose   :  This is the main polygon clipping module                        *
@@ -959,11 +959,16 @@ begin
     else if pipResult = pipInside then dec(outsideCnt);
     op := op.next;
   until (op = op1) or (Abs(outsideCnt) = 2);
-  // if path1's location is still equivocal then check its midpoint
-  path := GetCleanPath(op1);
-  mp := Clipper.Core.GetBounds(path).MidPoint;
-  path := GetCleanPath(op2);
-  Result := PointInPolygon(mp, path) <> pipOutside;
+  if (Abs(outsideCnt) < 2) then
+  begin
+    // if path1's location is still equivocal then check its midpoint
+    path := GetCleanPath(op1);
+    mp := Clipper.Core.GetBounds(path).MidPoint;
+    path := GetCleanPath(op2);
+    Result := PointInPolygon(mp, path) <> pipOutside;
+  end
+  else
+     Result := (outsideCnt < 0);
 end;
 //------------------------------------------------------------------------------
 
