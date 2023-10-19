@@ -2,7 +2,7 @@ unit Clipper.Engine;
 
 (*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  16 October 2023                                                 *
+* Date      :  19 October 2023                                                 *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2023                                         *
 * Purpose   :  This is the main polygon clipping module                        *
@@ -2342,21 +2342,9 @@ begin
   begin
     e2.outrec.pts := e1.outrec.pts;
     e1.outrec.pts := nil;
-  end else
-  begin
+  end
+  else
     SetOwner(e2.outrec, e1.outrec);
-
-//    if FUsingPolytree then
-//    begin
-//      e := GetPrevHotEdge(e1);
-//      if not Assigned(e) then
-//        outRec.owner := nil else
-//        SetOwner(outRec, e.outrec);
-//      // nb: outRec.owner here is likely NOT the real
-//      // owner but this will be checked in DeepCheckOwner()
-//    end;
-
-  end;
 
   // and e1 and e2 are maxima and are about to be dropped from the Actives list.
   e1.outrec := nil;
@@ -3539,12 +3527,14 @@ begin
       begin
         IntersectEdges(horzEdge, e, pt);
         SwapPositionsInAEL(horzEdge, e);
+        CheckJoinLeft(e, pt);
         horzEdge.currX := e.currX;
         e := horzEdge.nextInAEL;
       end else
       begin
         IntersectEdges(e, horzEdge, pt);
         SwapPositionsInAEL(e, horzEdge);
+        CheckJoinRight(e, pt);
         horzEdge.currX := e.currX;
         e := horzEdge.prevInAEL;
       end;

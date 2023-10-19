@@ -1,6 +1,6 @@
 ﻿/*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  1 October 2023                                                  *
+* Date      :  19 October 2023                                                 *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2023                                         *
 * Purpose   :  This is the main polygon clipping module                        *
@@ -2228,6 +2228,7 @@ private void DoHorizontal(Active horz)
           {
             IntersectEdges(horz, ae, pt);
             SwapPositionsInAEL(horz, ae);
+            CheckJoinLeft(ae, pt);
             horz.curX = ae.curX;
             ae = horz.nextInAEL;
           }
@@ -2235,6 +2236,7 @@ private void DoHorizontal(Active horz)
           {
             IntersectEdges(ae, horz, pt);
             SwapPositionsInAEL(ae, horz);
+            CheckJoinRight(ae, pt);
             horz.curX = ae.curX;
             ae = horz.prevInAEL;
           }

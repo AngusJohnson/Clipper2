@@ -1,6 +1,6 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  27 August 2023                                                  *
+* Date      :  19 October 2023                                                 *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2023                                         *
 * Purpose   :  This is the main polygon clipping module                        *
@@ -1469,13 +1469,14 @@ namespace Clipper2Lib {
     e2.outrec->front_edge = nullptr;
     e2.outrec->back_edge = nullptr;
     e2.outrec->pts = nullptr;
-    SetOwner(e2.outrec, e1.outrec);
 
     if (IsOpenEnd(e1))
     {
       e2.outrec->pts = e1.outrec->pts;
       e1.outrec->pts = nullptr;
     }
+    else 
+      SetOwner(e2.outrec, e1.outrec);
 
     //and e1 and e2 are maxima and are about to be dropped from the Actives list.
     e1.outrec = nullptr;
@@ -2591,6 +2592,7 @@ namespace Clipper2Lib {
         {
           IntersectEdges(horz, *e, pt);
           SwapPositionsInAEL(horz, *e);
+          CheckJoinLeft(*e, pt);
           horz.curr_x = e->curr_x;
           e = horz.next_in_ael;
         }
@@ -2598,6 +2600,7 @@ namespace Clipper2Lib {
         {
           IntersectEdges(*e, horz, pt);
           SwapPositionsInAEL(*e, horz);
+          CheckJoinRight(*e, pt);
           horz.curr_x = e->curr_x;
           e = horz.prev_in_ael;
         }
