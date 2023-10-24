@@ -1,6 +1,6 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  1 October 2023                                                  *
+* Date      :  24 October 2023                                                 *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2023                                         *
 * Purpose   :  This is the main polygon clipping module                        *
@@ -416,12 +416,21 @@ namespace Clipper2Lib {
 
 		void SetScale(double value) { scale_ = value; }
 		double Scale() { return scale_; }
+		
 		PolyPathD* AddChild(const Path64& path) override
 		{
 			int error_code = 0;
 			auto p = std::make_unique<PolyPathD>(this);
 			PolyPathD* result = childs_.emplace_back(std::move(p)).get();
 			result->polygon_ = ScalePath<double, int64_t>(path, scale_, error_code);
+			return result;
+		}
+
+		PolyPathD* AddChild(const PathD& path)
+		{
+			auto p = std::make_unique<PolyPathD>(this);
+			PolyPathD* result = childs_.emplace_back(std::move(p)).get();
+			result->polygon_ = path;
 			return result;
 		}
 

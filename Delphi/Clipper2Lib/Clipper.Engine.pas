@@ -2,7 +2,7 @@ unit Clipper.Engine;
 
 (*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  19 October 2023                                                 *
+* Date      :  24 October 2023                                                 *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2023                                         *
 * Purpose   :  This is the main polygon clipping module                        *
@@ -347,10 +347,9 @@ type
   TPolyPath64 = class(TPolyPathBase)
   {$IFDEF STRICT}strict{$ENDIF} private
     FPath : TPath64;
-    function    GetChild64(index: Integer): TPolyPath64;
-  protected
-    function AddChild(const path: TPath64): TPolyPathBase; override;
+    function GetChild64(index: Integer): TPolyPath64;
   public
+    function AddChild(const path: TPath64): TPolyPathBase; override;
     property Child[index: Integer]: TPolyPath64 read GetChild64; default;
     property Polygon: TPath64 read FPath;
   end;
@@ -403,8 +402,9 @@ type
     function  GetChildD(index: Integer): TPolyPathD;
   protected
     FScale  : double;
-    function  AddChild(const path: TPath64): TPolyPathBase; override;
   public
+    function AddChild(const path: TPath64): TPolyPathBase; overload; override;
+    function AddChild(const path: TPathD): TPolyPathBase; reintroduce; overload;
     property  Polygon: TPathD read FPath;
     property Child[index: Integer]: TPolyPathD read GetChildD; default;
   end;
@@ -4248,6 +4248,16 @@ begin
   Result.Parent := self;
   TPolyPathD(Result).fScale := fScale;
   TPolyPathD(Result).FPath := ScalePathD(path, 1/FScale);
+  ChildList.Add(Result);
+end;
+//------------------------------------------------------------------------------
+
+function TPolyPathD.AddChild(const path: TPathD): TPolyPathBase;
+begin
+  Result := TPolyPathD.Create;
+  Result.Parent := self;
+  TPolyPathD(Result).fScale := fScale;
+  TPolyPathD(Result).FPath := path;
   ChildList.Add(Result);
 end;
 //------------------------------------------------------------------------------

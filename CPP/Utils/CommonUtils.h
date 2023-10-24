@@ -13,4 +13,14 @@ Clipper2Lib::Path64 MakeRandomPoly(int width, int height, unsigned vertCnt)
   return result;
 }
 
+Clipper2Lib::PathD MakeRandomPolyD(int width, int height, unsigned vertCnt)
+{
+  using namespace Clipper2Lib;
+  PathD result;
+  result.reserve(vertCnt);
+  for (unsigned i = 0; i < vertCnt; ++i)
+    result.push_back(PointD(std::rand() % width, std::rand() % height));
+  return result;
+}
+
 #endif

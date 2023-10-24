@@ -13,42 +13,23 @@ uses
   SysUtils,
   Clipper in '..\..\Delphi\Clipper2Lib\Clipper.pas',
   Clipper.Core in '..\..\Delphi\Clipper2Lib\Clipper.Core.pas',
+  Clipper.Engine in '..\..\Delphi\Clipper2Lib\Clipper.Engine.pas',
   Clipper.SVG in '..\..\Delphi\Utils\Clipper.SVG.pas',
   Colors in '..\..\Delphi\Utils\Colors.pas',
   Timer in '..\..\Delphi\Utils\Timer.pas';
 
 type
+  CInt64arr   = array[0..$FFFF] of Int64;
+  CPath64     = ^CInt64arr;
+  CPaths64    = ^CInt64arr;
+  CPolyPath64 = ^CInt64arr;
+  CPolytree64 = ^CInt64arr;
 
-  CInt64arr = array[0..$FFFF] of Int64;
-  CPath64 = ^CInt64arr;
-  CPath64arr = array[0..$FFFF] of CPath64;
-  CPaths64 = ^CPath64arr;
-  CDblarr = array[0..$FFFF] of Double;
-  CPathD = ^CDblarr;
-  CPathDarr = array[0..$FFFF] of CPathD;
-  CPathsD = ^CPathDarr;
-
-
-  // nb: Pointer sizes could be 32bit or 64 bits
-  // and this will depend on how the DLL was compiled
-  // Obviously, DLLs compiled for 64bits won't work with
-  // applications compiled for 32bits (and vice versa).
-
-  PCPolyTree64 = ^CPolyTree64;
-  CPolyTree64 = packed record
-    polygon   : CPath64;        //pointer (32bit or 64bit)
-    isHole    : LongBool;       //32 bits
-    childCnt  : Int32;          //32 bits
-    childs    : PCPolyTree64;   //pointer (32bit or 64bit)
-  end;
-
-  PCPolyTreeD = ^CPolyTreeD;
-  CPolyTreeD = packed record
-    polygon   : CPathD;         //pointer (32bit or 64bit)
-    isHole    : LongBool;       //32 bits
-    childCnt  : Int32;          //32 bits
-    childs    : PCPolyTreeD;    //pointer (32bit or 64bit)
-  end;
+  CDblarr     = array[0..$FFFF] of Double;
+  CPathD      = ^CDblarr;
+  CPathsD     = ^CDblarr;
+  CPolyPathD  = ^CDblarr;
+  CPolytreeD  = ^CDblarr;
 
 const
 {$IFDEF WIN64}
@@ -57,6 +38,7 @@ const
   CLIPPER2_DLL = 'Clipper2_32.dll';
 {$ENDIF}
 
+
 ////////////////////////////////////////////////////////
 // Clipper2 DLL functions
 ////////////////////////////////////////////////////////
@@ -64,17 +46,13 @@ const
 function Version(): PAnsiChar; cdecl;
   external CLIPPER2_DLL name 'Version';
 
-procedure DisposeExportedCPath64(cp: CPath64); cdecl;
-  external CLIPPER2_DLL name 'DisposeExportedCPath64';
 procedure DisposeExportedCPaths64(var cps: CPaths64); cdecl;
   external CLIPPER2_DLL name 'DisposeExportedCPaths64';
-procedure DisposeExportedCPathD(cp: CPathD); cdecl;
-  external CLIPPER2_DLL name 'DisposeExportedCPathD';
 procedure DisposeExportedCPathsD(var cp: CPathsD); cdecl;
   external CLIPPER2_DLL name 'DisposeExportedCPathsD';
-procedure DisposeExportedCPolyTree64(var cpt: PCPolyTree64); cdecl;
+procedure DisposeExportedCPolyTree64(var cpt: CPolyTree64); cdecl;
   external CLIPPER2_DLL name 'DisposeExportedCPolyTree64';
-procedure DisposeExportedCPolyTreeD(var cpt: PCPolyTreeD); cdecl;
+procedure DisposeExportedCPolyTreeD(var cpt: CPolyTreeD); cdecl;
   external CLIPPER2_DLL name 'DisposeExportedCPolyTreeD';
 
 function BooleanOp64(cliptype: UInt8; fillrule: UInt8;
@@ -84,13 +62,13 @@ function BooleanOp64(cliptype: UInt8; fillrule: UInt8;
   preserve_collinear: boolean = true;
   reverse_solution: boolean = false): integer;  cdecl;
   external CLIPPER2_DLL name 'BooleanOp64';
-function BooleanOpPt64(cliptype: UInt8; fillrule: UInt8;
+function BooleanOp_PolyTree64(cliptype: UInt8; fillrule: UInt8;
   const subjects: CPaths64; const subjects_open: CPaths64;
-  const clips: CPaths64; out solution: PCPolyTree64;
+  const clips: CPaths64; out solution: CPolyTree64;
   out solution_open: CPaths64;
   preserve_collinear: boolean = true;
   reverse_solution: boolean = false): integer; cdecl;
-  external CLIPPER2_DLL name 'BooleanOpPt64';
+  external CLIPPER2_DLL name 'BooleanOp_PolyTree64';
 
 function BooleanOpD(cliptype: UInt8; fillrule: UInt8;
   const subjects: CPathsD; const subjects_open: CPathsD;
@@ -99,13 +77,13 @@ function BooleanOpD(cliptype: UInt8; fillrule: UInt8;
   preserve_collinear: boolean = true;
   reverse_solution: boolean = false): integer; cdecl;
   external CLIPPER2_DLL name 'BooleanOpD';
-function BooleanOpPtD(cliptype: UInt8; fillrule: UInt8;
+function BooleanOp_PolyTreeD(cliptype: UInt8; fillrule: UInt8;
   const subjects: CPathsD; const subjects_open: CPathsD;
-  const clips: CPathsD; out solution: PCPolyTreeD; out solution_open: CPathsD;
+  const clips: CPathsD; out solution: CPolyTreeD; out solution_open: CPathsD;
   precision: integer = 2;
   preserve_collinear: boolean = true;
   reverse_solution: boolean = false): integer; cdecl;
-  external CLIPPER2_DLL name 'BooleanOpPtD';
+  external CLIPPER2_DLL name 'BooleanOp_PolyTreeD';
 function InflatePaths64(const paths: CPaths64;
   delta: double; jointype, endtype: UInt8; miter_limit: double = 2.0;
   arc_tolerance: double = 0.0;
@@ -130,248 +108,267 @@ function RectClipLinesD(const rect: TRectD;
   const paths: CPathsD; precision: integer = 2): CPathsD; cdecl;
   external CLIPPER2_DLL name 'RectClipLinesD';
 
+const
+  Intersection = 1; Union = 2; Difference =3; Xor_ = 4;
+  EvenOdd = 0; NonZero = 1; Positive = 2; Negative = 3;
+  magic_64 = 64; magic_D = 68;
+
 ////////////////////////////////////////////////////////
 // functions related to Clipper2 DLL structures
 ////////////////////////////////////////////////////////
 
-procedure DisposeLocalCPath64(cp: CPath64);
+procedure DisposeLocalCPaths64(cp: CPaths64);
 begin
   FreeMem(cp);
 end;
 
-procedure DisposeLocalCPaths64(var cps: CPaths64);
-var
-  i, cnt: integer;
-begin
-  if cps = nil then Exit;
-  cnt := cps[0][1];
-  for i := 0 to cnt do //cnt +1
-    FreeMem(cps[i]);
-  FreeMem(cps);
-  cps := nil;
-end;
-
-procedure DisposeLocalCPathD(cp: CPathD);
+procedure DisposeLocalCPathsD(cp: CPathsD);
 begin
   FreeMem(cp);
 end;
 
-procedure DisposeLocalCPathsD(var cps: CPathsD);
+////////////////////////////////////////////////////////
+// path format conversion functions
+////////////////////////////////////////////////////////
+
+function CreateCPaths64(const pp: TPaths64): CPaths64;
 var
-  i, cnt: integer;
+  i,j, len, len2: integer;
+  v: PInt64;
 begin
-  if not Assigned(cps) then Exit;
-  cnt := Round(cps[0][1]);
-  for i := 0 to cnt do //cnt +1
-    FreeMem(cps[i]);
-  FreeMem(cps);
-  cps := nil;
+  len := Length(pp);
+  len2 := 2;
+  for i := 0 to len -1 do
+    if Length(pp[i]) > 0 then
+      inc(len2, Length(pp[i]) *2 + 2);
+  GetMem(Result, len2 * sizeof(Int64));
+  Result[0] := 0;
+  Result[1] := len;
+  v := @Result[2];
+  for i := 0 to len -1 do
+  begin
+    len2 := Length(pp[i]);
+    if len2 = 0 then continue;
+    v^ := len2; inc(v);
+    v^ := 0; inc(v);
+    for j := 0 to len2 -1 do
+    begin
+      v^ := pp[i][j].X; inc(v);
+      v^ := pp[i][j].Y; inc(v);
+    end;
+  end;
 end;
 
-////////////////////////////////////////////////////////
-// conversion functions
-////////////////////////////////////////////////////////
+function CreateCPathsD(const pp: TPathsD): CPathsD;
+var
+  i,j, len, len2: integer;
+  v: PDouble;
+begin
+  len := Length(pp);
+  len2 := 2;
+  for i := 0 to len -1 do
+    if Length(pp[i]) > 0 then
+      inc(len2, Length(pp[i]) *2 + 2);
+  GetMem(Result, len2 * sizeof(double));
+  Result[0] := 0;
+  Result[1] := len;
+  v := @Result[2];
+  for i := 0 to len -1 do
+  begin
+    len2 := Length(pp[i]);
+    if len2 = 0 then continue;
+    v^ := len2; inc(v);
+    v^ := 0; inc(v);
+    for j := 0 to len2 -1 do
+    begin
+      v^ := pp[i][j].X; inc(v);
+      v^ := pp[i][j].Y; inc(v);
+    end;
+  end;
+end;
 
-function TPath64ToCPath64(const path: TPath64): CPath64;
+function ConvertToTPaths64(cp: CPaths64): TPaths64;
+var
+  i, j, len, len2: integer;
+  v: PInt64;
+begin
+  Result := nil;
+  v := PInt64(cp);
+  if v^ <> 0 then Exit; inc(v);
+  len := v^; inc(v);
+  SetLength(Result, len);
+  for i := 0 to len -1 do
+  begin
+    len2 := v^; inc(v, 2);
+    SetLength(Result[i], len2);
+    for j := 0 to len2 -1 do
+    begin
+      Result[i][j].X := v^; inc(v);
+      Result[i][j].Y := v^; inc(v);
+    end;
+  end;
+end;
+
+function ConvertToTPathsD(cp: CPathsD): TPathsD;
+var
+  i, j, len, len2: integer;
+  v: PDouble;
+begin
+  Result := nil;
+  if cp[0] <> 0 then Exit;
+  len := Round(cp[1]);
+  SetLength(Result, len);
+  v := @cp[2];
+  for i := 0 to len -1 do
+  begin
+    len2 := Round(v^); inc(v, 2);
+    SetLength(Result[i], len2);
+    for j := 0 to len2 -1 do
+    begin
+      Result[i][j].X := v^; inc(v);
+      Result[i][j].Y := v^; inc(v);
+    end;
+  end;
+end;
+
+function GetPolyPath64ArrayLen(const pp: TPolyPath64): integer;
+var
+  i: integer;
+begin
+  Result := 4; // magic + is_hole + child_count + poly_length
+  inc(Result, Length(pp.Polygon) * 2);
+  for i := 0 to pp.Count -1 do
+    Inc(Result, GetPolyPath64ArrayLen(pp.Child[i]));
+end;
+
+procedure GetPolytreeCountAndCStorageSize(const tree: TPolyTree64;
+  out cnt: integer; out arrayLen: integer);
+begin
+  cnt := tree.Count; // nb: top level count only
+  arrayLen := GetPolyPath64ArrayLen(tree);
+end;
+
+procedure CreateCPolyPathD(const pp: TPolyPath64;
+  var v: PDouble; scale: double);
 var
   i, len: integer;
 begin
-  len := Length(path);
-  GetMem(Result, (2 + len * 2) * sizeof(Int64));
-  Result[0] := len;
-  Result[1] := 0;
+  v^ := magic_64; inc(v);
+  if pp.IsHole then
+    v^ := 1 else
+    v^ := 0;
+  inc(v);
+  v^ := pp.Count; inc(v);
+  len := Length(pp.Polygon);
+  v^ := len; inc(v);
   for i := 0 to len -1 do
   begin
-    Result[2 + i*2] := path[i].X;
-    Result[3 + i*2] := path[i].Y;
+    v^ := pp.Polygon[i].x * scale;
+    v^ := pp.Polygon[i].y * scale;
   end;
+  for i := 0 to pp.Count -1 do
+    CreateCPolyPathD(pp.Child[i], v, scale);
 end;
 
-function TPathDToCPathD(const path: TPathD): CPathD;
+
+function CreateCPolyTreeD(const tree: TPolyTree64; scale: double): CPolyTreeD;
 var
-  i, len: integer;
-begin
-  len := Length(path);
-  GetMem(Result, (2 + len * 2) * sizeof(Double));
-  Result[0] := len;
-  Result[1] := 0;
-  for i := 0 to len -1 do
-  begin
-    Result[2 + i*2] := path[i].X;
-    Result[3 + i*2] := path[i].Y;
-  end;
-end;
-
-function CPath64Cntrs(cnt1, cnt2: Int64): CPath64;
-begin
-  GetMem(Result, 2 * sizeof(Int64));
-  Result[0] := cnt1;
-  Result[1] := cnt2;
-end;
-
-function CPathDCntrs(cnt1, cnt2: integer): CPathD;
-begin
-  GetMem(Result, 2 * sizeof(double));
-  Result[0] := cnt1;
-  Result[1] := cnt2;
-end;
-
-function TPaths64ToCPaths64(const pp: TPaths64): CPaths64;
-var
-  i,j, len, len2: integer;
-begin
-  len := Length(pp);
-  len2 := len;
-  for i := 0 to len -1 do
-    if Length(pp[i]) = 0 then
-      dec(len2);
-  GetMem(Result, (1 + len2) * sizeof(Pointer));
-  Result[0] := CPath64Cntrs(0, len2); // add the counter 'path'
-  j := 1;
-  for i := 0 to len -1 do
-  begin
-    if Length(pp[i]) = 0 then continue;
-    Result[j] := TPath64ToCPath64(pp[i]);
-    inc(j);
-  end;
-end;
-
-function TPathsDToCPathsD(const pp: TPathsD): CPathsD;
-var
-  i,j, len, len2: integer;
-begin
-  len := Length(pp);
-  len2 := len;
-  for i := 0 to len -1 do
-    if Length(pp[i]) = 0 then
-      dec(len2);
-
-  GetMem(Result, (1 + len2) * sizeof(Pointer));
-  Result[0] := CPathDCntrs(0, len2); // add the counter 'path'
-  j := 1;
-  for i := 0 to len -1 do
-  begin
-    if Length(pp[i]) = 0 then continue;
-    Result[j] := TPathDToCPathD(pp[i]);
-    inc(j);
-  end;
-end;
-
-function CPath64ToPath64(cp: CPath64): TPath64;
-var
-  i: integer;
-  cnt: Int64;
-begin
-  if not Assigned(cp) then
-    cnt := 0 else
-    cnt := cp[0];
-  SetLength(Result, cnt);
-  for i := 0 to cnt -1 do
-  begin
-    Result[i].X := cp[2 + i*2];
-    Result[i].Y := cp[3 + i*2];
-  end;
-end;
-
-function CPathDToPathD(cp: CPathD): TPathD;
-var
-  i, cnt: integer;
-begin
-  if not Assigned(cp) then
-    cnt := 0 else
-    cnt := Round(cp[0]);
-  SetLength(Result, cnt);
-  for i := 0 to cnt -1 do
-  begin
-    Result[i].X := cp[2 + i*2];
-    Result[i].Y := cp[3 + i*2];
-  end;
-end;
-
-function CPaths64ToPaths64(cps: CPaths64): TPaths64;
-var
-  i: integer;
-  cnt: Int64;
-begin
-  if not Assigned(cps) then
-    cnt := 0 else
-    cnt := cps[0][1];
-  SetLength(Result, cnt);
-  for i := 1 to cnt do
-    Result[i-1] := CPath64ToPath64(cps[i]);
-end;
-
-function CPathsDToPathsD(cps: CPathsD): TPathsD;
-var
-  i, cnt: integer;
-begin
-  if not Assigned(cps) then
-    cnt := 0 else
-    cnt := Round(cps[0][1]);
-  SetLength(Result, cnt);
-  for i := 1 to cnt do
-    Result[i-1] := CPathDToPathD(cps[i]);
-end;
-
-procedure CPt64Internal(cpt: PCPolyTree64; var paths: TPaths64);
-var
-  i: integer;
-  child: PCPolyTree64;
-begin
-  if Assigned(cpt.polygon) then
-    AppendPath(paths, CPath64ToPath64(cpt.polygon));
-  if cpt.childCnt = 0 then Exit;
-  child := cpt.childs;
-  for i := 0 to cpt.childCnt -1 do
-  begin
-    CPt64Internal(child, paths);
-    inc(child);
-  end;
-end;
-
-function CPolytree64ToPaths64(cpt: PCPolyTree64): TPaths64;
-var
-  i: integer;
-  child: PCPolyTree64;
+  i, cnt, arrayLen: integer;
+  v: PDouble;
 begin
   Result := nil;
-  if not Assigned(cpt) or (cpt.childCnt = 0) then Exit;
-  child := cpt.childs;
-  for i := 0 to cpt.childCnt -1 do
-  begin
-    CPt64Internal(child, Result);
-    inc(child);
-  end;
+  GetPolytreeCountAndCStorageSize(tree, cnt, arrayLen);
+  if cnt = 0 then Exit;
+  // allocate storage
+  GetMem(Result, arrayLen * SizeOf(double));
+
+  v := PDouble(Result);
+  v^ := magic_64; inc(v);
+  v^ := 0; inc(v);
+  v^ := tree.Count; inc(v);
+  v^ := 0;  inc(v);
+  for i := 0 to tree.Count - 1 do
+    CreateCPolyPathD(tree.Child[i], v, scale);
 end;
 
-procedure CPtDInternal(cpt: PCPolyTreeD; var paths: TPathsD);
+function CreatePolyPath64FromCPolyPath(var v: PInt64; owner: TPolyPath64): Boolean;
 var
-  i: integer;
-  child: PCPolyTreeD;
+  i, magic, childCount, len: integer;
+  path: TPath64;
+  newOwner: TPolyPath64;
 begin
-  AppendPath(paths, CPathDToPathD(cpt.polygon));
-  if cpt.childCnt = 0 then Exit;
-  child := cpt.childs;
-  for i := 0 to cpt.childCnt -1 do
+  Result := false;
+  magic := v^; inc(v, 2);
+  childCount := v^; inc(v);
+  len := v^; inc(v);
+  if (magic <> magic_64) or (len = 0) then Exit;
+  SetLength(path, len);
+  for i := 0 to len -1 do
   begin
-    CPtDInternal(child, paths);
-    inc(child);
+    path[i].X := v^; inc(v);
+    path[i].Y := v^; inc(v);
   end;
+  newOwner := TPolyPath64(owner.AddChild(path));
+  for i := 0 to childCount -1 do
+    if not CreatePolyPath64FromCPolyPath(v, newOwner) then Exit;
+  Result := true;
 end;
 
-function CPolytreeDToPathsD(cpt: PCPolyTreeD): TPathsD;
+function BuildPolyTree64FromCPolyTree(tree: CPolyTree64; outTree: TPolyTree64): Boolean;
 var
-  i: integer;
-  child: PCPolyTreeD;
+  v: PInt64;
+  i, magic, childCount, len: integer;
 begin
-  Result := nil;
-  if not Assigned(cpt) or (cpt.childCnt = 0) then Exit;
-  child := cpt.childs;
-  for i := 0 to cpt.childCnt -1 do
+  Result := false;
+  outTree.Clear();
+  v := PInt64(tree);
+  magic := v^; inc(v, 2);
+  childCount := v^; inc(v);
+  len := v^; inc(v);
+  if (magic <> magic_64) or (len > 0) then Exit;
+  for i := 0 to childCount -1 do
+    if not CreatePolyPath64FromCPolyPath(v, outTree) then Exit;
+  Result := true;
+end;
+
+function CreatePolyPathDFromCPolyPath(var v: PDouble; owner: TPolyPathD): Boolean;
+var
+  i, magic, childCount, len: integer;
+  path: TPathD;
+  newOwner: TPolyPathD;
+begin
+  Result := false;
+  magic := Round(v^); inc(v, 2);
+  childCount := Round(v^); inc(v);
+  len := Round(v^); inc(v);
+  if (magic <> magic_64) or (len = 0) then Exit;
+  SetLength(path, len);
+  for i := 0 to len -1 do
   begin
-    CPtDInternal(child, Result);
-    inc(child);
+    path[i].X := v^; inc(v);
+    path[i].Y := v^; inc(v);
   end;
+  newOwner := TPolyPathD(owner.AddChild(path));
+  for i := 0 to childCount -1 do
+    if not CreatePolyPathDFromCPolyPath(v, newOwner) then Exit;
+  Result := true;
+end;
+
+function BuildPolyTreeDFromCPolyTree(tree: CPolyTreeD; outTree: TPolyTreeD): Boolean;
+var
+  v: PDouble;
+  i, magic, childCount, len: integer;
+begin
+  Result := false;
+  outTree.Clear();
+  v := PDouble(tree);
+  magic := Round(v^); inc(v, 2);
+  childCount := Round(v^); inc(v);
+  len := Round(v^); inc(v);
+  if (magic <> magic_64) or (len > 0) then Exit;
+  for i := 0 to childCount -1 do
+    if not CreatePolyPathDFromCPolyPath(v, outTree) then Exit;
+  Result := true;
 end;
 
 ////////////////////////////////////////////////////////
@@ -430,140 +427,14 @@ begin
   end;
 end;
 
-procedure WriteCPath64(p: CPath64);
-var
-  i, len: integer;
-  s: string;
-begin
-  len := p[0];
-  if len = 0 then Exit;
-  s := '';
-  for i := 0 to len -1 do
-    s := s +
-      inttostr(p[2 + i*2]) + ',' +
-      inttostr(p[3 + i*2]) + ', ';
-  WriteLn(s);
-end;
-
-procedure WriteCPaths64(p: CPaths64);
-var
-  i, len: integer;
-begin
-  len := p[0][1];
-  for i := 1 to len do
-    WriteCPath64(p[i]);
-  WriteLn('');
-end;
-
-procedure WritePath64(p: TPath64);
-var
-  i,len: integer;
-  s: string;
-begin
-  len := Length(p);
-  if len = 0 then Exit;
-  s := '';
-  for i := 0 to len -1 do
-    s := s +
-      inttostr(p[i].X) + ',' +
-      inttostr(p[i].Y) + ', ';
-  WriteLn(s);
-end;
-
-
-procedure WritePaths64(pp: TPaths64);
-var
-  i: integer;
-begin
-  for i := 0 to High(pp) do
-    WritePath64(pp[i]);
-end;
-
-procedure WritePathD(p: TPathD);
-var
-  i,len: integer;
-  s: string;
-begin
-  len := Length(p);
-  if len = 0 then Exit;
-  s := '';
-  for i := 0 to len -1 do
-    s := Format('%s%1.2f,%1.2f, ',
-      [s, p[i].X, p[i].Y]);
-  WriteLn(s);
-end;
-
-procedure WritePathsD(pp: TPathsD);
-var
-  i: integer;
-begin
-  for i := 0 to High(pp) do
-    WritePathD(pp[i]);
-end;
-
-procedure WriteCPolyTree64(pp: PCPolyTree64);
-var
-  i: integer;
-  child: PCPolyTree64;
-begin
-  if Assigned(pp.polygon) then
-    WriteCPath64(pp.polygon);
-  if pp.childCnt = 0 then Exit;
-  child := pp.childs;
-  for i := 0 to pp.childCnt -1 do
-  begin
-    WriteCPolyTree64(child);
-    inc(child);
-  end;
-end;
-
-procedure WriteCPathD(p: CPathD);
-var
-  i, len: integer;
-  s: string;
-begin
-  len := round(p[0]);
-  if len = 0 then Exit;
-  s := '';
-  for i := 0 to len -1 do
-    s := Format('%s%1.2f,%1.2f, ',
-      [s, p[2 + i*2], p[3 + i*2]]);
-  WriteLn(s);
-end;
-
-procedure WriteCPathsD(pp: CPathsD);
-var
-  i, len: integer;
-begin
-  len := Round(pp[0][1]);
-  for i := 1 to len do
-    WriteCPathD(pp[i]);
-end;
-
-procedure WriteCPolyTreeD(pp: PCPolyTreeD);
-var
-  i: integer;
-  child: PCPolyTreeD;
-begin
-  if Assigned(pp.polygon) then
-    WriteCPathD(pp.polygon);
-  if pp.childCnt = 0 then Exit;
-  child := pp.childs;
-  for i := 0 to pp.childCnt -1 do
-  begin
-    WriteCPolyTreeD(child);
-    inc(child);
-  end;
-end;
-
 procedure ShowSvgImage(const svgFilename: string);
 begin
   ShellExecute(0, 'open',PChar(svgFilename), nil, nil, SW_SHOW);
 end;
 
 const
-  displayWidth = 800;
-  displayHeight = 600;
+  displayWidth = 600;
+  displayHeight = 400;
 
 procedure DisplaySVG(const sub, subo, clp, sol, solo: TPathsD;
   const svgName: string; width: integer = displayWidth;
@@ -596,6 +467,7 @@ begin
     AddSubject(svg, sub);
     AddOpenSubject(svg, subo);
     AddClip(svg, clp);
+
     AddSolution(svg, sol);
     AddOpenSolution(svg, solo);
     SaveSvg(svg, svgName, width, height);
@@ -608,39 +480,6 @@ end;
 ////////////////////////////////////////////////////////
 // test procedures
 ////////////////////////////////////////////////////////
-
-procedure Test_RandIntersect_MegaStress(maxCnt: integer);
-var
-  i: integer;
-  sub, clp: TPathsD;
-  csub_local, cclp_local: CPathsD;
-  csol_extern, csolo_extern: CPathsD;
-begin
-  csol_extern   := nil;
-  csolo_extern  := nil;
-  SetLength(sub, 1);
-  SetLength(clp, 1);
-
-  for i := 1 to maxCnt do
-  begin
-    sub[0] := MakeRandomPathD(displayWidth, displayHeight, 50);
-    clp[0] := MakeRandomPathD(displayWidth, displayHeight, 50);
-    csub_local := TPathsDToCPathsD(sub);
-    cclp_local := TPathsDToCPathsD(clp);
-
-    BooleanOpD(Uint8(TClipType.ctIntersection),
-      Uint8(TFillRule.frNonZero),
-      csub_local, nil, cclp_local,
-      csol_extern, csolo_extern);
-
-    DisposeLocalCPathsD(csub_local);
-    DisposeLocalCPathsD(cclp_local);
-    DisposeExportedCPathsD(csol_extern);
-    DisposeExportedCPathsD(csolo_extern);
-    if i mod 100 = 0 then Write('.');
-  end;
-  WriteLn(#10'Passed!');
-end;
 
 procedure Test_Version();
 begin
@@ -662,20 +501,16 @@ begin
     SetLength(clp, 1);
     clp[0] := MakeRandomPath(displayWidth, displayHeight, edgeCnt);
     // convert paths into DLL structures (will require local clean up)
-    csub_local := TPaths64ToCPaths64(sub);
-    cclp_local := TPaths64ToCPaths64(clp);
+    csub_local := CreateCPaths64(sub);
+    cclp_local := CreateCPaths64(clp);
 
     // do the DLL operation
-    BooleanOp64(Uint8(TClipType.ctIntersection),
-      Uint8(TFillRule.frNonZero),
+    BooleanOp64(Intersection, NonZero,
       csub_local, nil, cclp_local,
       csol_extern, csolo_extern);
 
-    // optionally display result on the console
-    //WriteCPaths64(csol_extern);
-
     DisplaySVG(sub, nil, clp,
-      CPaths64ToPaths64(csol_extern), nil, 'BooleanOp64.svg');
+      ConvertToTPaths64(csol_extern), nil, 'BooleanOp64.svg');
 
     // clean up
     DisposeLocalCPaths64(csub_local);
@@ -698,8 +533,8 @@ begin
     SetLength(clp, 1);
     clp[0] := MakeRandomPathD(displayWidth, displayHeight, edgeCnt);
     // convert paths into DLL structures (will require local clean up)
-    csub_local := TPathsDToCPathsD(sub);
-    cclp_local := TPathsDToCPathsD(clp);
+    csub_local := CreateCPathsD(sub);
+    cclp_local := CreateCPathsD(clp);
 
     // do the DLL operation
     BooleanOpD(Uint8(TClipType.ctIntersection),
@@ -711,7 +546,7 @@ begin
     //WriteCPaths64(csol_extern);
 
     DisplaySVG(sub, nil, clp,
-      CPathsDToPathsD(csol_extern), nil, 'BooleanOpD.svg');
+      ConvertToTPathsD(csol_extern), nil, 'BooleanOpD.svg');
 
     DisposeLocalCPathsD(csub_local);
     DisposeLocalCPathsD(cclp_local);
@@ -719,42 +554,82 @@ begin
     DisposeExportedCPathsD(csolo_extern);
 end;
 
-procedure Test_BooleanOpPtD(edgeCnt: integer);
+procedure Test_BooleanOp_Polytree64(edgeCnt: integer);
+var
+  sub, clp, sol: TPaths64;
+  csub_local, cclp_local: CPaths64;
+  csol_extern: CPolyTree64;
+  tree: TPolyTree64;
+  csol_open_extern: CPaths64;
+begin
+    // setup
+    WriteLn(#10'Testing BooleanOp_PolyTree64');
+    SetLength(sub, 1);
+    sub[0] := MakeRandomPath(displayWidth, displayHeight, edgeCnt);
+    SetLength(clp, 1);
+    clp[0] := MakeRandomPath(displayWidth, displayHeight, edgeCnt);
+    // convert paths into DLL structures (will require local clean up)
+    csub_local := CreateCPaths64(sub);
+    cclp_local := CreateCPaths64(clp);
+
+    // do the DLL operation
+    BooleanOp_PolyTree64(Intersection, NonZero,
+      csub_local, nil, cclp_local, csol_extern, csol_open_extern);
+
+    tree := TPolyTree64.Create;
+    try
+      BuildPolyTree64FromCPolyTree(csol_extern, tree);
+      sol := PolyTreeToPaths64(tree);
+    finally
+      tree.Free;
+    end;
+    DisposeExportedCPolyTree64(csol_extern);
+    DisposeExportedCPaths64(csol_open_extern);
+
+    DisposeLocalCPaths64(csub_local);
+    DisposeLocalCPaths64(cclp_local);
+
+    // finally, display and clean up
+    DisplaySVG(sub, nil, clp, sol, nil, 'BooleanOp_PolyTree64.svg');
+end;
+
+procedure Test_BooleanOp_PolytreeD(edgeCnt: integer);
 var
   sub, clp, sol: TPathsD;
   csub_local, cclp_local: CPathsD;
-  csol_extern: PCPolyTreeD;
-  csolo_extern: CPathsD;
+  csol_extern: CPolyTreeD;
+  tree: TPolyTreeD;
+  csol_open_extern: CPathsD;
 begin
     // setup
-    csolo_extern := nil;
-    WriteLn(#10'Testing BooleanOpPtD');
+    WriteLn(#10'Testing BooleanOp_PolyTreeD');
     SetLength(sub, 1);
     sub[0] := MakeRandomPathD(displayWidth, displayHeight, edgeCnt);
     SetLength(clp, 1);
     clp[0] := MakeRandomPathD(displayWidth, displayHeight, edgeCnt);
     // convert paths into DLL structures (will require local clean up)
-    csub_local := TPathsDToCPathsD(sub);
-    cclp_local := TPathsDToCPathsD(clp);
+    csub_local := CreateCPathsD(sub);
+    cclp_local := CreateCPathsD(clp);
 
     // do the DLL operation
-    BooleanOpPtD(Uint8(TClipType.ctIntersection),
-      Uint8(TFillRule.frNonZero),
-      csub_local, nil, cclp_local,
-      csol_extern, csolo_extern);
+    BooleanOp_PolyTreeD(Intersection, NonZero,
+      csub_local, nil, cclp_local, csol_extern, csol_open_extern);
 
-    // optionally display result on the console
-    //WriteCPaths64(csol_extern);
-
-    sol := CPolytreeDToPathsD(csol_extern);
+    tree := TPolyTreeD.Create;
+    try
+      BuildPolyTreeDFromCPolyTree(csol_extern, tree);
+      sol := PolyTreeToPathsD(tree);
+    finally
+      tree.Free;
+    end;
     DisposeExportedCPolyTreeD(csol_extern);
-    DisposeExportedCPathsD(csolo_extern);
+    DisposeExportedCPathsD(csol_open_extern);
 
     DisposeLocalCPathsD(csub_local);
     DisposeLocalCPathsD(cclp_local);
 
     // finally, display and clean up
-    DisplaySVG(sub, nil, clp, sol, nil, 'BooleanOpPtD.svg');
+    DisplaySVG(sub, nil, clp, sol, nil, 'BooleanOp_PolyTreeD.svg');
 end;
 
 procedure Test_InflatePathsD(edgeCnt: integer; delta: double);
@@ -769,7 +644,7 @@ begin
     SetLength(sub, 1);
     sub[0] := MakeRandomPathD(displayWidth, displayHeight, edgeCnt);
     // convert path into required DLL structure (also requires local clean up)
-    csub_local := TPathsDToCPathsD(sub);
+    csub_local := CreateCPathsD(sub);
 
     // and because offsetting self-intersecting paths is unpredictable
     // we must remove self-intersection via a union operation
@@ -785,30 +660,12 @@ begin
     //WriteCPaths64(csol_extern);
 
     DisplaySVG(sub, nil, nil,
-      CPathsDToPathsD(csol_extern), nil, 'InflatePaths64.svg');
+      ConvertToTPathsD(csol_extern), nil, 'InflatePathsD.svg');
 
     DisposeLocalCPathsD(csub_local);
     DisposeExportedCPathsD(csol_extern);
     DisposeExportedCPathsD(csolo_extern);
 end;
-
-function RotatePath(const path: TPathD;
-  const focalPoint: TPointD; angle: double): TPathD;
-var
-  i: integer;
-  sinA, cosA, x,y: double;
-begin
-  SetLength(Result, length(path));
-  SinCos(angle, sinA, cosA);
-  for i := 0 to high(path) do
-  begin
-    x := path[i].X - focalPoint.X;
-    y := path[i].Y - focalPoint.Y;
-    Result[i].X := x * cosA - y * sinA + focalPoint.X;
-    Result[i].Y := x * sinA + y * cosA + focalPoint.Y;
-  end;
-end;
-
 
 procedure Test_RectClipD(shapeCount: integer);
 var
@@ -853,20 +710,18 @@ begin
         Random(Round(maxOffX)), Random(Round(maxOffY)));
     end;
 
-    csub_local := TPathsDToCPathsD(sub);
+    csub_local := CreateCPathsD(sub);
     csol_extern := RectClipD(rec, csub_local, 2, true);
-    sol1 := CPathsDToPathsD(csol_extern);
+    sol1 := ConvertToTPathsD(csol_extern);
     DisposeExportedCPathsD(csol_extern);
 
     // do the DLL operation again with ConvexOnly disabled
     csol_extern := RectClipD(rec, csub_local, 2, false);
-    sol2 := CPathsDToPathsD(csol_extern);
+    sol2 := ConvertToTPathsD(csol_extern);
 
     SetLength(clp, 1);
     clp[0] := rec.AsPath;
 
-    //DisplaySVG(sub, nil, clp, nil, nil, 'RectClip64_1.svg', w,h);
-    //DisplaySVG(sub, nil, clp, sol1, nil, 'RectClip64_2.svg', w,h);
     DisplaySVG(sub, nil, clp, sol2, nil, 'RectClip64_3.svg', w,h);
 
     DisposeLocalCPathsD(csub_local);
@@ -885,7 +740,7 @@ begin
     SetLength(sub, 1);
 
     sub[0] := MakeRandomPath(displayWidth, displayHeight, edgeCnt);
-    csub_local := TPaths64ToCPaths64(sub);
+    csub_local := CreateCPaths64(sub);
 
     rec.Left := 80;
     rec.Top := 80;
@@ -895,70 +750,15 @@ begin
     // do the DLL operation
     csolo_extern := RectClipLines64(rec, csub_local);
 
-    // optionally display result on the console
-    //WriteCPaths64(csol_extern);
-
-    // finally, display and clean up
-
     SetLength(clp, 1);
     clp[0] := rec.AsPath;
 
     DisplaySVG(nil, sub, clp, nil,
-      CPaths64ToPaths64(csolo_extern), 'RectClipLines64.svg');
+      ConvertToTPaths64(csolo_extern), 'RectClipLines64.svg');
 
     DisposeLocalCPaths64(csub_local);
     DisposeExportedCPaths64(csolo_extern);
 end;
-
-procedure Test_Performance(lowThousand, hiThousand: integer);
-var
-  i: integer;
-  tr: TTimeRec;
-  sub, clp: TPaths64;
-  csub_local, cclp_local: CPaths64;
-  csol_extern, csolo_extern: CPaths64;
-const
-  w = 800;
-  h = 600;
-begin
-  csolo_extern := nil;
-  WriteLn(#10'Testing Performance');
-  for i := lowThousand to hiThousand do
-  begin
-    Write(format(#10' C++ DLL     - %d edges: ', [i*1000]));
-    // setup
-    SetLength(sub, 1);
-    sub[0] := MakeRandomPath(w, h, i*1000);
-    SetLength(clp, 1);
-    clp[0] := MakeRandomPath(w, h, i*1000);
-    // convert paths into DLL structures (will require local clean up)
-    csub_local := TPaths64ToCPaths64(sub);
-    cclp_local := TPaths64ToCPaths64(clp);
-
-    StartTimer(tr);
-    // do the DLL operation
-    BooleanOp64(Uint8(TClipType.ctIntersection),
-      Uint8(TFillRule.frNonZero),
-      csub_local, nil, cclp_local,
-      csol_extern, csolo_extern);
-    WriteLn(format('%1.3n secs', [EndTimer(tr)]));
-
-    Write(format(' Pure delphi - %d edges: ', [i*1000]));
-    StartTimer(tr);
-    Clipper.Intersect(sub, clp, Clipper.frNonZero);
-    WriteLn(format('%1.3n secs', [EndTimer(tr)]));
-
-    if i = hiThousand then
-      DisplaySVG(sub, nil, clp, CPaths64ToPaths64(csol_extern), nil, 'Performance.svg');
-
-    DisposeLocalCPaths64(csub_local);
-    DisposeLocalCPaths64(cclp_local);
-    DisposeExportedCPaths64(csol_extern);
-    DisposeExportedCPaths64(csolo_extern);
-
-  end; //bottom of for loop
-end;
-
 
 ////////////////////////////////////////////////////////
 // main entry here
@@ -969,14 +769,13 @@ var
 begin
   Randomize;
   Test_Version();
-  Test_BooleanOp64(50);
-  Test_BooleanOpD(75);
-  Test_BooleanOpPtD(20);
+  Test_BooleanOp64(25);
+  Test_BooleanOpD(25);
+  Test_BooleanOp_Polytree64(15);
+  Test_BooleanOp_PolytreeD(25);
   Test_InflatePathsD(20, -10); // edgeCount, offsetDist
   Test_RectClipD(15);
   Test_RectClipLines64(25);
-  Test_Performance(1, 5); // 1000 to 5000
-  Test_RandIntersect_MegaStress(10000);
 
   WriteLn(#10'Press Enter to quit.');
   ReadLn(s);

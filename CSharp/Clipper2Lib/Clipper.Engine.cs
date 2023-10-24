@@ -1,6 +1,6 @@
 ﻿/*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  19 October 2023                                                 *
+* Date      :  24 October 2023                                                 *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2023                                         *
 * Purpose   :  This is the main polygon clipping module                        *
@@ -3485,7 +3485,7 @@ private void DoHorizontal(Active horz)
     }
 
     public int Count => _childs.Count;
-    internal abstract PolyPathBase AddChild(Path64 p);
+    public abstract PolyPathBase AddChild(Path64 p);
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void Clear()
@@ -3530,7 +3530,7 @@ public class PolyPath64 : PolyPathBase
     public PolyPath64(PolyPathBase? parent = null) : base(parent) {}
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    internal override PolyPathBase AddChild(Path64 p)
+    public override PolyPathBase AddChild(Path64 p)
     {
       PolyPathBase newChild = new PolyPath64(this);
       (newChild as PolyPath64)!.Polygon = p;
@@ -3576,11 +3576,21 @@ public class PolyPath64 : PolyPathBase
     public PolyPathD(PolyPathBase? parent = null) : base(parent) {}
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    internal override PolyPathBase AddChild(Path64 p)
+    public override PolyPathBase AddChild(Path64 p)
     {
       PolyPathBase newChild = new PolyPathD(this);
       (newChild as PolyPathD)!.Scale = Scale;
       (newChild as PolyPathD)!.Polygon = Clipper.ScalePathD(p, 1 / Scale);
+      _childs.Add(newChild);
+      return newChild;
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public PolyPathBase AddChild(PathD p)
+    {
+      PolyPathBase newChild = new PolyPathD(this);
+      (newChild as PolyPathD)!.Scale = Scale;
+      (newChild as PolyPathD)!.Polygon = p;
       _childs.Add(newChild);
       return newChild;
     }
