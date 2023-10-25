@@ -1,6 +1,6 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  24 October 2023                                                 *
+* Date      :  25 October 2023                                                 *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2023                                         *
 * Purpose   :  This module exports the Clipper2 Library (ie DLL/so)            *
@@ -106,13 +106,13 @@ inline Rect<T> CRectToRect(const CRect<T>& rect)
 
 EXTERN_DLL_EXPORT const char* Version();
 
-// Some exported functions will return data in structures that 
-// have been allocated in heap memory. Eventually this memory will 
+// Most of the exported functions below return data in structures that 
+// has been allocated in heap memory. Eventually this memory will 
 // need to be released using one of the following 'DisposeExported...' 
 // functions.  (This may be the only safe way to release this memory 
 // since the executable accessing these exported functions may use 
-// a memory manager that allocates and releases heap memory in a 
-// different way.
+// a different memory manager (MM)., And allocating memory using one 
+// MM and releasing the same memory in another will cause problems.)
 EXTERN_DLL_EXPORT void DisposeExportedCPaths64(CPaths64& p)
 {
   delete[] p;
@@ -184,23 +184,13 @@ EXTERN_DLL_EXPORT CPathsD RectClipLinesD(const CRectD& rect,
 // INTERNAL FUNCTIONS
 //////////////////////////////////////////////////////
 
-static void GetPathCountAndCPaths64ArrayLen(const Paths64& paths, size_t& cnt, size_t& array_len)
+template <typename T>
+static void GetPathCountAndCPathsArrayLen(const std::vector < std::vector <Point<T>>>& paths, 
+size_t& cnt, size_t& array_len)
 {
   array_len = 2;
   cnt = 0;
-  for (const Path64& path : paths)
-    if (path.size())
-    {
-      array_len += path.size() * 2 + 2;
-      ++cnt;
-    }
-}
-
-static void GetPathCountAndCPathsDArrayLen(const PathsD& paths, size_t& cnt, size_t& array_len)
-{
-  array_len = 2;
-  cnt = 0;
-  for (const PathD& path : paths)
+  for (const Path<T>& path : paths)
     if (path.size())
     {
       array_len += path.size() * 2 + 2;
@@ -234,7 +224,7 @@ static size_t GetPolyPathDArrayLen(const PolyPathD& pp)
 static CPaths64 CreateCPaths64(const Paths64& paths)
 {
   size_t cnt, array_len;
-  GetPathCountAndCPaths64ArrayLen(paths, cnt, array_len);
+  GetPathCountAndCPathsArrayLen(paths, cnt, array_len);
   int64_t* result = new int64_t[array_len], * v = result;
   *v++ = 0;
   *v++ = cnt;
@@ -255,7 +245,7 @@ static CPaths64 CreateCPaths64(const Paths64& paths)
 static CPathsD CreateCPathsD(const PathsD& paths)
 {
   size_t cnt, array_len;
-  GetPathCountAndCPathsDArrayLen(paths, cnt, array_len);
+  GetPathCountAndCPathsArrayLen(paths, cnt, array_len);
   double* result = new double[array_len], * v = result;
   *v++ = 0;
   *v++ = (double)cnt;
@@ -277,7 +267,7 @@ CPathsD CreateCPathsDFromPaths64(const Paths64& paths, double scale)
 {
   if (!paths.size()) return nullptr;
   size_t cnt, array_len;
-  GetPathCountAndCPaths64ArrayLen(paths, cnt, array_len);
+  GetPathCountAndCPathsArrayLen(paths, cnt, array_len);
   CPathsD result = new double[array_len], v = result;
   *v++ = 0;
   *v++ = (double)cnt;
@@ -331,6 +321,7 @@ static PathsD ConvertCPathsD(const CPathsD paths)
     v += 2;
     PathD path;
     path.reserve(cnt2);
+    for (size_t j = 0; j < cnt2; ++j)
     {
       double x = *v++, y = *v++;
       path.push_back(PointD(x, y));

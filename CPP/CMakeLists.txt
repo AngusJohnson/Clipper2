@@ -193,6 +193,7 @@ else()
   set_target_properties(gtest gtest_main PROPERTIES FOLDER GTest)
 endif()
   set(ClipperTests_SRC
+    Tests/TestExportHeaders.cpp
     Tests/TestLines.cpp
     Tests/TestOffsets.cpp
     Tests/TestOffsetOrientation.cpp

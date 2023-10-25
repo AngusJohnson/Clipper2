@@ -1,6 +1,6 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  24 October 2023                                                 *
+* Date      :  25 October 2023                                                 *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2023                                         *
 * Purpose   :  This is the main polygon clipping module                        *
@@ -344,12 +344,12 @@ namespace Clipper2Lib {
 			childs_.resize(0);
 		}
 
-		const PolyPath64* operator [] (size_t index) const
+		PolyPath64* operator [] (size_t index) const
 		{ 
 			return childs_[index].get(); //std::unique_ptr
 		} 
 
-		const PolyPath64* Child(size_t index) const
+		PolyPath64* Child(size_t index) const
 		{
 			return childs_[index].get();
 		}
@@ -401,12 +401,12 @@ namespace Clipper2Lib {
 			childs_.resize(0);
 		}
 
-		const PolyPathD* operator [] (size_t index) const
+		PolyPathD* operator [] (size_t index) const
 		{ 
 			return childs_[index].get();
 		}
 
-		const PolyPathD* Child(size_t index) const
+		PolyPathD* Child(size_t index) const
 		{
 			return childs_[index].get();
 		}
