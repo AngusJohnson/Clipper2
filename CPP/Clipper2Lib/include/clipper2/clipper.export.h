@@ -218,14 +218,6 @@ static void GetPolytreeCountAndCStorageSize(const PolyTree64& tree, size_t& cnt,
   array_len = GetPolyPath64ArrayLen(tree);
 }
 
-static size_t GetPolyPathDArrayLen(const PolyPathD& pp)
-{
-  size_t result = 4; // magic + is_hole + child_count + poly_length
-  result += pp.Polygon().size() * 2;
-  for (size_t i = 0; i < pp.Count(); ++i)
-    result += GetPolyPathDArrayLen(*pp[i]);
-}
-
 static CPaths64 CreateCPaths64(const Paths64& paths)
 {
   size_t cnt, array_len;
