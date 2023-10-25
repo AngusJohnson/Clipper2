@@ -1,6 +1,6 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  25 October 2023                                                 *
+* Date      :  26 October 2023                                                 *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2023                                         *
 * Purpose   :  This module exports the Clipper2 Library (ie DLL/so)            *
@@ -31,15 +31,24 @@
 // These structures are very similar to their respecitve path structures. These 
 // structures not only contain any number of consecutive CPath64 or CPathD 
 // structures but, preceeding these paths, there is an extra x,y pair of values 
-// that contains the path count. However, in this case the x value = 0, and 
-// the y value contains the count (ie the number of following paths).
+// that contains the path count. However, in this case the x value = array length, 
+// and the y value contains the count (ie the number of following paths).
 // _______________________________
 // |counter|path1|path2|...|pathN|
-// |0, N   |     |     |...|pathN|
+// |len, N |     |     |...|pathN|
 // _______________________________
 //
 // 
-// The CPolytree64 & CPolytreeD structures are defined lower down.
+// CPolytree64 and CPolytreeD:
+// These are both simple arrays (of int64_t or double respectively). Otherwise 
+// their structures are identical, and consist of series of CPolyPath structures.
+// The CPolyPath structure is as follows:
+//   Usually polygon length (N) except for the very first CPolyPath entry that 
+//     contains the array size. (The top-most CPolyPath never contains a polygon.)
+//   ChildCount (C)
+//   N * x,y coordinates in Polygon
+//   C * Nested child CPolyPath structures
+
 
 #ifndef CLIPPER2_EXPORT_H
 #define CLIPPER2_EXPORT_H
@@ -58,9 +67,6 @@ typedef int64_t* CPath64;
 typedef int64_t* CPaths64;
 typedef double*  CPathD;
 typedef double*  CPathsD;
-
-static const int64_t magic_64 = 64;
-static const double  magic_D = 68;
 
 typedef int64_t* CPolyPath64;
 typedef int64_t* CPolyTree64;
@@ -205,8 +211,9 @@ size_t& cnt, size_t& array_len)
 
 static size_t GetPolyPath64ArrayLen(const PolyPath64& pp)
 {
-  size_t result = 4; // magic + is_hole + child_count + poly_length
+  size_t result = 2; // poly_length + child_count
   result += pp.Polygon().size() * 2;
+  //plus nested children :)
   for (size_t i = 0; i < pp.Count(); ++i)
     result += GetPolyPath64ArrayLen(*pp[i]);
   return result;
@@ -223,7 +230,7 @@ static CPaths64 CreateCPaths64(const Paths64& paths)
   size_t cnt, array_len;
   GetPathCountAndCPathsArrayLen(paths, cnt, array_len);
   int64_t* result = new int64_t[array_len], * v = result;
-  *v++ = 0;
+  *v++ = array_len;
   *v++ = cnt;
   for (const Path64& path : paths)
   {
@@ -244,7 +251,7 @@ static CPathsD CreateCPathsD(const PathsD& paths)
   size_t cnt, array_len;
   GetPathCountAndCPathsArrayLen(paths, cnt, array_len);
   double* result = new double[array_len], * v = result;
-  *v++ = 0;
+  *v++ = array_len;
   *v++ = (double)cnt;
   for (const PathD& path : paths)
   {
@@ -266,7 +273,7 @@ CPathsD CreateCPathsDFromPaths64(const Paths64& paths, double scale)
   size_t cnt, array_len;
   GetPathCountAndCPathsArrayLen(paths, cnt, array_len);
   CPathsD result = new double[array_len], v = result;
-  *v++ = 0;
+  *v++ = array_len;
   *v++ = (double)cnt;
   for (const Path64& path : paths)
   {
@@ -355,10 +362,8 @@ static Paths64 ConvertCPathsDToPaths64(const CPathsD paths, double scale)
 
 static void CreateCPolyPath64(const PolyPath64* pp, CPolyPath64& v)
 {
-  *v++ = magic_64;
-  *v++ = pp->IsHole() ? 1 : 0;
-  *v++ = pp->Count();
   *v++ = pp->Polygon().size();
+  *v++ = pp->Count();
   for (const Point64& pt : pp->Polygon())
   {
     *v++ = pt.x;
@@ -377,10 +382,8 @@ static CPolyTree64 CreateCPolyTree64(const PolyTree64& tree)
   int64_t* result = new int64_t[array_len];
   int64_t* v = &result[0];
 
-  *v++ = magic_64;
-  *v++ = 0;
+  *v++ = array_len;
   *v++ = tree.Count();
-  *v++ = 0;
   for (size_t i = 0; i < tree.Count(); ++i)
     CreateCPolyPath64(tree.Child(i), v);
   return result;
@@ -388,10 +391,8 @@ static CPolyTree64 CreateCPolyTree64(const PolyTree64& tree)
 
 static void CreateCPolyPathD(const PolyPath64* pp, CPolyPathD& v, double scale)
 {
-  *v++ = magic_64;
-  *v++ = pp->IsHole() ? 1 : 0;
-  *v++ = (double)pp->Count();
   *v++ = (double)pp->Polygon().size();
+  *v++ = (double)pp->Count();
   for (const Point64& pt : pp->Polygon())
   {
     *v++ = pt.x * scale;
@@ -409,12 +410,10 @@ static CPolyTreeD CreateCPolyTreeD(const PolyTree64& tree, double scale)
   if (!cnt) return nullptr;
   // allocate storage
   double* result = new double[array_len];
-  double* v = &result[0];
+  double* v = result;
 
-  *v++ = magic_64;
-  *v++ = 0;
+  *v++ = array_len;
   *v++ = (double)tree.Count();
-  *v++ = 0;
   for (size_t i = 0; i < tree.Count(); ++i)
     CreateCPolyPathD(tree.Child(i), v, scale);
   return result;

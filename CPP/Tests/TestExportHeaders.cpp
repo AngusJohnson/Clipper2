@@ -8,8 +8,8 @@ using namespace Clipper2Lib;
 
 static bool CreatePolyPath64FromCPolyPath(CPolyPath64& v, PolyPath64& owner)
 {
-  int64_t magic = *v++, hole = *v++, child_count = *v++, poly_len = *v++;
-  if (magic != magic_64 || !poly_len) return false;
+  int64_t poly_len = *v++, child_count = *v++;
+  if (!poly_len) return false;
   Path64 path;
   path.reserve(poly_len);
   for (size_t i = 0; i < poly_len; ++i)
@@ -28,8 +28,7 @@ static bool BuildPolyTree64FromCPolyTree(CPolyTree64 tree, PolyTree64& result)
 {
   result.Clear();
   int64_t* v = tree;
-  int64_t magic = *v++, hole = *v++, child_count = *v++, poly_len = *v++;
-  if (magic != magic_64 || poly_len) return false;
+  int64_t array_len = *v++, child_count = *v++;
   for (size_t i = 0; i < child_count; ++i)
     if (!CreatePolyPath64FromCPolyPath(v, result)) return false;
   return true;
@@ -37,8 +36,8 @@ static bool BuildPolyTree64FromCPolyTree(CPolyTree64 tree, PolyTree64& result)
 
 static bool CreatePolyPathDFromCPolyPath(CPolyPathD& v, PolyPathD& owner)
 {
-  int64_t magic = *v++, hole = *v++, child_count = *v++, poly_len = *v++;
-  if (magic != magic_64 || !poly_len) return false;
+  int64_t poly_len = *v++, child_count = *v++;
+  if (!poly_len) return false;
   PathD path;
   path.reserve(poly_len);
   for (size_t i = 0; i < poly_len; ++i)
@@ -56,8 +55,7 @@ static bool BuildPolyTreeDFromCPolyTree(CPolyTreeD tree, PolyTreeD& result)
 {
   result.Clear();
   double* v = tree;
-  int64_t magic = *v++, hole = *v++, child_count = *v++, poly_len = *v++;
-  if (magic != magic_64 || poly_len) return false;
+  int64_t array_len = *v++, child_count = *v++;
   for (size_t i = 0; i < child_count; ++i)
     if (!CreatePolyPathDFromCPolyPath(v, result)) return false;
   return true;

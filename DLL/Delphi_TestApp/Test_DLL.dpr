@@ -111,7 +111,6 @@ function RectClipLinesD(const rect: TRectD;
 const
   Intersection = 1; Union = 2; Difference =3; Xor_ = 4;
   EvenOdd = 0; NonZero = 1; Positive = 2; Negative = 3;
-  magic_64 = 64; magic_D = 68;
 
 ////////////////////////////////////////////////////////
 // functions related to Clipper2 DLL structures
@@ -142,7 +141,7 @@ begin
     if Length(pp[i]) > 0 then
       inc(len2, Length(pp[i]) *2 + 2);
   GetMem(Result, len2 * sizeof(Int64));
-  Result[0] := 0;
+  Result[0] := len2;
   Result[1] := len;
   v := @Result[2];
   for i := 0 to len -1 do
@@ -170,7 +169,7 @@ begin
     if Length(pp[i]) > 0 then
       inc(len2, Length(pp[i]) *2 + 2);
   GetMem(Result, len2 * sizeof(double));
-  Result[0] := 0;
+  Result[0] := len2;
   Result[1] := len;
   v := @Result[2];
   for i := 0 to len -1 do
@@ -194,7 +193,7 @@ var
 begin
   Result := nil;
   v := PInt64(cp);
-  if v^ <> 0 then Exit; inc(v);
+  inc(v); // ignore array length
   len := v^; inc(v);
   SetLength(Result, len);
   for i := 0 to len -1 do
@@ -215,10 +214,10 @@ var
   v: PDouble;
 begin
   Result := nil;
-  if cp[0] <> 0 then Exit;
-  len := Round(cp[1]);
+  v := PDouble(cp);
+  inc(v); // ignore array length
+  len := Round(cp[1]); inc(v);
   SetLength(Result, len);
-  v := @cp[2];
   for i := 0 to len -1 do
   begin
     len2 := Round(v^); inc(v, 2);
@@ -235,7 +234,7 @@ function GetPolyPath64ArrayLen(const pp: TPolyPath64): integer;
 var
   i: integer;
 begin
-  Result := 4; // magic + is_hole + child_count + poly_length
+  Result := 2; // poly_length + child_count
   inc(Result, Length(pp.Polygon) * 2);
   for i := 0 to pp.Count -1 do
     Inc(Result, GetPolyPath64ArrayLen(pp.Child[i]));
@@ -253,14 +252,9 @@ procedure CreateCPolyPathD(const pp: TPolyPath64;
 var
   i, len: integer;
 begin
-  v^ := magic_64; inc(v);
-  if pp.IsHole then
-    v^ := 1 else
-    v^ := 0;
-  inc(v);
-  v^ := pp.Count; inc(v);
   len := Length(pp.Polygon);
   v^ := len; inc(v);
+  v^ := pp.Count; inc(v);
   for i := 0 to len -1 do
   begin
     v^ := pp.Polygon[i].x * scale;
@@ -283,10 +277,8 @@ begin
   GetMem(Result, arrayLen * SizeOf(double));
 
   v := PDouble(Result);
-  v^ := magic_64; inc(v);
-  v^ := 0; inc(v);
+  v^ := arrayLen; inc(v);
   v^ := tree.Count; inc(v);
-  v^ := 0;  inc(v);
   for i := 0 to tree.Count - 1 do
     CreateCPolyPathD(tree.Child[i], v, scale);
 end;
@@ -298,10 +290,9 @@ var
   newOwner: TPolyPath64;
 begin
   Result := false;
-  magic := v^; inc(v, 2);
+  len := v^; inc(v); //polygon length
   childCount := v^; inc(v);
-  len := v^; inc(v);
-  if (magic <> magic_64) or (len = 0) then Exit;
+  if (len = 0) then Exit;
   SetLength(path, len);
   for i := 0 to len -1 do
   begin
@@ -322,10 +313,8 @@ begin
   Result := false;
   outTree.Clear();
   v := PInt64(tree);
-  magic := v^; inc(v, 2);
+  inc(v); //skip array size
   childCount := v^; inc(v);
-  len := v^; inc(v);
-  if (magic <> magic_64) or (len > 0) then Exit;
   for i := 0 to childCount -1 do
     if not CreatePolyPath64FromCPolyPath(v, outTree) then Exit;
   Result := true;
@@ -338,10 +327,9 @@ var
   newOwner: TPolyPathD;
 begin
   Result := false;
-  magic := Round(v^); inc(v, 2);
-  childCount := Round(v^); inc(v);
   len := Round(v^); inc(v);
-  if (magic <> magic_64) or (len = 0) then Exit;
+  childCount := Round(v^); inc(v);
+  if (len = 0) then Exit;
   SetLength(path, len);
   for i := 0 to len -1 do
   begin
@@ -362,10 +350,8 @@ begin
   Result := false;
   outTree.Clear();
   v := PDouble(tree);
-  magic := Round(v^); inc(v, 2);
+  inc(v); // ignore array size
   childCount := Round(v^); inc(v);
-  len := Round(v^); inc(v);
-  if (magic <> magic_64) or (len > 0) then Exit;
   for i := 0 to childCount -1 do
     if not CreatePolyPathDFromCPolyPath(v, outTree) then Exit;
   Result := true;
