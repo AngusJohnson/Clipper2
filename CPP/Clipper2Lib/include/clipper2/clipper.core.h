@@ -19,7 +19,6 @@
 #include <algorithm>
 #include <climits>
 #include <numeric>
-
 #include "clipper2/clipper.version.h"
 
 namespace Clipper2Lib
@@ -55,7 +54,13 @@ namespace Clipper2Lib
 #ifndef PI
   static const double PI = 3.141592653589793238;
 #endif
-  static const int MAX_DECIMAL_PRECISION = 8; // see https://github.com/AngusJohnson/Clipper2/discussions/564
+
+#ifdef CLIPPER2_MAX_PRECISION
+  const int MAX_DECIMAL_PRECISION = CLIPPER2_MAX_PRECISION;
+#else
+  const int MAX_DECIMAL_PRECISION = 8; // see Discussions #564
+#endif
+
   static const int64_t MAX_COORD = INT64_MAX >> 2;
   static const int64_t MIN_COORD = -MAX_COORD;
   static const int64_t INVALID = INT64_MAX;

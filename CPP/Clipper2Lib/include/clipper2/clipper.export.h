@@ -70,11 +70,8 @@ typedef double*  CPathsD;
 
 typedef int64_t* CPolyPath64;
 typedef int64_t* CPolyTree64;
-// magic, hole, child_count, poly_len (4 total) + polygon + nested childs
-
 typedef double* CPolyPathD;
 typedef double* CPolyTreeD;
-// magic, hole, child_count, poly_len (4 total) + polygon + nested childs
 
 template <typename T>
 struct CRect {
