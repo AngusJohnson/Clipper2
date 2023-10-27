@@ -4,13 +4,21 @@
 [![Nuget](https://img.shields.io/nuget/v/Clipper2?color=green)](https://www.nuget.org/packages/Clipper2)
 [![documentation](https://user-images.githubusercontent.com/5280692/187832279-b2a43890-da80-4888-95fe-793f092be372.svg)](http://www.angusj.com/clipper2/Docs/Overview.htm)
 
-The <b>Clipper2</b> library performs **intersection**, **union**, **difference** and **XOR** boolean operations on both simple and complex polygons. It also performs polygon offsetting. This is a major update of my original <a href="https://sourceforge.net/projects/polyclipping/"><b>Clipper</b></a> library that was written over 10 years ago. That library I'm now calling <b>Clipper1</b> and while it still works very well, Clipper2 is [better](http://www.angusj.com/clipper2/Docs/Changes.htm) in just about every way.
+# Clipper2 Library
 
-### Compilers
+The **Clipper2 library** is a powerful tool for performing a wide range of boolean operations on both simple and complex polygons. These operations include intersection, union, difference, and XOR, making it an essential resource for various applications. Additionally, Clipper2 provides polygon offsetting capabilities, further enhancing its functionality.
 
-C++: Requires C++17 (but could be modified to C++11 with only minor changes)<br>
-C#: The core library uses Standard Library 2.0 but the sample code uses .NET6<br>
-Delphi: Compiles with any version of Delphi back to Delphi 7.
+## What's New in Clipper2
+
+[Clipper2](http://www.angusj.com/clipper2/Docs/Changes.htm) represents a significant upgrade from the original Clipper library, which was developed over a decade ago and is now referred to as Clipper1. While Clipper1 continues to be effective, Clipper2 outshines it in nearly every aspect, offering improved performance and a more extensive set of features.
+
+## Supported Compilers
+
+- **C++:** Clipper2 is compatible with C++17, with the potential for adaptation to C++11 with minor adjustments.
+- **C#:** The core library utilizes Standard Library 2.0, while the accompanying sample code is designed for .NET6.
+- **Delphi:** Clipper2 can be compiled with any version of Delphi dating back to Delphi.
+
+This updated version of the library provides a versatile and efficient solution for working with polygons, making it an invaluable resource for developers across various platforms and programming languages.
 
 ### Documentation
 
