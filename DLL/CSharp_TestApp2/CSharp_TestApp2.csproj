@@ -8,4 +8,9 @@
     <Platforms>x64</Platforms>
   </PropertyGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\..\CSharp\Clipper2Lib\Clipper2Lib.csproj" />
+    <ProjectReference Include="..\..\CSharp\Utils\SVG\Clipper2.SVG.csproj" />
+  </ItemGroup>
+
 </Project>

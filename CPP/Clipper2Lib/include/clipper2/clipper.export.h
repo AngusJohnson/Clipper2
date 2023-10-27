@@ -248,7 +248,7 @@ static CPathsD CreateCPathsD(const PathsD& paths)
   size_t cnt, array_len;
   GetPathCountAndCPathsArrayLen(paths, cnt, array_len);
   double* result = new double[array_len], * v = result;
-  *v++ = array_len;
+  *v++ = (double)array_len;
   *v++ = (double)cnt;
   for (const PathD& path : paths)
   {
@@ -270,7 +270,7 @@ CPathsD CreateCPathsDFromPaths64(const Paths64& paths, double scale)
   size_t cnt, array_len;
   GetPathCountAndCPathsArrayLen(paths, cnt, array_len);
   CPathsD result = new double[array_len], v = result;
-  *v++ = array_len;
+  *v++ = (double)array_len;
   *v++ = (double)cnt;
   for (const Path64& path : paths)
   {
@@ -409,7 +409,7 @@ static CPolyTreeD CreateCPolyTreeD(const PolyTree64& tree, double scale)
   double* result = new double[array_len];
   double* v = result;
 
-  *v++ = array_len;
+  *v++ = (double)array_len;
   *v++ = (double)tree.Count();
   for (size_t i = 0; i < tree.Count(); ++i)
     CreateCPolyPathD(tree.Child(i), v, scale);
@@ -506,7 +506,6 @@ EXTERN_DLL_EXPORT int BooleanOpD(uint8_t cliptype,
   if (clp.size() > 0) clipper.AddClip(clp);
   if (!clipper.Execute(ClipType(cliptype),
     FillRule(fillrule), sol, sol_open)) return -1;
-
   solution = CreateCPathsDFromPaths64(sol, 1 / scale);
   solution_open = CreateCPathsDFromPaths64(sol_open, 1 / scale);
   return 0;
