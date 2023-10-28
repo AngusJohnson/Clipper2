@@ -8,6 +8,7 @@
 
 using System;
 using System.Runtime.InteropServices;
+using static ClipperDllDemo.Application;
 
 namespace ClipperDllDemo
 {
@@ -24,16 +25,15 @@ namespace ClipperDllDemo
     {
       public T X;
       public T Y;
-      private readonly int precision = 2;
       public Point(T x, T y)
       {
         X = x;
         Y = y;
       }
-      public override string ToString()
+      public string ToString(int precision = 0)
       {
-        if (typeof(T) == typeof(long))
-            return $"{X},{Y} ";
+        if (typeof(T) == typeof(long)) // ignore precision
+          return $"{X},{Y} ";
         else
           return string.Format($"{{0:F{precision}}},{{1:F{precision}}} ", X, Y);
       }
@@ -50,17 +50,17 @@ namespace ClipperDllDemo
         left = l; top = t; right = r; bottom = b;
       }
     }
-    
+
     public class Path<T> : List<Point<T>>
     {
       private Path() : base() { }
       public Path(int capacity = 0) : base(capacity) { }
       public Path(IEnumerable<Point<T>> path) : base(path) { }
-      public override string ToString()
+      public string ToString(int precision = 0)
       {
         string s = "";
         foreach (Point<T> p in this)
-          s = s + p.ToString() + " ";
+          s = s + p.ToString(precision) + " ";
         return s;
       }
     }
@@ -70,11 +70,11 @@ namespace ClipperDllDemo
       private Paths() : base() { }
       public Paths(int capacity = 0) : base(capacity) { }
       public Paths(IEnumerable<Path<T>> paths) : base(paths) { }
-      public override string ToString()
+      public string ToString(int precision = 0)
       {
         string s = "";
         foreach (Path<T> p in this)
-          s = s + p.ToString() + "\n";
+          s = s + p.ToString(precision) + "\n";
         return s;
       }
     }
@@ -135,26 +135,54 @@ namespace ClipperDllDemo
       return result;
     }
 
-    public static long[]? GetPathsFromIntPtr64(IntPtr paths)
+    public static void DisplayPolyPath<T>(T[] polypath, ref int idx, bool isHole, string spaceIndent)
     {
-      if (paths == IntPtr.Zero) return null;
-      long[] len = new long[1];
-      Marshal.Copy(paths, len, 0, 1);
-      long[] result = new long[(int)len[0]];
-      Marshal.Copy(paths, result, 0, (int)len[0]);
-      return result;
+      int polyCnt = Convert.ToInt32(polypath[idx++]);
+      int childCnt = Convert.ToInt32(polypath[idx++]);
+      string preamble = isHole ? "Hole: " : (spaceIndent == "") ? "Polygon: " : "Nested Polygon: ";
+      Console.Write(spaceIndent + preamble);
+      spaceIndent += "  ";
+      for (int i = 0; i < polyCnt; i++)
+      {
+        Point<T> pt = new Point<T>(polypath[idx++], polypath[idx++]);
+        Console.Write(pt.ToString(2));
+      }
+      Console.Write("\n");
+      for (int i = 0; i < childCnt; i++)
+        DisplayPolyPath<T>(polypath, ref idx, !isHole, spaceIndent);
     }
 
-    public static double[]? GetPathsFromIntPtrD(IntPtr paths)
+    public static void DisplayPolytree<T>(T[] polytree)
     {
-      if (paths == IntPtr.Zero) return null;
-      double[] len = new double[1];
-      Marshal.Copy(paths, len, 0, 1);
-      double[] result = new double[(int)len[0]];
-      Marshal.Copy(paths, result, 0, (int)len[0]);
-      return result;
+      int cnt = Convert.ToInt32(polytree[1]);
+      int idx = 2;
+      for (int i = 0; i < cnt; i++) 
+        DisplayPolyPath<T>(polytree, ref idx, false, "");
+      Console.Write("\n");
     }
 
+    public static T[]? GetArrayFromIntPtr<T>(IntPtr paths)
+    {
+      if (paths == IntPtr.Zero) return null;
+      if (typeof(T) == typeof(long))
+      {
+        long[] len = new long[1];
+        Marshal.Copy(paths, len, 0, 1);
+        long[] res = new long[(int)len[0]];
+        Marshal.Copy(paths, res, 0, (int)len[0]);
+        return res as T[];
+      }
+      else if (typeof(T) == typeof(double))
+      {
+        double[] len = new double[1];
+        Marshal.Copy(paths, len, 0, 1);
+        double[] res = new double[(int)len[0]];
+        Marshal.Copy(paths, res, 0, (int)len[0]);
+        return res as T[];
+      }
+      else return null;
+    }
+  
     // DLL exported function definitions /////////////////////
 
     public const string clipperDll = @"..\..\..\..\Clipper2_64.dll";
@@ -164,19 +192,30 @@ namespace ClipperDllDemo
 
     [DllImport(clipperDll, EntryPoint = "BooleanOp64", CallingConvention = CallingConvention.Cdecl)]
     static extern Int32 BooleanOp64(byte clipType, byte fillRule,
-      long[] subject, long[]? subOpen, long[]? clip,
-      out IntPtr solution, out IntPtr solOpen, bool preserveCollinear, bool reverseSolution);
+      long[] subjects, long[]? openSubs, long[]? clips,
+      out IntPtr solution, out IntPtr openSol, bool preserveCollinear, bool reverseSolution);
 
     [DllImport(clipperDll, EntryPoint = "BooleanOpD", CallingConvention = CallingConvention.Cdecl)]
     static extern Int32 BooleanOpD(byte clipType, byte fillRule,
-      double[] subject, double[]? subOpen, double[]? clip,
-      out IntPtr solution, out IntPtr solOpen, Int32 precision, bool preserveCollinear, bool reverseSolution);
+      double[] subjects, double[]? openSubs, double[]? clips,
+      out IntPtr solution, out IntPtr openSol, Int32 precision, bool preserveCollinear, bool reverseSolution);
 
+    // DisposeExported(): since all these functions behave identically ...
     [DllImport(clipperDll, EntryPoint = "DisposeExportedCPaths64", CallingConvention = CallingConvention.Cdecl)]
-    static extern void DisposeExportedCPaths64(ref IntPtr paths);
-    [DllImport(clipperDll, EntryPoint = "DisposeExportedCPathsD", CallingConvention = CallingConvention.Cdecl)]
-    static extern void DisposeExportedCPathsD(ref IntPtr paths);
-    
+    static extern void DisposeExportedIntPtr(ref IntPtr intptr);
+
+    [DllImport(clipperDll, EntryPoint = "BooleanOp_PolyTree64", CallingConvention = CallingConvention.Cdecl)]
+    static extern Int32 BooleanOp_PolyTree64(byte cliptype,
+      byte fillrule, long[] subjects, long[]? openSubs, long[]? clips,
+      out IntPtr solTree, out IntPtr openSol,
+      bool preserve_collinear, bool reverse_solution);
+
+    [DllImport(clipperDll, EntryPoint = "BooleanOp_PolyTreeD", CallingConvention = CallingConvention.Cdecl)]
+    static extern Int32 BooleanOp_PolyTreeD(byte cliptype,
+      byte fillrule, double[] subjects, double[]? openSubs, double[]? clips,
+      out IntPtr solTree, out IntPtr openSol, Int32 precision,
+      bool preserve_collinear, bool reverse_solution);
+
     static readonly byte None = 0, Intersection = 1, Union = 2, Difference = 3, Xor = 4;
     static readonly byte EvenOdd = 0, NonZero = 1, Positive = 2, Negative = 3;
 
@@ -198,9 +237,9 @@ namespace ClipperDllDemo
         null, cClip, out IntPtr cSol, out IntPtr cSolOpen, false, false);
       if (result != 0) return;
 
-      long[]? cSolution = GetPathsFromIntPtr64(cSol);
-      DisposeExportedCPaths64(ref cSol);
-      DisposeExportedCPaths64(ref cSolOpen);
+      long[]? cSolution = GetArrayFromIntPtr<long>(cSol);
+      DisposeExportedIntPtr(ref cSol);
+      DisposeExportedIntPtr(ref cSolOpen);
       if (cSolution == null) return;
       Paths<long> solution = GetPathsFromCPaths<long>(cSolution);
 
@@ -217,15 +256,59 @@ namespace ClipperDllDemo
         null, cClipD, out IntPtr cSolD, out IntPtr cSolOpenD, 2, false, false);
       if (resultD != 0) return;
 
-      double[]? cSolutionD = GetPathsFromIntPtrD(cSolD);
-      DisposeExportedCPathsD(ref cSolD);
-      DisposeExportedCPathsD(ref cSolOpenD);
+      double[]? cSolutionD = GetArrayFromIntPtr<double>(cSolD);
+      DisposeExportedIntPtr(ref cSolD);
+      DisposeExportedIntPtr(ref cSolOpenD);
       if (cSolutionD == null) return;
       Paths<double> solutionD = GetPathsFromCPaths<double>(cSolutionD);
 
-      Console.WriteLine(solutionD.ToString());
+      Console.WriteLine(solutionD.ToString(0));
       //////////////////////////////////////////////////////////////////////////////////
 
+
+      // test BooleanOp_PolyTree64() ///////////////////////////////////////////////////
+      Paths<long> subject3 = new(), clip3 = new();
+
+      for (int i = 1; i < 6; ++i)
+        subject3.Add(MakePath(new long[] { -i * 20, -i * 20, i * 20, -i * 20, i * 20, i * 20, -i * 20, i * 20 }));
+      clip3.Add(MakePath(new long[] { -90, -120, 90, -120, 90, 120, -90, 120 }));
+
+      long[] cSubject3 = CreateCPaths<long>(subject3);
+      long[] cClip3 = CreateCPaths<long>(clip3);
+
+      int result3 = BooleanOp_PolyTree64(Intersection, EvenOdd, cSubject3, null, cClip3,
+        out IntPtr cSol_pt64, out IntPtr cSolOpen_pt64, false, false);
+      if (result3 != 0) return;
+
+      long[]? cPolyTree64 = GetArrayFromIntPtr<long>(cSol_pt64);
+      DisposeExportedIntPtr(ref cSol_pt64);
+      DisposeExportedIntPtr(ref cSolOpen_pt64);
+      if (cPolyTree64 == null) return;
+
+      DisplayPolytree<long>(cPolyTree64);
+      //////////////////////////////////////////////////////////////////////////////////
+
+      // test BooleanOp_PolyTreeD() ///////////////////////////////////////////////////
+      Paths<double> subject4 = new(), clip4 = new();
+
+      for (int i = 1; i < 6; ++i)
+        subject4.Add(MakePath(new double[] { -i * 20, -i * 20, i * 20, -i * 20, i * 20, i * 20, -i * 20, i * 20 }));
+      clip4.Add(MakePath(new double[] { -90, -120, 90, -120, 90, 120, -90, 120 }));
+
+      double[] cSubject4 = CreateCPaths<double>(subject4);
+      double[] cClip4 = CreateCPaths<double>(clip4);
+
+      int result4 = BooleanOp_PolyTreeD(Intersection, EvenOdd, cSubject4, null, cClip4,
+        out IntPtr cSol_ptD, out IntPtr cSolOpen_ptD, 2, false, false);
+      if (result4 != 0) return;
+
+      double[]? cPolyTreeD = GetArrayFromIntPtr<double>(cSol_ptD);
+      DisposeExportedIntPtr(ref cSol_ptD);
+      DisposeExportedIntPtr(ref cSolOpen_ptD);
+      if (cPolyTreeD == null) return;
+
+      DisplayPolytree<double>(cPolyTreeD);
+      //////////////////////////////////////////////////////////////////////////////////
 
       Console.WriteLine("Press ENTER to exit ... ");
       Console.ReadLine();
