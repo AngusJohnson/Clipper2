@@ -21,31 +21,14 @@ namespace ClipperDllDemo
 
     static T[]? CreateCPath<T>(T[] coords)
     {      
-      int pathLen = coords.Count() / 2;
+      int pathLen = coords.Length / 2;
       if (pathLen == 0) return null;
       int arrayLen = pathLen * 2 + 2;
       T[] result = new T[arrayLen];
       result[0] = (T)Convert.ChangeType(pathLen, typeof(T));
       result[1] = (T)Convert.ChangeType(0, typeof(T));
-      int idx = 2;
-      for (int i = 0; i < pathLen; i++)
-      {
-        result[idx++] = coords[i * 2];
-        result[idx++] = coords[i * 2 + 1];
-      }
+      coords.CopyTo(result, 2);
       return result;  
-    }
-    static void AppendCPath<T>(ref T[] cpaths, ref int idx, T[] cpath)
-    {
-      int pathLen = cpath.Count() / 2 - 1;
-      if (pathLen <= 0) return;
-      cpaths[idx++] = (T)Convert.ChangeType(pathLen, typeof(T));
-      cpaths[idx++] = (T)Convert.ChangeType(0, typeof(T));
-      for (int i = 1; i <= pathLen; i++)
-      {
-        cpaths[idx++] = cpath[i * 2];
-        cpaths[idx++] = cpath[i * 2 + 1];
-      }
     }
 
     static T[] CreateCPaths<T>(List<T[]> listOfCPath)
@@ -53,36 +36,35 @@ namespace ClipperDllDemo
       int pathCount = listOfCPath.Count();
       int arrayLen = 2;
       foreach (T[] path in listOfCPath)
-        arrayLen += path.Count();
+        arrayLen += path.Length;
       T[] result = new T[arrayLen];
 
       result[0] = (T)Convert.ChangeType(arrayLen, typeof(T));
       result[1] = (T)Convert.ChangeType(pathCount, typeof(T));
 
       int idx = 2;
-      foreach (T[] path in listOfCPath)
-        AppendCPath(ref result, ref idx, path);
+      foreach (T[] cpath in listOfCPath)
+      {
+        cpath.CopyTo(result, idx);
+        idx += cpath.Length;
+      }
       return result;
     }
 
-    // and to create cpaths that will contain just 1 path ...
+    // or create a cpaths array that contains just 1 path
     static T[] CreateCPaths<T>(T[] coords)
     {
-      int pathLen = coords.Count() / 2, arrayLen = pathLen *2 + 2 + 2;
+      int pathLen = coords.Length / 2;
+      int arrayLen = pathLen *2 + 2 + 2;
       T[] result = new T[arrayLen];
 
       result[0] = (T)Convert.ChangeType(arrayLen, typeof(T));
-      result[1] = (T)Convert.ChangeType(1, typeof(T));
+      result[1] = (T)Convert.ChangeType(1, typeof(T)); // 1 path
 
       result[2] = (T)Convert.ChangeType(pathLen, typeof(T));
       result[3] = (T)Convert.ChangeType(0, typeof(T));
 
-      int idx = 4;
-      for (int i = 0; i < pathLen; i++)
-      {
-        result[idx++] = coords[i * 2];
-        result[idx++] = coords[i * 2 + 1];
-      }
+      coords.CopyTo(result, 4);
       return result;
     }
 
