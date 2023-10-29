@@ -82,11 +82,11 @@ TEST(Clipper2Tests, ExportHeader64)
   // Normally clipper.export.h will be compiled into a DLL/so so it can be called
   // by non C++ applications. If CreateCPaths64 was an exported function and it
   // was called by a non C++ application, it would crash that application.
-  CPaths64 c_subj = CreateCPaths64(subj);
-  CPaths64 c_clip = CreateCPaths64(clip);
+  CPaths64 c_subj = CreateCPaths(subj);
+  CPaths64 c_clip = CreateCPaths(clip);
 
   BooleanOp64(Intersection, EvenOdd, c_subj, c_subj_open, c_clip, c_sol, c_sol_open);
-  solution = ConvertCPaths64(c_sol);
+  solution = ConvertCPaths(c_sol);
 
   //clean up !!!
   delete[] c_subj;
@@ -116,11 +116,11 @@ TEST(Clipper2Tests, ExportHeaderD)
   // Normally clipper.export.h will be compiled into a DLL/so so it can be called
   // by non C++ applications. If CreateCPathsD was an exported function and it
   // was called by a non C++ application, it would crash that application.
-  CPathsD c_subj = CreateCPathsD(subj);
-  CPathsD c_clip = CreateCPathsD(clip);
+  CPathsD c_subj = CreateCPaths(subj);
+  CPathsD c_clip = CreateCPaths(clip);
 
   BooleanOpD(Intersection, EvenOdd, c_subj, c_subj_open, c_clip, c_sol, c_sol_open);
-  solution = ConvertCPathsD(c_sol);
+  solution = ConvertCPaths(c_sol);
 
   //clean up !!!
   delete[] c_subj;
@@ -147,8 +147,8 @@ TEST(Clipper2Tests, ExportHeaderTree64)
   // More likely, clipper.export.h will be compiled into a DLL/so so it can be 
   // called by non C++ applications. If CreateCPaths64 was an exported function 
   // and it was called by a non C++ application, it would crash that application.
-  CPaths64 c_subj = CreateCPaths64(subj);
-  CPaths64 c_clip = CreateCPaths64(clip);
+  CPaths64 c_subj = CreateCPaths(subj);
+  CPaths64 c_clip = CreateCPaths(clip);
 
   int64_t* c_sol_tree = nullptr;
   BooleanOp_PolyTree64(Intersection, EvenOdd, c_subj, c_subj_open, c_clip, c_sol_tree, c_sol_open);
@@ -192,8 +192,8 @@ TEST(Clipper2Tests, ExportHeaderTreeD)
   // More likely, clipper.export.h will be compiled into a DLL/so so it can be 
   // called by non C++ applications. If CreateCPathsD was an exported function 
   // and it was called by a non C++ application, it would crash that application.
-  CPathsD c_subj = CreateCPathsD(subj);
-  CPathsD c_clip = CreateCPathsD(clip);
+  CPathsD c_subj = CreateCPaths(subj);
+  CPathsD c_clip = CreateCPaths(clip);
 
 
   static const int precision = 4;
