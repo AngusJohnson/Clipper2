@@ -19,7 +19,7 @@
 #include <algorithm>
 #include <climits>
 #include <numeric>
-#include "clipper2/clipper.version.h"
+#include "clipper.version.h"
 
 namespace Clipper2Lib
 {
@@ -244,19 +244,13 @@ namespace Clipper2Lib
     T right;
     T bottom;
 
-    Rect() :
-      left(0),
-      top(0),
-      right(0),
-      bottom(0) {}
-
     Rect(T l, T t, T r, T b) :
       left(l),
       top(t),
       right(r),
       bottom(b) {}
 
-    Rect(bool is_valid)
+    Rect(bool is_valid = true)
     {
       if (is_valid)
       {
@@ -322,9 +316,7 @@ namespace Clipper2Lib
     }
 
     friend std::ostream& operator<<(std::ostream& os, const Rect<T>& rect) {
-      os << "("
-        << rect.left << "," << rect.top << "," << rect.right << "," << rect.bottom
-        << ")";
+      os << "(" << rect.left << "," << rect.top << "," << rect.right << "," << rect.bottom << ") ";
       return os;
     }
   };
@@ -500,26 +492,6 @@ namespace Clipper2Lib
     std::transform(paths.cbegin(), paths.cend(), std::back_inserter(result),
       [](const Path<T2>& path) {return TransformPath<T1, T2>(path); });
     return result;
-  }
-
-  inline PathD Path64ToPathD(const Path64& path)
-  {
-    return TransformPath<double, int64_t>(path);
-  }
-
-  inline PathsD Paths64ToPathsD(const Paths64& paths)
-  {
-    return TransformPaths<double, int64_t>(paths);
-  }
-
-  inline Path64 PathDToPath64(const PathD& path)
-  {
-    return TransformPath<int64_t, double>(path);
-  }
-
-  inline Paths64 PathsDToPaths64(const PathsD& paths)
-  {
-    return TransformPaths<int64_t, double>(paths);
   }
 
   template<typename T>

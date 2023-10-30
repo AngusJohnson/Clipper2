@@ -321,12 +321,12 @@ static Paths64 ConvertCPathsDToPaths64(const CPathsD paths, double scale)
 template <typename T>
 static void CreateCPolyPath(const PolyPath64* pp, T*& v, T scale)
 {
-  *v++ = (T)pp->Polygon().size();
-  *v++ = (T)pp->Count();
+  *v++ = static_cast<T>(pp->Polygon().size());
+  *v++ = static_cast<T>(pp->Count());
   for (const Point64& pt : pp->Polygon())
   {
-    *v++ = (T)(pt.x * scale);
-    *v++ = (T)(pt.y * scale);
+    *v++ = static_cast<T>(pt.x * scale);
+    *v++ = static_cast<T>(pt.y * scale);
   }
   for (size_t i = 0; i < pp->Count(); ++i)
     CreateCPolyPath(pp->Child(i), v, scale);
@@ -343,8 +343,8 @@ static T* CreateCPolyTree(const PolyTree64& tree, T scale)
   T* result = new T[array_len];
   T* v = result;
 
-  *v++ = (T)array_len;
-  *v++ = (T)tree.Count();
+  *v++ = static_cast<T>(array_len);
+  *v++ = static_cast<T>(tree.Count());
   for (size_t i = 0; i < tree.Count(); ++i)
     CreateCPolyPath(tree.Child(i), v, scale);
   return result;
