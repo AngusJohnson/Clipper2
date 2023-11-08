@@ -140,7 +140,7 @@ namespace Clipper2Lib {
   bool SvgWriter::SaveToFile(const std::string &filename,
     int max_width, int max_height, int margin)
   {
-    RectD rec = MaxInvalidRectD;
+    RectD rec = InvalidRectD;
     for (const PathInfo* pi : path_infos)
       for (const PathD& path : pi->paths_)
         for (const PointD& pt : path){

@@ -19,7 +19,7 @@
 #include <numeric>
 #include <memory>
 
-#include "clipper.core.h"
+#include "clipper2/clipper.core.h"
 
 namespace Clipper2Lib {
 

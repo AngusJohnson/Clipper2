@@ -5,10 +5,14 @@
 #ifndef CLIPPER_TEST_SAVE_H
 #define CLIPPER_TEST_SAVE_H
 
-#include "clipper2/clipper.h"
+#include "ClipFileLoad.h"
 
-bool SaveTest(const std::string& filename, bool append,
-  Clipper2Lib::Paths64* subj, Clipper2Lib::Paths64* subj_open, Clipper2Lib::Paths64* clip,
-  int64_t area, int64_t count, Clipper2Lib::ClipType ct, Clipper2Lib::FillRule fr);
+namespace Clipper2Lib {
+
+  bool SaveTest(const std::string& filename, bool append,
+    const Paths64* subj, const Paths64* subj_open, const Paths64* clip, 
+    int64_t area, int64_t count, ClipType ct, FillRule fr);
+
+} //end namespace
 
 #endif //CLIPPER_TEST_SAVE_H

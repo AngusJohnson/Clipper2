@@ -1,6 +1,6 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  16 July 2023                                                    *
+* Date      :  1 November 2023                                                 *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2023                                         *
 * Purpose   :  This module provides a simple interface to the Clipper Library  *
@@ -14,11 +14,11 @@
 #include <type_traits>
 #include <vector>
 
-#include "clipper.core.h"
-#include "clipper.engine.h"
-#include "clipper.offset.h"
-#include "clipper.minkowski.h"
-#include "clipper.rectclip.h"
+#include "clipper2/clipper.core.h"
+#include "clipper2/clipper.engine.h"
+#include "clipper2/clipper.offset.h"
+#include "clipper2/clipper.minkowski.h"
+#include "clipper2/clipper.rectclip.h"
 
 namespace Clipper2Lib {
 
@@ -653,7 +653,7 @@ namespace Clipper2Lib {
   }
 
   template <typename T>
-  inline Path<T> SimplifyPath(const Path<T> path, 
+  inline Path<T> SimplifyPath(const Path<T> &path, 
     double epsilon, bool isClosedPath = true)
   {
     const size_t len = path.size(), high = len -1;
@@ -721,7 +721,7 @@ namespace Clipper2Lib {
   }
 
   template <typename T>
-  inline Paths<T> SimplifyPaths(const Paths<T> paths, 
+  inline Paths<T> SimplifyPaths(const Paths<T> &paths, 
     double epsilon, bool isClosedPath = true)
   {
     Paths<T> result;

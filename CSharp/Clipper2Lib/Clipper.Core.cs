@@ -342,6 +342,11 @@ namespace Clipper2Lib
       return bottom <= top || right <= left;
     }
 
+    public readonly bool IsValid()
+    {
+      return left < long.MaxValue;
+    }
+
     public readonly Point64 MidPoint()
     {
       return new Point64((left + right) /2, (top + bottom)/2);

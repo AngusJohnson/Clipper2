@@ -1,6 +1,6 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  29 October 2023                                                 *
+* Date      :  1 November 2023                                                 *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2023                                         *
 * Purpose   :  This module exports the Clipper2 Library (ie DLL/so)            *
@@ -138,7 +138,6 @@ EXTERN_DLL_EXPORT void DisposeExportedCPolyTreeD(CPolyTreeD& p)
   delete[] p;
 }
 
-
 // Boolean clipping:
 // cliptype: None=0, Intersection=1, Union=2, Difference=3, Xor=4
 // fillrule: EvenOdd=0, NonZero=1, Positive=2, Negative=3
@@ -226,7 +225,7 @@ static void GetPolytreeCountAndCStorageSize(const PolyTree64& tree,
 template <typename T>
 static T* CreateCPaths(const Paths<T>& paths)
 {
-  size_t cnt, array_len;
+  size_t cnt = 0, array_len = 0;
   GetPathCountAndCPathsArrayLen(paths, cnt, array_len);
   T* result = new T[array_len], * v = result;
   *v++ = array_len;
@@ -496,13 +495,15 @@ EXTERN_DLL_EXPORT CPathsD InflatePathsD(const CPathsD paths,
   double arc_tolerance, bool reverse_solution)
 {
   if (precision < -8 || precision > 8 || !paths) return nullptr;
+
   const double scale = std::pow(10, precision);
   ClipperOffset clip_offset(miter_limit, arc_tolerance, reverse_solution);
   Paths64 pp = ConvertCPathsDToPaths64(paths, scale);
   clip_offset.AddPaths(pp, JoinType(jointype), EndType(endtype));
   Paths64 result;
   clip_offset.Execute(delta * scale, result);
-  return CreateCPathsDFromPaths64(result, 1/scale);
+
+  return CreateCPathsDFromPaths64(result, 1 / scale);
 }
 
 EXTERN_DLL_EXPORT CPaths64 RectClip64(const CRect64& rect, const CPaths64 paths)
@@ -526,7 +527,8 @@ EXTERN_DLL_EXPORT CPathsD RectClipD(const CRectD& rect, const CPathsD paths, int
   Paths64 pp = ConvertCPathsDToPaths64(paths, scale);
   class RectClip64 rc(rec);
   Paths64 result = rc.Execute(pp);
-  return CreateCPathsDFromPaths64(result, 1/scale);
+
+  return CreateCPathsDFromPaths64(result, 1 / scale);
 }
 
 EXTERN_DLL_EXPORT CPaths64 RectClipLines64(const CRect64& rect,
@@ -545,12 +547,13 @@ EXTERN_DLL_EXPORT CPathsD RectClipLinesD(const CRectD& rect,
 {
   if (CRectIsEmpty(rect) || !paths) return nullptr;
   if (precision < -8 || precision > 8) return nullptr;
+
   const double scale = std::pow(10, precision);
   Rect64 r = ScaleRect<int64_t, double>(CRectToRect(rect), scale);
   class RectClipLines64 rcl(r);
   Paths64 pp = ConvertCPathsDToPaths64(paths, scale);
   Paths64 result = rcl.Execute(pp);
-  return CreateCPathsDFromPaths64(result, 1/scale);
+  return CreateCPathsDFromPaths64(result, 1 / scale);
 }
 
 }  // end Clipper2Lib namespace

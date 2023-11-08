@@ -1,6 +1,6 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  24 September 2023                                               *
+* Date      :  5 November 2023                                                 *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2023                                         *
 * Purpose   :  Path Offset (Inflate/Shrink)                                    *
@@ -34,13 +34,12 @@ private:
 	class Group {
 	public:
 		Paths64 paths_in;
-		Paths64 paths_out;
-		Path64 path;
+		std::vector<Rect64> bounds_list;
+		int lowest_path_idx = -1;
 		bool is_reversed = false;
 		JoinType join_type;
 		EndType end_type;
-		Group(const Paths64& _paths, JoinType _join_type, EndType _end_type) :
-			paths_in(_paths), join_type(_join_type), end_type(_end_type) {}
+		Group(const Paths64& _paths, JoinType _join_type, EndType _end_type);
 	};
 
 	int   error_code_ = 0;
@@ -51,6 +50,7 @@ private:
 	double step_sin_ = 0.0;
 	double step_cos_ = 0.0;
 	PathD norms;
+	Path64 path_out;
 	Paths64 solution;
 	std::vector<Group> groups_;
 	JoinType join_type_ = JoinType::Bevel;
@@ -66,15 +66,17 @@ private:
 #endif
 	DeltaCallback64 deltaCallback64_ = nullptr;
 
-	void DoBevel(Group& group, const Path64& path, size_t j, size_t k);
-	void DoSquare(Group& group, const Path64& path, size_t j, size_t k);
-	void DoMiter(Group& group, const Path64& path, size_t j, size_t k, double cos_a);
-	void DoRound(Group& group, const Path64& path, size_t j, size_t k, double angle);
+	size_t CalcSolutionCapacity();
+	bool CheckReverseOrientation();
+	void DoBevel(const Path64& path, size_t j, size_t k);
+	void DoSquare(const Path64& path, size_t j, size_t k);
+	void DoMiter(const Path64& path, size_t j, size_t k, double cos_a);
+	void DoRound(const Path64& path, size_t j, size_t k, double angle);
 	void BuildNormals(const Path64& path);
-	void OffsetPolygon(Group& group, Path64& path);
-	void OffsetOpenJoined(Group& group, Path64& path);
-	void OffsetOpenPath(Group& group, Path64& path);
-	void OffsetPoint(Group& group, Path64& path, size_t j, size_t k);
+	void OffsetPolygon(Group& group, const Path64& path);
+	void OffsetOpenJoined(Group& group, const Path64& path);
+	void OffsetOpenPath(Group& group, const Path64& path);
+	void OffsetPoint(Group& group, const Path64& path, size_t j, size_t k);
 	void DoGroupOffset(Group &group);
 	void ExecuteInternal(double delta);
 public:

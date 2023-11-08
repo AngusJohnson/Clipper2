@@ -2,13 +2,13 @@
 // Functions load clipping operations from text files
 //------------------------------------------------------------------------------
 
-#include "ClipFileLoad.h"
 #include "ClipFileSave.h"
 #include <sstream>
 #include <cstring>
 
-using namespace std;
-using namespace Clipper2Lib;
+namespace Clipper2Lib {
+
+ using namespace std;
 
 //------------------------------------------------------------------------------
 // Boyer Moore Horspool Search
@@ -247,8 +247,8 @@ static bool GetInt(string::const_iterator& s_it,
 }
 
 bool SaveTest(const std::string& filename, bool append,
-  Clipper2Lib::Paths64* subj, Clipper2Lib::Paths64* subj_open, Clipper2Lib::Paths64* clip,
-  int64_t area, int64_t count, Clipper2Lib::ClipType ct, Clipper2Lib::FillRule fr)
+  const Paths64* subj, const Paths64* subj_open, const Paths64* clip, 
+  int64_t area, int64_t count, ClipType ct, FillRule fr)
 {
   string line;
   bool found = false;
@@ -258,7 +258,7 @@ bool SaveTest(const std::string& filename, bool append,
   {
     ifstream file;
     file.open(filename, std::ios::binary);
-    if (!file) return false;
+    if (!file || !file.good()) return false;
     BMH_Search bmh = BMH_Search(file, "CAPTION:");
     while (bmh.FindNext()) ;
     if (bmh.LastFound())
@@ -322,3 +322,5 @@ bool SaveTest(const std::string& filename, bool append,
   source.close();
   return true;
 }
+
+} //end namespace
