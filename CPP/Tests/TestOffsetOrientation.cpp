@@ -24,11 +24,9 @@ TEST(Clipper2Tests, TestOffsettingOrientation2) {
   co.Execute(5, solution);
 
   ASSERT_EQ(solution.size(), 2);
-  // When offsetting, output orientation should match input EXCEPT when ReverseSolution == true
-  // However, input path ORDER may not match output path order. For example, order will change 
-  // whenever inner paths (holes) are defined before their container outer paths (as above).
-  // And when offsetting multiple outer paths, their order will likely change too. Due to the 
-  // sweep-line algorithm used, paths with larger Y coordinates will likely be listed first.
+  // when offsetting, output orientation should match input EXCEPT when ReverseSolution == true
+  // HOWEVER, input path order MANY NOT MATCH output path order, for example when inner paths (holes)
+  // are defined before their container outer paths (as above).
   EXPECT_TRUE(Clipper2Lib::IsPositive(subject[1]) != Clipper2Lib::IsPositive(solution[0]));
 }
 
