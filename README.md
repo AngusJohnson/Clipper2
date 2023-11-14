@@ -7,6 +7,7 @@
 The <b>Clipper2</b> library performs **intersection**, **union**, **difference** and **XOR** boolean operations on both simple and complex polygons. It also performs polygon offsetting. This is a major update of my original <a href="https://sourceforge.net/projects/polyclipping/"><b>Clipper</b></a> library that was written over 10 years ago. That library I'm now calling <b>Clipper1</b>, and while it still works very well, Clipper2 is [better](http://www.angusj.com/clipper2/Docs/Changes.htm) in just about every way.
 
 ### Compilers
+<b>Clipper2</b> can be compiled using either C++, or C#, or Delphi Pascal. Nevertheless, the library's performance does [differ](https://www.angusj.com/clipper2/Docs/Changes.htm) between these languages, with the C++ compiled code being noticeably faster. The library can be accessed using many other programming languages too, simply by dynamically linking to various c++ compiled and exported library functions (in a DLL file). C# and Delphi users may well do this too when performance is critical.
 | Lang. | Requirements |
 | --- | --- |
 | [**C++:**](https://github.com/AngusJohnson/Clipper2/tree/main/CPP) | Requires C++17 (could be modified to C++11 with relatively minor changes), **or**| 
