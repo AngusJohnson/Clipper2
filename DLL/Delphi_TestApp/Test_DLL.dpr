@@ -20,16 +20,18 @@ uses
 
 type
   CInt64arr   = array[0..$FFFF] of Int64;
-  CPath64     = ^CInt64arr;
-  CPaths64    = ^CInt64arr;
-  CPolyPath64 = ^CInt64arr;
-  CPolytree64 = ^CInt64arr;
+  PCInt64arr  = ^CInt64arr;
+  CPath64     = PCInt64arr;
+  CPaths64    = PCInt64arr;
+  CPolyPath64 = PCInt64arr;
+  CPolytree64 = PCInt64arr;
 
   CDblarr     = array[0..$FFFF] of Double;
-  CPathD      = ^CDblarr;
-  CPathsD     = ^CDblarr;
-  CPolyPathD  = ^CDblarr;
-  CPolytreeD  = ^CDblarr;
+  PCDblarr    = ^CDblarr;
+  CPathD      = PCDblarr;
+  CPathsD     = PCDblarr;
+  CPolyPathD  = PCDblarr;
+  CPolytreeD  = PCDblarr;
 
 const
 {$IFDEF WIN64}
@@ -46,14 +48,10 @@ const
 function Version(): PAnsiChar; cdecl;
   external CLIPPER2_DLL name 'Version';
 
-procedure DisposeExportedCPaths64(var cps: CPaths64); cdecl;
-  external CLIPPER2_DLL name 'DisposeExportedCPaths64';
-procedure DisposeExportedCPathsD(var cp: CPathsD); cdecl;
-  external CLIPPER2_DLL name 'DisposeExportedCPathsD';
-procedure DisposeExportedCPolyTree64(var cpt: CPolyTree64); cdecl;
-  external CLIPPER2_DLL name 'DisposeExportedCPolyTree64';
-procedure DisposeExportedCPolyTreeD(var cpt: CPolyTreeD); cdecl;
-  external CLIPPER2_DLL name 'DisposeExportedCPolyTreeD';
+procedure DisposeExportedArray64(var cps: PCInt64arr); cdecl;
+  external CLIPPER2_DLL name 'DisposeArray64';
+procedure DisposeExportedArrayD(var cp: PCDblarr); cdecl;
+  external CLIPPER2_DLL name 'DisposeArrayD';
 
 function BooleanOp64(cliptype: UInt8; fillrule: UInt8;
   const subjects: CPaths64; const subjects_open: CPaths64;
@@ -116,12 +114,12 @@ const
 // functions related to Clipper2 DLL structures
 ////////////////////////////////////////////////////////
 
-procedure DisposeLocalCPaths64(cp: CPaths64);
+procedure DisposeLocalArray64(cp: PCInt64arr);
 begin
   FreeMem(cp);
 end;
 
-procedure DisposeLocalCPathsD(cp: CPathsD);
+procedure DisposeLocalArrayD(cp: PCDblarr);
 begin
   FreeMem(cp);
 end;
@@ -285,7 +283,7 @@ end;
 
 function CreatePolyPath64FromCPolyPath(var v: PInt64; owner: TPolyPath64): Boolean;
 var
-  i, magic, childCount, len: integer;
+  i, childCount, len: integer;
   path: TPath64;
   newOwner: TPolyPath64;
 begin
@@ -308,7 +306,7 @@ end;
 function BuildPolyTree64FromCPolyTree(tree: CPolyTree64; outTree: TPolyTree64): Boolean;
 var
   v: PInt64;
-  i, magic, childCount, len: integer;
+  i, childCount: integer;
 begin
   Result := false;
   outTree.Clear();
@@ -322,7 +320,7 @@ end;
 
 function CreatePolyPathDFromCPolyPath(var v: PDouble; owner: TPolyPathD): Boolean;
 var
-  i, magic, childCount, len: integer;
+  i, len, childCount: integer;
   path: TPathD;
   newOwner: TPolyPathD;
 begin
@@ -345,7 +343,7 @@ end;
 function BuildPolyTreeDFromCPolyTree(tree: CPolyTreeD; outTree: TPolyTreeD): Boolean;
 var
   v: PDouble;
-  i, magic, childCount, len: integer;
+  i, childCount: integer;
 begin
   Result := false;
   outTree.Clear();
@@ -499,10 +497,10 @@ begin
       ConvertToTPaths64(csol_extern), nil, 'BooleanOp64.svg');
 
     // clean up
-    DisposeLocalCPaths64(csub_local);
-    DisposeLocalCPaths64(cclp_local);
-    DisposeExportedCPaths64(csol_extern);
-    DisposeExportedCPaths64(csolo_extern);
+    DisposeLocalArray64(csub_local);
+    DisposeLocalArray64(cclp_local);
+    DisposeExportedArray64(csol_extern);
+    DisposeExportedArray64(csolo_extern);
 end;
 
 procedure Test_BooleanOpD(edgeCnt: integer);
@@ -534,10 +532,10 @@ begin
     DisplaySVG(sub, nil, clp,
       ConvertToTPathsD(csol_extern), nil, 'BooleanOpD.svg');
 
-    DisposeLocalCPathsD(csub_local);
-    DisposeLocalCPathsD(cclp_local);
-    DisposeExportedCPathsD(csol_extern);
-    DisposeExportedCPathsD(csolo_extern);
+    DisposeLocalArrayD(csub_local);
+    DisposeLocalArrayD(cclp_local);
+    DisposeExportedArrayD(csol_extern);
+    DisposeExportedArrayD(csolo_extern);
 end;
 
 procedure Test_BooleanOp_Polytree64(edgeCnt: integer);
@@ -569,11 +567,11 @@ begin
     finally
       tree.Free;
     end;
-    DisposeExportedCPolyTree64(csol_extern);
-    DisposeExportedCPaths64(csol_open_extern);
+    DisposeExportedArray64(csol_extern);
+    DisposeExportedArray64(csol_open_extern);
 
-    DisposeLocalCPaths64(csub_local);
-    DisposeLocalCPaths64(cclp_local);
+    DisposeLocalArray64(csub_local);
+    DisposeLocalArray64(cclp_local);
 
     // finally, display and clean up
     DisplaySVG(sub, nil, clp, sol, nil, 'BooleanOp_PolyTree64.svg');
@@ -608,11 +606,11 @@ begin
     finally
       tree.Free;
     end;
-    DisposeExportedCPolyTreeD(csol_extern);
-    DisposeExportedCPathsD(csol_open_extern);
+    DisposeExportedArrayD(csol_extern);
+    DisposeExportedArrayD(csol_open_extern);
 
-    DisposeLocalCPathsD(csub_local);
-    DisposeLocalCPathsD(cclp_local);
+    DisposeLocalArrayD(csub_local);
+    DisposeLocalArrayD(cclp_local);
 
     // finally, display and clean up
     DisplaySVG(sub, nil, clp, sol, nil, 'BooleanOp_PolyTreeD.svg');
@@ -648,70 +646,40 @@ begin
     DisplaySVG(sub, nil, nil,
       ConvertToTPathsD(csol_extern), nil, 'InflatePathsD.svg');
 
-    DisposeLocalCPathsD(csub_local);
-    DisposeExportedCPathsD(csol_extern);
-    DisposeExportedCPathsD(csolo_extern);
+    DisposeLocalArrayD(csub_local);
+    DisposeExportedArrayD(csol_extern);
+    DisposeExportedArrayD(csolo_extern);
 end;
 
-procedure Test_RectClipD(shapeCount: integer);
+procedure Test_RectClipD(edgeCount: integer);
 var
-  i, rec_margin: Integer;
-  sub, clp, sol1, sol2: TPathsD;
+  rec_margin: Integer;
+  sub, clp, sol: TPathsD;
   csub_local: CPathsD;
   csol_extern: CPathsD;
-  scaleRnd, maxOffX, maxOffY: Double;
   rec: TRectD;
-  shapes: array [0..3] of TPathD;
-const
-  w = 300;
-  h = 300;
 begin
-    // four simple concave polygons
-    shapes[0] := MakePathD([20,20, 20,0, 40,0, 40,20, 60,20, 60,40,
-      40,40, 40,60, 20,60, 20,40, 0,40, 0,20]);
-    shapes[1] := MakePathD([0,0, 60,0, 60,20, 20,20, 20,40, 60,40,
-      60,60, 0,60]);
-    shapes[2] := MakePathD([0,0, 20,0, 20,20, 40,20, 40,0, 60,0,
-      60,60, 40,60, 40,40, 20,40, 20,60, 0,60]);
-    shapes[3] := MakePathD([20,60, 20,20, 0,20, 0,0, 60,0, 60,20,
-      40,20, 40,60]);
+    WriteLn(#10'Testing RectClipD:');
 
-    // setup
-    WriteLn(#10'Testing RectClip64:');
-
-    rec_margin := Min(w,h) div 3;
+    rec_margin := Min(displayWidth,displayHeight) div 4;
     rec.Left := rec_margin;
     rec.Top := rec_margin;
-    rec.Right := w - rec_margin;
-    rec.Bottom := h -rec_margin;
+    rec.Right := displayWidth - rec_margin;
+    rec.Bottom := displayHeight -rec_margin;
 
-    SetLength(sub, shapeCount);
-    for i := 0 to shapeCount -1 do
-    begin
-      scaleRnd := (60 + Random(w div 4)) / 120;
-      maxOffX := w - (scaleRnd * 60);
-      maxOffY := h - (scaleRnd * 60);
-      sub[i] := ScalePathD(shapes[Random(4)], scaleRnd);
-      sub[i] := TranslatePath(sub[i],
-        Random(Round(maxOffX)), Random(Round(maxOffY)));
-    end;
-
+    SetLength(sub, 1);
+    sub[0] := MakeRandomPathD(displayWidth, displayHeight, edgeCount);
     csub_local := CreateCPathsD(sub);
-    csol_extern := RectClipD(rec, csub_local, 2, true);
-    sol1 := ConvertToTPathsD(csol_extern);
-    DisposeExportedCPathsD(csol_extern);
 
-    // do the DLL operation again with ConvexOnly disabled
-    csol_extern := RectClipD(rec, csub_local, 2, false);
-    sol2 := ConvertToTPathsD(csol_extern);
+    csol_extern := RectClipD(rec, csub_local, 2, true);
+    sol := ConvertToTPathsD(csol_extern);
+    DisposeLocalArrayD(csub_local);
+    DisposeExportedArrayD(csol_extern);
 
     SetLength(clp, 1);
     clp[0] := rec.AsPath;
-
-    DisplaySVG(sub, nil, clp, sol2, nil, 'RectClip64_3.svg', w,h);
-
-    DisposeLocalCPathsD(csub_local);
-    DisposeExportedCPathsD(csol_extern);
+    DisplaySVG(sub, nil, clp, sol,
+      nil, 'RectClipD.svg', displayWidth,displayHeight);
 end;
 
 procedure Test_RectClipLines64(edgeCnt: integer);
@@ -742,16 +710,16 @@ begin
     DisplaySVG(nil, sub, clp, nil,
       ConvertToTPaths64(csolo_extern), 'RectClipLines64.svg');
 
-    DisposeLocalCPaths64(csub_local);
-    DisposeExportedCPaths64(csolo_extern);
+    DisposeLocalArray64(csub_local);
+    DisposeExportedArray64(csolo_extern);
 end;
 
 ////////////////////////////////////////////////////////
 // main entry here
 ////////////////////////////////////////////////////////
 
-var
-  s: string;
+//var
+//  s: string;
 begin
   Randomize;
   Test_Version();
@@ -760,9 +728,9 @@ begin
   Test_BooleanOp_Polytree64(15);
   Test_BooleanOp_PolytreeD(25);
   Test_InflatePathsD(20, -10); // edgeCount, offsetDist
-  Test_RectClipD(15);
+  Test_RectClipD(7);
   Test_RectClipLines64(25);
 
-  WriteLn(#10'Press Enter to quit.');
-  ReadLn(s);
+//  WriteLn(#10'Press Enter to quit.');
+//  ReadLn(s);
 end.

@@ -91,8 +91,8 @@ TEST(Clipper2Tests, ExportHeader64)
   //clean up !!!
   delete[] c_subj;
   delete[] c_clip;
-  DisposeExportedCPaths64(c_sol);
-  DisposeExportedCPaths64(c_sol_open);
+  DisposeArray64(c_sol);
+  DisposeArray64(c_sol_open);
 
   EXPECT_EQ(solution.size(), 5);
 }
@@ -125,8 +125,8 @@ TEST(Clipper2Tests, ExportHeaderD)
   //clean up !!!
   delete[] c_subj;
   delete[] c_clip;
-  DisposeExportedCPathsD(c_sol);
-  DisposeExportedCPathsD(c_sol_open);
+  DisposeArrayD(c_sol);
+  DisposeArrayD(c_sol_open);
 
   EXPECT_EQ(solution.size(), 5);
 }
@@ -164,8 +164,8 @@ TEST(Clipper2Tests, ExportHeaderTree64)
   //clean up !!!
   delete[] c_subj;
   delete[] c_clip;
-  DisposeExportedCPolyTree64(c_sol_tree);
-  DisposeExportedCPaths64(c_sol_open);
+  DisposeArray64(c_sol_tree);
+  DisposeArray64(c_sol_open);
 
   PolyPath64* pp = &sol_tree;
   for (int i = 0; i < 4; ++i)
@@ -209,8 +209,8 @@ TEST(Clipper2Tests, ExportHeaderTreeD)
   //clean up !!!
   delete[] c_subj;
   delete[] c_clip;
-  DisposeExportedCPolyTreeD(c_sol_tree);
-  DisposeExportedCPathsD(c_sol_open);
+  DisposeArrayD(c_sol_tree);
+  DisposeArrayD(c_sol_open);
 
   PolyPathD* pp = &sol_tree;
   for (int i = 0; i < 4; ++i)

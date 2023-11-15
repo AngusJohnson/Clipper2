@@ -1,6 +1,6 @@
 ﻿/*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  8 November 2023                                                 *
+* Date      :  15 November 2023                                                *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2023                                         *
 * Purpose   :  Path Offset (Inflate/Shrink)                                    *
@@ -677,7 +677,7 @@ namespace Clipper2Lib
         _groupDelta = (group.pathsReversed) ? -_delta : _delta;
       }
       else
-        _groupDelta = Math.Abs(_delta) * 0.5;
+        _groupDelta = Math.Abs(_delta);// * 0.5;
 
       double absDelta = Math.Abs(_groupDelta);
       if (!ValidateBounds(group.boundsList, absDelta))

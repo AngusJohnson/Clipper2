@@ -1,6 +1,6 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  8 November 2023                                                 *
+* Date      :  15 November 2023                                                *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2023                                         *
 * Purpose   :  Path Offset (Inflate/Shrink)                                    *
@@ -508,9 +508,9 @@ void ClipperOffset::DoGroupOffset(Group& group)
 		if (group.lowest_path_idx < 0) return;
 		//if (area == 0) return; // probably unhelpful (#430)
 		group_delta_ = (group.is_reversed) ? -delta_ : delta_;
-	} 
+	}
 	else
-		group_delta_ = std::abs(delta_) * 0.5;
+		group_delta_ = std::abs(delta_);// *0.5;
 
 	double abs_delta = std::fabs(group_delta_);
 	if (!ValidateBounds(group.bounds_list, abs_delta))

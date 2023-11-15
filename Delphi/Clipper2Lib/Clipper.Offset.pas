@@ -2,7 +2,7 @@ unit Clipper.Offset;
 
 (*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  8 November 2023                                                 *
+* Date      :  15 November 2023                                                *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2023                                         *
 * Purpose   :  Path Offset (Inflate/Shrink)                                    *
@@ -428,7 +428,7 @@ begin
       fGroupDelta := fDelta;
   end else
   begin
-    fGroupDelta := Abs(fDelta) * 0.5;
+    fGroupDelta := Abs(fDelta);// * 0.5;
   end;
 
   absDelta := Abs(fGroupDelta);

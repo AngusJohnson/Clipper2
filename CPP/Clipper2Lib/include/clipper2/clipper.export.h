@@ -1,53 +1,76 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  1 November 2023                                                 *
+* Date      :  15 November 2023                                                *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2023                                         *
 * Purpose   :  This module exports the Clipper2 Library (ie DLL/so)            *
 * License   :  http://www.boost.org/LICENSE_1_0.txt                            *
 *******************************************************************************/
 
-// =============================================================================
-// CAUTION: THE FOLLOWING DATA STRUCTURES HAVE RECENTLY BEEN CHANGED (ver 1.2.4) 
-// =============================================================================
-// 
-// The path structures that are used extensively in other parts of this library 
-// are all based on std::vector classes. And unfortunately, C++ classes can't 
-// be accessed by other languages. So all these (std::vector based) paths must 
-// be converted into simple C data structures that can be understood by just
-// about any programming language. And these C style data structures are mostly 
-// just simple arrays. 
-//
-// Path64 and PathD are converted into arrays of int64_t or double values 
-// respectively, representing consecutive x and y coordinates.
-// However preceeding each array is single x,y pair that contains the
-// path's length in the x value (and the 'y' value = 0).
-// __________________________________
-// |counter|coord1|coord2|...|coordN|
-// |N, 0   |x1, y1|x2, y2|...|xN, yN|
-// __________________________________
-//
-// CPaths64 and CPathsD:
-// These structures are very similar to their respecitve path structures. These 
-// structures not only contain any number of consecutive CPath64 or CPathD 
-// structures but, preceeding these paths, there is an extra x,y pair of values 
-// that contains the path count. However, in this case the x value = array length, 
-// and the y value contains the count (ie the number of following paths).
-// _______________________________
-// |counter|path1|path2|...|pathN|
-// |len, N |     |     |...|pathN|
-// _______________________________
-//
-// 
-// CPolytree64 and CPolytreeD:
-// These are both simple arrays (of int64_t or double respectively). Otherwise 
-// their structures are identical, and consist of series of CPolyPath structures.
-// The CPolyPath structure is as follows:
-//   Usually polygon length (N) except for the very first CPolyPath entry that 
-//     contains the array size. (The top-most CPolyPath never contains a polygon.)
-//   ChildCount (C)
-//   N * x,y coordinates in Polygon
-//   C * Nested child CPolyPath structures
+
+/* 
+ Boolean clipping:
+ cliptype: None=0, Intersection=1, Union=2, Difference=3, Xor=4
+ fillrule: EvenOdd=0, NonZero=1, Positive=2, Negative=3
+
+ Polygon offsetting (inflate/deflate):
+ jointype: Square=0, Bevel=1, Round=2, Miter=3
+ endtype: Polygon=0, Joined=1, Butt=2, Square=3, Round=4
+
+The path structures used extensively in other parts of this library are all
+based on std::vector classes. Since C++ classes can't be accessed by other
+languages, these paths must be converted into simple C data structures that
+can be understood by just about any programming language. And these C style
+path structures will be simple arrays of int94_t (CPath64) or double (CPathD).
+
+CPath64 and CPathD:
+These are simple arrays of consecutive x and y path coordinates preceeded by  
+a pair of values containing the path's length (N) and a 0 value.
+__________________________________
+|counter|coord1|coord2|...|coordN|
+|N, 0   |x1, y1|x2, y2|...|xN, yN|
+__________________________________
+
+CPaths64 and CPathsD:
+These are also simple arrays containing any number of consecutive CPath64 or
+CPathD  structures. But preceeding these consecutive paths, there is pair of
+values that contain the total length of the array (A) and the number of
+contained paths (C).
+_______________________________
+|counter|path1|path2|...|pathC|
+|A  , C |                     |
+_______________________________
+
+CPolytree64 and CPolytreeD:
+These are also simple arrays consisting of CPolyPath structures.
+However, since the very first CPolyPath is the tree container, it has no
+path and its structure will be very slightly different from the remaining
+CPolyPath. This difference will be discussed below.
+
+CPolyPath64 and CPolyPathD:
+These are simple arrays consisting path coordinates followed by any number of
+child CPolyPath (representing the paths they own). Preceding these are a pair
+of values: the length of its path (N); and the number of child CPolyPath (C).
+____________________________________________________________
+|counter|coord1|coord2|...|coordN| child1|child2|...|childC|
+|N  , C |x1, y1|x2, y2|...|xN, yN|                         |
+____________________________________________________________
+
+As mentioned above, the very first CPolyPath structure is just a container
+(both directly and indirectly) for every other CPolyPath in the tree. So
+where this first CPolyPath has no path, instead of a path length, its first
+value contains the total length of the CPolytree array (A).
+
+All the exported structures (CPaths64, CPathsD, CPolyTree64 & CPolyTreeD)
+are arrays of type int64_t or double. And the first value in these arrays 
+will always contain the length of that array.
+
+These array structures will be allocated in heap memory, so eventually this 
+memory will need to be released. But because the applications dynamically 
+linking to these functions may use a different memory manager, the only 
+really safe way to free up this memory is to use the exported  
+DisposeArray64 and DisposeArrayD functions below.
+*/
 
 
 #ifndef CLIPPER2_EXPORT_H
@@ -114,33 +137,16 @@ inline Rect<T> CRectToRect(const CRect<T>& rect)
 
 EXTERN_DLL_EXPORT const char* Version();
 
-// Most of the exported functions below return data in structures that 
-// has been allocated in heap memory. Eventually this memory will 
-// need to be released using one of the following 'DisposeExported...' 
-// functions.  (This may be the only safe way to release this memory 
-// since the executable accessing these exported functions may use 
-// a different memory manager (MM)., And allocating memory using one 
-// MM and releasing the same memory in another will cause problems.)
-EXTERN_DLL_EXPORT void DisposeExportedCPaths64(CPaths64& p)
-{
-  delete[] p;
-}
-EXTERN_DLL_EXPORT void DisposeExportedCPathsD(CPathsD& p)
-{
-  delete[] p;
-}
-EXTERN_DLL_EXPORT void DisposeExportedCPolyTree64(CPolyTree64& p)
-{
-  delete[] p;
-}
-EXTERN_DLL_EXPORT void DisposeExportedCPolyTreeD(CPolyTreeD& p)
+EXTERN_DLL_EXPORT void DisposeArray64(int64_t*& p)
 {
   delete[] p;
 }
 
-// Boolean clipping:
-// cliptype: None=0, Intersection=1, Union=2, Difference=3, Xor=4
-// fillrule: EvenOdd=0, NonZero=1, Positive=2, Negative=3
+EXTERN_DLL_EXPORT void DisposeArrayD(double*& p)
+{
+  delete[] p;
+}
+
 EXTERN_DLL_EXPORT int BooleanOp64(uint8_t cliptype,
   uint8_t fillrule, const CPaths64 subjects,
   const CPaths64 subjects_open, const CPaths64 clips,
@@ -165,9 +171,6 @@ EXTERN_DLL_EXPORT int BooleanOp_PolyTreeD(uint8_t cliptype,
   CPolyTreeD& solution, CPathsD& solution_open, int precision = 2,
   bool preserve_collinear = true, bool reverse_solution = false);
 
-// Polygon offsetting (inflate/deflate):
-// jointype: Square=0, Round=1, Miter=2
-// endtype: Polygon=0, Joined=1, Butt=2, Square=3, Round=4
 EXTERN_DLL_EXPORT CPaths64 InflatePaths64(const CPaths64 paths,
   double delta, uint8_t jointype, uint8_t endtype, 
   double miter_limit = 2.0, double arc_tolerance = 0.0, 

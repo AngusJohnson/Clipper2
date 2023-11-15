@@ -341,6 +341,19 @@ namespace Clipper2Lib {
           details::OutlinePolyPathD(os, *pp.Child(i), i, preamble + "  ");
     }
 
+    template<typename T, typename U>
+    inline constexpr void MakePathGeneric(const T an_array, 
+      size_t array_size, std::vector<U>& result)
+    {
+      result.reserve(array_size / 2);
+      for (size_t i = 0; i < array_size; i +=2)
+#ifdef USINGZ
+        result.push_back( U{ an_array[i], an_array[i +1], 0} );
+#else
+        result.push_back( U{ an_array[i], an_array[i + 1]} );
+#endif
+    }
+
   } // end details namespace 
 
   inline std::ostream& operator<< (std::ostream& os, const PolyTree64& pp)
@@ -391,22 +404,6 @@ namespace Clipper2Lib {
     return true;
   }
 
-  namespace details {
-
-    template<typename T, typename U>
-    inline constexpr void MakePathGeneric(const T list, size_t size,
-      std::vector<U>& result)
-    {
-      for (size_t i = 0; i < size; ++i)
-#ifdef USINGZ
-        result[i / 2] = U{list[i], list[++i], 0};
-#else
-        result[i / 2] = U{list[i], list[++i]};
-#endif
-    }
-
-  } // end details namespace
-
   template<typename T,
     typename std::enable_if<
       std::is_integral<T>::value &&
@@ -417,7 +414,7 @@ namespace Clipper2Lib {
     const auto size = list.size() - list.size() % 2;
     if (list.size() != size)
       DoError(non_pair_error_i);  // non-fatal without exception handling
-    Path64 result(size / 2);      // else ignores unpaired value
+    Path64 result;
     details::MakePathGeneric(list, size, result);
     return result;
   }
@@ -431,7 +428,7 @@ namespace Clipper2Lib {
   {
     // Make the compiler error on unpaired value (i.e. no runtime effects).
     static_assert(N % 2 == 0, "MakePath requires an even number of arguments");
-    Path64 result(N / 2);
+    Path64 result;
     details::MakePathGeneric(list, N, result);
     return result;
   }
@@ -446,7 +443,7 @@ namespace Clipper2Lib {
     const auto size = list.size() - list.size() % 2;
     if (list.size() != size)
       DoError(non_pair_error_i);  // non-fatal without exception handling
-    PathD result(size / 2);       // else ignores unpaired value
+    PathD result;
     details::MakePathGeneric(list, size, result);
     return result;
   }
@@ -460,7 +457,7 @@ namespace Clipper2Lib {
   {
     // Make the compiler error on unpaired value (i.e. no runtime effects).
     static_assert(N % 2 == 0, "MakePath requires an even number of arguments");
-    PathD result(N / 2);
+    PathD result;
     details::MakePathGeneric(list, N, result);
     return result;
   }

@@ -93,7 +93,6 @@ namespace ClipperDllDemo
       int idx = 2;
       for (int i = 0; i < pathCnt; i++)
         DisplayCPath<T>(cpaths, ref idx, spaceIndent);
-      Console.Write("\n");
     }
 
     // Note: The CPolyTree<T> structure defined in clipper.export.h is 
@@ -121,7 +120,6 @@ namespace ClipperDllDemo
       int idx = 2;
       for (int i = 0; i < cnt; i++) 
         DisplayPolyPath<T>(polytree, ref idx, false, "  ", precision);
-      Console.Write("\n");
     }
 
     public static T[]? GetArrayFromIntPtr<T>(IntPtr paths)
@@ -166,10 +164,14 @@ namespace ClipperDllDemo
       double[] subjects, double[]? openSubs, double[]? clips,
       out IntPtr solution, out IntPtr openSol, Int32 precision, bool preserveCollinear, bool reverseSolution);
 
+    [DllImport(clipperDll, EntryPoint =
+      "DisposeArray64", CallingConvention = CallingConvention.Cdecl)]
+    static extern void DisposeArray64(ref IntPtr intptr);
+
     // DisposeExported(): since all these functions behave identically ...
-    [DllImport(clipperDll, EntryPoint = 
-      "DisposeExportedCPaths64", CallingConvention = CallingConvention.Cdecl)]
-    static extern void DisposeExportedIntPtr(ref IntPtr intptr);
+    [DllImport(clipperDll, EntryPoint =
+      "DisposeArrayD", CallingConvention = CallingConvention.Cdecl)]
+    static extern void DisposeArrayD(ref IntPtr intptr);
 
     [DllImport(clipperDll, EntryPoint = 
       "BooleanOp_PolyTree64", CallingConvention = CallingConvention.Cdecl)]
@@ -184,6 +186,7 @@ namespace ClipperDllDemo
       byte fillrule, double[] subjects, double[]? openSubs, double[]? clips,
       out IntPtr solTree, out IntPtr openSol, Int32 precision,
       bool preserve_collinear, bool reverse_solution);
+    
 
     public static readonly byte None = 0, Intersection = 1, Union = 2, Difference = 3, Xor = 4;
     public static readonly byte EvenOdd = 0, NonZero = 1, Positive = 2, Negative = 3;
@@ -200,17 +203,17 @@ namespace ClipperDllDemo
       Console.WriteLine("BooleanOp64:");
       long[] cSubject = CreateCPaths(new long[] { 0, 0, 100, 0, 100, 100, 0, 100 });
       long[] cClip = CreateCPaths(new long[] { 20, 20, 120, 20, 120, 120, 20, 120 });
-      int result = BooleanOp64(Intersection, NonZero, cSubject, 
-        null, cClip, out IntPtr cSol, out IntPtr cSolOpen, false, false);
-      if (result != 0) return;
+      
+      if (BooleanOp64(Intersection, NonZero, cSubject,
+        null, cClip, out IntPtr cSol, out IntPtr cSolOpen, false, false) != 0) return;
+
       long[]? cSolution = GetArrayFromIntPtr<long>(cSol);
       // clean up unmanaged memory
-      DisposeExportedIntPtr(ref cSol);
-      DisposeExportedIntPtr(ref cSolOpen);
+      DisposeArray64(ref cSol);
+      DisposeArray64(ref cSolOpen);
 
       DisplayCPaths(cSolution, "  ");
       /////////////////////////////////////////////////////////////////////////
-
 
       // test BooleanOpD() ////////////////////////////////////////////////////
       Console.WriteLine("BooleanOpD:");
@@ -221,8 +224,8 @@ namespace ClipperDllDemo
       if (resultD != 0) return;
       double[]? cSolutionD = GetArrayFromIntPtr<double>(cSolD);
       // clean up unmanaged memory
-      DisposeExportedIntPtr(ref cSolD);
-      DisposeExportedIntPtr(ref cSolOpenD);
+      DisposeArrayD(ref cSolD);
+      DisposeArrayD(ref cSolOpenD);
 
       DisplayCPaths(cSolutionD, "  ");
       /////////////////////////////////////////////////////////////////////////
@@ -246,8 +249,8 @@ namespace ClipperDllDemo
 
       long[]? cPolyTree64 = GetArrayFromIntPtr<long>(cSol_pt64);
       // clean up unmanaged memory
-      DisposeExportedIntPtr(ref cSol_pt64);
-      DisposeExportedIntPtr(ref cSolOpen_pt64);
+      DisposeArray64(ref cSol_pt64);
+      DisposeArray64(ref cSolOpen_pt64);
 
       if (cPolyTree64 == null) return;
       DisplayPolytree<long>(cPolyTree64, 2);
@@ -272,16 +275,16 @@ namespace ClipperDllDemo
       double[]? cPolyTreeD = GetArrayFromIntPtr<double>(cSol_ptD);
 
       // clean up unmanaged memory
-      DisposeExportedIntPtr(ref cSol_ptD);
-      DisposeExportedIntPtr(ref cSolOpen_ptD);
+      DisposeArrayD(ref cSol_ptD);
+      DisposeArrayD(ref cSolOpen_ptD);
 
       if (cPolyTreeD == null) return;
       DisplayPolytree<double>(cPolyTreeD, 2);
       /////////////////////////////////////////////////////////////////////////
 
 
-      Console.WriteLine("Press ENTER to exit ... ");
-      Console.ReadLine();
+      Console.WriteLine("\nPress any key to exit ... ");
+      Console.ReadKey();
     }
 
   } //end Application

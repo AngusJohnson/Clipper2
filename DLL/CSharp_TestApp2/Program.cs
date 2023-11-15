@@ -102,7 +102,7 @@ namespace ClipperDllDemo
       Marshal.Copy(paths, len, 0, 1);
       long[] result = new long[len[0]];
       Marshal.Copy(paths, result, 0, (int)len[0]);
-      return result;
+      return result; 
     }
 
     // Define DLL exported functions /////////////////////
@@ -117,8 +117,8 @@ namespace ClipperDllDemo
       long[] subject, long[]? subOpen, long[]? clip,
       out IntPtr solution, out IntPtr solOpen, bool preserveCollinear, bool reverseSolution);
 
-    [DllImport(clipperDll, EntryPoint = "DisposeExportedCPaths64", CallingConvention = CallingConvention.Cdecl)]
-    static extern void DisposeExportedCPaths64(ref IntPtr paths);
+    [DllImport(clipperDll, EntryPoint = "DisposeArray64", CallingConvention = CallingConvention.Cdecl)]
+    static extern void DisposeArray64(ref IntPtr paths);
 
     static readonly byte None = 0, Intersection = 1, Union = 2, Difference = 3, Xor = 4;
     static readonly byte EvenOdd = 0, NonZero = 1, Positive = 2, Negative = 3;
@@ -133,42 +133,40 @@ namespace ClipperDllDemo
       Random rand = new();
 
       ////////////////////////////////////////////////////////////////////////
-      int edgeCount = 2000;
+      int edgeCount = 2500;
       ////////////////////////////////////////////////////////////////////////
 
       Paths64 subject = new() { MakeRandomPath(600,400, edgeCount, rand)};
       Paths64 clip = new() { MakeRandomPath(600, 400, edgeCount, rand) };
 
       //////////////////////////////////////////////////////////////////////
-      // Use Clipper2's C++ compiled library (ie use the DLL)
-      // NB: this time includes the overhead of swapping path structures 
+      // Use Dynamically Linked C++ compiled library (ie use the DLL)
+      // NB: time will include ALL the overhead of swapping path structures 
       Stopwatch sw1 = Stopwatch.StartNew();
       long[] cSubject = CreateCPaths64(subject);
       long[] cClip = CreateCPaths64(clip);
-      int result = BooleanOp64(Intersection, NonZero, cSubject,
-        null, cClip, out IntPtr cSol, out IntPtr cSolOpen, false, false);
+      if (BooleanOp64(Intersection, NonZero, cSubject,
+        null, cClip, out IntPtr cSol, out IntPtr cSolOpen, false, false) != 0)
+          return;
+
+      long[]? cSolution = GetPathsFromIntPtr(cSol);
+      if (cSolution == null) return;
+      DisposeArray64(ref cSol);
+      DisposeArray64(ref cSolOpen);
+      Paths64 solution = GetPaths64FromCPaths(cSolution);
       sw1.Stop();
-      if (result != 0) return;
       timeMsec = sw1.ElapsedMilliseconds;
       Console.WriteLine($"Time using DLL (C++ code): {timeMsec} ms");
       //////////////////////////////////////////////////////////////////////
 
       //////////////////////////////////////////////////////////////////////
-      // Use Clipper2's C# compiled library
+      // Use Clipper2's statically linked C# compiled library
       Stopwatch sw2 = Stopwatch.StartNew();
       Clipper.Intersect(subject, clip, FillRule.NonZero);
       sw2.Stop();
       timeMsec = sw2.ElapsedMilliseconds;
       Console.WriteLine($"Time using C# code       : {timeMsec} ms");
       //////////////////////////////////////////////////////////////////////
-
-      long[]? cSolution = GetPathsFromIntPtr(cSol);
-      DisposeExportedCPaths64(ref cSol);
-      DisposeExportedCPaths64(ref cSolOpen);
-      if (cSolution == null) return;
-
-      Paths64 solution = GetPaths64FromCPaths(cSolution);
-      //Console.WriteLine(solution.ToString());
 
       string fileName = "../../../clipper2_dll.svg";
       SvgWriter svg = new(FillRule.NonZero);
@@ -178,8 +176,8 @@ namespace ClipperDllDemo
       svg.SaveToFile(fileName, 800, 600, 20);
       OpenFileWithDefaultApp(fileName);
 
-      //Console.WriteLine("Press ENTER to exit ... ");
-      //Console.ReadLine();
+      Console.WriteLine("Press any key to exit ... ");
+      Console.ReadKey();
     }
 
   } //end Application
