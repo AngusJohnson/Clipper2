@@ -705,7 +705,8 @@ namespace Clipper2Lib {
         curr = next;
         next = GetNext(next, high, flags);
         prior2 = GetPrior(prior, high, flags);
-        distSqr[curr] = PerpendicDistFromLineSqrd(path[curr], path[prior], path[next]);
+        if (curr != high || isClosedPath)
+          distSqr[curr] = PerpendicDistFromLineSqrd(path[curr], path[prior], path[next]);
         if (prior != 0 || isClosedPath)
           distSqr[prior] = PerpendicDistFromLineSqrd(path[prior], path[prior2], path[curr]);
       }
