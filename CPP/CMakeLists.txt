@@ -213,6 +213,7 @@ endif()
     Tests/TestPolytreeUnion.cpp
     Tests/TestRandomPaths.cpp
     Tests/TestRectClip.cpp
+    Tests/TestSimplifyPath.cpp
     Tests/TestTrimCollinear.cpp
     Tests/TestWindows.cpp
   )
