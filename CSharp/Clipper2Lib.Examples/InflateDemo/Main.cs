@@ -6,6 +6,7 @@
 * License   :  http://www.boost.org/LICENSE_1_0.txt                            *
 *******************************************************************************/
 
+using System;
 using System.IO;
 using System.Reflection;
 using Clipper2Lib;
@@ -25,43 +26,39 @@ namespace ClipperDemo1
 
     public static void DoSimpleShapes()
     {
-      //triangle offset - with large miter
-      Paths64 p = new() { Clipper.MakePath(new int[] { 30, 150, 60, 350, 0, 350 }) };
-      Paths64 pp = new();
-      pp.AddRange(p);
+      SvgWriter svg = new();
+      ClipperOffset co = new();
 
+      //triangle offset - with large miter
+      Paths64 p0 = new() { Clipper.MakePath(new int[] { 30,150, 60,350, 0,350 }) };
+      Paths64 p = new();
       for (int i = 0; i < 5; ++i)
       {
         //nb: the last parameter here (10) greatly increases miter limit
-        p = Clipper.InflatePaths(p, 5, JoinType.Miter, EndType.Polygon, 10);
-        pp.AddRange(p);
+        p0 = Clipper.InflatePaths(p0, 5, JoinType.Miter, EndType.Polygon, 10);
+        p.AddRange(p0);
       }
+      SvgUtils.AddSolution(svg, p, false);
+      p.Clear();  
 
       //rectangle offset - both squared and rounded
-      p.Clear();
-      ClipperOffset co = new();
-
       //nb: using the ClipperOffest class directly here to control 
       //different join types within the same offset operation
-      p.Add(Clipper.MakePath(new int[] { 100, 0, 340, 0, 340, 200, 100, 200 }));
-      pp.AddRange(p);
+      p.Add(Clipper.MakePath(new int[] { 100,0, 340,0, 340,200, 100,200, 100, 0 }));
+      SvgUtils.AddOpenSubject(svg, p);
       co.AddPaths(p, JoinType.Bevel, EndType.Joined);
 
       p = Clipper.TranslatePaths(p, 60, 50);
-      pp.AddRange(p);
+      SvgUtils.AddOpenSubject(svg, p);
       co.AddPaths(p, JoinType.Square, EndType.Joined);
-
       p = Clipper.TranslatePaths(p, 60, 50);
-      pp.AddRange(p);
+      SvgUtils.AddOpenSubject(svg, p);
       co.AddPaths(p, JoinType.Round, EndType.Joined);
 
-
-      co.Execute(20, p);
-      pp.AddRange(p);
+      co.Execute(10, p);
 
       string filename = "../../../inflate.svg";
-      SvgWriter svg = new();
-      SvgUtils.AddSolution(svg, pp, false);
+      SvgUtils.AddSolution(svg, p, false);
       SvgUtils.AddCaption(svg, "Beveled join", 100, -27);
       SvgUtils.AddCaption(svg, "Squared join", 160, 23);
       SvgUtils.AddCaption(svg, "Rounded join", 220, 73);

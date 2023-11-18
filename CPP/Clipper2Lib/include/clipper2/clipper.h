@@ -1,6 +1,6 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  1 November 2023                                                 *
+* Date      :  18 November 2023                                                *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2023                                         *
 * Purpose   :  This module provides a simple interface to the Clipper Library  *
@@ -659,7 +659,7 @@ namespace Clipper2Lib {
 
     std::vector<bool> flags(len);
     std::vector<double> distSqr(len);
-    size_t prior = high, curr = 0, start, next, prior2, next2;
+    size_t prior = high, curr = 0, start, next, prior2;
     if (isClosedPath)
     {
       distSqr[0] = PerpendicDistFromLineSqrd(path[0], path[high], path[1]);
@@ -689,27 +689,25 @@ namespace Clipper2Lib {
       next = GetNext(curr, high, flags);
       if (next == prior) break;
 
+      // flag for removal the smaller of adjacent 'distances'
       if (distSqr[next] < distSqr[curr])
       {
-        flags[next] = true;
-        next = GetNext(next, high, flags);
-        next2 = GetNext(next, high, flags);
-        distSqr[curr] = PerpendicDistFromLineSqrd(path[curr], path[prior], path[next]);
-        if (next != high || isClosedPath)
-          distSqr[next] = PerpendicDistFromLineSqrd(path[next], path[curr], path[next2]);
+        prior2 = prior;
+        prior = curr;
         curr = next;
+        next = GetNext(next, high, flags);
       }
       else
-      {
-        flags[curr] = true;
-        curr = next;
-        next = GetNext(next, high, flags);
         prior2 = GetPrior(prior, high, flags);
-        if (curr != high || isClosedPath)
-          distSqr[curr] = PerpendicDistFromLineSqrd(path[curr], path[prior], path[next]);
-        if (prior != 0 || isClosedPath)
-          distSqr[prior] = PerpendicDistFromLineSqrd(path[prior], path[prior2], path[curr]);
-      }
+        
+      flags[curr] = true;
+      curr = next;
+      next = GetNext(next, high, flags);
+
+      if (isClosedPath || ((curr != high) && (curr != 0)))
+        distSqr[curr] = PerpendicDistFromLineSqrd(path[curr], path[prior], path[next]);
+      if (isClosedPath || ((prior != 0) && (prior != high)))
+        distSqr[prior] = PerpendicDistFromLineSqrd(path[prior], path[prior2], path[curr]);
     }
     Path<T> result;
     result.reserve(len);

@@ -42,34 +42,35 @@ _______________________________
 _______________________________
 
 CPolytree64 and CPolytreeD:
-These are also simple arrays consisting of CPolyPath structures.
-However, since the very first CPolyPath is the tree container, it has no
-path and its structure will be very slightly different from the remaining
+These are also simple arrays consisting of CPolyPath structures that 
+represent individual paths in a tree structure. However, the very first 
+CPolyPath is just the tree container so it won't have a path. And because
+of that, its structure will be very slightly different from the remaining
 CPolyPath. This difference will be discussed below.
 
 CPolyPath64 and CPolyPathD:
-These are simple arrays consisting path coordinates followed by any number of
-child CPolyPath (representing the paths they own). Preceding these are a pair
-of values: the length of its path (N); and the number of child CPolyPath (C).
+These are simple arrays consisting of a series of path coordinates followed 
+by any number of child (ie nested) CPolyPath. Preceeding these are two values 
+indicating the length of the path (N) and the number of child CPolyPath (C).
 ____________________________________________________________
 |counter|coord1|coord2|...|coordN| child1|child2|...|childC|
 |N  , C |x1, y1|x2, y2|...|xN, yN|                         |
 ____________________________________________________________
 
 As mentioned above, the very first CPolyPath structure is just a container
-(both directly and indirectly) for every other CPolyPath in the tree. So
-where this first CPolyPath has no path, instead of a path length, its first
-value contains the total length of the CPolytree array (A).
+that owns (both directly and indirectly) every other CPolyPath in the tree. 
+Since this first CPolyPath has no path, instead of a path length, its first
+value will contain the total length of the CPolytree array.
 
 All the exported structures (CPaths64, CPathsD, CPolyTree64 & CPolyTreeD)
 are arrays of type int64_t or double. And the first value in these arrays 
 will always contain the length of that array.
 
-These array structures will be allocated in heap memory, so eventually this 
-memory will need to be released. But because the applications dynamically 
-linking to these functions may use a different memory manager, the only 
-really safe way to free up this memory is to use the exported  
-DisposeArray64 and DisposeArrayD functions below.
+These array structures are allocated in heap memory which will eventually 
+need to be released. But since applications dynamically linking to these 
+functions may use different memory managers, the only really safe way to 
+free up this memory is to use the exported DisposeArray64 and 
+DisposeArrayD functions below.
 */
 
 

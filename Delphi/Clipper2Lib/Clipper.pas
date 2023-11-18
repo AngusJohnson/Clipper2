@@ -2,7 +2,7 @@ unit Clipper;
 
 (*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  17 July 2023                                                    *
+* Date      :  18 November 2023                                                *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2023                                         *
 * Purpose   :  This module provides a simple interface to the Clipper Library  *
@@ -17,9 +17,8 @@ uses
   Math, SysUtils, Classes,
   Clipper.Core, Clipper.Engine, Clipper.Offset, Clipper.RectClip;
 
-// Redeclare here a number of structures defined in
-// other units so those units won't need to be declared
-// just to use the following functions.
+// A number of structures defined in other units are redeclared here
+// so those units won't also need to be declared in your own units clauses.
 type
   TClipper    = Clipper.Engine.TClipper64;
   TClipper64  = Clipper.Engine.TClipper64;
@@ -148,9 +147,13 @@ function PointInPolygon(const pt: TPoint64; const polygon: TPath64):
   TPointInPolygonResult;
 
 function SimplifyPath(const path: TPath64;
-  shapeTolerance: double; isOpenPath: Boolean): TPath64;
+  shapeTolerance: double; isClosedPath: Boolean = true): TPath64; overload;
 function SimplifyPaths(const paths: TPaths64;
-  shapeTolerance: double; isOpenPaths: Boolean): TPaths64;
+  shapeTolerance: double; isClosedPath: Boolean = true): TPaths64; overload;
+function SimplifyPath(const path: TPathD; shapeTolerance: double;
+  isClosedPath: Boolean = true; decimalPrecision: integer = 2): TPathD; overload;
+function SimplifyPaths(const paths: TPathsD; shapeTolerance: double;
+  isClosedPath: Boolean = true; decimalPrecision: integer = 2): TPathsD; overload;
 
 implementation
 
@@ -848,22 +851,22 @@ type
     pdSqrd  : double;
     prev    : PSimplifyRec;
     next    : PSimplifyRec;
-    isEnd   : Boolean;
+    //isEnd   : Boolean;
   end;
 
 function SimplifyPath(const path: TPath64;
-  shapeTolerance: double; isOpenPath: Boolean): TPath64;
+  shapeTolerance: double; isClosedPath: Boolean): TPath64;
 var
-  i, highI, minLen: integer;
+  i, highI, minHigh: integer;
   tolSqrd: double;
   srArray: array of TSimplifyRec;
   first, last: PSimplifyRec;
 begin
   Result := nil;
   highI := High(path);
-  if isOpenPath then minLen := 2 else minLen := 3;
 
-  if highI +1 < minLen then Exit;
+  if isClosedPath then minHigh := 2 else minHigh := 1;
+  if highI < minHigh then Exit;
 
   SetLength(srArray, highI +1);
   with srArray[0] do
@@ -871,15 +874,9 @@ begin
     pt      := path[0];
     prev    := @srArray[highI];
     next    := @srArray[1];
-    if isOpenPath then
-    begin
-      pdSqrd  := MaxDouble;
-      isEnd   := true;
-    end else
-    begin
-      pdSqrd  := PerpendicDistSqrd(path[0], path[highI], path[1]);
-      isEnd   := false;
-    end;
+    if isClosedPath then
+      pdSqrd  := PerpendicDistSqrd(path[0], path[highI], path[1]) else
+      pdSqrd  := invalidD;
   end;
 
   with srArray[highI] do
@@ -887,15 +884,9 @@ begin
     pt      := path[highI];
     prev    := @srArray[highI-1];
     next    := @srArray[0];
-    if isOpenPath then
-    begin
-      pdSqrd  := MaxDouble;
-      isEnd   := true;
-    end else
-    begin
-      pdSqrd  := PerpendicDistSqrd(path[highI], path[highI-1], path[0]);
-      isEnd   := false;
-    end;
+    if isClosedPath then
+      pdSqrd  := PerpendicDistSqrd(path[highI], path[highI-1], path[0]) else
+      pdSqrd  := invalidD;
   end;
 
   for i := 1 to highI -1 do
@@ -905,7 +896,6 @@ begin
       prev    := @srArray[i-1];
       next    := @srArray[i+1];
       pdSqrd  := PerpendicDistSqrd(path[i], path[i-1], path[i+1]);
-      isEnd   := false;
     end;
 
   first := @srArray[0];
@@ -914,26 +904,23 @@ begin
   tolSqrd := Sqr(shapeTolerance);
   while first <> last do
   begin
-    if first.isEnd or (first.pdSqrd > tolSqrd) or
+    if (first.pdSqrd > tolSqrd) or
       (first.next.pdSqrd < first.pdSqrd) then
     begin
       first := first.next;
-    end else
-    begin
-      first.prev.next := first.next;
-      first.next.prev := first.prev;
-      last := first.prev;
-      dec(highI);
-      if last.next = last.prev then break;
-      last.pdSqrd :=
-        PerpendicDistSqrd(last.pt, last.prev.pt, last.next.pt);
-      first := last.next;
-      first.pdSqrd :=
-        PerpendicDistSqrd(first.pt, first.prev.pt, first.next.pt);
+      Continue;
     end;
+    dec(highI);
+    first.prev.next := first.next;
+    first.next.prev := first.prev;
+    last := first.prev;
+    first := last.next;
+    if first.next = first.prev then break;
+    last.pdSqrd := PerpendicDistSqrd(last.pt, last.prev.pt, first.pt);
+    first.pdSqrd := PerpendicDistSqrd(first.pt, last.pt, first.next.pt);
   end;
-  if highI +1 < minLen then Exit;
-  if isOpenPath then first := @srArray[0];
+  if highI < minHigh then Exit;
+  if not isClosedPath then first := @srArray[0];
   SetLength(Result, highI +1);
   for i := 0 to HighI do
   begin
@@ -944,15 +931,43 @@ end;
 //------------------------------------------------------------------------------
 
 function SimplifyPaths(const paths: TPaths64;
-  shapeTolerance: double; isOpenPaths: Boolean): TPaths64;
+  shapeTolerance: double; isClosedPath: Boolean): TPaths64;
 var
   i, len: integer;
 begin
   len := Length(paths);
   SetLength(Result, len);
   for i := 0 to len -1 do
-    result[i] := SimplifyPath(paths[i], shapeTolerance, isOpenPaths);
+    result[i] := SimplifyPath(paths[i], shapeTolerance, isClosedPath);
 end;
+//------------------------------------------------------------------------------
+
+function SimplifyPath(const path: TPathD; shapeTolerance: double;
+  isClosedPath: Boolean; decimalPrecision: integer): TPathD;
+var
+  p: TPath64;
+  scale: double;
+begin
+  scale := power(10, decimalPrecision);
+  p := ScalePath(path, scale);
+  p := SimplifyPath(p, shapeTolerance, isClosedPath);
+  Result := ScalePathD(p, 1/scale);
+end;
+//------------------------------------------------------------------------------
+
+function SimplifyPaths(const paths: TPathsD; shapeTolerance: double;
+  isClosedPath: Boolean; decimalPrecision: integer): TPathsD;
+var
+  pp: TPaths64;
+  scale: double;
+begin
+  scale := power(10, decimalPrecision);
+  pp := ScalePaths(paths, scale);
+  pp := SimplifyPaths(pp, shapeTolerance, isClosedPath);
+  Result := ScalePathsD(pp, 1/scale);
+end;
+//------------------------------------------------------------------------------
+
 
 end.
 
