@@ -1,6 +1,6 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  15 November 2023                                                *
+* Date      :  19 November 2023                                                *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2023                                         *
 * Purpose   :  Path Offset (Inflate/Shrink)                                    *
@@ -160,16 +160,26 @@ ClipperOffset::Group::Group(const Paths64& _paths, JoinType _join_type, EndType 
 	for (Path64& p: paths_in)
 	  StripDuplicates(p, is_joined);
 
+	// get bounds of each path --> bounds_list
 	GetMultiBounds(paths_in, bounds_list, end_type);
+
 	if (end_type == EndType::Polygon)
 	{
+		is_hole_list.reserve(paths_in.size());
+		for (const Path64& path : paths_in)
+			is_hole_list.push_back(Area(path) < 0);
 		lowest_path_idx = GetLowestClosedPathIdx(bounds_list);
-		is_reversed = (lowest_path_idx >= 0) && Area(paths_in[lowest_path_idx]) < 0;
+		// the lowermost path must be an outer path, so if its orientation is negative,
+		// then flag the whole group is 'reversed' (will negate delta etc.)
+		// as this is much more efficient than reversing every path.
+		is_reversed = (lowest_path_idx >= 0) && is_hole_list[lowest_path_idx];
+		if (is_reversed) is_hole_list.flip();
 	}
 	else
 	{
 		lowest_path_idx = -1;
 		is_reversed = false;
+		is_hole_list.resize(paths_in.size());
 	}
 }
 
@@ -541,18 +551,20 @@ void ClipperOffset::DoGroupOffset(Group& group)
 		steps_per_rad_ = steps_per_360 / (2 * PI);
 	}
 
-	size_t i = 0;
-	for (const Path64& path_in : group.paths_in)
+	
+	std::vector<Rect64>::const_iterator path_rect_it = group.bounds_list.cbegin();
+	std::vector<bool>::const_iterator is_hole_it = group.is_hole_list.cbegin();
+	Paths64::const_iterator path_in_it = group.paths_in.cbegin();
+	for ( ; path_in_it != group.paths_in.cend(); ++path_in_it, ++path_rect_it, ++is_hole_it)
 	{
-		const Rect64& path_rect = group.bounds_list[i++];
-		if (!path_rect.IsValid()) continue;
-		Path64::size_type pathLen = path_in.size();
+		if (!path_rect_it->IsValid()) continue;
+		Path64::size_type pathLen = path_in_it->size();
 		path_out.clear();
 
 		if (pathLen == 1) // single point - only valid with open paths
 		{
 			if (group_delta_ < 1) continue;
-			const Point64& pt = path_in[0];
+			const Point64& pt = (*path_in_it)[0];
 			//single vertex so build a circle or square ...
 			if (group.join_type == JoinType::Round)
 			{
@@ -577,19 +589,20 @@ void ClipperOffset::DoGroupOffset(Group& group)
 		} // end of offsetting a single (open path) point 
 
 		// when shrinking, then make sure the path can shrink that far (#593)
-		if (group_delta_ < 0 &&
-			std::min(path_rect.Width(), path_rect.Height()) < -group_delta_ * 2)
-				continue;
+		// but also make sure this isn't a hole which will be expanding (#715)
+		if ( ((group_delta_ < 0) != *is_hole_it) &&
+			(std::min(path_rect_it->Width(), path_rect_it->Height()) < -group_delta_ * 2) )
+				  continue;
 
 		if ((pathLen == 2) && (group.end_type == EndType::Joined))
 			end_type_ = (group.join_type == JoinType::Round) ? 
 			  EndType::Round : 
 			  EndType::Square;
 
-		BuildNormals(path_in);
-		if (end_type_ == EndType::Polygon) OffsetPolygon(group, path_in);
-		else if (end_type_ == EndType::Joined) OffsetOpenJoined(group, path_in);
-		else OffsetOpenPath(group, path_in);
+		BuildNormals(*path_in_it);
+		if (end_type_ == EndType::Polygon) OffsetPolygon(group, *path_in_it);
+		else if (end_type_ == EndType::Joined) OffsetOpenJoined(group, *path_in_it);
+		else OffsetOpenPath(group, *path_in_it);
 	}
 }
 
@@ -604,6 +617,7 @@ size_t ClipperOffset::CalcSolutionCapacity()
 
 bool ClipperOffset::CheckReverseOrientation()
 {
+	// nb: this assumes there's consistency in orientation between groups
 	bool is_reversed_orientation = false;
 	for (const Group& g : groups_)
 		if (g.end_type == EndType::Polygon)

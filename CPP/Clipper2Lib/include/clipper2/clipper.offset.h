@@ -1,6 +1,6 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  5 November 2023                                                 *
+* Date      :  19 November 2023                                                *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2023                                         *
 * Purpose   :  Path Offset (Inflate/Shrink)                                    *
@@ -34,6 +34,7 @@ private:
 	class Group {
 	public:
 		Paths64 paths_in;
+		std::vector<bool> is_hole_list;
 		std::vector<Rect64> bounds_list;
 		int lowest_path_idx = -1;
 		bool is_reversed = false;

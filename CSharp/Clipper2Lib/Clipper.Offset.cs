@@ -1,6 +1,6 @@
 ﻿/*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  15 November 2023                                                *
+* Date      :  19 November 2023                                                *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2023                                         *
 * Purpose   :  Path Offset (Inflate/Shrink)                                    *
@@ -10,8 +10,6 @@
 using System;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
-using System.Text.RegularExpressions;
-using Clipper2Lib;
 
 namespace Clipper2Lib
 {
@@ -39,6 +37,7 @@ namespace Clipper2Lib
     {
       internal Paths64 inPaths;
       internal List<Rect64> boundsList;
+      internal List<bool> isHoleList;
       internal JoinType joinType;
       internal EndType endType;
       internal bool pathsReversed;
@@ -54,12 +53,30 @@ namespace Clipper2Lib
         foreach(Path64 path in paths)
           inPaths.Add(Clipper.StripDuplicates(path, isJoined));
 
-        boundsList = new List<Rect64>();
+        // get bounds of each path --> boundsList
+        boundsList = new List<Rect64>(inPaths.Count);
         GetMultiBounds(inPaths, boundsList, endType);
-        lowestPathIdx = GetLowestPathIdx(boundsList);
-        pathsReversed = false;
+
         if (endType == EndType.Polygon)
-          pathsReversed = Clipper.Area(inPaths[lowestPathIdx]) < 0;
+        {
+          lowestPathIdx = GetLowestPathIdx(boundsList);
+          isHoleList = new List<bool>(inPaths.Count);
+
+          foreach (Path64 path in inPaths)
+            isHoleList.Add(Clipper.Area(path) < 0);
+          // the lowermost path must be an outer path, so if its orientation is negative,
+          // then flag that the whole group is 'reversed' (will negate delta etc.)
+          // as this is much more efficient than reversing every path.
+          pathsReversed = (lowestPathIdx >= 0) && isHoleList[lowestPathIdx];
+          if (pathsReversed)
+            for (int i = 0; i < isHoleList.Count; i++) isHoleList[i] = !isHoleList[i];
+        }
+        else
+        {
+          lowestPathIdx = -1;
+          isHoleList = new List<bool>(new bool[inPaths.Count]);
+          pathsReversed = false;
+        }
       }
     }
 
@@ -703,35 +720,38 @@ namespace Clipper2Lib
         _stepsPerRad = stepsPer360 / (2 * Math.PI);
       }
 
-      int i = 0;
-      foreach (Path64 p in group.inPaths)
+      using List<Path64>.Enumerator pathIt = group.inPaths.GetEnumerator();
+      using List<Rect64>.Enumerator boundsIt = group.boundsList.GetEnumerator();
+      using List<bool>.Enumerator isHoleIt = group.isHoleList.GetEnumerator();
+      while (pathIt.MoveNext() && boundsIt.MoveNext() && isHoleIt.MoveNext())
       {
-        Rect64 pathBounds = group.boundsList[i++];
+        Rect64 pathBounds = boundsIt.Current;
         if (!pathBounds.IsValid()) continue;
 
-        int cnt = p.Count;
-        if ((cnt == 0) || ((cnt < 3) && (_endType == EndType.Polygon))) 
-          continue;
+        Path64 p = pathIt.Current;
+        bool isHole = isHoleIt.Current;
 
         pathOut = new Path64();
+        int cnt = p.Count;
+
         if (cnt == 1)
         {
           Point64 pt = p[0];
-          
+
           // single vertex so build a circle or square ...
           if (group.endType == EndType.Round)
           {
             double r = absDelta;
-            int steps = (int)Math.Ceiling(_stepsPerRad * 2 * Math.PI);
+            int steps = (int) Math.Ceiling(_stepsPerRad * 2 * Math.PI);
             pathOut = Clipper.Ellipse(pt, r, r, steps);
 #if USINGZ
             pathOut = InternalClipper.SetZ(pathOut, pt.Z);
-#endif      
+#endif
           }
           else
           {
             int d = (int) Math.Ceiling(_groupDelta);
-            Rect64 r = new Rect64(pt.X - d, pt.Y - d,  pt.X + d, pt.Y + d);
+            Rect64 r = new Rect64(pt.X - d, pt.Y - d, pt.X + d, pt.Y + d);
             pathOut = r.AsPath();
 #if USINGZ
             pathOut = InternalClipper.SetZ(pathOut, pt.Z);
@@ -742,13 +762,14 @@ namespace Clipper2Lib
         } // end of offsetting a single (open path) point 
 
         // when shrinking, then make sure the path can shrink that far (#593)
-        if (_groupDelta < 0 &&
-          Math.Min(pathBounds.Width, pathBounds.Height) < -_groupDelta * 2)
-            continue;
+        // but also make sure this isn't a hole which will be expanding (#715)
+        if (((_groupDelta < 0) != isHole) &&
+          (Math.Min(pathBounds.Width, pathBounds.Height) < -_groupDelta * 2))
+          continue;
 
         if (cnt == 2 && group.endType == EndType.Joined)
-          _endType = (group.joinType == JoinType.Round) ? 
-            EndType.Round : 
+          _endType = (group.joinType == JoinType.Round) ?
+            EndType.Round :
             EndType.Square;
 
         BuildNormals(p);

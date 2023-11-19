@@ -2,7 +2,7 @@ unit Clipper.Offset;
 
 (*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  15 November 2023                                                *
+* Date      :  19 November 2023                                                *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2023                                         *
 * Purpose   :  Path Offset (Inflate/Shrink)                                    *
@@ -33,6 +33,7 @@ type
     const path_norms: TPathD; currIdx, prevIdx: integer): double of object;
 
   TRect64Array = array of TRect64;
+  BooleanArray = array of Boolean;
 
   TGroup = class
 	  paths     : TPaths64;
@@ -41,6 +42,7 @@ type
     reversed  : Boolean;
     lowestPathIdx: integer;
     boundsList: TRect64Array;
+    isHoleList: BooleanArray;
     constructor Create(const pathsIn: TPaths64; jt: TJoinType; et: TEndType);
   end;
 
@@ -139,7 +141,7 @@ const
 //  Miscellaneous offset support functions
 //------------------------------------------------------------------------------
 
-function GetMultiBounds(const paths: TPaths64; endType: TEndType): TRect64Array;
+procedure GetMultiBounds(const paths: TPaths64; var list: TRect64Array; endType: TEndType);
 var
   i,j, len, len2, minPathLen: integer;
   path: TPath64;
@@ -150,14 +152,13 @@ begin
 	  minPathLen := 3 else
     minPathLen := 1;
   len := Length(paths);
-  SetLength(Result, len);
 	for i := 0 to len -1 do
 	begin
     path := paths[i];
     len2 := Length(path);
 		if len2 < minPathLen then
 		begin
-      Result[i] := InvalidRect64;
+      list[i] := InvalidRect64;
 			continue;
     end;
     pt1 := path[0];
@@ -170,7 +171,7 @@ begin
 			if (pt.x > r.right) then r.right := pt.x
 			else if (pt.x < r.left) then r.left := pt.x;
     end;
-    Result[i] := r;
+    list[i] := r;
 	end;
 end;
 //------------------------------------------------------------------------------
@@ -308,6 +309,7 @@ constructor TGroup.Create(const pathsIn: TPaths64; jt: TJoinType; et: TEndType);
 var
   i, len: integer;
   isJoined: boolean;
+  pb: PBoolean;
 begin
   Self.joinType := jt;
   Self.endType := et;
@@ -318,17 +320,31 @@ begin
   for i := 0 to len -1 do
     paths[i] := StripDuplicates(pathsIn[i], isJoined);
 
-	boundsList := GetMultiBounds(paths, et);
+  reversed := false;
+	SetLength(isHoleList, len);
+	SetLength(boundsList, len);
+  GetMultiBounds(paths, boundsList, et);
   if (et = etPolygon) then
   begin
 	  lowestPathIdx := GetLowestClosedPathIdx(boundsList);
-    reversed := (lowestPathIdx >= 0) and (
-      Area(pathsIn[lowestPathIdx]) < 0);
+    if lowestPathIdx < 0 then Exit;
+    pb := @isHoleList[0];
+    for i := 0 to len -1 do
+    begin
+      pb^ := Area(paths[i]) < 0; inc(pb);
+    end;
+    // the lowermost path must be an outer path, so if its orientation is
+    // negative, then flag that the whole group is 'reversed' (so negate
+    // delta etc.) as this is much more efficient than reversing every path.
+    reversed := (lowestPathIdx >= 0) and isHoleList[lowestPathIdx];
+    if not reversed then Exit;
+    pb := @isHoleList[0];
+    for i := 0 to len -1 do
+    begin
+      pb^ := not pb^; inc(pb);
+    end;
   end else
-  begin
     lowestPathIdx := -1;
-    reversed := false;
-  end;
 end;
 
 //------------------------------------------------------------------------------
@@ -495,8 +511,9 @@ begin
       Continue;
     end;
 
-		// when shrinking, then make sure the path can shrink that far
-    if (fGroupDelta < 0) and
+    // when shrinking, then make sure the path can shrink that far (#593)
+    // but also make sure this isn't a hole which will be expanding (#715)
+    if ((fGroupDelta < 0) <> group.isHoleList[i]) and
       (Min(group.boundsList[i].Width, group.boundsList[i].Height) <
         fGroupDelta *2) then Continue;
 

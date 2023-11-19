@@ -399,9 +399,31 @@ TEST(Clipper2Tests, TestOffsets6) // also modified from #593 (tests rounded ends
   offseter.AddPaths(subjects, Clipper2Lib::JoinType::Round, Clipper2Lib::EndType::Polygon);
   Clipper2Lib::Paths64 solution;
   offseter.Execute(offset, solution);
-  
+
   EXPECT_EQ(solution.size(), 2);
 
   double area = Area<int64_t>(solution[1]);
   EXPECT_LT(area, -47500);
+}
+
+TEST(Clipper2Tests, TestOffsets7) // (#593 & #715)
+{
+  Paths64 solution;
+  Paths64 subject = { MakePath({0,0, 100,0, 100,100, 0,100}) };
+
+  solution = InflatePaths(subject, -50, JoinType::Miter, EndType::Polygon);
+  EXPECT_EQ(solution.size(), 0);
+
+  subject.push_back(MakePath({ 40,60, 60,60, 60,40, 40,40 }));
+  solution = InflatePaths(subject, 10, JoinType::Miter, EndType::Polygon);
+  EXPECT_EQ(solution.size(), 1);
+
+  reverse(subject[0].begin(), subject[0].end());
+  reverse(subject[1].begin(), subject[1].end());
+  solution = InflatePaths(subject, 10, JoinType::Miter, EndType::Polygon);
+  EXPECT_EQ(solution.size(), 1);
+
+  subject.resize(1);
+  solution = InflatePaths(subject, -50, JoinType::Miter, EndType::Polygon);
+  EXPECT_EQ(solution.size(), 0);
 }
