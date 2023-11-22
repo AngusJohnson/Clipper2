@@ -1,6 +1,6 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  15 November 2023                                                *
+* Date      :  22 November 2023                                                *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2023                                         *
 * Purpose   :  This module exports the Clipper2 Library (ie DLL/so)            *
@@ -377,8 +377,8 @@ EXTERN_DLL_EXPORT int BooleanOp64(uint8_t cliptype,
   clp       = ConvertCPaths(clips);
 
   Clipper64 clipper;
-  clipper.PreserveCollinear = preserve_collinear;
-  clipper.ReverseSolution = reverse_solution;
+  clipper.PreserveCollinear(preserve_collinear);
+  clipper.ReverseSolution(reverse_solution);
   if (sub.size() > 0) clipper.AddSubject(sub);
   if (sub_open.size() > 0) clipper.AddOpenSubject(sub_open);
   if (clp.size() > 0) clipper.AddClip(clp);
@@ -404,8 +404,8 @@ EXTERN_DLL_EXPORT int BooleanOp_PolyTree64(uint8_t cliptype,
 
   PolyTree64 tree;
   Clipper64 clipper;
-  clipper.PreserveCollinear = preserve_collinear;
-  clipper.ReverseSolution = reverse_solution;
+  clipper.PreserveCollinear(preserve_collinear);
+  clipper.ReverseSolution(reverse_solution);
   if (sub.size() > 0) clipper.AddSubject(sub);
   if (sub_open.size() > 0) clipper.AddOpenSubject(sub_open);
   if (clp.size() > 0) clipper.AddClip(clp);
@@ -434,8 +434,8 @@ EXTERN_DLL_EXPORT int BooleanOpD(uint8_t cliptype,
   clp       = ConvertCPathsDToPaths64(clips, scale);
 
   Clipper64 clipper;
-  clipper.PreserveCollinear = preserve_collinear;
-  clipper.ReverseSolution = reverse_solution;
+  clipper.PreserveCollinear(preserve_collinear);
+  clipper.ReverseSolution(reverse_solution);
   if (sub.size() > 0) clipper.AddSubject(sub);
   if (sub_open.size() > 0) clipper.AddOpenSubject(sub_open);
   if (clp.size() > 0) clipper.AddClip(clp);
@@ -466,8 +466,8 @@ EXTERN_DLL_EXPORT int BooleanOp_PolyTreeD(uint8_t cliptype,
 
   PolyTree64 tree;
   Clipper64 clipper;
-  clipper.PreserveCollinear = preserve_collinear;
-  clipper.ReverseSolution = reverse_solution;
+  clipper.PreserveCollinear(preserve_collinear);
+  clipper.ReverseSolution(reverse_solution);
   if (sub.size() > 0) clipper.AddSubject(sub);
   if (sub_open.size() > 0) clipper.AddOpenSubject(sub_open);
   if (clp.size() > 0) clipper.AddClip(clp);

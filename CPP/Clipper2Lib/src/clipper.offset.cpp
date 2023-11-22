@@ -1,6 +1,6 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  19 November 2023                                                *
+* Date      :  22 November 2023                                                *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2023                                         *
 * Purpose   :  Path Offset (Inflate/Shrink)                                    *
@@ -669,9 +669,9 @@ void ClipperOffset::Execute(double delta, Paths64& paths)
 	bool paths_reversed = CheckReverseOrientation();
 	//clean up self-intersections ...
 	Clipper64 c;
-	c.PreserveCollinear = false;
+	c.PreserveCollinear(false);
 	//the solution should retain the orientation of the input
-	c.ReverseSolution = (reverse_solution_ != paths_reversed);
+	c.ReverseSolution(reverse_solution_ != paths_reversed);
 #ifdef USINGZ
 	if (zCallback64_) { c.SetZCallback(zCallback64_); }
 #endif
@@ -693,9 +693,9 @@ void ClipperOffset::Execute(double delta, PolyTree64& polytree)
 	bool paths_reversed = CheckReverseOrientation();
 	//clean up self-intersections ...
 	Clipper64 c;
-	c.PreserveCollinear = false;
+	c.PreserveCollinear(false);
 	//the solution should retain the orientation of the input
-	c.ReverseSolution = reverse_solution_ != paths_reversed;
+	c.ReverseSolution (reverse_solution_ != paths_reversed);
 #ifdef USINGZ
 	if (zCallback64_) {
 		c.SetZCallback(zCallback64_);

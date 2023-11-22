@@ -20,7 +20,7 @@ TEST(Clipper2Tests, TestPolytreeUnion) {
     else
     {
       //because clipping ops normally return Positive solutions
-      clipper.ReverseSolution = true;
+      clipper.ReverseSolution(true);
       clipper.Execute(ClipType::Union,
         FillRule::Negative, solution, open_paths);
     }

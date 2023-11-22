@@ -112,5 +112,19 @@ TEST(Clipper2Tests, TestMultiplePolygons)
 
   Clipper2Lib::PathsD subjd, clipd, solutiond;
   Clipper2Lib::FillRule frd = Clipper2Lib::FillRule::NonZero;
+}
 
+TEST(Clipper2Tests, TestHorzSpikes) //#720
+{
+  Clipper2Lib::Paths64 paths = {
+    Clipper2Lib::MakePath({1600,0, 1600,100, 2050,100, 2050,300, 450,300, 450, 0}),
+    Clipper2Lib::MakePath({1800,200, 1800,100, 1600,100, 2000,100, 2000,200}) };
+
+  std::cout << paths << std::endl;
+
+  Clipper2Lib::Clipper64 c; 
+  c.AddSubject(paths);
+  c.Execute(Clipper2Lib::ClipType::Union, Clipper2Lib::FillRule::NonZero, paths);
+
+  EXPECT_GE(paths.size(), 1);
 }

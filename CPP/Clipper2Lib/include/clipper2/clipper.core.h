@@ -1,6 +1,6 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  1 November 2023                                                 *
+* Date      :  22 November 2023                                                *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2023                                         *
 * Purpose   :  Core Clipper Library structures and functions                   *
@@ -43,13 +43,16 @@ namespace Clipper2Lib
     "Invalid scale (either 0 or too large)";
   static const char* non_pair_error =
     "There must be 2 values for each coordinate";
+  static const char* undefined_error =
+    "There is an undefined error in Clipper2";
 #endif
 
   // error codes (2^n)
-  const int precision_error_i   = 1; // non-fatal
-  const int scale_error_i       = 2; // non-fatal 
-  const int non_pair_error_i    = 4; // non-fatal 
-  const int range_error_i = 64;
+  const int precision_error_i   = 1;  // non-fatal
+  const int scale_error_i       = 2;  // non-fatal 
+  const int non_pair_error_i    = 4;  // non-fatal 
+  const int undefined_error_i   = 32; // fatal 
+  const int range_error_i       = 64;
 
 #ifndef PI
   static const double PI = 3.141592653589793238;
@@ -80,6 +83,8 @@ namespace Clipper2Lib
       throw Clipper2Exception(scale_error);
     case non_pair_error_i:
       throw Clipper2Exception(non_pair_error);
+    case undefined_error_i:
+      throw Clipper2Exception(undefined_error);
     case range_error_i:
       throw Clipper2Exception(range_error);
     }
@@ -87,6 +92,7 @@ namespace Clipper2Lib
     ++error_code; // only to stop compiler warning
 #endif
   }
+
 
   //By far the most widely used filling rules for polygons are EvenOdd
   //and NonZero, sometimes called Alternate and Winding respectively.
@@ -144,7 +150,7 @@ namespace Clipper2Lib
 
     friend std::ostream& operator<<(std::ostream& os, const Point& point)
     {
-      os << point.x << "," << point.y << "," << point.z << " ";
+      os << point.x << "," << point.y << "," << point.z;
       return os;
     }
 
@@ -181,7 +187,7 @@ namespace Clipper2Lib
 
     friend std::ostream& operator<<(std::ostream& os, const Point& point)
     {
-      os << point.x << "," << point.y << " ";
+      os << point.x << "," << point.y;
       return os;
     }
 #endif

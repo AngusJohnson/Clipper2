@@ -1,6 +1,6 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  25 October 2023                                                 *
+* Date      :  22 November 2023                                                *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2023                                         *
 * Purpose   :  This is the main polygon clipping module                        *
@@ -262,6 +262,8 @@ namespace Clipper2Lib {
 		inline void CheckJoinRight(Active& e,
 			const Point64& pt, bool check_curr_x = false);
 	protected:
+		bool preserve_collinear_ = true;
+		bool reverse_solution_ = false;
 		int error_code_ = 0;
 		bool has_open_paths_ = false;
 		bool succeeded_ = true;
@@ -281,8 +283,10 @@ namespace Clipper2Lib {
 	public:
 		virtual ~ClipperBase();
 		int ErrorCode() { return error_code_; };
-		bool PreserveCollinear = true;
-		bool ReverseSolution = false;
+		void PreserveCollinear(bool val) { preserve_collinear_ = val; };
+		bool PreserveCollinear() { return preserve_collinear_;};
+		void ReverseSolution(bool val) { reverse_solution_ = val; };
+		bool ReverseSolution() { return reverse_solution_; };
 		void Clear();
 		void AddReuseableData(const ReuseableDataContainer64& reuseable_data);
 #ifdef USINGZ
