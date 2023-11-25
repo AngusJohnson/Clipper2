@@ -76,7 +76,7 @@ TEST(Clipper2Tests, TestOffsets2) { // see #448 & #456
       if (d < delta * 2)
       {
         if (d < min_dist) min_dist = d;
-        if (d > max_dist) max_dist = d;
+        if (d> max_dist) max_dist = d;
       }
       prevPt = pt;
     }
@@ -119,33 +119,29 @@ TEST(Clipper2Tests, TestOffsets4) // see #482
     {40000, 0}, {40000, 50000}, {0, 50000}, {0, 0}} };
   Paths64 solution = InflatePaths(paths, -5000,
     JoinType::Square, EndType::Polygon);
-  std::cout << solution[0].size() << std::endl;
-
+  //std::cout << solution[0].size() << std::endl;
   EXPECT_EQ(solution[0].size(), 5);
 
   paths = { { {0, 0}, {20000, 400},
     {40000, 0}, {40000, 50000}, {0, 50000}, {0, 0}} };
   solution = InflatePaths(paths, -5000,
     JoinType::Square, EndType::Polygon);
-  std::cout << solution[0].size() << std::endl;
-
+  //std::cout << solution[0].size() << std::endl;
   EXPECT_EQ(solution[0].size(), 5);
 
   paths = { { {0, 0}, {20000, 400},
     {40000, 0}, {40000, 50000}, {0, 50000}, {0, 0}} };
   solution = InflatePaths(paths, -5000,
-    JoinType::Round, EndType::Polygon);
-  std::cout << solution[0].size() << std::endl;
-
-  EXPECT_EQ(solution[0].size(), 5);
+    JoinType::Round, EndType::Polygon, 2, 100);
+  //std::cout << solution[0].size() << std::endl;
+  EXPECT_GT(solution[0].size(), 5);
 
   paths = { { {0, 0}, {20000, 1500},
     {40000, 0}, {40000, 50000}, {0, 50000}, {0, 0}} };
   solution = InflatePaths(paths, -5000,
-    JoinType::Round, EndType::Polygon);
-  std::cout << solution[0].size() << std::endl;
-
-  EXPECT_GT(solution[0].size(), 6);
+    JoinType::Round, EndType::Polygon, 2, 100);
+  //std::cout << solution[0].size() << std::endl;
+  EXPECT_GT(solution[0].size(), 5);
 }
 
 TEST(Clipper2Tests, TestOffsets5) // modified from #593 (tests offset clean up)
@@ -426,4 +422,189 @@ TEST(Clipper2Tests, TestOffsets7) // (#593 & #715)
   subject.resize(1);
   solution = InflatePaths(subject, -50, JoinType::Miter, EndType::Polygon);
   EXPECT_EQ(solution.size(), 0);
+}
+
+struct OffsetQual
+{
+  double smallestDist;
+  double largestDist;
+  size_t idxSmallestIn;  //index to first segment pt
+  size_t idxSmallestOut;
+  size_t idxLargestIn;   //index to first segment pt
+  size_t idxLargestOut;
+  double standardDev;
+};
+
+template<typename T>
+static OffsetQual GetOffsetQuality(const Path<T>& input, const Path<T>& output, const double desiredDist)
+{
+  if (!input.size() || !output.size()) return OffsetQual();
+
+  double desiredDistSqr = desiredDist * desiredDist;
+  double smallestSqr = desiredDistSqr, largestSqr = desiredDistSqr;
+  double deviationsSqr = 0;
+  size_t smallestInIdx = 0, largestInIdx = 0, smallestOutIdx = 0, largestOutIdx = 0;
+  size_t outIdx = 0;
+  for (const Point<T>& outPt : output)
+  {
+    double closestDistSqr = std::numeric_limits<double>::infinity();
+
+    size_t cpi = 0; //closest point index
+    Point<T> in_prev = input[input.size() - 1];
+    for (size_t i = 0; i < input.size(); ++i)
+    {
+      Point<T> cp = Clipper2Lib::GetClosestPointOnSegment(outPt, input[i], in_prev);
+      in_prev = input[i];
+      const double sqrDist = Clipper2Lib::DistanceSqr(cp, outPt);
+      if (sqrDist < closestDistSqr) { closestDistSqr = sqrDist; cpi = i; };
+    }
+
+    if (closestDistSqr < smallestSqr)
+    {
+      smallestSqr = closestDistSqr;
+      smallestInIdx = cpi;
+      smallestOutIdx = outIdx;
+    }
+    if (closestDistSqr > largestSqr)
+    {
+      largestSqr = closestDistSqr;
+      largestInIdx = cpi;
+      largestOutIdx = outIdx;
+    }
+    // we now have smallestDistSqr between outPt and the input path
+    double offset_qual = std::sqrt(closestDistSqr) - desiredDist;
+    deviationsSqr += offset_qual * offset_qual;
+    ++outIdx;
+  }
+  OffsetQual oq{};
+  oq.smallestDist = std::sqrt(smallestSqr);
+  oq.largestDist = std::sqrt(largestSqr);
+  oq.idxSmallestIn = smallestInIdx == 0 ? input.size() - 1 : smallestInIdx - 1;
+  oq.idxLargestIn = largestInIdx == 0 ? input.size() - 1 : largestInIdx - 1;
+  oq.idxSmallestOut = smallestOutIdx;
+  oq.idxLargestOut = largestOutIdx;
+  oq.standardDev = std::sqrt(deviationsSqr / input.size());
+  return oq;
+}
+
+TEST(Clipper2Tests, TestOffsets8) // (#724)
+{
+  Paths64 subject = { MakePath({
+       91759700, -49711991,    83886095, -50331657,
+       -872415388, -50331657,  -880288993, -49711991,  -887968725, -47868251,
+       -895265482, -44845834,  -901999593, -40719165,  -908005244, -35589856,
+       -913134553, -29584205,  -917261224, -22850094,  -920283639, -15553337,
+       -922127379, -7873605,   -922747045, 0,          -922747045, 1434498600,
+       -922160557, 1442159790, -920414763, 1449642437, -917550346, 1456772156,
+       -913634061, 1463382794, -908757180, 1469320287, -903033355, 1474446264,
+       -896595982, 1478641262, -889595081, 1481807519, -882193810, 1483871245,
+       -876133965, 1484596521, -876145751, 1484713389, -875781839, 1485061090,
+       -874690056, 1485191762, -874447580, 1485237014, -874341490, 1485264094,
+       -874171960, 1485309394, -873612294, 1485570372, -873201878, 1485980788,
+       -872941042, 1486540152, -872893274, 1486720070, -872835064, 1487162210,
+       -872834788, 1487185500, -872769052, 1487406000, -872297948, 1487583168,
+       -871995958, 1487180514, -871995958, 1486914040, -871908872, 1486364208,
+       -871671308, 1485897962, -871301302, 1485527956, -870835066, 1485290396,
+       -870285226, 1485203310, -868659019, 1485203310, -868548443, 1485188472,
+       -868239649, 1484791011, -868239527, 1484783879, -838860950, 1484783879,
+       -830987345, 1484164215, -823307613, 1482320475, -816010856, 1479298059,
+       -809276745, 1475171390, -803271094, 1470042081, -752939437, 1419710424,
+       -747810128, 1413704773, -743683459, 1406970662, -740661042, 1399673904,
+       -738817302, 1391994173, -738197636, 1384120567, -738197636, 1244148246,
+       -738622462, 1237622613, -739889768, 1231207140, -802710260, 995094494,
+       -802599822, 995052810,  -802411513, 994586048,  -802820028, 993050638,
+       -802879992, 992592029,  -802827240, 992175479,  -802662144, 991759637,
+       -802578556, 991608039,  -802511951, 991496499,  -801973473, 990661435,
+       -801899365, 990554757,  -801842657, 990478841,  -801770997, 990326371,
+       -801946911, 989917545,  -801636397, 989501855,  -801546099, 989389271,
+       -800888669, 988625013,  -800790843, 988518907,  -800082405, 987801675,
+       -799977513, 987702547,  -799221423, 987035738,  -799109961, 986944060,
+       -798309801, 986330832,  -798192297, 986247036,  -797351857, 985690294,
+       -797228867, 985614778,  -796352124, 985117160,  -796224232, 985050280,
+       -795315342, 984614140,  -795183152, 984556216,  -794246418, 984183618,
+       -794110558, 984134924,  -793150414, 983827634,  -793011528, 983788398,
+       -792032522, 983547874,  -791891266, 983518284,  -790898035, 983345662,
+       -790755079, 983325856,  -789752329, 983221956,  -789608349, 983212030,
+       -787698545, 983146276,  -787626385, 983145034,  -536871008, 983145034,
+       -528997403, 982525368,  -521317671, 980681627,  -514020914, 977659211,
+       -507286803, 973532542,  -501281152, 968403233,  -496151843, 962397582,
+       -492025174, 955663471,  -489002757, 948366714,  -487159017, 940686982,
+       -486539351, 932813377,  -486539351, 667455555,  -486537885, 667377141,
+       -486460249, 665302309,  -486448529, 665145917,  -486325921, 664057737,
+       -486302547, 663902657,  -486098961, 662826683,  -486064063, 662673784,
+       -485780639, 661616030,  -485734413, 661466168,  -485372735, 660432552,
+       -485315439, 660286564,  -484877531, 659282866,  -484809485, 659141568,
+       -484297795, 658173402,  -484219379, 658037584,  -483636768, 657110363,
+       -483548422, 656980785,  -482898150, 656099697,  -482800368, 655977081,
+       -482086070, 655147053,  -481979398, 655032087,  -481205068, 654257759,
+       -481090104, 654151087,  -480260074, 653436789,  -480137460, 653339007,
+       -479256372, 652688735,  -479126794, 652600389,  -478199574, 652017779,
+       -478063753, 651939363,  -477095589, 651427672,  -476954289, 651359626,
+       -475950593, 650921718,  -475804605, 650864422,  -474770989, 650502744,
+       -474621127, 650456518,  -473563373, 650173094,  -473410475, 650138196,
+       -472334498, 649934610,  -472179420, 649911236,  -471091240, 649788626,
+       -470934848, 649776906,  -468860016, 649699272,  -468781602, 649697806,
+       -385876037, 649697806,  -378002432, 649078140,  -370322700, 647234400,
+       -363025943, 644211983,  -356291832, 640085314,  -350286181, 634956006,
+       -345156872, 628950354,  -341030203, 622216243,  -338007786, 614919486,
+       -336164046, 607239755,  -335544380, 599366149,  -335544380, 571247184,
+       -335426942, 571236100,  -335124952, 570833446,  -335124952, 569200164,
+       -335037864, 568650330,  -334800300, 568184084,  -334430294, 567814078,
+       -333964058, 567576517,  -333414218, 567489431,  -331787995, 567489431,
+       -331677419, 567474593,  -331368625, 567077133,  -331368503, 567070001,
+       -142068459, 567070001,  -136247086, 566711605,  -136220070, 566848475,
+       -135783414, 567098791,  -135024220, 567004957,  -134451560, 566929159,
+       -134217752, 566913755,  -133983942, 566929159,  -133411282, 567004957,
+       -132665482, 567097135,  -132530294, 567091859,  -132196038, 566715561,
+       -132195672, 566711157,  -126367045, 567070001,  -33554438, 567070001,
+       -27048611, 566647761,   -20651940, 565388127,   -14471751, 563312231,
+       -8611738, 560454902,    36793963, 534548454,    43059832, 530319881,
+       48621743, 525200596,    53354240, 519306071,    57150572, 512769270,
+       59925109, 505737634,    61615265, 498369779,    62182919, 490831896,
+       62182919, 474237629,    62300359, 474226543,    62602349, 473823889,
+       62602349, 472190590,    62689435, 471640752,    62926995, 471174516,
+       63297005, 470804506,    63763241, 470566946,    64313081, 470479860,
+       65939308, 470479860,    66049884, 470465022,    66358678, 470067562,
+       66358800, 470060430,    134217752, 470060430,   134217752, 0,
+       133598086, -7873605,    131754346, -15553337,   128731929, -22850094,
+       124605260, -29584205,   119475951, -35589856,   113470300, -40719165,
+       106736189, -44845834,   99439432, -47868251,    91759700, -49711991
+    }) };
+
+  Paths64 solution;
+  ClipperOffset c;
+  double offset = -50329979.0, arc_tol = 2500.0;
+
+  c.AddPaths(subject, JoinType::Round, EndType::Polygon);
+  c.ArcTolerance(arc_tol);
+  c.MiterLimit(2.0);
+  c.Execute(offset, solution);
+
+  offset = std::abs(offset);
+  OffsetQual offset_qual = GetOffsetQuality(subject[0], solution[0], std::abs(offset));
+  /*
+  std::cout.imbue(std::locale(""));
+  std::cout << std::setprecision(2) << std::fixed << std::setfill(' ');
+  std::cout << "Max dist. short of specified offset   : "
+    << std::setw(12) << (offset - offset_qual.smallestDist) << std::endl;
+  std::cout << "Max dist. beyond specified offset     : "
+    << std::setw(12) << (offset_qual.largestDist - offset) << std::endl;
+
+  std::cout.imbue(std::locale("C")); //remove thousands separator
+  Point64 inPt = subject[0][offset_qual.idxSmallestIn];
+  Point64 outPt = solution[0][offset_qual.idxSmallestOut];
+  std::cout << "Distance less than delta" << std::endl;
+  std::cout << "Point in subject                      : " << inPt << std::endl;
+  std::cout << "Point in result                       : " << outPt << std::endl;
+
+  inPt = subject[0][offset_qual.idxLargestIn];
+  outPt = solution[0][offset_qual.idxLargestOut];
+  std::cout << "Distance greater than delta" << std::endl;
+  std::cout << "Point in subject                      : " << inPt << std::endl;
+  std::cout << "Point in result                       : " << outPt << std::endl;
+
+  std::cout << "StdDev of dist from specified offset  : "
+    << std::setw(12) << offset_qual.standardDev << std::endl << std::endl;
+  */
+  EXPECT_LE(std::abs(offset) - offset_qual.smallestDist , arc_tol);
 }

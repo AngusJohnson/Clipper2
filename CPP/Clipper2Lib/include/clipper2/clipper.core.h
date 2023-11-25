@@ -1,6 +1,6 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  22 November 2023                                                *
+* Date      :  24 November 2023                                                *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2023                                         *
 * Purpose   :  Core Clipper Library structures and functions                   *
@@ -729,8 +729,9 @@ namespace Clipper2Lib
     }
   }
 
-  inline Point64 GetClosestPointOnSegment(const Point64& offPt,
-    const Point64& seg1, const Point64& seg2)
+  template<typename T>
+  inline Point<T> GetClosestPointOnSegment(const Point<T>& offPt,
+    const Point<T>& seg1, const Point<T>& seg2)
   {
     if (seg1.x == seg2.x && seg1.y == seg2.y) return seg1;
     double dx = static_cast<double>(seg2.x - seg1.x);
@@ -740,9 +741,14 @@ namespace Clipper2Lib
         static_cast<double>(offPt.y - seg1.y) * dy) /
       (Sqr(dx) + Sqr(dy));
     if (q < 0) q = 0; else if (q > 1) q = 1;
-    return Point64(
-      seg1.x + static_cast<int64_t>(nearbyint(q * dx)),
-      seg1.y + static_cast<int64_t>(nearbyint(q * dy)));
+    if constexpr (std::numeric_limits<T>::is_integer)
+      return Point<T>(
+        seg1.x + static_cast<T>(nearbyint(q * dx)),
+        seg1.y + static_cast<T>(nearbyint(q * dy)));
+    else
+      return Point<T>(
+        seg1.x + static_cast<T>(q * dx),
+        seg1.y + static_cast<T>(q * dy));
   }
 
   enum class PointInPolygonResult { IsOn, IsInside, IsOutside };

@@ -2,7 +2,7 @@ unit Clipper.Engine;
 
 (*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  24 October 2023                                                 *
+* Date      :  22 November 2023                                                *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2023                                         *
 * Purpose   :  This is the main polygon clipping module                        *
@@ -2480,6 +2480,31 @@ begin
 end;
 //------------------------------------------------------------------------------
 
+procedure TrimHorz(horzEdge: PActive; preserveCollinear: Boolean);
+var
+  pt: TPoint64;
+  wasTrimmed: Boolean;
+begin
+  wasTrimmed := false;
+  pt := NextVertex(horzEdge).pt;
+  while (pt.Y = horzEdge.top.Y) do
+  begin
+    // always trim 180 deg. spikes (in closed paths)
+    // but otherwise break if preserveCollinear = true
+    if preserveCollinear and
+    ((pt.X < horzEdge.top.X) <> (horzEdge.bot.X < horzEdge.top.X)) then
+      break;
+
+    horzEdge.vertTop := NextVertex(horzEdge);
+    horzEdge.top := pt;
+    wasTrimmed := true;
+    if IsMaxima(horzEdge) then Break;
+    pt := NextVertex(horzEdge).pt;
+  end;
+  if wasTrimmed then SetDx(horzEdge); // +/-infinity
+end;
+//------------------------------------------------------------------------------
+
 procedure TClipperBase.UpdateEdgeIntoAEL(var e: PActive);
 begin
   e.bot := e.top;
@@ -2490,7 +2515,11 @@ begin
 
   if IsJoined(e) then UndoJoin(e, e.bot);
 
-  if IsHorizontal(e) then Exit;
+  if IsHorizontal(e) then
+  begin
+    if not IsOpen(e) then TrimHorz(e, PreserveCollinear);
+    Exit;
+  end;
   InsertScanLine(e.top.Y);
 
   CheckJoinLeft(e, e.bot);
@@ -3333,41 +3362,6 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-function HorzIsSpike(horzEdge: PActive): Boolean;
-var
-  nextPt: TPoint64;
-begin
-  nextPt := NextVertex(horzEdge).pt;
-  Result := (nextPt.Y = horzEdge.top.Y) and
-    (horzEdge.bot.X < horzEdge.top.X) <> (horzEdge.top.X < nextPt.X);
-end;
-//------------------------------------------------------------------------------
-
-procedure TrimHorz(horzEdge: PActive; preserveCollinear: Boolean);
-var
-  pt: TPoint64;
-  wasTrimmed: Boolean;
-begin
-  wasTrimmed := false;
-  pt := NextVertex(horzEdge).pt;
-  while (pt.Y = horzEdge.top.Y) do
-  begin
-    // always trim 180 deg. spikes (in closed paths)
-    // but otherwise break if preserveCollinear = true
-    if preserveCollinear and
-    ((pt.X < horzEdge.top.X) <> (horzEdge.bot.X < horzEdge.top.X)) then
-      break;
-
-    horzEdge.vertTop := NextVertex(horzEdge);
-    horzEdge.top := pt;
-    wasTrimmed := true;
-    if IsMaxima(horzEdge) then Break;
-    pt := NextVertex(horzEdge).pt;
-  end;
-  if wasTrimmed then SetDx(horzEdge); // +/-infinity
-end;
-//------------------------------------------------------------------------------
-
 function GetLastOp(hotEdge: PActive): POutPt;
   {$IFDEF INLINING} inline; {$ENDIF}
 var
@@ -3443,10 +3437,6 @@ begin
   if horzIsOpen then
     maxVertex := GetCurrYMaximaVertexOpen(horzEdge) else
     maxVertex := GetCurrYMaximaVertex(horzEdge);
-
-  if Assigned(maxVertex) and not horzIsOpen and
-    (maxVertex <> horzEdge.vertTop) then
-      TrimHorz(horzEdge, FPreserveCollinear);
 
   isLeftToRight := ResetHorzDirection;
 
@@ -3569,11 +3559,6 @@ begin
     if IsHotEdge(horzEdge) then
       AddOutPt(horzEdge, horzEdge.top);
     UpdateEdgeIntoAEL(horzEdge);
-
-    if PreserveCollinear and
-      not horzIsOpen and HorzIsSpike(horzEdge) then
-        TrimHorz(horzEdge, true);
-
     isLeftToRight := ResetHorzDirection;
   end; // end while horizontal
 

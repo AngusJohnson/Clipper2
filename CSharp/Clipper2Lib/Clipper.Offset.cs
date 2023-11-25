@@ -1,6 +1,6 @@
 ﻿/*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  19 November 2023                                                *
+* Date      :  25 November 2023                                                *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2023                                         *
 * Purpose   :  Path Offset (Inflate/Shrink)                                    *
@@ -93,7 +93,6 @@ namespace Clipper2Lib
 
 
     private readonly List<Group> _groupList = new List<Group>();
-    private readonly Path64 inPath = new Path64();
     private Path64 pathOut = new Path64();
     private readonly PathD _normals = new PathD();
     private readonly Paths64 _solution = new Paths64();
@@ -588,18 +587,29 @@ namespace Clipper2Lib
         pathOut.Add(GetPerpendic(path[j], _normals[j]));
       }
       else if (cosA > 0.999)
-        DoMiter(group, path, j, k, cosA);
+      {
+        //  with ::Round, preserving near exact delta is more important than simpler paths
+        //  See also Issues #424, #526 #482
+        if (_joinType == JoinType.Round)
+        {
+          pathOut.Add(GetPerpendic(path[j], _normals[k]));
+          pathOut.Add(GetPerpendic(path[j], _normals[j]));
+        }
+        else
+          DoMiter(group, path, j, k, cosA);
+      }
       else if (_joinType == JoinType.Miter)
       {
         // miter unless the angle is so acute the miter would exceeds ML
         if (cosA > _mitLimSqr - 1) DoMiter(group, path, j, k, cosA);
         else DoSquare(path, j, k);
       }
-      else if (cosA > 0.99 || _joinType == JoinType.Bevel)
-        //angle less than 8 degrees or a squared join
-        DoBevel(path, j, k);
       else if (_joinType == JoinType.Round)
         DoRound(path, j, k, Math.Atan2(sinA, cosA));
+      else if (/*cosA > 0.99 ||*/ _joinType == JoinType.Bevel)
+        // cos_a > 0.99 here improves performance with extremely minor reduction in accuracy
+        // acos(0.99) == 8.1 deg. still a small angle but not as small as cos_a > 0.999 (see above)
+        DoBevel(path, j, k);
       else
         DoSquare(path, j, k);
 

@@ -282,11 +282,11 @@ namespace Clipper2Lib {
 		void AddPaths(const Paths64& paths, PathType polytype, bool is_open);
 	public:
 		virtual ~ClipperBase();
-		int ErrorCode() { return error_code_; };
+		int ErrorCode() const { return error_code_; };
 		void PreserveCollinear(bool val) { preserve_collinear_ = val; };
-		bool PreserveCollinear() { return preserve_collinear_;};
+		bool PreserveCollinear() const { return preserve_collinear_;};
 		void ReverseSolution(bool val) { reverse_solution_ = val; };
-		bool ReverseSolution() { return reverse_solution_; };
+		bool ReverseSolution() const { return reverse_solution_; };
 		void Clear();
 		void AddReuseableData(const ReuseableDataContainer64& reuseable_data);
 #ifdef USINGZ
@@ -419,7 +419,7 @@ namespace Clipper2Lib {
 		PolyPathDList::const_iterator end() const { return childs_.cend(); }
 
 		void SetScale(double value) { scale_ = value; }
-		double Scale() { return scale_; }
+		double Scale() const { return scale_; }
 		
 		PolyPathD* AddChild(const Path64& path) override
 		{
