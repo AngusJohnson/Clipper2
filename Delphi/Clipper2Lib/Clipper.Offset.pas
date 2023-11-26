@@ -2,7 +2,7 @@ unit Clipper.Offset;
 
 (*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  25 November 2023                                                *
+* Date      :  26 November 2023                                                *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2023                                         *
 * Purpose   :  Path Offset (Inflate/Shrink)                                    *
@@ -1027,28 +1027,20 @@ begin
     AddPoint(fInPath[j]); // (#405)
     AddPoint(GetPerpendic(fInPath[j], fNorms[j], fGroupDelta));
   end
-  else if (cosA > 0.999) then
+  else if (cosA > 0.999) and (fJoinType <> jtRound) then
   begin
-		//  with ::Round, preserving near exact delta is more important
-		//  than simpler paths (See also Issues #424, #526 #482)
-		if (fJoinType = jtRound) then
-    begin
-      AddPoint(GetPerpendic(fInPath[j], fNorms[k], fGroupDelta));
-      AddPoint(GetPerpendic(fInPath[j], fNorms[j], fGroupDelta));
-    end else
-      DoMiter(j, k, cosA)
+    // almost straight - less than 2.5 degree (#424, #482, #526 & #724)
+    DoMiter(j, k, cosA);
   end
   else if (fJoinType = jtMiter) then
   begin
-    // miter unless the angle is so acute the miter would exceeds ML
+		// miter unless the angle is sufficiently acute to exceed ML
     if (cosA > fTmpLimit -1) then DoMiter(j, k, cosA)
     else DoSquare(j, k);
   end
   else if (fJoinType = jtRound) then
     DoRound(j, k, ArcTan2(sinA, cosA))
-  else if {(cosA > 0.99) or} (fJoinType = jtBevel) then
-	// cos_a > 0.99 here improves performance with only very minor reductions in
-  // accuracy. acos(0.99) < ~8.1 deg. Not quite as small as cos_a > 0.999 above.
+  else if (fJoinType = jtBevel) then
     DoBevel(j, k)
   else
     DoSquare(j, k);

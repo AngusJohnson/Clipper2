@@ -1,6 +1,6 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  25 November 2023                                                *
+* Date      :  26 November 2023                                                *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2023                                         *
 * Purpose   :  Path Offset (Inflate/Shrink)                                    *
@@ -409,29 +409,20 @@ void ClipperOffset::OffsetPoint(Group& group, const Path64& path, size_t j, size
 		path_out.push_back(path[j]); // (#405)
 		path_out.push_back(GetPerpendic(path[j], norms[j], group_delta_));
 	}
-	else if (cos_a > 0.999) // almost straight - less than 2.5 degree (#424, #526) 
+	else if (cos_a > 0.999 && join_type_ != JoinType::Round) 
 	{
-		//  with ::Round, preserving near exact delta is more important than simpler paths
-		//  See also Issues #424, #526 #482
-		if (join_type_ == JoinType::Round)
-		{
-			path_out.push_back(GetPerpendic(path[j], norms[k], group_delta_));
-			path_out.push_back(GetPerpendic(path[j], norms[j], group_delta_));
-		} 
-		else
-		  DoMiter(path, j, k, cos_a);
+		// almost straight - less than 2.5 degree (#424, #482, #526 & #724) 
+		DoMiter(path, j, k, cos_a);
 	}
 	else if (join_type_ == JoinType::Miter)
 	{
-		// miter unless the angle is so acute the miter would exceeds ML
+		// miter unless the angle is sufficiently acute to exceed ML
 		if (cos_a > temp_lim_ - 1) DoMiter(path, j, k, cos_a);
 		else DoSquare(path, j, k);
 	}
 	else if (join_type_ == JoinType::Round)
 		DoRound(path, j, k, std::atan2(sin_a, cos_a));
-	else if (/*cos_a > 0.99 || */ join_type_ == JoinType::Bevel)
-	// cos_a > 0.99 here improves performance with extremely minor reduction in accuracy
-	// acos(0.99) == 8.1 deg. still a small angle but not as small as cos_a > 0.999 (see above)
+	else if ( join_type_ == JoinType::Bevel)
 		DoBevel(path, j, k);
 	else
 		DoSquare(path, j, k);

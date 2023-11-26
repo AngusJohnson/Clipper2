@@ -1,7 +1,7 @@
 #include <gtest/gtest.h>
 #include "clipper2/clipper.offset.h"
 #include "ClipFileLoad.h"
-#include <algorithm>
+//#include "clipper.svg.utils.h"
 
 using namespace Clipper2Lib;
 TEST(Clipper2Tests, TestOffsets) { 
@@ -42,7 +42,7 @@ TEST(Clipper2Tests, TestOffsets) {
 }
 
 
-Point64 MidPoint(const Point64& p1, const Point64& p2)
+static Point64 MidPoint(const Point64& p1, const Point64& p2)
 {
   Point64 result;
   result.x = (p1.x + p2.x) / 2;
@@ -424,66 +424,89 @@ TEST(Clipper2Tests, TestOffsets7) // (#593 & #715)
   EXPECT_EQ(solution.size(), 0);
 }
 
+
 struct OffsetQual
 {
-  double smallestDist;
-  double largestDist;
-  size_t idxSmallestIn;  //index to first segment pt
-  size_t idxSmallestOut;
-  size_t idxLargestIn;   //index to first segment pt
-  size_t idxLargestOut;
-  double standardDev;
+  PointD smallestInSub;   // smallestInSub & smallestInSol are the points in subject and solution 
+  PointD smallestInSol;   // that define the place that most falls short of the expected offset
+  PointD largestInSub;    // largestInSub & largestInSol are the points in subject and solution 
+  PointD largestInSol;    // that define the place that most exceeds the expected offset
 };
 
-template<typename T>
-static OffsetQual GetOffsetQuality(const Path<T>& input, const Path<T>& output, const double desiredDist)
-{
-  if (!input.size() || !output.size()) return OffsetQual();
 
-  double desiredDistSqr = desiredDist * desiredDist;
+template<typename T>
+inline PointD GetClosestPointOnSegment(const PointD& offPt,
+  const Point<T>& seg1, const Point<T>& seg2)
+{
+  if (seg1.x == seg2.x && seg1.y == seg2.y) return PointD(seg1);
+  double dx = static_cast<double>(seg2.x - seg1.x);
+  double dy = static_cast<double>(seg2.y - seg1.y);
+  double q = (
+    (offPt.x - static_cast<double>(seg1.x)) * dx +
+    (offPt.y - static_cast<double>(seg1.y)) * dy) /
+    (Sqr(dx) + Sqr(dy));
+  q = (q < 0) ? 0 : (q > 1) ? 1 : q;
+  return PointD(
+    static_cast<double>(seg1.x) + (q * dx),
+    static_cast<double>(seg1.y) + (q * dy));
+}
+
+
+template<typename T>
+static OffsetQual GetOffsetQuality(const Path<T>& subject, const Path<T>& solution, const double delta)
+{
+  if (!subject.size() || !solution.size()) return OffsetQual();
+
+  double desiredDistSqr = delta * delta;
   double smallestSqr = desiredDistSqr, largestSqr = desiredDistSqr;
   double deviationsSqr = 0;
-  size_t smallestInIdx = 0, largestInIdx = 0, smallestOutIdx = 0, largestOutIdx = 0;
-  size_t outIdx = 0;
-  for (const Point<T>& outPt : output)
+  OffsetQual oq;
+
+  const size_t subVertexCount = 4; // 1 .. 100 :)
+  const double subVertexFrac = 1.0 / subVertexCount;
+  Point<T> outPrev = solution[solution.size() - 1];
+  for (const Point<T>& outPt : solution)
   {
-    double closestDistSqr = std::numeric_limits<double>::infinity();
+    for (size_t i = 0; i < subVertexCount; ++i)
+    {
+      // divide each edge in solution into series of sub-vertices (solPt), 
+      PointD solPt = PointD(
+        static_cast<double>(outPrev.x) + static_cast<double>(outPt.x - outPrev.x) * subVertexFrac * i,
+        static_cast<double>(outPrev.y) + static_cast<double>(outPt.y - outPrev.y) * subVertexFrac * i);
 
-    size_t cpi = 0; //closest point index
-    Point<T> in_prev = input[input.size() - 1];
-    for (size_t i = 0; i < input.size(); ++i)
-    {
-      Point<T> cp = Clipper2Lib::GetClosestPointOnSegment(outPt, input[i], in_prev);
-      in_prev = input[i];
-      const double sqrDist = Clipper2Lib::DistanceSqr(cp, outPt);
-      if (sqrDist < closestDistSqr) { closestDistSqr = sqrDist; cpi = i; };
-    }
+      // now find the closest point in subject to each of these solPt.
+      PointD closestToSolPt;
+      double closestDistSqr = std::numeric_limits<double>::infinity();
+      Point<T> subPrev = subject[subject.size() - 1];
+      for (size_t i = 0; i < subject.size(); ++i)
+      {
+        PointD closestPt = ::GetClosestPointOnSegment(solPt, subject[i], subPrev);
+        subPrev = subject[i];
+        const double sqrDist = DistanceSqr(closestPt, solPt);
+        if (sqrDist < closestDistSqr) {
+          closestDistSqr = sqrDist;
+          closestToSolPt = closestPt;
+        };
+      }
 
-    if (closestDistSqr < smallestSqr)
-    {
-      smallestSqr = closestDistSqr;
-      smallestInIdx = cpi;
-      smallestOutIdx = outIdx;
+      // we've now found solPt's closest pt in subject (closestToSolPt).
+      // but how does the distance between these 2 points compare with delta
+      // ideally - Distance(closestToSolPt, solPt) == delta;
+
+      // see how this distance compares with every other solPt 
+      if (closestDistSqr < smallestSqr) {
+        smallestSqr = closestDistSqr;
+        oq.smallestInSub = closestToSolPt;
+        oq.smallestInSol = solPt;
+      }
+      if (closestDistSqr > largestSqr) {
+        largestSqr = closestDistSqr;
+        oq.largestInSub = closestToSolPt;
+        oq.largestInSol = solPt;
+      }
     }
-    if (closestDistSqr > largestSqr)
-    {
-      largestSqr = closestDistSqr;
-      largestInIdx = cpi;
-      largestOutIdx = outIdx;
-    }
-    // we now have smallestDistSqr between outPt and the input path
-    double offset_qual = std::sqrt(closestDistSqr) - desiredDist;
-    deviationsSqr += offset_qual * offset_qual;
-    ++outIdx;
+    outPrev = outPt;
   }
-  OffsetQual oq{};
-  oq.smallestDist = std::sqrt(smallestSqr);
-  oq.largestDist = std::sqrt(largestSqr);
-  oq.idxSmallestIn = smallestInIdx == 0 ? input.size() - 1 : smallestInIdx - 1;
-  oq.idxLargestIn = largestInIdx == 0 ? input.size() - 1 : largestInIdx - 1;
-  oq.idxSmallestOut = smallestOutIdx;
-  oq.idxLargestOut = largestOutIdx;
-  oq.standardDev = std::sqrt(deviationsSqr / input.size());
   return oq;
 }
 
@@ -571,40 +594,28 @@ TEST(Clipper2Tests, TestOffsets8) // (#724)
        106736189, -44845834,   99439432, -47868251,    91759700, -49711991
     }) };
 
-  Paths64 solution;
-  ClipperOffset c;
-  double offset = -50329979.0, arc_tol = 2500.0;
+  double offset = -50329979.277800001, arc_tol = 5000;
 
-  c.AddPaths(subject, JoinType::Round, EndType::Polygon);
-  c.ArcTolerance(arc_tol);
-  c.MiterLimit(2.0);
-  c.Execute(offset, solution);
-
+  Paths64 solution = InflatePaths(subject, offset, JoinType::Round, EndType::Polygon, 2, arc_tol);
+  OffsetQual oq = GetOffsetQuality(subject[0], solution[0], offset);
+  double smallestDist = Distance(oq.smallestInSub, oq.smallestInSol);
+  double largestDist = Distance(oq.largestInSub, oq.largestInSol);
+  const double rounding_tolerance = 1.0;
   offset = std::abs(offset);
-  OffsetQual offset_qual = GetOffsetQuality(subject[0], solution[0], std::abs(offset));
-  /*
-  std::cout.imbue(std::locale(""));
-  std::cout << std::setprecision(2) << std::fixed << std::setfill(' ');
-  std::cout << "Max dist. short of specified offset   : "
-    << std::setw(12) << (offset - offset_qual.smallestDist) << std::endl;
-  std::cout << "Max dist. beyond specified offset     : "
-    << std::setw(12) << (offset_qual.largestDist - offset) << std::endl;
 
-  std::cout.imbue(std::locale("C")); //remove thousands separator
-  Point64 inPt = subject[0][offset_qual.idxSmallestIn];
-  Point64 outPt = solution[0][offset_qual.idxSmallestOut];
-  std::cout << "Distance less than delta" << std::endl;
-  std::cout << "Point in subject                      : " << inPt << std::endl;
-  std::cout << "Point in result                       : " << outPt << std::endl;
+  //std::cout << std::setprecision(0) << std::fixed;
+  //std::cout << "Expected delta           : " << offset << std::endl;
+  //std::cout << "Smallest delta           : " << smallestDist << " (" << smallestDist - offset << ")" << std::endl;
+  //std::cout << "Largest delta            : " << largestDist << " (" << largestDist - offset << ")" << std::endl;
+  //std::cout << "Coords of smallest delta : " << oq.smallestInSub << " and " << oq.smallestInSol << std::endl;
+  //std::cout << "Coords of largest delta  : " << oq.largestInSub << " and " << oq.largestInSol << std::endl;
+  //std::cout << std::endl;
+  //SvgWriter svg;
+  //SvgAddSubject(svg, subject, FillRule::NonZero);
+  //SvgAddSolution(svg, solution, FillRule::NonZero, false);
+  //std::string filename = "offset_test.svg";
+  //SvgSaveToFile(svg, filename, 800, 600, 10);
 
-  inPt = subject[0][offset_qual.idxLargestIn];
-  outPt = solution[0][offset_qual.idxLargestOut];
-  std::cout << "Distance greater than delta" << std::endl;
-  std::cout << "Point in subject                      : " << inPt << std::endl;
-  std::cout << "Point in result                       : " << outPt << std::endl;
-
-  std::cout << "StdDev of dist from specified offset  : "
-    << std::setw(12) << offset_qual.standardDev << std::endl << std::endl;
-  */
-  EXPECT_LE(std::abs(offset) - offset_qual.smallestDist , arc_tol);
+  EXPECT_LE(offset - smallestDist - rounding_tolerance, arc_tol);
+  EXPECT_LE(largestDist - offset  - rounding_tolerance, arc_tol);
 }
