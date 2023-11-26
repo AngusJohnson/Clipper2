@@ -1,6 +1,6 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  22 November 2023                                                *
+* Date      :  26 November 2023                                                *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2023                                         *
 * Purpose   :  This module exports the Clipper2 Library (ie DLL/so)            *
@@ -21,10 +21,10 @@ The path structures used extensively in other parts of this library are all
 based on std::vector classes. Since C++ classes can't be accessed by other
 languages, these paths must be converted into simple C data structures that
 can be understood by just about any programming language. And these C style
-path structures will be simple arrays of int94_t (CPath64) or double (CPathD).
+path structures are simple arrays of int64_t (CPath64) and double (CPathD).
 
 CPath64 and CPathD:
-These are simple arrays of consecutive x and y path coordinates preceeded by  
+These are arrays of consecutive x and y path coordinates preceeded by  
 a pair of values containing the path's length (N) and a 0 value.
 __________________________________
 |counter|coord1|coord2|...|coordN|
@@ -32,7 +32,7 @@ __________________________________
 __________________________________
 
 CPaths64 and CPathsD:
-These are also simple arrays containing any number of consecutive CPath64 or
+These are also arrays containing any number of consecutive CPath64 or
 CPathD  structures. But preceeding these consecutive paths, there is pair of
 values that contain the total length of the array (A) and the number of
 contained paths (C).
