@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.15)
-project(Clipper2 VERSION 1.2.4 LANGUAGES C CXX)
+project(Clipper2 VERSION 1.3.0 LANGUAGES C CXX)
 
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 if(NOT DEFINED CMAKE_CXX_STANDARD OR CMAKE_CXX_STANDARD LESS 17)
@@ -19,7 +19,7 @@ set(CLIPPER2_USINGZ "ON" CACHE STRING "Build Clipper2Z, either \"ON\" or \"OFF\"
 set(CLIPPER2_MAX_PRECISION 8 CACHE STRING "Maximum precision allowed for double to int64 scaling")
 
 if (APPLE)
-    set(CMAKE_SHARED_LIBRARY_SUFFIX ".so")
+    set(CMAKE_SHARED_LIBRARY_SUFFIX ".dylib")
 endif ()
 
 include(GNUInstallDirs)

@@ -1,6 +1,6 @@
 ﻿/*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  26 November 2023                                                *
+* Date      :  28 November 2023                                                *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2023                                         *
 * Purpose   :  Path Offset (Inflate/Shrink)                                    *
@@ -55,7 +55,7 @@ namespace Clipper2Lib
 
         // get bounds of each path --> boundsList
         boundsList = new List<Rect64>(inPaths.Count);
-        GetMultiBounds(inPaths, boundsList, endType);
+        GetMultiBounds(inPaths, boundsList);
 
         if (endType == EndType.Polygon)
         {
@@ -255,14 +255,12 @@ namespace Clipper2Lib
       Execute(1.0, solution);
     }
 
-    internal static void GetMultiBounds(Paths64 paths, List<Rect64> boundsList, EndType endType)
+    internal static void GetMultiBounds(Paths64 paths, List<Rect64> boundsList)
     {
-
-      int minPathLen = (endType == EndType.Polygon) ? 3 : 1;
       boundsList.Capacity = paths.Count;
       foreach (Path64 path in paths)
       {
-        if (path.Count < minPathLen)
+        if (path.Count < 1)
         {
           boundsList.Add(InvalidRect64);
           continue;
@@ -686,16 +684,22 @@ namespace Clipper2Lib
       _solution.Add(pathOut);
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static bool ToggleBoolIf(bool val, bool condition)
+    {
+      return condition ? !val : val;
+    }
     private void DoGroupOffset(Group group)
     {
       if (group.endType == EndType.Polygon)
       {
-        if (group.lowestPathIdx < 0) return;
-        //if (area == 0) return; // probably unhelpful (#430)
+        // a straight path (2 points) can now also be 'polygon' offset 
+        // where the ends will be treated as (180 deg.) joins
+        if (group.lowestPathIdx < 0) _delta = Math.Abs(_delta);
         _groupDelta = (group.pathsReversed) ? -_delta : _delta;
       }
       else
-        _groupDelta = Math.Abs(_delta);// * 0.5;
+        _groupDelta = Math.Abs(_delta);
 
       double absDelta = Math.Abs(_groupDelta);
       if (!ValidateBounds(group.boundsList, absDelta))
@@ -760,13 +764,14 @@ namespace Clipper2Lib
           }
           _solution.Add(pathOut);
           continue;
-        } // end of offsetting a single (open path) point 
+        } // end of offsetting a single point 
 
-        // when shrinking, then make sure the path can shrink that far (#593)
-        // but also make sure this isn't a hole which will be expanding (#715)
-        if (((_groupDelta < 0) != isHole) &&
-          (Math.Min(pathBounds.Width, pathBounds.Height) < -_groupDelta * 2))
-          continue;
+
+        // when shrinking outer paths, make sure they can shrink this far (#593)
+        // also when shrinking holes, make sure they too can shrink this far (#715)
+        if (((_groupDelta > 0) == ToggleBoolIf(isHole, group.pathsReversed)) &&
+          (Math.Min(pathBounds.Width, pathBounds.Height) <= -_groupDelta * 2))
+            continue;
 
         if (cnt == 2 && group.endType == EndType.Joined)
           _endType = (group.joinType == JoinType.Round) ?

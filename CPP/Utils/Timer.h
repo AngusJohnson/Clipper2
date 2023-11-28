@@ -44,6 +44,13 @@ public:
       std::chrono::high_resolution_clock::now();
   }
 
+  void restart()
+  {
+    paused_ = false;
+    duration_ = {};
+    time_started_ = std::chrono::high_resolution_clock::now();
+  }
+
   void resume()
   {
     if (!paused_) return;

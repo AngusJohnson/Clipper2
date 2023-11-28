@@ -1,6 +1,6 @@
 #include "benchmark/benchmark.h"
 #include "clipper2/clipper.h"
-#include "Utils/CommonUtils.h"
+#include "CommonUtils.h"
 #include <iostream>
 
 static void CustomArguments(benchmark::internal::Benchmark *b) {

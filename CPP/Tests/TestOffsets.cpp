@@ -464,15 +464,15 @@ static OffsetQual GetOffsetQuality(const Path<T>& subject, const Path<T>& soluti
 
   const size_t subVertexCount = 4; // 1 .. 100 :)
   const double subVertexFrac = 1.0 / subVertexCount;
-  Point<T> outPrev = solution[solution.size() - 1];
-  for (const Point<T>& outPt : solution)
+  Point<T> solPrev = solution[solution.size() - 1];
+  for (const Point<T>& solPt0 : solution)
   {
     for (size_t i = 0; i < subVertexCount; ++i)
     {
       // divide each edge in solution into series of sub-vertices (solPt), 
       PointD solPt = PointD(
-        static_cast<double>(outPrev.x) + static_cast<double>(outPt.x - outPrev.x) * subVertexFrac * i,
-        static_cast<double>(outPrev.y) + static_cast<double>(outPt.y - outPrev.y) * subVertexFrac * i);
+        static_cast<double>(solPrev.x) + static_cast<double>(solPt0.x - solPrev.x) * subVertexFrac * i,
+        static_cast<double>(solPrev.y) + static_cast<double>(solPt0.y - solPrev.y) * subVertexFrac * i);
 
       // now find the closest point in subject to each of these solPt.
       PointD closestToSolPt;
@@ -505,7 +505,7 @@ static OffsetQual GetOffsetQuality(const Path<T>& subject, const Path<T>& soluti
         oq.largestInSol = solPt;
       }
     }
-    outPrev = outPt;
+    solPrev = solPt0;
   }
   return oq;
 }
@@ -618,4 +618,49 @@ TEST(Clipper2Tests, TestOffsets8) // (#724)
 
   EXPECT_LE(offset - smallestDist - rounding_tolerance, arc_tol);
   EXPECT_LE(largestDist - offset  - rounding_tolerance, arc_tol);
+}
+
+
+TEST(Clipper2Tests, TestOffsets9) // (#733)
+{
+  // solution orientations should match subject orientations UNLESS 
+  // reverse_solution is set true in ClipperOffset's constructor
+
+  // start subject's orientation positive ...
+  Paths64 subject{ MakePath({100,100, 200,100, 200, 400, 100, 400}) };
+  Paths64 solution = InflatePaths(subject, 50, JoinType::Miter, EndType::Polygon);
+  EXPECT_EQ(solution.size(), 1);
+  EXPECT_TRUE(IsPositive(solution[0]));
+
+  // reversing subject's orientation should not affect delta direction 
+  // (ie where positive deltas inflate).
+  std::reverse(subject[0].begin(), subject[0].end());
+  solution = InflatePaths(subject, 50, JoinType::Miter, EndType::Polygon);
+  EXPECT_EQ(solution.size(), 1);
+  EXPECT_TRUE(std::fabs(Area(solution[0])) > std::fabs(Area(subject[0])));
+  EXPECT_FALSE(IsPositive(solution[0]));
+
+  ClipperOffset co(2, 0, false, true); // last param. reverses solution
+  co.AddPaths(subject, JoinType::Miter, EndType::Polygon);
+  co.Execute(50, solution);
+  EXPECT_EQ(solution.size(), 1);
+  EXPECT_TRUE(std::fabs(Area(solution[0])) > std::fabs(Area(subject[0])));
+  EXPECT_TRUE(IsPositive(solution[0]));
+
+  // add a hole (ie has reverse orientation to outer path)
+  subject.push_back( MakePath({130,130, 170,130, 170,370, 130,370}) );
+  solution = InflatePaths(subject, 30, JoinType::Miter, EndType::Polygon);
+  EXPECT_EQ(solution.size(), 1);
+  EXPECT_FALSE(IsPositive(solution[0]));
+
+  co.Clear(); // should still reverse solution orientation
+  co.AddPaths(subject, JoinType::Miter, EndType::Polygon);
+  co.Execute(30, solution);
+  EXPECT_EQ(solution.size(), 1);
+  EXPECT_TRUE(std::fabs(Area(solution[0])) > std::fabs(Area(subject[0])));
+  EXPECT_TRUE(IsPositive(solution[0]));
+
+  solution = InflatePaths(subject, -15, JoinType::Miter, EndType::Polygon);
+  EXPECT_EQ(solution.size(), 0);
+
 }

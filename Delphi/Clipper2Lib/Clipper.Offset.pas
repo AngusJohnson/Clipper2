@@ -2,7 +2,7 @@ unit Clipper.Offset;
 
 (*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  26 November 2023                                                *
+* Date      :  28 November 2023                                                *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2023                                         *
 * Purpose   :  Path Offset (Inflate/Shrink)                                    *
@@ -141,22 +141,19 @@ const
 //  Miscellaneous offset support functions
 //------------------------------------------------------------------------------
 
-procedure GetMultiBounds(const paths: TPaths64; var list: TRect64Array; endType: TEndType);
+procedure GetMultiBounds(const paths: TPaths64; var list: TRect64Array);
 var
-  i,j, len, len2, minPathLen: integer;
+  i,j, len, len2: integer;
   path: TPath64;
   pt1, pt: TPoint64;
   r: TRect64;
 begin
-  if endType = etPolygon then
-	  minPathLen := 3 else
-    minPathLen := 1;
   len := Length(paths);
 	for i := 0 to len -1 do
 	begin
     path := paths[i];
     len2 := Length(path);
-		if len2 < minPathLen then
+		if len2 < 1 then
 		begin
       list[i] := InvalidRect64;
 			continue;
@@ -323,7 +320,7 @@ begin
   reversed := false;
 	SetLength(isHoleList, len);
 	SetLength(boundsList, len);
-  GetMultiBounds(paths, boundsList, et);
+  GetMultiBounds(paths, boundsList);
   if (et = etPolygon) then
   begin
 	  lowestPathIdx := GetLowestClosedPathIdx(boundsList);
@@ -426,6 +423,15 @@ begin
 end;
 //------------------------------------------------------------------------------
 
+function ToggleBoolIf(val, condition: Boolean): Boolean;
+  {$IFDEF INLINING} inline; {$ENDIF}
+begin
+  if condition then
+    Result := not val else
+    Result := val;
+end;
+//------------------------------------------------------------------------------
+
 procedure TClipperOffset.DoGroupOffset(group: TGroup);
 var
   i,j, len, steps: Integer;
@@ -437,8 +443,7 @@ begin
 
   if group.endType = etPolygon then
   begin
-    if (group.lowestPathIdx < 0) then Exit;
-		//if (area == 0) return; // probably unhelpful (#430)
+    if (group.lowestPathIdx < 0) then fDelta := Abs(fDelta);
     if group.reversed then
       fGroupDelta := -fDelta else
       fGroupDelta := fDelta;
@@ -457,7 +462,8 @@ begin
   // calculate a sensible number of steps (for 360 deg for the given offset
   if (group.joinType = jtRound) or (group.endType = etRound) then
   begin
-		// arcTol - when fArcTolerance is undefined (0), the amount of
+		// calculate a sensible number of steps (for 360 deg for the given offset)
+		// arcTol - when arc_tolerance_ is undefined (0), the amount of
 		// curve imprecision that's allowed is based on the size of the
 		// offset (delta). Obviously very large offsets will almost always
 		// require much less precision. See also offset_triginometry2.svg
@@ -480,9 +486,9 @@ begin
 
     fInPath := group.paths[i];
     fNorms := nil;
+    len := Length(fInPath);
 
 		//if a single vertex then build a circle or a square ...
-    len := Length(fInPath);
     if len = 1 then
     begin
       if fGroupDelta < 1 then Continue;
@@ -509,13 +515,14 @@ begin
       end;
       UpdateSolution;
       Continue;
-    end;
+    end; // end of offsetting a single point
 
-    // when shrinking, then make sure the path can shrink that far (#593)
-    // but also make sure this isn't a hole which will be expanding (#715)
-    if ((fGroupDelta < 0) <> group.isHoleList[i]) and
-      (Min(group.boundsList[i].Width, group.boundsList[i].Height) <
-        fGroupDelta *2) then Continue;
+		// when shrinking outer paths, make sure they can shrink this far (#593)
+		// also when shrinking holes, make sure they too can shrink this far (#715)
+    with group do
+      if ((fGroupDelta > 0) = ToggleBoolIf(isHoleList[i], reversed)) and
+        (Min(boundsList[i].Width, boundsList[i].Height) <= -fGroupDelta *2) then
+          Continue;
 
     if (len = 2) and (group.endType = etJoined) then
     begin

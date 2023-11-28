@@ -1,6 +1,6 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  26 November 2023                                                *
+* Date      :  28 November 2023                                                *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2023                                         *
 * Purpose   :  Path Offset (Inflate/Shrink)                                    *
@@ -20,13 +20,17 @@ const double floating_point_tolerance = 1e-12;
 // Miscellaneous methods
 //------------------------------------------------------------------------------
 
-void GetMultiBounds(const Paths64& paths, std::vector<Rect64>& recList, EndType end_type)
+inline bool ToggleBoolIf(bool val, bool condition)
 {
-	size_t min_path_len = (end_type == EndType::Polygon) ? 3 : 1;
+	return condition ? !val : val;
+}
+
+void GetMultiBounds(const Paths64& paths, std::vector<Rect64>& recList)
+{
 	recList.reserve(paths.size());
 	for (const Path64& path : paths)
 	{ 
-		if (path.size() < min_path_len)
+		if (path.size() < 1)
 		{
 			recList.push_back(InvalidRect64);
 			continue;
@@ -161,7 +165,7 @@ ClipperOffset::Group::Group(const Paths64& _paths, JoinType _join_type, EndType 
 	  StripDuplicates(p, is_joined);
 
 	// get bounds of each path --> bounds_list
-	GetMultiBounds(paths_in, bounds_list, end_type);
+	GetMultiBounds(paths_in, bounds_list);
 
 	if (end_type == EndType::Polygon)
 	{
@@ -206,10 +210,10 @@ void ClipperOffset::BuildNormals(const Path64& path)
 	norms.clear();
 	norms.reserve(path.size());
 	if (path.size() == 0) return;
-	Path64::const_iterator path_iter, path_last_iter = --path.cend();
-	for (path_iter = path.cbegin(); path_iter != path_last_iter; ++path_iter)
+	Path64::const_iterator path_iter, path_stop_iter = --path.cend();
+	for (path_iter = path.cbegin(); path_iter != path_stop_iter; ++path_iter)
 		norms.push_back(GetUnitNormal(*path_iter,*(path_iter +1)));
-	norms.push_back(GetUnitNormal(*path_last_iter, *(path.cbegin())));
+	norms.push_back(GetUnitNormal(*path_stop_iter, *(path.cbegin())));
 }
 
 inline PointD TranslatePoint(const PointD& pt, double dx, double dy)
@@ -515,8 +519,9 @@ void ClipperOffset::DoGroupOffset(Group& group)
 {
 	if (group.end_type == EndType::Polygon)
 	{
-		if (group.lowest_path_idx < 0) return;
-		//if (area == 0) return; // probably unhelpful (#430)
+		// a straight path (2 points) can now also be 'polygon' offset 
+		// where the ends will be treated as (180 deg.) joins
+		if (group.lowest_path_idx < 0) delta_ = std::abs(delta_);
 		group_delta_ = (group.is_reversed) ? -delta_ : delta_;
 	}
 	else
@@ -535,7 +540,7 @@ void ClipperOffset::DoGroupOffset(Group& group)
 
 	if (group.join_type == JoinType::Round || group.end_type == EndType::Round)
 	{
-		//calculate a sensible number of steps (for 360 deg for the given offset)
+		// calculate a sensible number of steps (for 360 deg for the given offset)
 		// arcTol - when arc_tolerance_ is undefined (0), the amount of 
 		// curve imprecision that's allowed is based on the size of the 
 		// offset (delta). Obviously very large offsets will almost always 
@@ -551,7 +556,6 @@ void ClipperOffset::DoGroupOffset(Group& group)
 		steps_per_rad_ = steps_per_360 / (2 * PI);
 	}
 
-	
 	std::vector<Rect64>::const_iterator path_rect_it = group.bounds_list.cbegin();
 	std::vector<bool>::const_iterator is_hole_it = group.is_hole_list.cbegin();
 	Paths64::const_iterator path_in_it = group.paths_in.cbegin();
@@ -561,7 +565,7 @@ void ClipperOffset::DoGroupOffset(Group& group)
 		Path64::size_type pathLen = path_in_it->size();
 		path_out.clear();
 
-		if (pathLen == 1) // single point - only valid with open paths
+		if (pathLen == 1) // single point
 		{
 			if (group_delta_ < 1) continue;
 			const Point64& pt = (*path_in_it)[0];
@@ -586,12 +590,12 @@ void ClipperOffset::DoGroupOffset(Group& group)
 			}
 			solution.push_back(path_out);
 			continue;
-		} // end of offsetting a single (open path) point 
+		} // end of offsetting a single point 
 
-		// when shrinking, then make sure the path can shrink that far (#593)
-		// but also make sure this isn't a hole which will be expanding (#715)
-		if ( ((group_delta_ < 0) != *is_hole_it) &&
-			(std::min(path_rect_it->Width(), path_rect_it->Height()) < -group_delta_ * 2) )
+		// when shrinking outer paths, make sure they can shrink this far (#593)
+		// also when shrinking holes, make sure they too can shrink this far (#715)
+		if (group_delta_ > 0 == ToggleBoolIf(*is_hole_it, group.is_reversed) &&
+			(std::min(path_rect_it->Width(), path_rect_it->Height()) <= -group_delta_ * 2) )
 				  continue;
 
 		if ((pathLen == 2) && (group.end_type == EndType::Joined))
@@ -637,7 +641,7 @@ void ClipperOffset::ExecuteInternal(double delta)
 
 	if (std::abs(delta) < 0.5) // ie: offset is insignificant 
 	{
-		int64_t sol_size = 0;
+		Paths64::size_type sol_size = 0;
 		for (const Group& group : groups_) sol_size += group.paths_in.size();
 		solution.reserve(sol_size);
 		for (const Group& group : groups_)

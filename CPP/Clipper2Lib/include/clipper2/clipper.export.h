@@ -34,17 +34,17 @@ __________________________________
 CPaths64 and CPathsD:
 These are also arrays containing any number of consecutive CPath64 or
 CPathD  structures. But preceeding these consecutive paths, there is pair of
-values that contain the total length of the array (A) and the number of
-contained paths (C).
+values that contain the total length of the array (A) structure and 
+the number (C) of CPath64 or CPathD it contains.
 _______________________________
 |counter|path1|path2|...|pathC|
 |A  , C |                     |
 _______________________________
 
 CPolytree64 and CPolytreeD:
-These are also simple arrays consisting of CPolyPath structures that 
-represent individual paths in a tree structure. However, the very first 
-CPolyPath is just the tree container so it won't have a path. And because
+These are also arrays consisting of CPolyPath structures that represent 
+individual paths in a tree structure. However, the very first (ie top)
+CPolyPath is just the tree container that won't have a path. And because
 of that, its structure will be very slightly different from the remaining
 CPolyPath. This difference will be discussed below.
 
@@ -59,18 +59,18 @@ ____________________________________________________________
 
 As mentioned above, the very first CPolyPath structure is just a container
 that owns (both directly and indirectly) every other CPolyPath in the tree. 
-Since this first CPolyPath has no path, instead of a path length, its first
-value will contain the total length of the CPolytree array.
+Since this first CPolyPath has no path, instead of a path length, its very
+first value will contain the total length of the CPolytree array structure.
 
-All the exported structures (CPaths64, CPathsD, CPolyTree64 & CPolyTreeD)
+All theses exported structures (CPaths64, CPathsD, CPolyTree64 & CPolyTreeD)
 are arrays of type int64_t or double. And the first value in these arrays 
 will always contain the length of that array.
 
 These array structures are allocated in heap memory which will eventually 
 need to be released. But since applications dynamically linking to these 
-functions may use different memory managers, the only really safe way to 
-free up this memory is to use the exported DisposeArray64 and 
-DisposeArrayD functions below.
+functions may use different memory managers, the only safe way to free up
+this memory is to use the exported DisposeArray64 and  DisposeArrayD 
+functions below.
 */
 
 
