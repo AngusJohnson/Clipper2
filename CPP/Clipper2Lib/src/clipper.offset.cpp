@@ -594,7 +594,7 @@ void ClipperOffset::DoGroupOffset(Group& group)
 
 		// when shrinking outer paths, make sure they can shrink this far (#593)
 		// also when shrinking holes, make sure they too can shrink this far (#715)
-		if (group_delta_ > 0 == ToggleBoolIf(*is_hole_it, group.is_reversed) &&
+		if ((group_delta_ > 0) == ToggleBoolIf(*is_hole_it, group.is_reversed) &&
 			(std::min(path_rect_it->Width(), path_rect_it->Height()) <= -group_delta_ * 2) )
 				  continue;
 
