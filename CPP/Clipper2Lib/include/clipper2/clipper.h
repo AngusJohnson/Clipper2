@@ -348,7 +348,7 @@ namespace Clipper2Lib {
       result.reserve(array_size / 2);
       for (size_t i = 0; i < array_size; i +=2)
 #ifdef USINGZ
-        result.push_back( U{ an_array[i], an_array[i +1], 0} );
+        result.push_back( U{ an_array[i], an_array[i + 1], 0} );
 #else
         result.push_back( U{ an_array[i], an_array[i + 1]} );
 #endif
