@@ -201,6 +201,13 @@ else()
   add_subdirectory("${PROJECT_SOURCE_DIR}/Tests/googletest/")
   set_target_properties(gtest gtest_main PROPERTIES FOLDER GTest)
 endif()
+
+  if(TARGET gtest AND TARGET gtest_main)
+    set(gtest_libs gtest gtest_main)
+  elseif(TARGET GTest::gtest AND TARGET GTest::gtest_main)
+    set(gtest_libs GTest::gtest GTest::gtest_main)
+  endif()
+
   set(ClipperTests_SRC
     Tests/TestExportHeaders.cpp
     Tests/TestLines.cpp
@@ -223,7 +230,7 @@ endif()
   if (NOT (CLIPPER2_USINGZ STREQUAL "ONLY"))
     list(APPEND CLIPPER2_TESTS "ClipperTests")
     add_executable(ClipperTests ${ClipperTests_SRC})
-    target_link_libraries(ClipperTests gtest gtest_main Clipper2 Clipper2utils)
+    target_link_libraries(ClipperTests ${gtest_libs} Clipper2 Clipper2utils)
 
     gtest_discover_tests(ClipperTests
       # set a working directory to your project root so that you can find test data via paths relative to the project root
@@ -235,7 +242,7 @@ endif()
   if (NOT (CLIPPER2_USINGZ STREQUAL "OFF"))
     list(APPEND CLIPPER2_TESTS "ClipperTestsZ")
     add_executable(ClipperTestsZ ${ClipperTests_SRC})
-    target_link_libraries(ClipperTestsZ gtest gtest_main Clipper2Z Clipper2Zutils)
+    target_link_libraries(ClipperTestsZ ${gtest_libs} Clipper2Z Clipper2Zutils)
 
     gtest_discover_tests(ClipperTestsZ
       # set a working directory so your project root so that you can find test data via paths relative to the project root
