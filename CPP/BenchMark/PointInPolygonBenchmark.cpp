@@ -387,66 +387,6 @@ static void DoErrorTest2(int index)
 }
 
 /////////////////////////////////////////////////////////
-// Benchmark functions
-/////////////////////////////////////////////////////////
-
-// DoBenchmark1
-/////////////////////////////////////////////////////////
-static void DoBenchmark1()
-{
-  // compare 3 PIP algorithms
-  pipResults.clear();
-  pipResults.resize(3);
-  for (size_t i = 0; i < 3; ++i) pipResults[i].resize(paths.size());
-  benchmark::Initialize(0, nullptr);
-  BENCHMARK(BM_PIP1)->Apply(CustomArguments); // current Clipper2
-  BENCHMARK(BM_PIP2)->Apply(CustomArguments); // modified Clipper2
-  BENCHMARK(BM_PIP3)->Apply(CustomArguments); // Hao et al. (2018)
-  benchmark::RunSpecifiedBenchmarks(benchmark::CreateDefaultDisplayReporter());
-  benchmark::ClearRegisteredBenchmarks();
-  benchmark::Shutdown();
-}
-
-// DoBenchmark2
-/////////////////////////////////////////////////////////
-static bool DoBenchmark2()
-{
-  pipResults.clear();
-  pipResults.resize(3);
-  for (size_t i = 0; i < 3; ++i) pipResults[i].resize(paths.size());
-
-  benchmark::Initialize(0, nullptr);
-  BENCHMARK(BM_PIP1)->Apply(CustomArguments); // current Clipper2
-  BENCHMARK(BM_PIP2)->Apply(CustomArguments); // modified Clipper2
-  BENCHMARK(BM_PIP3)->Apply(CustomArguments); // Hao et al. (2018)
-  benchmark::RunSpecifiedBenchmarks(benchmark::CreateDefaultDisplayReporter());
-
-  std::cout << std::endl;
-  // compare results to ensure they all agree :)
-  bool result = true;
-  const std::string bad_filename = "test_pip_";
-  for (size_t i = 0; i < pipResults[0].size(); ++i)
-  {
-    if ((pipResults[0][i] == pipResults[1][i]) &&
-      (pipResults[0][i] == pipResults[2][i])) continue;
-
-    if (pipResults[0][i] != pipResults[1][i])
-      std::cout << "PIP2 returned the " << SetConsoleTextColor(red_bold) << "wrong " <<
-      SetConsoleTextColor(reset) << "result:" << std::endl;
-    if (pipResults[0][i] != pipResults[2][i])
-      std::cout << "PIP3 returned the " << SetConsoleTextColor(red_bold) << "wrong " <<
-      SetConsoleTextColor(reset) << "result:" << std::endl;
-
-    std::cout << "Problematic PIP path saved to - " << bad_filename << i << ".txt" << std::endl;
-    std::ofstream of(bad_filename);
-    of << paths[i] << std::endl;
-    of.close();
-    result = false;
-  }
-  return true;
-}
-
-/////////////////////////////////////////////////////////
 // Main Entry
 /////////////////////////////////////////////////////////
 
@@ -524,7 +464,8 @@ int main(int argc, char** argv)
   int width = 600000, height = 400000;
   const int power10_lo = 4, power10_high = 8;
   mp = Point64(width / 2, height / 2);
- 
+
+
   std::cout << std::endl << SetConsoleTextColor(yellow_bold) <<
     "Benchmarks 1:" << SetConsoleTextColor(reset) << std::endl;
   //////////////////////////////////////////////////////////////
@@ -535,7 +476,16 @@ int main(int argc, char** argv)
     "Edge counts between 10^" << power10_lo << " and 10^" << 
     power10_high << std::endl << std::endl;
 
-  DoBenchmark1();
+  pipResults.clear();
+  pipResults.resize(3);
+  for (size_t i = 0; i < 3; ++i) pipResults[i].resize(paths.size());
+
+  benchmark::Initialize(0, nullptr);
+  BENCHMARK(BM_PIP1)->Apply(CustomArguments); // current Clipper2
+  BENCHMARK(BM_PIP2)->Apply(CustomArguments); // modified Clipper2
+  BENCHMARK(BM_PIP3)->Apply(CustomArguments); // Hao et al. (2018)
+  benchmark::RunSpecifiedBenchmarks(benchmark::CreateDefaultDisplayReporter());
+  benchmark::ClearRegisteredBenchmarks();
   std::cout << std::endl;
 
 
@@ -551,8 +501,36 @@ int main(int argc, char** argv)
   paths.clear();
   for (int i = power10_lo; i <= power10_high; ++i)
     paths.push_back(MakeRandomPoly(width, height, (unsigned)std::pow(10, i)));
-  DoBenchmark2();
-  std::cout << std::endl;
+  
+  pipResults.clear();
+  pipResults.resize(3);
+  for (size_t i = 0; i < 3; ++i) pipResults[i].resize(paths.size());
+  benchmark::Initialize(0, nullptr);
+  BENCHMARK(BM_PIP1)->Apply(CustomArguments); // current Clipper2
+  BENCHMARK(BM_PIP2)->Apply(CustomArguments); // modified Clipper2
+  BENCHMARK(BM_PIP3)->Apply(CustomArguments); // Hao et al. (2018)
+  benchmark::RunSpecifiedBenchmarks(benchmark::CreateDefaultDisplayReporter());
 
-  return 0;
+  std::cout << std::endl;
+  // compare results to ensure they all agree :)
+  const std::string bad_filename = "test_pip_";
+  for (size_t i = 0; i < pipResults[0].size(); ++i)
+  {
+    if ((pipResults[0][i] == pipResults[1][i]) &&
+      (pipResults[0][i] == pipResults[2][i])) continue;
+
+    if (pipResults[0][i] != pipResults[1][i])
+      std::cout << "PIP2 returned the " << SetConsoleTextColor(red_bold) << "wrong " <<
+      SetConsoleTextColor(reset) << "result:" << std::endl;
+    if (pipResults[0][i] != pipResults[2][i])
+      std::cout << "PIP3 returned the " << SetConsoleTextColor(red_bold) << "wrong " <<
+      SetConsoleTextColor(reset) << "result:" << std::endl;
+
+    std::cout << "Problematic PIP path saved to - " << bad_filename << i << ".txt" << std::endl;
+    std::ofstream of(bad_filename);
+    of << paths[i] << std::endl;
+    of.close();
+    break;
+  }
+
 }
