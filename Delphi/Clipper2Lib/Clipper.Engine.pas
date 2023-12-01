@@ -2,7 +2,7 @@ unit Clipper.Engine;
 
 (*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  22 November 2023                                                *
+* Date      :  1 December 2023                                                 *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2023                                         *
 * Purpose   :  This is the main polygon clipping module                        *
@@ -2374,8 +2374,10 @@ var
   prev: PActive;
 begin
   prev := e.prevInAEL;
-  if IsOpen(e) or not IsHotEdge(e) or not Assigned(prev) or
-    IsOpen(prev) or not IsHotEdge(prev) then Exit;
+  if not Assigned(prev) or
+    not IsHotEdge(e) or not IsHotEdge(prev) or
+    IsHorizontal(e) or IsHorizontal(prev) or
+    IsOpen(e) or IsOpen(prev) then Exit;
   if ((pt.Y < e.top.Y +2) or (pt.Y < prev.top.Y +2)) and
     ((e.bot.Y > pt.Y) or (prev.bot.Y > pt.Y)) then Exit; // (#490)
 
@@ -2403,8 +2405,10 @@ var
   next: PActive;
 begin
   next := e.nextInAEL;
-  if IsOpen(e) or not IsHotEdge(e) or not Assigned(next) or
-    not IsHotEdge(next) or IsOpen(next) then Exit;
+  if not Assigned(next) or
+    not IsHotEdge(e) or not IsHotEdge(next) or
+    IsHorizontal(e) or IsHorizontal(next) or
+    IsOpen(e) or IsOpen(next) then Exit;
   if ((pt.Y < e.top.Y +2) or (pt.Y < next.top.Y +2)) and
     ((e.bot.Y > pt.Y) or (next.bot.Y > pt.Y)) then Exit; // (#490)
 

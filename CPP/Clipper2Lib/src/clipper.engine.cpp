@@ -1,6 +1,6 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  22 November 2023                                                *
+* Date      :  1 December 2023                                                 *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2023                                         *
 * Purpose   :  This is the main polygon clipping module                        *
@@ -62,6 +62,7 @@ namespace Clipper2Lib {
         return locMin2->vertex->pt.x > locMin1->vertex->pt.x;
     }
   };
+
 
   inline bool IsOdd(int val)
   {
@@ -2536,8 +2537,8 @@ namespace Clipper2Lib {
           if (IsHotEdge(horz) && IsJoined(*e))
             Split(*e, e->top);
 
-          //if (IsHotEdge(horz) != IsHotEdge(*e)) 
-          //  DoError(undefined_error_i);
+          //if (IsHotEdge(horz) != IsHotEdge(*e))
+          //    DoError(undefined_error_i);
 
           if (IsHotEdge(horz))
           {
@@ -2758,8 +2759,10 @@ namespace Clipper2Lib {
     const Point64& pt, bool check_curr_x)
   {
     Active* prev = e.prev_in_ael;
-    if (IsOpen(e) || !IsHotEdge(e) || !prev ||
-      IsOpen(*prev) || !IsHotEdge(*prev)) return;
+    if (!prev || 
+      !IsHotEdge(e) || !IsHotEdge(*prev) || 
+      IsHorizontal(e) || IsHorizontal(*prev) || 
+      IsOpen(e) || IsOpen(*prev) ) return;
     if ((pt.y < e.top.y + 2 || pt.y < prev->top.y + 2) &&
       ((e.bot.y > pt.y) || (prev->bot.y > pt.y))) return; // avoid trivial joins              
 
@@ -2784,8 +2787,10 @@ namespace Clipper2Lib {
     const Point64& pt, bool check_curr_x)
   {
     Active* next = e.next_in_ael;
-    if (IsOpen(e) || !IsHotEdge(e) ||
-      !next || IsOpen(*next) || !IsHotEdge(*next)) return;
+    if (!next || 
+      !IsHotEdge(e) || !IsHotEdge(*next) || 
+      IsHorizontal(e) || IsHorizontal(*next) || 
+      IsOpen(e) || IsOpen(*next)) return;
     if ((pt.y < e.top.y +2 || pt.y < next->top.y +2) &&
       ((e.bot.y > pt.y) || (next->bot.y > pt.y))) return; // avoid trivial joins              
 

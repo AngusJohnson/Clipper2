@@ -1,6 +1,6 @@
 ﻿/*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  22 November 2023                                                *
+* Date      :  1 December 2023                                                 *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2023                                         *
 * Purpose   :  This is the main polygon clipping module                        *
@@ -2393,8 +2393,10 @@ private void DoHorizontal(Active horz)
       Point64 pt, bool checkCurrX = false)
     {
       Active? prev = e.prevInAEL;
-      if (prev == null || IsOpen(e) || IsOpen(prev) ||
-        !IsHotEdge(e) || !IsHotEdge(prev)) return;
+      if (prev == null || 
+        !IsHotEdge(e) || !IsHotEdge(prev) || 
+        IsHorizontal(e) || IsHorizontal(prev) ||
+        IsOpen(e) || IsOpen(prev)) return;
       if ((pt.Y < e.top.Y + 2 || pt.Y < prev.top.Y + 2) &&  // avoid trivial joins
         ((e.bot.Y > pt.Y) || (prev.bot.Y > pt.Y))) return;  // (#490)
 
@@ -2420,8 +2422,10 @@ private void DoHorizontal(Active horz)
       Point64 pt, bool checkCurrX = false)
     {
       Active? next = e.nextInAEL;
-      if (IsOpen(e) || !IsHotEdge(e) || IsJoined(e) ||
-        next == null || IsOpen(next) || !IsHotEdge(next)) return; 
+      if (next == null || 
+        !IsHotEdge(e) || !IsHotEdge(next) || 
+        IsHorizontal(e) || IsHorizontal(next) ||
+        IsOpen(e) || IsOpen(next)) return; 
       if ((pt.Y < e.top.Y + 2 || pt.Y < next.top.Y + 2) &&  // avoid trivial joins
         ((e.bot.Y > pt.Y) || (next.bot.Y > pt.Y)))  return; // (#490)
 

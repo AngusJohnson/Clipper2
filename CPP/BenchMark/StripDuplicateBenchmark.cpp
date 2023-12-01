@@ -55,9 +55,9 @@ static void BM_StripDuplicatesCopyVersion(benchmark::State &state) {
 
   for (auto _ : state) {
     state.PauseTiming();
-    int width = state.range(0);
-    int height = state.range(1);
-    int count = state.range(2);
+    int width = (int)state.range(0);
+    int height = (int)state.range(1);
+    int count = (int)state.range(2);
     op1.push_back(MakeRandomPoly(width, height, count));
     state.ResumeTiming();
     StripDuplicatesCopyVersion(op1, true);
@@ -69,9 +69,9 @@ static void BM_StripDuplicates(benchmark::State &state) {
   Paths64 op1;
   for (auto _ : state) {
     state.PauseTiming();
-    int width = state.range(0);
-    int height = state.range(1);
-    int count = state.range(2);
+    int width = (int)state.range(0);
+    int height = (int)state.range(1);
+    int count = (int)state.range(2);
     op1.push_back(MakeRandomPoly(width, height, count));
     state.ResumeTiming();
     StripDuplicates(op1, true);
