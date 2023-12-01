@@ -24,7 +24,7 @@ namespace Clipper2Lib {
 
   inline Paths64 BooleanOp(ClipType cliptype, FillRule fillrule,
     const Paths64& subjects, const Paths64& clips)
-  {    
+  {
     Paths64 result;
     Clipper64 clipper;
     clipper.AddSubject(subjects);
@@ -58,7 +58,7 @@ namespace Clipper2Lib {
   }
 
   inline void BooleanOp(ClipType cliptype, FillRule fillrule,
-    const PathsD& subjects, const PathsD& clips, 
+    const PathsD& subjects, const PathsD& clips,
     PolyTreeD& polytree, int precision = 2)
   {
     polytree.Clear();
@@ -75,7 +75,7 @@ namespace Clipper2Lib {
   {
     return BooleanOp(ClipType::Intersection, fillrule, subjects, clips);
   }
-  
+
   inline PathsD Intersect(const PathsD& subjects, const PathsD& clips, FillRule fillrule, int decimal_prec = 2)
   {
     return BooleanOp(ClipType::Intersection, fillrule, subjects, clips, decimal_prec);
@@ -145,7 +145,7 @@ namespace Clipper2Lib {
   }
 
   inline PathsD InflatePaths(const PathsD& paths, double delta,
-    JoinType jt, EndType et, double miter_limit = 2.0, 
+    JoinType jt, EndType et, double miter_limit = 2.0,
     int precision = 2, double arc_tolerance = 0.0)
   {
     int error_code = 0;
@@ -225,7 +225,7 @@ namespace Clipper2Lib {
     Rect64 r = ScaleRect<int64_t, double>(rect, scale);
     RectClip64 rc(r);
     Paths64 pp = ScalePaths<int64_t, double>(paths, scale, error_code);
-    if (error_code) return PathsD(); // ie: error_code result is lost 
+    if (error_code) return PathsD(); // ie: error_code result is lost
     return ScalePaths<double, int64_t>(
       rc.Execute(pp), 1 / scale, error_code);
   }
@@ -290,8 +290,8 @@ namespace Clipper2Lib {
       {
         // return false if this child isn't fully contained by its parent
 
-        // checking for a single vertex outside is a bit too crude since 
-        // it doesn't account for rounding errors. It's better to check 
+        // checking for a single vertex outside is a bit too crude since
+        // it doesn't account for rounding errors. It's better to check
         // for consecutive vertices found outside the parent's polygon.
 
         int outsideCnt = 0;
@@ -311,7 +311,7 @@ namespace Clipper2Lib {
       return true;
     }
 
-    static void OutlinePolyPath(std::ostream& os, 
+    static void OutlinePolyPath(std::ostream& os,
       size_t idx, bool isHole, size_t count, const std::string& preamble)
     {
       std::string plural = (count == 1) ? "." : "s.";
@@ -342,7 +342,7 @@ namespace Clipper2Lib {
     }
 
     template<typename T, typename U>
-    inline constexpr void MakePathGeneric(const T an_array, 
+    inline constexpr void MakePathGeneric(const T an_array,
       size_t array_size, std::vector<U>& result)
     {
       result.reserve(array_size / 2);
@@ -354,7 +354,7 @@ namespace Clipper2Lib {
 #endif
     }
 
-  } // end details namespace 
+  } // end details namespace
 
   inline std::ostream& operator<< (std::ostream& os, const PolyTree64& pp)
   {
@@ -398,7 +398,7 @@ namespace Clipper2Lib {
   inline bool CheckPolytreeFullyContainsChildren(const PolyTree64& polytree)
   {
     for (const auto& child : polytree)
-      if (child->Count() > 0 && 
+      if (child->Count() > 0 &&
         !details::PolyPath64ContainsChildren(*child))
           return false;
     return true;
@@ -471,7 +471,7 @@ namespace Clipper2Lib {
     std::size_t size = N / 3;
     Path64 result(size);
     for (size_t i = 0; i < size; ++i)
-      result[i] = Point64(list[i * 3], 
+      result[i] = Point64(list[i * 3],
         list[i * 3 + 1], list[i * 3 + 2]);
     return result;
   }
@@ -489,7 +489,7 @@ namespace Clipper2Lib {
           list[i * 3 + 1], list[i * 3 + 2]);
     else
       for (size_t i = 0; i < size; ++i)
-        result[i] = PointD(list[i * 3], list[i * 3 + 1], 
+        result[i] = PointD(list[i * 3], list[i * 3 + 1],
           static_cast<int64_t>(list[i * 3 + 2]));
     return result;
   }
@@ -580,12 +580,12 @@ namespace Clipper2Lib {
     double cp = std::abs(CrossProduct(pt1, pt2, pt3));
     return (cp * cp) / (DistanceSqr(pt1, pt2) * DistanceSqr(pt2, pt3)) < sin_sqrd_min_angle_rads;
   }
-  
+
   template <typename T>
   inline Path<T> Ellipse(const Rect<T>& rect, int steps = 0)
   {
-    return Ellipse(rect.MidPoint(), 
-      static_cast<double>(rect.Width()) *0.5, 
+    return Ellipse(rect.MidPoint(),
+      static_cast<double>(rect.Width()) *0.5,
       static_cast<double>(rect.Height()) * 0.5, steps);
   }
 
@@ -626,7 +626,7 @@ namespace Clipper2Lib {
     return Sqr(a * d - c * b) / (c * c + d * d);
   }
 
-  inline size_t GetNext(size_t current, size_t high, 
+  inline size_t GetNext(size_t current, size_t high,
     const std::vector<bool>& flags)
   {
     ++current;
@@ -637,7 +637,7 @@ namespace Clipper2Lib {
     return current;
   }
 
-  inline size_t GetPrior(size_t current, size_t high, 
+  inline size_t GetPrior(size_t current, size_t high,
     const std::vector<bool>& flags)
   {
     if (current == 0) current = high;
@@ -650,7 +650,7 @@ namespace Clipper2Lib {
   }
 
   template <typename T>
-  inline Path<T> SimplifyPath(const Path<T> &path, 
+  inline Path<T> SimplifyPath(const Path<T> &path,
     double epsilon, bool isClosedPath = true)
   {
     const size_t len = path.size(), high = len -1;
@@ -665,7 +665,7 @@ namespace Clipper2Lib {
       distSqr[0] = PerpendicDistFromLineSqrd(path[0], path[high], path[1]);
       distSqr[high] = PerpendicDistFromLineSqrd(path[high], path[0], path[high - 1]);
     }
-    else 
+    else
     {
       distSqr[0] = MAX_DBL;
       distSqr[high] = MAX_DBL;
@@ -684,7 +684,7 @@ namespace Clipper2Lib {
         } while (curr != start && distSqr[curr] > epsSqr);
         if (curr == start) break;
       }
-      
+
       prior = GetPrior(curr, high, flags);
       next = GetNext(curr, high, flags);
       if (next == prior) break;
@@ -699,7 +699,7 @@ namespace Clipper2Lib {
       }
       else
         prior2 = GetPrior(prior, high, flags);
-        
+
       flags[curr] = true;
       curr = next;
       next = GetNext(next, high, flags);
@@ -717,7 +717,7 @@ namespace Clipper2Lib {
   }
 
   template <typename T>
-  inline Paths<T> SimplifyPaths(const Paths<T> &paths, 
+  inline Paths<T> SimplifyPaths(const Paths<T> &paths,
     double epsilon, bool isClosedPath = true)
   {
     Paths<T> result;

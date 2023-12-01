@@ -15,7 +15,7 @@ message("start fetching the googlebenchmark")
 FetchContent_Declare(googlebenchmark
         GIT_REPOSITORY https://github.com/google/benchmark.git
         GIT_TAG v1.7.1
-) 
+)
 
 FetchContent_MakeAvailable(
         googlebenchmark)
@@ -50,12 +50,12 @@ set(CLIPPER2_UTILS_SRC
   ../Utils/ClipFileLoad.cpp
   ../Utils/ClipFileSave.cpp
 )
-set(CLIPPER2_UTILS "") 
+set(CLIPPER2_UTILS "")
   list(APPEND CLIPPER2_UTILS Clipper2utils_bm)
   add_library(Clipper2utils_bm STATIC ${CLIPPER2_UTILS_INC} ${CLIPPER2_UTILS_SRC})
   target_include_directories(Clipper2utils_bm
     PUBLIC ../Clipper2Lib/include
-    PUBLIC ../Utils        
+    PUBLIC ../Utils
   )
   target_link_libraries(Clipper2utils_bm PUBLIC Clipper2_bm)
 
@@ -68,7 +68,7 @@ foreach(benchmark ${benchmark_srcs})
 
     target_include_directories(${benchmark_target}
       PUBLIC ../Clipper2Lib/include
-      PUBLIC ../Utils        
+      PUBLIC ../Utils
     )
 
     target_link_libraries(${benchmark_target}

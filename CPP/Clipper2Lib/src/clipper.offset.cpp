@@ -29,7 +29,7 @@ void GetMultiBounds(const Paths64& paths, std::vector<Rect64>& recList)
 {
 	recList.reserve(paths.size());
 	for (const Path64& path : paths)
-	{ 
+	{
 		if (path.size() < 1)
 		{
 			recList.push_back(InvalidRect64);
@@ -96,7 +96,7 @@ inline bool AlmostZero(double value, double epsilon = 0.001)
 	return std::fabs(value) < epsilon;
 }
 
-inline double Hypot(double x, double y) 
+inline double Hypot(double x, double y)
 {
 	//see https://stackoverflow.com/a/32436148/359538
 	return std::sqrt(x * x + y * y);
@@ -271,7 +271,7 @@ void ClipperOffset::DoBevel(const Path64& path, size_t j, size_t k)
 		double abs_delta = std::abs(group_delta_);
 		pt1 = PointD(path[j].x - abs_delta * norms[j].x, path[j].y - abs_delta * norms[j].y);
 		pt2 = PointD(path[j].x + abs_delta * norms[j].x, path[j].y + abs_delta * norms[j].y);
-	} 
+	}
 	else
 	{
 		pt1 = PointD(path[j].x + group_delta_ * norms[k].x, path[j].y + group_delta_ * norms[k].y);
@@ -284,7 +284,7 @@ void ClipperOffset::DoBevel(const Path64& path, size_t j, size_t k)
 void ClipperOffset::DoSquare(const Path64& path, size_t j, size_t k)
 {
 	PointD vec;
-	if (j == k) 
+	if (j == k)
 		vec = PointD(norms[j].y, -norms[j].x);
 	else
 		vec = GetAvgUnitVector(
@@ -343,7 +343,7 @@ void ClipperOffset::DoMiter(const Path64& path, size_t j, size_t k, double cos_a
 void ClipperOffset::DoRound(const Path64& path, size_t j, size_t k, double angle)
 {
 	if (deltaCallback64_) {
-		// when deltaCallback64_ is assigned, group_delta_ won't be constant, 
+		// when deltaCallback64_ is assigned, group_delta_ won't be constant,
 		// so we'll need to do the following calculations for *every* vertex.
 		double abs_delta = std::fabs(group_delta_);
 		double arcTol = (arc_tolerance_ > floating_point_tolerance ?
@@ -413,9 +413,9 @@ void ClipperOffset::OffsetPoint(Group& group, const Path64& path, size_t j, size
 		path_out.push_back(path[j]); // (#405)
 		path_out.push_back(GetPerpendic(path[j], norms[j], group_delta_));
 	}
-	else if (cos_a > 0.999 && join_type_ != JoinType::Round) 
+	else if (cos_a > 0.999 && join_type_ != JoinType::Round)
 	{
-		// almost straight - less than 2.5 degree (#424, #482, #526 & #724) 
+		// almost straight - less than 2.5 degree (#424, #482, #526 & #724)
 		DoMiter(path, j, k, cos_a);
 	}
 	else if (join_type_ == JoinType::Miter)
@@ -483,7 +483,7 @@ void ClipperOffset::OffsetOpenPath(Group& group, const Path64& path)
 	for (Path64::size_type j = 1, k = 0; j < highI; k = j, ++j)
 		OffsetPoint(group, path, j, k);
 
-	// reverse normals 
+	// reverse normals
 	for (size_t i = highI; i > 0; --i)
 		norms[i] = PointD(-norms[i - 1].x, -norms[i - 1].y);
 	norms[0] = norms[highI];
@@ -519,7 +519,7 @@ void ClipperOffset::DoGroupOffset(Group& group)
 {
 	if (group.end_type == EndType::Polygon)
 	{
-		// a straight path (2 points) can now also be 'polygon' offset 
+		// a straight path (2 points) can now also be 'polygon' offset
 		// where the ends will be treated as (180 deg.) joins
 		if (group.lowest_path_idx < 0) delta_ = std::abs(delta_);
 		group_delta_ = (group.is_reversed) ? -delta_ : delta_;
@@ -541,9 +541,9 @@ void ClipperOffset::DoGroupOffset(Group& group)
 	if (group.join_type == JoinType::Round || group.end_type == EndType::Round)
 	{
 		// calculate a sensible number of steps (for 360 deg for the given offset)
-		// arcTol - when arc_tolerance_ is undefined (0), the amount of 
-		// curve imprecision that's allowed is based on the size of the 
-		// offset (delta). Obviously very large offsets will almost always 
+		// arcTol - when arc_tolerance_ is undefined (0), the amount of
+		// curve imprecision that's allowed is based on the size of the
+		// offset (delta). Obviously very large offsets will almost always
 		// require much less precision. See also offset_triginometry2.svg
 		double arcTol = (arc_tolerance_ > floating_point_tolerance ?
 			std::min(abs_delta, arc_tolerance_) :
@@ -590,7 +590,7 @@ void ClipperOffset::DoGroupOffset(Group& group)
 			}
 			solution.push_back(path_out);
 			continue;
-		} // end of offsetting a single point 
+		} // end of offsetting a single point
 
 		// when shrinking outer paths, make sure they can shrink this far (#593)
 		// also when shrinking holes, make sure they too can shrink this far (#715)
@@ -599,8 +599,8 @@ void ClipperOffset::DoGroupOffset(Group& group)
 				  continue;
 
 		if ((pathLen == 2) && (group.end_type == EndType::Joined))
-			end_type_ = (group.join_type == JoinType::Round) ? 
-			  EndType::Round : 
+			end_type_ = (group.join_type == JoinType::Round) ?
+			  EndType::Round :
 			  EndType::Square;
 
 		BuildNormals(*path_in_it);
@@ -639,7 +639,7 @@ void ClipperOffset::ExecuteInternal(double delta)
 	if (groups_.size() == 0) return;
 	solution.reserve(CalcSolutionCapacity());
 
-	if (std::abs(delta) < 0.5) // ie: offset is insignificant 
+	if (std::abs(delta) < 0.5) // ie: offset is insignificant
 	{
 		Paths64::size_type sol_size = 0;
 		for (const Group& group : groups_) sol_size += group.paths_in.size();

@@ -8,7 +8,7 @@
 
 using namespace Clipper2Lib;
 
-enum ConsoleTextColor { 
+enum ConsoleTextColor {
   reset = 0,
   //normal text colors ...
   red = 31, green = 32, yellow = 33, blue = 34, magenta = 35, cyan = 36, white = 37,
@@ -17,9 +17,9 @@ enum ConsoleTextColor {
   magenta_bold = 95, cyan_bold = 96, white_bold = 97
 };
 
-/////////////////////////////////////////////////////////////////////////////
-// SetConsoleTextColor: a simple class to adjust Windows' Console Text Colors
-/////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////
+// SetConsoleTextColor: a simple class to adjust Console Text Colors (Windows & Linux)
+//////////////////////////////////////////////////////////////////////////////////////
 
 struct SetConsoleTextColor
 {
@@ -33,7 +33,7 @@ public:
     return out << "\x1B[" << scc._color << "m";
   }
 };
-/////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////
 
 
 typedef std::function<PointInPolygonResult(const Point64&, const Path64&)> PipFunction;
@@ -124,8 +124,8 @@ inline PointInPolygonResult PIP1(const Point<T>& pt, const Path<T>& polygon)
 
 
 /////////////////////////////////////////////////////////
-// PIP2: This is a not fully tested modification of the  
-// current Clipper2 PointInPolygon code. It's a little 
+// PIP2: This is a not fully tested modification of the
+// current Clipper2 PointInPolygon code. It's a little
 // simpler and also marginally faster.
 /////////////////////////////////////////////////////////
 template <typename T>
@@ -142,13 +142,13 @@ inline PointInPolygonResult PIP2(const Point<T>& pt, const Path<T>& polygon)
   if (prev->y == pt.y)
   {
     if (pt == *prev) return PointInPolygonResult::IsOn;
-    if ((curr->y == pt.y) &&  ((curr->x == pt.x) || 
+    if ((curr->y == pt.y) &&  ((curr->x == pt.x) ||
       ((pt.x > prev->x) == (pt.x < curr->x))))
         return PointInPolygonResult::IsOn;
     Path<T>::const_reverse_iterator  pr = polygon.crbegin() +1;
     while (pr != polygon.crend() && pr->y == pt.y) ++pr;
     is_above = pr == polygon.crend() || pr->y < pt.y;
-  } 
+  }
   else is_above = prev->y < pt.y;
 
   int val = 0;
@@ -156,15 +156,15 @@ inline PointInPolygonResult PIP2(const Point<T>& pt, const Path<T>& polygon)
   {
     if (is_above)
     {
-      while (curr != cend && curr->y < pt.y) ++curr; 
+      while (curr != cend && curr->y < pt.y) ++curr;
       if (curr == cend) break;
     }
     else
     {
-      while (curr != cend && curr->y > pt.y) ++curr; 
+      while (curr != cend && curr->y > pt.y) ++curr;
       if (curr == cend) break;
     }
-  
+
     prev = (curr == first) ? last : curr - 1;
     if (curr->y == pt.y)
     {
@@ -191,8 +191,8 @@ inline PointInPolygonResult PIP2(const Point<T>& pt, const Path<T>& polygon)
     ++curr;
   }
 
-  return (val % 2) ? 
-    PointInPolygonResult::IsInside : 
+  return (val % 2) ?
+    PointInPolygonResult::IsInside :
     PointInPolygonResult::IsOutside;
 }
 
@@ -223,14 +223,14 @@ static PointInPolygonResult PIP3(const Point<T> &pt, const Path<T> &path)
 
     x1 = itPrev->x - pt.x;
     x2 = itCurr->x - pt.x;
-    if ((y1 <= 0) && (y2 > 0)) 
+    if ((y1 <= 0) && (y2 > 0))
     {
       //double f = double(x1) * y2 - double(x2) * y1; // avoids int overflow
       int64_t f = x1 * y2 - x2 * y1;
       if (f > 0) ++k;
       else if (f == 0) return PointInPolygonResult::IsOn;
     }
-    else if ((y1 > 0) && (y2 <= 0)) 
+    else if ((y1 > 0) && (y2 <= 0))
     {
       int64_t f = x1 * y2 - x2 * y1;
       if (f < 0) ++k;
@@ -246,7 +246,7 @@ static PointInPolygonResult PIP3(const Point<T> &pt, const Path<T> &path)
         return PointInPolygonResult::IsOn;
     itPrev = itCurr;
   }
-  if (k % 2) return PointInPolygonResult::IsInside; 
+  if (k % 2) return PointInPolygonResult::IsInside;
   return PointInPolygonResult::IsOutside;
 }
 
@@ -317,7 +317,7 @@ inline PipFunction GetPIPFunc(int index)
 // DoErrorTest1
 /////////////////////////////////////////////////////////
 
-static void DoErrorTest1_internal(const Path64& pts_of_int, const Paths64& paths, 
+static void DoErrorTest1_internal(const Path64& pts_of_int, const Paths64& paths,
   PipFunction pip_func, PointInPolygonResult expected)
 {
   Path64 error_points;
@@ -353,12 +353,12 @@ static void DoErrorTest1(int index)
 
   std::cout << SetConsoleTextColor(green_bold) <<
     "Testing PIP" << index +1 << "/outside:" << SetConsoleTextColor(reset);
-  DoErrorTest1_internal(points_of_interest_outside, paths, 
+  DoErrorTest1_internal(points_of_interest_outside, paths,
     pip_func, PointInPolygonResult::IsOutside);
 
   std::cout << SetConsoleTextColor(green_bold) <<
     "Testing PIP" << index +1 << "/inside :" << SetConsoleTextColor(reset);
-  DoErrorTest1_internal(points_of_interest_inside, paths, 
+  DoErrorTest1_internal(points_of_interest_inside, paths,
     pip_func, PointInPolygonResult::IsInside);
 }
 
@@ -379,7 +379,7 @@ static void DoErrorTest2(int index)
     std::cout << SetConsoleTextColor(red_bold) << " Error in ";
     for (size_t i = 0; i < high_error; ++i)
       std::cout << errors[i] << " and ";
-    std::cout << errors[high_error] << "." << 
+    std::cout << errors[high_error] << "." <<
       SetConsoleTextColor(reset) << std::endl;
   }
   else
@@ -390,9 +390,9 @@ static void DoErrorTest2(int index)
 // Main Entry
 /////////////////////////////////////////////////////////
 
-int main(int argc, char** argv) 
+int main(int argc, char** argv)
 {
-  std::cout << SetConsoleTextColor(cyan_bold) << 
+  std::cout << SetConsoleTextColor(cyan_bold) <<
     "Simple error checks ..." << SetConsoleTextColor(reset) <<
     std::endl;
 
@@ -411,7 +411,7 @@ int main(int argc, char** argv)
   const std::string test_file = "../../../../../Tests/PolytreeHoleOwner2.txt";
   points_of_interest_outside =
     MakePath({ 21887,10420, 21726,10825, 21662,10845, 21617,10890 });
-  points_of_interest_inside = 
+  points_of_interest_inside =
     MakePath({ 21887,10430, 21843,10520, 21810,10686, 21900,10461 });
   if (!FileExists(test_file)) return 1;
   std::ifstream ifs(test_file);
@@ -473,7 +473,7 @@ int main(int argc, char** argv)
   for (int i = power10_lo; i <= power10_high; ++i)
     paths.push_back(Ellipse(mp, width / 2.0, height / 2.0, (unsigned)std::pow(10, i)));
   std::cout << "A single elliptical path " << std::endl <<
-    "Edge counts between 10^" << power10_lo << " and 10^" << 
+    "Edge counts between 10^" << power10_lo << " and 10^" <<
     power10_high << std::endl << std::endl;
 
   pipResults.clear();
@@ -501,7 +501,7 @@ int main(int argc, char** argv)
   paths.clear();
   for (int i = power10_lo; i <= power10_high; ++i)
     paths.push_back(MakeRandomPoly(width, height, (unsigned)std::pow(10, i)));
-  
+
   pipResults.clear();
   pipResults.resize(3);
   for (size_t i = 0; i < 3; ++i) pipResults[i].resize(paths.size());

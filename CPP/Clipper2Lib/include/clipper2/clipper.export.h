@@ -8,7 +8,7 @@
 *******************************************************************************/
 
 
-/* 
+/*
  Boolean clipping:
  cliptype: None=0, Intersection=1, Union=2, Difference=3, Xor=4
  fillrule: EvenOdd=0, NonZero=1, Positive=2, Negative=3
@@ -24,7 +24,7 @@ can be understood by just about any programming language. And these C style
 path structures are simple arrays of int64_t (CPath64) and double (CPathD).
 
 CPath64 and CPathD:
-These are arrays of consecutive x and y path coordinates preceeded by  
+These are arrays of consecutive x and y path coordinates preceeded by
 a pair of values containing the path's length (N) and a 0 value.
 __________________________________
 |counter|coord1|coord2|...|coordN|
@@ -34,7 +34,7 @@ __________________________________
 CPaths64 and CPathsD:
 These are also arrays containing any number of consecutive CPath64 or
 CPathD  structures. But preceeding these consecutive paths, there is pair of
-values that contain the total length of the array (A) structure and 
+values that contain the total length of the array (A) structure and
 the number (C) of CPath64 or CPathD it contains.
 _______________________________
 |counter|path1|path2|...|pathC|
@@ -42,15 +42,15 @@ _______________________________
 _______________________________
 
 CPolytree64 and CPolytreeD:
-These are also arrays consisting of CPolyPath structures that represent 
+These are also arrays consisting of CPolyPath structures that represent
 individual paths in a tree structure. However, the very first (ie top)
 CPolyPath is just the tree container that won't have a path. And because
 of that, its structure will be very slightly different from the remaining
 CPolyPath. This difference will be discussed below.
 
 CPolyPath64 and CPolyPathD:
-These are simple arrays consisting of a series of path coordinates followed 
-by any number of child (ie nested) CPolyPath. Preceeding these are two values 
+These are simple arrays consisting of a series of path coordinates followed
+by any number of child (ie nested) CPolyPath. Preceeding these are two values
 indicating the length of the path (N) and the number of child CPolyPath (C).
 ____________________________________________________________
 |counter|coord1|coord2|...|coordN| child1|child2|...|childC|
@@ -58,18 +58,18 @@ ____________________________________________________________
 ____________________________________________________________
 
 As mentioned above, the very first CPolyPath structure is just a container
-that owns (both directly and indirectly) every other CPolyPath in the tree. 
+that owns (both directly and indirectly) every other CPolyPath in the tree.
 Since this first CPolyPath has no path, instead of a path length, its very
 first value will contain the total length of the CPolytree array structure.
 
 All theses exported structures (CPaths64, CPathsD, CPolyTree64 & CPolyTreeD)
-are arrays of type int64_t or double. And the first value in these arrays 
+are arrays of type int64_t or double. And the first value in these arrays
 will always contain the length of that array.
 
-These array structures are allocated in heap memory which will eventually 
-need to be released. But since applications dynamically linking to these 
+These array structures are allocated in heap memory which will eventually
+need to be released. But since applications dynamically linking to these
 functions may use different memory managers, the only safe way to free up
-this memory is to use the exported DisposeArray64 and  DisposeArrayD 
+this memory is to use the exported DisposeArray64 and  DisposeArrayD
 functions below.
 */
 
@@ -128,7 +128,7 @@ inline Rect<T> CRectToRect(const CRect<T>& rect)
 #ifdef _WIN32
   #define EXTERN_DLL_EXPORT extern "C" __declspec(dllexport)
 #else
-  #define EXTERN_DLL_EXPORT extern "C" 
+  #define EXTERN_DLL_EXPORT extern "C"
 #endif
 
 
@@ -173,8 +173,8 @@ EXTERN_DLL_EXPORT int BooleanOp_PolyTreeD(uint8_t cliptype,
   bool preserve_collinear = true, bool reverse_solution = false);
 
 EXTERN_DLL_EXPORT CPaths64 InflatePaths64(const CPaths64 paths,
-  double delta, uint8_t jointype, uint8_t endtype, 
-  double miter_limit = 2.0, double arc_tolerance = 0.0, 
+  double delta, uint8_t jointype, uint8_t endtype,
+  double miter_limit = 2.0, double arc_tolerance = 0.0,
   bool reverse_solution = false);
 EXTERN_DLL_EXPORT CPathsD InflatePathsD(const CPathsD paths,
   double delta, uint8_t jointype, uint8_t endtype,
@@ -219,10 +219,10 @@ static size_t GetPolyPath64ArrayLen(const PolyPath64& pp)
   return result;
 }
 
-static void GetPolytreeCountAndCStorageSize(const PolyTree64& tree, 
+static void GetPolytreeCountAndCStorageSize(const PolyTree64& tree,
   size_t& cnt, size_t& array_len)
 {
-  cnt = tree.Count(); // nb: top level count only 
+  cnt = tree.Count(); // nb: top level count only
   array_len = GetPolyPath64ArrayLen(tree);
 }
 
@@ -300,7 +300,7 @@ static Paths64 ConvertCPathsDToPaths64(const CPathsD paths, double scale)
 {
   Paths64 result;
   if (!paths) return result;
-  double* v = paths; 
+  double* v = paths;
   ++v; // skip the first value (0)
   size_t cnt = static_cast<size_t>(*v++);
   result.reserve(cnt);
@@ -362,7 +362,7 @@ EXTERN_DLL_EXPORT const char* Version()
   return CLIPPER2_VERSION;
 }
 
-EXTERN_DLL_EXPORT int BooleanOp64(uint8_t cliptype, 
+EXTERN_DLL_EXPORT int BooleanOp64(uint8_t cliptype,
   uint8_t fillrule, const CPaths64 subjects,
   const CPaths64 subjects_open, const CPaths64 clips,
   CPaths64& solution, CPaths64& solution_open,
@@ -370,7 +370,7 @@ EXTERN_DLL_EXPORT int BooleanOp64(uint8_t cliptype,
 {
   if (cliptype > static_cast<uint8_t>(ClipType::Xor)) return -4;
   if (fillrule > static_cast<uint8_t>(FillRule::Negative)) return -3;
-  
+
   Paths64 sub, sub_open, clp, sol, sol_open;
   sub       = ConvertCPaths(subjects);
   sub_open  = ConvertCPaths(subjects_open);
@@ -382,7 +382,7 @@ EXTERN_DLL_EXPORT int BooleanOp64(uint8_t cliptype,
   if (sub.size() > 0) clipper.AddSubject(sub);
   if (sub_open.size() > 0) clipper.AddOpenSubject(sub_open);
   if (clp.size() > 0) clipper.AddClip(clp);
-  if (!clipper.Execute(ClipType(cliptype), FillRule(fillrule), sol, sol_open)) 
+  if (!clipper.Execute(ClipType(cliptype), FillRule(fillrule), sol, sol_open))
     return -1; // clipping bug - should never happen :)
   solution = CreateCPaths(sol);
   solution_open = CreateCPaths(sol_open);
@@ -455,7 +455,7 @@ EXTERN_DLL_EXPORT int BooleanOp_PolyTreeD(uint8_t cliptype,
   if (precision < -8 || precision > 8) return -5;
   if (cliptype > static_cast<uint8_t>(ClipType::Xor)) return -4;
   if (fillrule > static_cast<uint8_t>(FillRule::Negative)) return -3;
-  
+
   double scale = std::pow(10, precision);
 
   int err = 0;
@@ -485,10 +485,10 @@ EXTERN_DLL_EXPORT CPaths64 InflatePaths64(const CPaths64 paths,
 {
   Paths64 pp;
   pp = ConvertCPaths(paths);
-  ClipperOffset clip_offset( miter_limit, 
+  ClipperOffset clip_offset( miter_limit,
     arc_tolerance, reverse_solution);
   clip_offset.AddPaths(pp, JoinType(jointype), EndType(endtype));
-  Paths64 result; 
+  Paths64 result;
   clip_offset.Execute(delta, result);
   return CreateCPaths(result);
 }
@@ -561,5 +561,5 @@ EXTERN_DLL_EXPORT CPathsD RectClipLinesD(const CRectD& rect,
 }
 
 }  // end Clipper2Lib namespace
-  
+
 #endif  // CLIPPER2_EXPORT_H

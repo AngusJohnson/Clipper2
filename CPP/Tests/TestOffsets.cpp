@@ -2,31 +2,24 @@
 #include "clipper2/clipper.offset.h"
 #include "ClipFileLoad.h"
 //#include "clipper.svg.utils.h"
-
 using namespace Clipper2Lib;
-TEST(Clipper2Tests, TestOffsets) { 
+TEST(Clipper2Tests, TestOffsets) {
   std::ifstream ifs("Offsets.txt");
   if(!ifs.good()) return;
-
   for (int test_number = 1; test_number <= 2; ++test_number)
   {
     ClipperOffset co;
-
     Paths64 subject, subject_open, clip;
     Paths64 solution, solution_open;
     ClipType ct = ClipType::None;
     FillRule fr = FillRule::NonZero;
     int64_t stored_area = 0, stored_count = 0;
-
     ASSERT_TRUE(LoadTestNum(ifs, test_number, subject, subject_open, clip, stored_area, stored_count, ct, fr));
-
     co.AddPaths(subject, JoinType::Round, EndType::Polygon);
     Paths64 outputs;
     co.Execute(1, outputs);
-
     // is the sum total area of the solution is positive
     const auto outer_is_positive = Area(outputs) > 0;
-
     // there should be exactly one exterior path
     const auto is_positive_func = IsPositive<int64_t>;
     const auto is_positive_count = std::count_if(
@@ -40,8 +33,6 @@ TEST(Clipper2Tests, TestOffsets) {
   }
   ifs.close();
 }
-
-
 static Point64 MidPoint(const Point64& p1, const Point64& p2)
 {
   Point64 result;
@@ -49,22 +40,16 @@ static Point64 MidPoint(const Point64& p1, const Point64& p2)
   result.y = (p1.y + p2.y) / 2;
   return result;
 }
-
 TEST(Clipper2Tests, TestOffsets2) { // see #448 & #456
-
   double scale = 10, delta = 10 * scale, arc_tol = 0.25 * scale;
-
   Paths64 subject, solution;
   ClipperOffset c;
   subject.push_back(MakePath({ 50,50, 100,50, 100,150, 50,150, 0,100 }));
-
   int err;
   subject = ScalePaths<int64_t, int64_t>(subject, scale, err);
-
   c.AddPaths(subject, JoinType::Round, EndType::Polygon);
   c.ArcTolerance(arc_tol);
   c.Execute(delta, solution);
-
   double min_dist = delta * 2, max_dist = 0;
   for (const Point64& subjPt : subject[0])
   {
@@ -81,11 +66,9 @@ TEST(Clipper2Tests, TestOffsets2) { // see #448 & #456
       prevPt = pt;
     }
   }
-
   EXPECT_GE(min_dist + 1, delta - arc_tol); // +1 for rounding errors
-  EXPECT_LE(solution[0].size(), 21); 
+  EXPECT_LE(solution[0].size(), 21);
 }
-
 TEST(Clipper2Tests, TestOffsets3) // see #424
 {
   Paths64 subjects = {{
@@ -108,11 +91,9 @@ TEST(Clipper2Tests, TestOffsets3) // see #424
    {1602758902, 1378489467}, {1618990858, 1376350372}, {1615058698, 1344085688},
    {1603230761, 1345700495}, {1598648484, 1346329641}, {1598931599, 1348667965},
    {1596698132, 1348993024}, {1595775386, 1342722540} }};
-
   Paths64 solution = InflatePaths(subjects, -209715, JoinType::Miter, EndType::Polygon);
   EXPECT_LE(solution[0].size() - subjects[0].size(), 1);
 }
-
 TEST(Clipper2Tests, TestOffsets4) // see #482
 {
   Paths64 paths = { { {0, 0}, {20000, 200},
@@ -121,21 +102,18 @@ TEST(Clipper2Tests, TestOffsets4) // see #482
     JoinType::Square, EndType::Polygon);
   //std::cout << solution[0].size() << std::endl;
   EXPECT_EQ(solution[0].size(), 5);
-
   paths = { { {0, 0}, {20000, 400},
     {40000, 0}, {40000, 50000}, {0, 50000}, {0, 0}} };
   solution = InflatePaths(paths, -5000,
     JoinType::Square, EndType::Polygon);
   //std::cout << solution[0].size() << std::endl;
   EXPECT_EQ(solution[0].size(), 5);
-
   paths = { { {0, 0}, {20000, 400},
     {40000, 0}, {40000, 50000}, {0, 50000}, {0, 0}} };
   solution = InflatePaths(paths, -5000,
     JoinType::Round, EndType::Polygon, 2, 100);
   //std::cout << solution[0].size() << std::endl;
   EXPECT_GT(solution[0].size(), 5);
-
   paths = { { {0, 0}, {20000, 1500},
     {40000, 0}, {40000, 50000}, {0, 50000}, {0, 0}} };
   solution = InflatePaths(paths, -5000,
@@ -143,7 +121,6 @@ TEST(Clipper2Tests, TestOffsets4) // see #482
   //std::cout << solution[0].size() << std::endl;
   EXPECT_GT(solution[0].size(), 5);
 }
-
 TEST(Clipper2Tests, TestOffsets5) // modified from #593 (tests offset clean up)
 {
   Paths64 subject = {
@@ -368,17 +345,13 @@ TEST(Clipper2Tests, TestOffsets5) // modified from #593 (tests offset clean up)
       }),
     MakePath({ -47877,-47877, 84788,-47877, 84788,81432, -47877,81432 })
   };
-
   Paths64 solution = InflatePaths(subject, -10000, JoinType::Round, EndType::Polygon);
   EXPECT_EQ(solution.size(), 2);
 }
-
-
 TEST(Clipper2Tests, TestOffsets6) // also modified from #593 (tests rounded ends)
 {
   Paths64 subjects = {
     {{620,620}, {-620,620}, {-620,-620}, {620,-620}},
-
     {{20,-277}, {42,-275}, {59,-272}, {80,-266}, {97,-261}, {114,-254},
     {135,-243}, {149,-235}, {167,-222}, {182,-211}, {197,-197},
     {212,-181}, {223,-167}, {234,-150}, {244,-133}, {253,-116},
@@ -387,53 +360,40 @@ TEST(Clipper2Tests, TestOffsets6) // also modified from #593 (tests rounded ends
     {223,-167}, {212,-181}, {197,-197}, {182,-211}, {168,-222}, {152,-233},
     {135,-243}, {114,-254}, {97,-261}, {80,-267}, {59,-272}, {42,-275}, {20,-278}}
   };
-
   const double offset = -50;
   Clipper2Lib::ClipperOffset offseter;
   Clipper2Lib::Paths64 tmpSubject;
-
   offseter.AddPaths(subjects, Clipper2Lib::JoinType::Round, Clipper2Lib::EndType::Polygon);
   Clipper2Lib::Paths64 solution;
   offseter.Execute(offset, solution);
-
   EXPECT_EQ(solution.size(), 2);
-
   double area = Area<int64_t>(solution[1]);
   EXPECT_LT(area, -47500);
 }
-
 TEST(Clipper2Tests, TestOffsets7) // (#593 & #715)
 {
   Paths64 solution;
   Paths64 subject = { MakePath({0,0, 100,0, 100,100, 0,100}) };
-
   solution = InflatePaths(subject, -50, JoinType::Miter, EndType::Polygon);
   EXPECT_EQ(solution.size(), 0);
-
   subject.push_back(MakePath({ 40,60, 60,60, 60,40, 40,40 }));
   solution = InflatePaths(subject, 10, JoinType::Miter, EndType::Polygon);
   EXPECT_EQ(solution.size(), 1);
-
   reverse(subject[0].begin(), subject[0].end());
   reverse(subject[1].begin(), subject[1].end());
   solution = InflatePaths(subject, 10, JoinType::Miter, EndType::Polygon);
   EXPECT_EQ(solution.size(), 1);
-
   subject.resize(1);
   solution = InflatePaths(subject, -50, JoinType::Miter, EndType::Polygon);
   EXPECT_EQ(solution.size(), 0);
 }
-
-
 struct OffsetQual
 {
-  PointD smallestInSub;   // smallestInSub & smallestInSol are the points in subject and solution 
+  PointD smallestInSub;   // smallestInSub & smallestInSol are the points in subject and solution
   PointD smallestInSol;   // that define the place that most falls short of the expected offset
-  PointD largestInSub;    // largestInSub & largestInSol are the points in subject and solution 
+  PointD largestInSub;    // largestInSub & largestInSol are the points in subject and solution
   PointD largestInSol;    // that define the place that most exceeds the expected offset
 };
-
-
 template<typename T>
 inline PointD GetClosestPointOnSegment(const PointD& offPt,
   const Point<T>& seg1, const Point<T>& seg2)
@@ -450,18 +410,14 @@ inline PointD GetClosestPointOnSegment(const PointD& offPt,
     static_cast<double>(seg1.x) + (q * dx),
     static_cast<double>(seg1.y) + (q * dy));
 }
-
-
 template<typename T>
 static OffsetQual GetOffsetQuality(const Path<T>& subject, const Path<T>& solution, const double delta)
 {
   if (!subject.size() || !solution.size()) return OffsetQual();
-
   double desiredDistSqr = delta * delta;
   double smallestSqr = desiredDistSqr, largestSqr = desiredDistSqr;
   double deviationsSqr = 0;
   OffsetQual oq;
-
   const size_t subVertexCount = 4; // 1 .. 100 :)
   const double subVertexFrac = 1.0 / subVertexCount;
   Point<T> solPrev = solution[solution.size() - 1];
@@ -469,11 +425,10 @@ static OffsetQual GetOffsetQuality(const Path<T>& subject, const Path<T>& soluti
   {
     for (size_t i = 0; i < subVertexCount; ++i)
     {
-      // divide each edge in solution into series of sub-vertices (solPt), 
+      // divide each edge in solution into series of sub-vertices (solPt),
       PointD solPt = PointD(
         static_cast<double>(solPrev.x) + static_cast<double>(solPt0.x - solPrev.x) * subVertexFrac * i,
         static_cast<double>(solPrev.y) + static_cast<double>(solPt0.y - solPrev.y) * subVertexFrac * i);
-
       // now find the closest point in subject to each of these solPt.
       PointD closestToSolPt;
       double closestDistSqr = std::numeric_limits<double>::infinity();
@@ -488,12 +443,10 @@ static OffsetQual GetOffsetQuality(const Path<T>& subject, const Path<T>& soluti
           closestToSolPt = closestPt;
         };
       }
-
       // we've now found solPt's closest pt in subject (closestToSolPt).
       // but how does the distance between these 2 points compare with delta
       // ideally - Distance(closestToSolPt, solPt) == delta;
-
-      // see how this distance compares with every other solPt 
+      // see how this distance compares with every other solPt
       if (closestDistSqr < smallestSqr) {
         smallestSqr = closestDistSqr;
         oq.smallestInSub = closestToSolPt;
@@ -509,7 +462,6 @@ static OffsetQual GetOffsetQuality(const Path<T>& subject, const Path<T>& soluti
   }
   return oq;
 }
-
 TEST(Clipper2Tests, TestOffsets8) // (#724)
 {
   Paths64 subject = { MakePath({
@@ -593,16 +545,13 @@ TEST(Clipper2Tests, TestOffsets8) // (#724)
        124605260, -29584205,   119475951, -35589856,   113470300, -40719165,
        106736189, -44845834,   99439432, -47868251,    91759700, -49711991
     }) };
-
   double offset = -50329979.277800001, arc_tol = 5000;
-
   Paths64 solution = InflatePaths(subject, offset, JoinType::Round, EndType::Polygon, 2, arc_tol);
   OffsetQual oq = GetOffsetQuality(subject[0], solution[0], offset);
   double smallestDist = Distance(oq.smallestInSub, oq.smallestInSol);
   double largestDist = Distance(oq.largestInSub, oq.largestInSol);
   const double rounding_tolerance = 1.0;
   offset = std::abs(offset);
-
   //std::cout << std::setprecision(0) << std::fixed;
   //std::cout << "Expected delta           : " << offset << std::endl;
   //std::cout << "Smallest delta           : " << smallestDist << " (" << smallestDist - offset << ")" << std::endl;
@@ -615,52 +564,42 @@ TEST(Clipper2Tests, TestOffsets8) // (#724)
   //SvgAddSolution(svg, solution, FillRule::NonZero, false);
   //std::string filename = "offset_test.svg";
   //SvgSaveToFile(svg, filename, 800, 600, 10);
-
   EXPECT_LE(offset - smallestDist - rounding_tolerance, arc_tol);
   EXPECT_LE(largestDist - offset  - rounding_tolerance, arc_tol);
 }
-
-
 TEST(Clipper2Tests, TestOffsets9) // (#733)
 {
-  // solution orientations should match subject orientations UNLESS 
+  // solution orientations should match subject orientations UNLESS
   // reverse_solution is set true in ClipperOffset's constructor
-
   // start subject's orientation positive ...
   Paths64 subject{ MakePath({100,100, 200,100, 200, 400, 100, 400}) };
   Paths64 solution = InflatePaths(subject, 50, JoinType::Miter, EndType::Polygon);
   EXPECT_EQ(solution.size(), 1);
   EXPECT_TRUE(IsPositive(solution[0]));
-
-  // reversing subject's orientation should not affect delta direction 
+  // reversing subject's orientation should not affect delta direction
   // (ie where positive deltas inflate).
   std::reverse(subject[0].begin(), subject[0].end());
   solution = InflatePaths(subject, 50, JoinType::Miter, EndType::Polygon);
   EXPECT_EQ(solution.size(), 1);
   EXPECT_TRUE(std::fabs(Area(solution[0])) > std::fabs(Area(subject[0])));
   EXPECT_FALSE(IsPositive(solution[0]));
-
   ClipperOffset co(2, 0, false, true); // last param. reverses solution
   co.AddPaths(subject, JoinType::Miter, EndType::Polygon);
   co.Execute(50, solution);
   EXPECT_EQ(solution.size(), 1);
   EXPECT_TRUE(std::fabs(Area(solution[0])) > std::fabs(Area(subject[0])));
   EXPECT_TRUE(IsPositive(solution[0]));
-
   // add a hole (ie has reverse orientation to outer path)
   subject.push_back( MakePath({130,130, 170,130, 170,370, 130,370}) );
   solution = InflatePaths(subject, 30, JoinType::Miter, EndType::Polygon);
   EXPECT_EQ(solution.size(), 1);
   EXPECT_FALSE(IsPositive(solution[0]));
-
   co.Clear(); // should still reverse solution orientation
   co.AddPaths(subject, JoinType::Miter, EndType::Polygon);
   co.Execute(30, solution);
   EXPECT_EQ(solution.size(), 1);
   EXPECT_TRUE(std::fabs(Area(solution[0])) > std::fabs(Area(subject[0])));
   EXPECT_TRUE(IsPositive(solution[0]));
-
   solution = InflatePaths(subject, -15, JoinType::Miter, EndType::Polygon);
   EXPECT_EQ(solution.size(), 0);
-
 }
