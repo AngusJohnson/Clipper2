@@ -1,6 +1,6 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  26 November 2023                                                *
+* Date      :  1 December 2023                                                *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2023                                         *
 * Purpose   :  This module exports the Clipper2 Library (ie DLL/so)            *
@@ -277,11 +277,11 @@ static Paths<T> ConvertCPaths(T* paths)
   Paths<T> result;
   if (!paths) return result;
   T* v = paths; ++v;
-  size_t cnt = *v++;
+  size_t cnt = static_cast<size_t>(*v++);
   result.reserve(cnt);
   for (size_t i = 0; i < cnt; ++i)
   {
-    size_t cnt2 = *v;
+    size_t cnt2 = static_cast<size_t>(*v);
     v += 2;
     Path<T> path;
     path.reserve(cnt2);
@@ -302,15 +302,15 @@ static Paths64 ConvertCPathsDToPaths64(const CPathsD paths, double scale)
   if (!paths) return result;
   double* v = paths; 
   ++v; // skip the first value (0)
-  int64_t cnt = (int64_t)*v++;
+  size_t cnt = static_cast<size_t>(*v++);
   result.reserve(cnt);
-  for (int i = 0; i < cnt; ++i)
+  for (size_t i = 0; i < cnt; ++i)
   {
-    int64_t cnt2 = (int64_t)*v;
+    size_t cnt2 = static_cast<size_t>(*v);
     v += 2;
     Path64 path;
     path.reserve(cnt2);
-    for (int j = 0; j < cnt2; ++j)
+    for (size_t j = 0; j < cnt2; ++j)
     {
       double x = *v++ * scale;
       double y = *v++ * scale;
