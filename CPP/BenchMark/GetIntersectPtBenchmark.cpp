@@ -80,7 +80,7 @@ static bool GIP_Func_F(const Point64& ln1a, const Point64& ln1b,
   double ln2dy = (double)(ln2b.y - ln2a.y);
   double ln2dx = (double)(ln2a.x - ln2b.x);
   double det = (ln2dy * ln1dx) - (ln1dy * ln2dx);
-  if (det == 0.0) return 0;
+  if (det == 0.0) return false;
   int64_t bb0minx = CC_MIN(ln1a.x, ln1b.x);
   int64_t bb0miny = CC_MIN(ln1a.y, ln1b.y);
   int64_t bb0maxx = CC_MAX(ln1a.x, ln1b.x);
@@ -97,16 +97,16 @@ static bool GIP_Func_F(const Point64& ln1a, const Point64& ln1b,
   double hity = ((ln2dy * ln0c) - (ln1dy * ln1c)) / det;
 #if DETECT_HIT_OVERFLOW
   if (fmax(fabs((double)originx + hitx),
-    fabs((double)originy + hity)) >= (double)(INT64_MAX - 1))  return 0;
+    fabs((double)originy + hity)) >= (double)(INT64_MAX - 1))  return false;
 #endif
   ip.x = originx + (int64_t)nearbyint(hitx);
   ip.y = originy + (int64_t)nearbyint(hity);
-  return 1;
+  return true;
 }
 
 /////////////////////////////////////////////////////////
-// GIP3: mathVertexLineLineIntersection_F but without calling nearbyint
-// https://github.com/AngusJohnson/Clipper2/issues/317#issuecomment-1314023253
+// GIP3: Modified mathVertexLineLineIntersection_F above.
+//       Uses static casting instead of calling nearbyint
 /////////////////////////////////////////////////////////
 #define CC_MIN(x,y) ((x)>(y)?(y):(x))
 #define CC_MAX(x,y) ((x)<(y)?(y):(x))
@@ -119,7 +119,7 @@ static bool GIP_F_Mod(const Point64& ln1a, const Point64& ln1b,
   double ln2dy = (double)(ln2b.y - ln2a.y);
   double ln2dx = (double)(ln2a.x - ln2b.x);
   double det = (ln2dy * ln1dx) - (ln1dy * ln2dx);
-  if (det == 0.0) return 0;
+  if (det == 0.0) return false;
   int64_t bb0minx = CC_MIN(ln1a.x, ln1b.x);
   int64_t bb0miny = CC_MIN(ln1a.y, ln1b.y);
   int64_t bb0maxx = CC_MAX(ln1a.x, ln1b.x);
@@ -136,31 +136,32 @@ static bool GIP_F_Mod(const Point64& ln1a, const Point64& ln1b,
   double hity = ((ln2dy * ln0c) - (ln1dy * ln1c)) / det;
 #if DETECT_HIT_OVERFLOW
   if (fmax(fabs((double)originx + hitx), 
-    fabs((double)originy + hity)) >= (double)(INT64_MAX - 1))  return 0;
+    fabs((double)originy + hity)) >= (double)(INT64_MAX - 1))  return false;
 #endif
   ip.x = originx + static_cast<int64_t>(hitx);
   ip.y = originy + static_cast<int64_t>(hity);  
-  //ip.x = originx + (int64_t)nearbyint(hitx);
-  //ip.y = originy + (int64_t)nearbyint(hity);
-  return 1;
+  return true;
 }
 
 struct TestRecord
 {
 public:
-  Point64 ideal, pt1, pt2, pt3, pt4;
+  Point64 actual, pt1, pt2, pt3, pt4;
   Path64 results;
-  TestRecord(int participants, const Point64& ip,
+  TestRecord(int participants, const Point64& intersect_pt,
     const Point64& p1, const Point64& p2, const Point64& p3, const Point64& p4) :
-    ideal(ip), pt1(p1), pt2(p2), pt3(p3), pt4(p4) { results.resize(participants); };
+    actual(intersect_pt), pt1(p1), pt2(p2), pt3(p3), pt4(p4) { results.resize(participants); };
 };
 
 typedef std::unique_ptr<TestRecord> TestRecord_ptr;
+typedef std::vector<TestRecord_ptr>::const_iterator test_iter;
 
 // global data 
 std::vector<TestRecord_ptr> tests;
-typedef std::vector<TestRecord_ptr>::const_iterator test_iter;
 
+/////////////////////////////////////////////////////////
+// Miscellaneous functions
+/////////////////////////////////////////////////////////
 
 static inline Point64 ReflectPoint(const Point64& pt, const Point64& pivot)
 {
@@ -175,12 +176,12 @@ static inline Point64 MidPoint(const Point64& p1, const Point64& p2)
   return result;
 }
 
-static inline Point64 MakeRandomPoint(int64_t min_x, int64_t max_x, int64_t min_y, int64_t max_y)
+static inline Point64 MakeRandomPoint(int64_t min_val, int64_t max_val)
 {
   std::random_device rd;
   std::mt19937 gen(rd());
-  std::uniform_int_distribution<int64_t> x(min_x, max_x);
-  std::uniform_int_distribution<int64_t> y(min_y, max_y);
+  std::uniform_int_distribution<int64_t> x(min_val, max_val);
+  std::uniform_int_distribution<int64_t> y(min_val, max_val);
   return Point64(x(gen), y(gen));
 }
 
@@ -271,43 +272,49 @@ int main(int argc, char** argv)
   BENCHMARK(BM_GIP_F_Mod);
 
   bool first_pass = true;
-  for (int power10 = 8; power10 <= 18; power10 += 2)
+  for (int current_pow10 = 12; current_pow10 <= 18; ++current_pow10)
   {
-    int64_t max_coord = static_cast<int64_t>(pow(10, power10));
+    // create multiple TestRecords containing segment pairs that intersect 
+    // at their midpoints, while using random coordinates that are 
+    // restricted to the specified power of 10 range
+    int64_t max_coord = static_cast<int64_t>(pow(10, current_pow10));
     for (int64_t i = 0; i < 10000; ++i)
     {
-      Point64 ip1 = MakeRandomPoint(-max_coord, max_coord, -max_coord, max_coord);
-      Point64 ip2 = MakeRandomPoint(-max_coord, max_coord, -max_coord, max_coord);
-      Point64 ip = MidPoint(ip1, ip2);
-      Point64 ip3 = MakeRandomPoint(-max_coord, max_coord, -max_coord, max_coord);
-      Point64 ip4 = ReflectPoint(ip3, ip);
+      Point64 ip1    = MakeRandomPoint(-max_coord, max_coord);
+      Point64 ip2    = MakeRandomPoint(-max_coord, max_coord);
+      Point64 actual = MidPoint(ip1, ip2);
+      Point64 ip3    = MakeRandomPoint(-max_coord, max_coord);
+      Point64 ip4    = ReflectPoint(ip3, actual);
       Point64 _;
-      // just to exclude any segments that are collinear
-      if (GIP_Current(ip1, ip2, ip3, ip4, _))
-        tests.push_back(std::make_unique<TestRecord>(participants, ip, ip1, ip2, ip3, ip4));
+      // excluding any segments that are collinear
+      if (!GIP_Current(ip1, ip2, ip3, ip4, _)) continue;
+      tests.push_back(std::make_unique<TestRecord>(participants, actual, ip1, ip2, ip3, ip4));
     }
 
-    // only benchmark the GetIntersectPoint functions once because 
-    // the size of coordinate values won't affect their performance.
     if (first_pass)
     {
+      // only **benchmark** the GetIntersectPoint functions once because changing
+      // the maximum range of coordinates won't affect function performance.
       first_pass = false;
       std::cout << std::endl << SetConsoleTextColor(green_bold) <<
-        "Benchmarking GetIntersectPoint performance ... " << SetConsoleTextColor(reset) << 
+        "Benchmark GetIntersectPoint performance ... " << SetConsoleTextColor(reset) << 
         std::endl << std::endl;
+      // using each test function in the callback functions above, benchmarking 
+      // will calculate and store intersect points for each TestRecord 
       benchmark::RunSpecifiedBenchmarks(benchmark::CreateDefaultDisplayReporter());
 
       std::cout << std::endl << std::endl << SetConsoleTextColor(green_bold) <<
-        "Now comparing function accuracy ..." << SetConsoleTextColor(white_bold) << std::endl << 
-        "and showing how it deteriorates when using very large coordinate ranges." <<
-        SetConsoleTextColor(reset) << std::endl << 
+        "Compare function accuracy ..." << SetConsoleTextColor(reset) << std::endl << 
+        "and show how it deteriorates when using very large coordinate ranges." << std::endl << 
         "Distance error is the distance between the calculated and actual intersection points." << std::endl << 
-        "nb: The largest errors will occur whenever intersecting edges are very close to collinear." << std::endl;
+        "The largest errors will occur whenever intersecting segments are almost collinear." << std::endl;
     } 
     else
     {
       for (int i = 0; i < participants; ++i)
       {
+        // although we're not benchmarking, we still need to collect the calculated
+        // intersect points of each TestRecord using each participating test function
         Point64 ip;
         GipFunction gip_func = GetGipFunc(i);
         test_iter cit = tests.cbegin();
@@ -326,14 +333,13 @@ int main(int argc, char** argv)
     for (; cit != tests.cend(); ++cit)
       for (int i = 0; i < participants; ++i)
       {
-        double dist = Distance((*cit)->ideal, (*cit)->results[i]);
+        double dist = Distance((*cit)->actual, (*cit)->results[i]);
         avg_dists[i] += dist;
         if (dist > worst_dists[i])  worst_dists[i] = dist;
       }
 
-
     std::cout << std::endl << SetConsoleTextColor(cyan_bold) <<
-      "Coordinate ranges between  +/- 10^" << power10 << 
+      "Coordinate ranges between  +/-10^" << current_pow10 << 
       SetConsoleTextColor(reset) << std::endl;
 
     for (int i = 0; i < participants; ++i)
