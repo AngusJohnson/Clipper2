@@ -42,7 +42,7 @@ typedef std::function<bool(const Point64&, const Point64&,
   const Point64&, const Point64&, Point64&)> GipFunction;
 
 /////////////////////////////////////////////////////////
-// GIP1: This is the current Clipper2 PointInPolygon code
+// GIP1: This is the current Clipper2 GetIntersectPoint code
 /////////////////////////////////////////////////////////
 static bool GIP1(const Point64& ln1a, const Point64& ln1b,
   const Point64& ln2a, const Point64& ln2b, Point64& ip)
