@@ -44,7 +44,7 @@ typedef std::function<bool(const Point64&, const Point64&,
 /////////////////////////////////////////////////////////
 // GIP1: This is the current Clipper2 GetIntersectPoint code
 /////////////////////////////////////////////////////////
-static bool GIP1(const Point64& ln1a, const Point64& ln1b,
+static bool GIP_Current(const Point64& ln1a, const Point64& ln1b,
   const Point64& ln2a, const Point64& ln2b, Point64& ip)
 {
   double dx1 = static_cast<double>(ln1b.x - ln1a.x);
@@ -72,7 +72,7 @@ static bool GIP1(const Point64& ln1a, const Point64& ln1b,
 #define CC_MIN(x,y) ((x)>(y)?(y):(x))
 #define CC_MAX(x,y) ((x)<(y)?(y):(x))
 #define DETECT_HIT_OVERFLOW (0)
-static bool GIP2(const Point64& ln1a, const Point64& ln1b,
+static bool GIP_Func_F(const Point64& ln1a, const Point64& ln1b,
   const Point64& ln2a, const Point64& ln2b, Point64& ip)
 {
   double ln1dy = (double)(ln1b.y - ln1a.y);
@@ -111,7 +111,7 @@ static bool GIP2(const Point64& ln1a, const Point64& ln1b,
 #define CC_MIN(x,y) ((x)>(y)?(y):(x))
 #define CC_MAX(x,y) ((x)<(y)?(y):(x))
 #define DETECT_HIT_OVERFLOW (0)
-static bool GIP3(const Point64& ln1a, const Point64& ln1b,
+static bool GIP_F_Mod(const Point64& ln1a, const Point64& ln1b,
   const Point64& ln2a, const Point64& ln2b, Point64& ip)
 {
   double ln1dy = (double)(ln1b.y - ln1a.y);
@@ -161,18 +161,6 @@ typedef std::unique_ptr<TestRecord> TestRecord_ptr;
 std::vector<TestRecord_ptr> tests;
 typedef std::vector<TestRecord_ptr>::const_iterator test_iter;
 
-inline GipFunction GetGipFunc(int index)
-{
-  GipFunction result;
-  switch (index)
-  {
-    case 0: result = GIP1; break;
-    case 1: result = GIP3; break;
-    //case 2: result = GIP3; break;
-    default: throw "oops! - wrong function!";
-  }
-  return result;
-}
 
 static inline Point64 ReflectPoint(const Point64& pt, const Point64& pivot)
 {
@@ -196,22 +184,74 @@ static inline Point64 MakeRandomPoint(int64_t min_x, int64_t max_x, int64_t min_
   return Point64(x(gen), y(gen));
 }
 
+static inline GipFunction GetGipFunc(int index)
+{
+  GipFunction result;
+  switch (index)
+  {
+  case 0: result = GIP_Current; break;
+  case 1: result = GIP_Func_F; break;
+  case 2: result = GIP_F_Mod; break;
+  default: throw "oops! - wrong function!";
+  }
+  return result;
+}
+
+static inline std::string GetGipFuncName(int index)
+{
+  std::string result;
+  switch (index)
+  {
+  case 0: result = "GIP_Current"; break;
+  case 1: result = "GIP_Func_F "; break;
+  case 2: result = "GIP_F_Mod  "; break;
+  default: throw "oops!";
+  }
+  return result;
+}
+
 /////////////////////////////////////////////////////////
 // Benchmark callback functions
 /////////////////////////////////////////////////////////
 
-static void BM_GIP(benchmark::State& state)
+static void BM_GIP_Current(benchmark::State& state)
 {
   Point64 ip;
-  int idx = (int)state.range(0);
-  GipFunction gip_func = GetGipFunc(idx);
   for (auto _ : state)
   {
     test_iter cit = tests.cbegin();
     for (; cit != tests.cend(); ++cit)
     {
-      gip_func((*cit)->pt1, (*cit)->pt2, (*cit)->pt3, (*cit)->pt4, ip);
-      (*cit)->results[idx] = ip;
+      GIP_Current((*cit)->pt1, (*cit)->pt2, (*cit)->pt3, (*cit)->pt4, ip);
+      (*cit)->results[0] = ip;
+    }
+  }
+}
+
+static void BM_GIP_Func_F(benchmark::State& state)
+{
+  Point64 ip;
+  for (auto _ : state)
+  {
+    test_iter cit = tests.cbegin();
+    for (; cit != tests.cend(); ++cit)
+    {
+      GIP_Func_F((*cit)->pt1, (*cit)->pt2, (*cit)->pt3, (*cit)->pt4, ip);
+      (*cit)->results[1] = ip;
+    }
+  }
+}
+
+static void BM_GIP_F_Mod(benchmark::State& state)
+{
+  Point64 ip;
+  for (auto _ : state)
+  {
+    test_iter cit = tests.cbegin();
+    for (; cit != tests.cend(); ++cit)
+    {
+      GIP_F_Mod((*cit)->pt1, (*cit)->pt2, (*cit)->pt3, (*cit)->pt4, ip);
+      (*cit)->results[2] = ip;
     }
   }
 }
@@ -223,11 +263,12 @@ static void BM_GIP(benchmark::State& state)
 int main(int argc, char** argv)
 {
 
-  const int participants = 2;
+  const int participants = 3;
   //setup benchmarking ...
   benchmark::Initialize(0, nullptr);
-  BENCHMARK(BM_GIP)->Args(std::vector<int64_t>{0});
-  BENCHMARK(BM_GIP)->Args(std::vector<int64_t>{1});
+  BENCHMARK(BM_GIP_Current);
+  BENCHMARK(BM_GIP_Func_F);
+  BENCHMARK(BM_GIP_F_Mod);
 
   bool first_pass = true;
   for (int power10 = 8; power10 <= 18; power10 += 2)
@@ -241,8 +282,8 @@ int main(int argc, char** argv)
       Point64 ip3 = MakeRandomPoint(-max_coord, max_coord, -max_coord, max_coord);
       Point64 ip4 = ReflectPoint(ip3, ip);
       Point64 _;
-      // excluding any segments that are collinear
-      if (GIP1(ip1, ip2, ip3, ip4, _))
+      // just to exclude any segments that are collinear
+      if (GIP_Current(ip1, ip2, ip3, ip4, _))
         tests.push_back(std::make_unique<TestRecord>(participants, ip, ip1, ip2, ip3, ip4));
     }
 
@@ -298,8 +339,9 @@ int main(int argc, char** argv)
     for (int i = 0; i < participants; ++i)
     {
       avg_dists[i] /= tests.size();
-      std::cout << std::fixed << "GIP" << i << ": average distance error = " << std::setprecision(2) <<
-        avg_dists[i] << "; largest dist. = " << std::setprecision(0) << worst_dists[i] << std::endl;
+      std::cout << std::fixed << GetGipFuncName(i) << 
+        ": average distance error = " << std::setprecision(2) << avg_dists[i] << 
+        "; largest dist. = " << std::setprecision(0) << worst_dists[i] << std::endl;
     }
     tests.clear();
   }
