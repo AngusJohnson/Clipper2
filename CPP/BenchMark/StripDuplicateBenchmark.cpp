@@ -3,20 +3,16 @@
 #include "CommonUtils.h"
 #include <iostream>
 
-static void CustomArguments(benchmark::internal::Benchmark *b) {
-  for (int i = 5; i <= 6; ++i)
-    for (int j = 5; j <= 6; j *= 8)
-      for (int k = 5; k <= 10; k++)
-        b->Args({i, j, k});
-}
+using namespace Clipper2Lib;
 
+// globals 
+Paths64 test_paths;
+
+// Previous (slow) StripDuplicates function - copies path
 template <typename T>
-inline Clipper2Lib::Path<T>
-StripDuplicatesCopyVersion(const Clipper2Lib::Path<T> &path,
-                           bool is_closed_path) {
-  using namespace Clipper2Lib;
-  if (path.size() == 0)
-    return Path<T>();
+inline Path<T> StripDuplicates1(const Path<T> &path, bool is_closed_path) 
+{  
+  if (path.size() == 0) return Path<T>();
   Path<T> result;
   result.reserve(path.size());
   typename Path<T>::const_iterator path_iter = path.cbegin();
@@ -35,51 +31,43 @@ StripDuplicatesCopyVersion(const Clipper2Lib::Path<T> &path,
   return result;
 }
 
-template <typename T>
-inline Clipper2Lib::Paths<T>
-StripDuplicatesCopyVersion(const Clipper2Lib::Paths<T> &paths,
-                           bool is_closed_path) {
-  using namespace Clipper2Lib;
-  Paths<T> result;
-  result.reserve(paths.size());
-  for (typename Paths<T>::const_iterator paths_citer = paths.cbegin();
-       paths_citer != paths.cend(); ++paths_citer) {
-    result.push_back(StripDuplicatesCopyVersion(*paths_citer, is_closed_path));
-  }
-  return result;
+// Current StripDuplicates function - modifies the path in-place (ie avoids copying)
+template<typename T>
+inline void StripDuplicates2(Path<T>& path, bool is_closed_path)
+{
+  path.erase(std::unique(path.begin(), path.end()), path.end());
+  if (is_closed_path)
+    while (path.size() > 1 && path.back() == path.front()) path.pop_back();
 }
 
-static void BM_StripDuplicatesCopyVersion(benchmark::State &state) {
-  using namespace Clipper2Lib;
-  Paths64 op1;
+static void StripDuplicates_OLD(benchmark::State &state)
+{
+  for (auto _ : state) 
+  {
+    for (Path64& p: test_paths)
+      p = StripDuplicates1(p, true);
+  }
+}
 
+static void StripDuplicates_NEW(benchmark::State &state) 
+{
   for (auto _ : state) {
-    state.PauseTiming();
-    int width = (int)state.range(0);
-    int height = (int)state.range(1);
-    int count = (int)state.range(2);
-    op1.push_back(MakeRandomPoly(width, height, count));
-    state.ResumeTiming();
-    StripDuplicatesCopyVersion(op1, true);
+    for (Path64& p : test_paths)
+      StripDuplicates2(p, true); 
   }
 }
 
-static void BM_StripDuplicates(benchmark::State &state) {
-  using namespace Clipper2Lib;
-  Paths64 op1;
-  for (auto _ : state) {
-    state.PauseTiming();
-    int width = (int)state.range(0);
-    int height = (int)state.range(1);
-    int count = (int)state.range(2);
-    op1.push_back(MakeRandomPoly(width, height, count));
-    state.ResumeTiming();
-    StripDuplicates(op1, true);
-  }
-}
 
-// Register the function as a benchmark
-BENCHMARK(BM_StripDuplicatesCopyVersion)->Apply(CustomArguments);
-BENCHMARK(BM_StripDuplicates)->Apply(CustomArguments);
-// Run the benchmark
-BENCHMARK_MAIN();
+int main(int argc, char** argv)
+{  
+  const size_t max_paths = 5;
+  const int width = 6000, height = 4000, count = 10000;
+  test_paths.reserve(max_paths);
+  for (size_t i = 1; i <= max_paths; ++i)
+    test_paths.push_back(MakeRandomPoly(width, height, count));
+
+  benchmark::Initialize(0, nullptr);
+  BENCHMARK(StripDuplicates_OLD);
+  BENCHMARK(StripDuplicates_NEW);
+  benchmark::RunSpecifiedBenchmarks(benchmark::CreateDefaultDisplayReporter());
+}

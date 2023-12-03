@@ -41,12 +41,11 @@ typedef std::function<PointInPolygonResult(const Point64&, const Path64&)> PipFu
 /////////////////////////////////////////////////////////
 // PIP1: This is the current Clipper2 PointInPolygon code
 /////////////////////////////////////////////////////////
-template <typename T>
-inline PointInPolygonResult PIP1(const Point<T>& pt, const Path<T>& polygon)
+inline PointInPolygonResult PIP1(const Point64& pt, const Path64& polygon)
 {
   int val = 0;
-  typename Path<T>::const_iterator cbegin = polygon.cbegin(), first = cbegin, curr, prev;
-  typename Path<T>::const_iterator cend = polygon.cend();
+  typename Path64::const_iterator cbegin = polygon.cbegin(), first = cbegin, curr, prev;
+  typename Path64::const_iterator cend = polygon.cend();
 
   while (first != cend && first->y == pt.y) ++first;
   if (first == cend) // not a proper polygon
@@ -128,15 +127,14 @@ inline PointInPolygonResult PIP1(const Point<T>& pt, const Path<T>& polygon)
 // current Clipper2 PointInPolygon code. It's a little
 // simpler and also marginally faster.
 /////////////////////////////////////////////////////////
-template <typename T>
-inline PointInPolygonResult PIP2(const Point<T>& pt, const Path<T>& polygon)
+inline PointInPolygonResult PIP2(const Point64& pt, const Path64& polygon)
 {
   if (!polygon.size()) return PointInPolygonResult::IsOutside;
-  Path<T>::const_iterator cend = polygon.cend();
-  Path<T>::const_iterator last = cend - 1;
-  Path<T>::const_iterator first = polygon.cbegin();
-  Path<T>::const_iterator curr = first;
-  Path<T>::const_iterator prev = last;
+  Path64::const_iterator cend = polygon.cend();
+  Path64::const_iterator last = cend - 1;
+  Path64::const_iterator first = polygon.cbegin();
+  Path64::const_iterator curr = first;
+  Path64::const_iterator prev = last;
 
   bool is_above;
   if (prev->y == pt.y)
@@ -145,7 +143,7 @@ inline PointInPolygonResult PIP2(const Point<T>& pt, const Path<T>& polygon)
     if ((curr->y == pt.y) &&  ((curr->x == pt.x) ||
       ((pt.x > prev->x) == (pt.x < curr->x))))
         return PointInPolygonResult::IsOn;
-    Path<T>::const_reverse_iterator  pr = polygon.crbegin() +1;
+    Path64::const_reverse_iterator  pr = polygon.crbegin() +1;
     while (pr != polygon.crend() && pr->y == pt.y) ++pr;
     is_above = pr == polygon.crend() || pr->y < pt.y;
   }
@@ -203,14 +201,13 @@ inline PointInPolygonResult PIP2(const Point<T>& pt, const Path<T>& polygon)
 // by Jianqiang Hao et al.
 // Symmetry 2018, 10(10), 477; https://doi.org/10.3390/sym10100477
 /////////////////////////////////////////////////////////
-template <typename T>
-static PointInPolygonResult PIP3(const Point<T> &pt, const Path<T> &path)
+static PointInPolygonResult PIP3(const Point64&pt, const Path64&path)
 {
   if (!path.size()) return PointInPolygonResult::IsOutside;
-  T x1, y1, x2, y2;
+  int64_t x1, y1, x2, y2;
   int k = 0;
-  Path<T>::const_iterator itPrev = path.cend() - 1;
-  Path<T>::const_iterator itCurr = path.cbegin();
+  Path64::const_iterator itPrev = path.cend() - 1;
+  Path64::const_iterator itCurr = path.cbegin();
   for ( ; itCurr != path.cend(); ++itCurr)
   {
     y1 = itPrev->y - pt.y;
@@ -299,7 +296,7 @@ static void CustomArguments(benchmark::internal::Benchmark* b)
 
 inline PipFunction GetPIPFunc(int index)
 {
-  PointInPolygonResult(*result)(const Point64&, const Path64&);
+  PipFunction result;
   switch (index)
   {
     case 0: result = PIP1; break;
@@ -386,6 +383,7 @@ static void DoErrorTest2(int index)
     std::cout << " No errors found." << std::endl;
 }
 
+
 /////////////////////////////////////////////////////////
 // Main Entry
 /////////////////////////////////////////////////////////
@@ -398,8 +396,8 @@ int main(int argc, char** argv)
 
   //////////////////////////////////////////////////////////////
   std::cout << std::endl << SetConsoleTextColor(yellow_bold) <<
-    "Tests for errors #1:" << SetConsoleTextColor(reset) <<
-    std::endl << std::endl;
+    "Tests for errors #1:" << SetConsoleTextColor(reset) << std::endl << 
+    "(Reusing 'TestPolytreeHoles' tests)" << std::endl << std::endl;
   //////////////////////////////////////////////////////////////
 
   // #1. path is constant but points of interest change
@@ -423,8 +421,8 @@ int main(int argc, char** argv)
 
   //////////////////////////////////////////////////////////////
   std::cout << std::endl << SetConsoleTextColor(yellow_bold) <<
-    "Tests for errors #2:" << SetConsoleTextColor(reset) <<
-    std::endl << std::endl;
+    "Tests for errors #2:" << SetConsoleTextColor(reset) << std::endl <<
+    "(Testing with 'unusual' polygons)" << std::endl << std::endl;
   //////////////////////////////////////////////////////////////
 
   // #2. point of interest is now constant (10,10) but path changes
@@ -461,8 +459,7 @@ int main(int argc, char** argv)
     "Benchmarking ..." << SetConsoleTextColor(reset) << std::endl;
   //////////////////////////////////////////////////////////////
 
-  int width = 600000, height = 400000;
-  const int power10_lo = 4, power10_high = 8;
+  int width = 600000, height = 400000; count = 10000000;
   mp = Point64(width / 2, height / 2);
 
 
@@ -470,11 +467,12 @@ int main(int argc, char** argv)
     "Benchmarks 1:" << SetConsoleTextColor(reset) << std::endl;
   //////////////////////////////////////////////////////////////
   paths.clear();
-  for (int i = power10_lo; i <= power10_high; ++i)
-    paths.push_back(Ellipse(mp, width / 2.0, height / 2.0, (unsigned)std::pow(10, i)));
-  std::cout << "A single elliptical path " << std::endl <<
-    "Edge counts between 10^" << power10_lo << " and 10^" <<
-    power10_high << std::endl << std::endl;
+  for (int i = 0; i < 5; ++i)
+    paths.push_back(Ellipse(mp, width / 2.0, height / 2.0, count));
+  std::cout << "A single elliptical path (" <<
+    width << " x " << height << ")" << std::endl <<
+    "Edge count =  " << count << ". " << std::endl <<
+    "Point (" << mp << ")" << std::endl << std::endl;
 
   pipResults.clear();
   pipResults.resize(3);
@@ -485,30 +483,26 @@ int main(int argc, char** argv)
   BENCHMARK(BM_PIP2)->Apply(CustomArguments); // modified Clipper2
   BENCHMARK(BM_PIP3)->Apply(CustomArguments); // Hao et al. (2018)
   benchmark::RunSpecifiedBenchmarks(benchmark::CreateDefaultDisplayReporter());
-  benchmark::ClearRegisteredBenchmarks();
-  std::cout << std::endl;
+  
+  //benchmark::ClearRegisteredBenchmarks(); // same arguments, just different data
 
-
-  std::cout << std::endl << SetConsoleTextColor(yellow_bold) <<
+  std::cout << std::endl << std::endl << SetConsoleTextColor(yellow_bold) <<
     "Benchmarks 2:" << SetConsoleTextColor(reset) << std::endl;
   //////////////////////////////////////////////////////////////
   std::cout << "A random self-intersecting polygon (" <<
     width << " x " << height << ")" << std::endl <<
-    "Edge counts between 10^" << power10_lo << " and 10^" <<
-    power10_high << ". " << std::endl <<
+    "Edge count =  " << count << ". " << std::endl <<
     "Point (" << mp << ")" << std::endl << std::endl;
 
   paths.clear();
-  for (int i = power10_lo; i <= power10_high; ++i)
-    paths.push_back(MakeRandomPoly(width, height, (unsigned)std::pow(10, i)));
+  for (int i = 0; i < 5; ++i)
+    paths.push_back(MakeRandomPoly(width, height, count));
 
   pipResults.clear();
   pipResults.resize(3);
   for (size_t i = 0; i < 3; ++i) pipResults[i].resize(paths.size());
-  benchmark::Initialize(0, nullptr);
-  BENCHMARK(BM_PIP1)->Apply(CustomArguments); // current Clipper2
-  BENCHMARK(BM_PIP2)->Apply(CustomArguments); // modified Clipper2
-  BENCHMARK(BM_PIP3)->Apply(CustomArguments); // Hao et al. (2018)
+
+  // rerun benchmarks but this time using different polygons
   benchmark::RunSpecifiedBenchmarks(benchmark::CreateDefaultDisplayReporter());
 
   std::cout << std::endl;

@@ -23,6 +23,7 @@ set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
 message("fetching is done")
 
 set(benchmark_srcs
+    GetIntersectPtBenchmark.cpp
     PointInPolygonBenchmark.cpp
     StripDuplicateBenchmark.cpp
     # more to add
