@@ -11,7 +11,9 @@ jobs:
       with:
         node-version: '16'
     - name: Get GoogleTest
-      run: git submodule update --init
+      run: |
+        cd CPP/Tests
+        git clone https://github.com/google/googletest
     - name: Add MSBuild to PATH
       uses: microsoft/setup-msbuild@v1.0.2      
     - name: Build
@@ -32,7 +34,9 @@ jobs:
       with:
         node-version: '16'
     - name: Get GoogleTest
-      run: git submodule update --init
+      run: |
+        cd CPP/Tests
+        git clone https://github.com/google/googletest
     - name: Build
       run: |
         mkdir CPP/build
@@ -51,7 +55,9 @@ jobs:
       with:
         node-version: '16'
     - name: Get GoogleTest
-      run: git submodule update --init
+      run: |
+        cd CPP/Tests
+        git clone https://github.com/google/googletest
     - name: Install gcc 11
       run: |
         sudo apt update
@@ -75,7 +81,9 @@ jobs:
       with:
         node-version: '16'
     - name: Get GoogleTest
-      run: git submodule update --init
+      run: |
+        cd CPP/Tests
+        git clone https://github.com/google/googletest
     - name: Build
       run: |
         export CC=/usr/bin/clang
@@ -96,7 +104,9 @@ jobs:
       with:
         node-version: '16'
     - name: Get GoogleTest
-      run: git submodule update --init
+      run: |
+        cd CPP/Tests
+        git clone https://github.com/google/googletest
     - name: Install clang 13
       run: |
         wget https://apt.llvm.org/llvm.sh
@@ -122,7 +132,9 @@ jobs:
       with:
         node-version: '16'
     - name: Get GoogleTest
-      run: git submodule update --init
+      run: |
+        cd CPP/Tests
+        git clone https://github.com/google/googletest
     - name: Build
       run: |
         mkdir CPP/build
