@@ -72,7 +72,7 @@ namespace Clipper2Lib
 
   static const double MAX_DBL = (std::numeric_limits<double>::max)();
 
-  static void DoError(int error_code)
+  static void DoError([[maybe_unused]] int error_code)
   {
 #if (defined(__cpp_exceptions) && __cpp_exceptions) || (defined(__EXCEPTIONS) && __EXCEPTIONS)
     switch (error_code)
