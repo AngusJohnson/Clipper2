@@ -1,6 +1,6 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  24 November 2023                                                *
+* Date      :  9 December 2023                                                 *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2023                                         *
 * Purpose   :  Core Clipper Library structures and functions                   *
@@ -273,8 +273,17 @@ namespace Clipper2Lib
       else
       {
         left = top = (std::numeric_limits<T>::max)();
-        right = bottom = (std::numeric_limits<T>::lowest)();
+        right = bottom = std::numeric_limits<T>::lowest();
       }
+    }
+
+    static Rect<T> InvalidRect()
+    {
+      return {
+        (std::numeric_limits<T>::max)(),
+        (std::numeric_limits<T>::max)(),
+        std::numeric_limits<T>::lowest(),
+        std::numeric_limits<T>::lowest() };
     }
 
     bool IsValid() const { return left != (std::numeric_limits<T>::max)(); }
@@ -360,24 +369,16 @@ namespace Clipper2Lib
     return result;
   }
 
-  static const Rect64 InvalidRect64 = Rect64(
-    (std::numeric_limits<int64_t>::max)(),
-    (std::numeric_limits<int64_t>::max)(),
-    (std::numeric_limits<int64_t>::lowest)(),
-    (std::numeric_limits<int64_t>::lowest)());
-  static const RectD InvalidRectD = RectD(
-    (std::numeric_limits<double>::max)(),
-    (std::numeric_limits<double>::max)(),
-    (std::numeric_limits<double>::lowest)(),
-    (std::numeric_limits<double>::lowest)());
+  static const Rect64 InvalidRect64 = Rect64::InvalidRect();
+  static const RectD InvalidRectD = RectD::InvalidRect();
 
   template <typename T>
   Rect<T> GetBounds(const Path<T>& path)
   {
-    auto xmin = (std::numeric_limits<T>::max)();
-    auto ymin = (std::numeric_limits<T>::max)();
-    auto xmax = std::numeric_limits<T>::lowest();
-    auto ymax = std::numeric_limits<T>::lowest();
+    T xmin = (std::numeric_limits<T>::max)();
+    T ymin = (std::numeric_limits<T>::max)();
+    T xmax = std::numeric_limits<T>::lowest();
+    T ymax = std::numeric_limits<T>::lowest();
     for (const auto& p : path)
     {
       if (p.x < xmin) xmin = p.x;
@@ -391,17 +392,52 @@ namespace Clipper2Lib
   template <typename T>
   Rect<T> GetBounds(const Paths<T>& paths)
   {
-    auto xmin = (std::numeric_limits<T>::max)();
-    auto ymin = (std::numeric_limits<T>::max)();
-    auto xmax = std::numeric_limits<T>::lowest();
-    auto ymax = std::numeric_limits<T>::lowest();
+    T xmin = (std::numeric_limits<T>::max)();
+    T ymin = (std::numeric_limits<T>::max)();
+    T xmax = std::numeric_limits<T>::lowest();
+    T ymax = std::numeric_limits<T>::lowest();
     for (const Path<T>& path : paths)
       for (const Point<T>& p : path)
       {
+        if (p.x < xmin) xmin = p.x;
+        if (p.x > xmax) xmax = p.x;
+        if (p.y < ymin) ymin = p.y;
+        if (p.y > ymax) ymax = p.y;
+      }
+    return Rect<T>(xmin, ymin, xmax, ymax);
+  }
+
+  template <typename T, typename T2>
+  Rect<T> GetBounds(const Path<T2>& path)
+  {
+    T xmin = (std::numeric_limits<T>::max)();
+    T ymin = (std::numeric_limits<T>::max)();
+    T xmax = std::numeric_limits<T>::lowest();
+    T ymax = std::numeric_limits<T>::lowest();
+    for (const auto& p : path)
+    {
       if (p.x < xmin) xmin = p.x;
       if (p.x > xmax) xmax = p.x;
       if (p.y < ymin) ymin = p.y;
       if (p.y > ymax) ymax = p.y;
+    }
+    return Rect<T>(xmin, ymin, xmax, ymax);
+  }
+
+  template <typename T, typename T2>
+  Rect<T> GetBounds(const Paths<T2>& paths)
+  {
+    T xmin = (std::numeric_limits<T>::max)();
+    T ymin = (std::numeric_limits<T>::max)();
+    T xmax = std::numeric_limits<T>::lowest();
+    T ymax = std::numeric_limits<T>::lowest();
+    for (const Path<T2>& path : paths)
+      for (const Point<T2>& p : path)
+      {
+        if (p.x < xmin) xmin = p.x;
+        if (p.x > xmax) xmax = p.x;
+        if (p.y < ymin) ymin = p.y;
+        if (p.y > ymax) ymax = p.y;
       }
     return Rect<T>(xmin, ymin, xmax, ymax);
   }
@@ -468,10 +504,9 @@ namespace Clipper2Lib
   {
     Paths<T1> result;
 
-    if constexpr (std::numeric_limits<T1>::is_integer &&
-      !std::numeric_limits<T2>::is_integer)
+    if constexpr (std::numeric_limits<T1>::is_integer)
     {
-      RectD r = GetBounds(paths);
+      RectD r = GetBounds<double, T2>(paths);
       if ((r.left * scale_x) < min_coord ||
         (r.right * scale_x) > max_coord ||
         (r.top * scale_y) < min_coord ||

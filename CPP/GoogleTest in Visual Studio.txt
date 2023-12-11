@@ -1,12 +1,13 @@
 Installing GoogleTest in Visual Studio
 
-1. Goto https://github.com/google/googletest
-2. Click on the bright green "Code" button and then click "Download ZIP".
+1. In Clipper2's CPP/Tests folder create a subfolder named googletest.
+2. Goto https://github.com/google/googletest
+3. Click on the bright green "Code" button and then click "Download ZIP".
 3. Open the downloaded Zip package and locate the following:
    a. CMakeLists.txt 
    b. googlemock folder 
    c. googletest folder
-4. Copy these into Clipper2's empty CPP/Tests/googletest folder.
-5. In Visual Studio, open Clipper2's CPP folder and wait to see
+5. Copy these into the empty googletest folder created in step 1.
+6. In Visual Studio, open Clipper2's CPP folder and wait to see
    "CMake generation finished" in Visual Studio's statusbar.
-6. Rebuild all files (Ctrl+Shift+B).
+7. Rebuild all files (Ctrl+Shift+B).

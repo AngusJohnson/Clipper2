@@ -42,7 +42,7 @@ typedef std::function<bool(const Point64&, const Point64&,
   const Point64&, const Point64&, Point64&)> GipFunction;
 
 /////////////////////////////////////////////////////////
-// GIP1: This is the current Clipper2 GetIntersectPoint code
+// GIP_Current: This is the current Clipper2 GetIntersectPoint code
 /////////////////////////////////////////////////////////
 static bool GIP_Current(const Point64& ln1a, const Point64& ln1b,
   const Point64& ln2a, const Point64& ln2b, Point64& ip)
@@ -66,7 +66,7 @@ static bool GIP_Current(const Point64& ln1a, const Point64& ln1b,
 }
 
 /////////////////////////////////////////////////////////
-// GIP2: This is mathVertexLineLineIntersection_F
+// GIP_Func_F: This is mathVertexLineLineIntersection_F
 // https://github.com/AngusJohnson/Clipper2/issues/317#issuecomment-1314023253
 /////////////////////////////////////////////////////////
 #define CC_MIN(x,y) ((x)>(y)?(y):(x))
@@ -105,8 +105,8 @@ static bool GIP_Func_F(const Point64& ln1a, const Point64& ln1b,
 }
 
 /////////////////////////////////////////////////////////
-// GIP3: Modified mathVertexLineLineIntersection_F above.
-//       Uses static casting instead of calling nearbyint
+// GIP_F_Mod: Modified GIP_Func_F (see above).
+//            Uses static_cast instead of nearbyint.
 /////////////////////////////////////////////////////////
 #define CC_MIN(x,y) ((x)>(y)?(y):(x))
 #define CC_MAX(x,y) ((x)<(y)?(y):(x))
@@ -135,11 +135,11 @@ static bool GIP_F_Mod(const Point64& ln1a, const Point64& ln1b,
   double hitx = ((ln1dx * ln1c) - (ln2dx * ln0c)) / det;
   double hity = ((ln2dy * ln0c) - (ln1dy * ln1c)) / det;
 #if DETECT_HIT_OVERFLOW
-  if (fmax(fabs((double)originx + hitx), 
+  if (fmax(fabs((double)originx + hitx),
     fabs((double)originy + hity)) >= (double)(INT64_MAX - 1))  return false;
 #endif
   ip.x = originx + static_cast<int64_t>(hitx);
-  ip.y = originy + static_cast<int64_t>(hity);  
+  ip.y = originy + static_cast<int64_t>(hity);
   return true;
 }
 
@@ -147,21 +147,37 @@ struct TestRecord
 {
 public:
   Point64 actual, pt1, pt2, pt3, pt4;
-  Path64 results;
+  std::vector<Point64> results;
   TestRecord(int participants, const Point64& intersect_pt,
     const Point64& p1, const Point64& p2, const Point64& p3, const Point64& p4) :
-    actual(intersect_pt), pt1(p1), pt2(p2), pt3(p3), pt4(p4) { results.resize(participants); };
+    actual(intersect_pt), pt1(p1), pt2(p2), pt3(p3), pt4(p4) {
+    results.resize(participants);
+  };
 };
 
-typedef std::unique_ptr<TestRecord> TestRecord_ptr;
-typedef std::vector<TestRecord_ptr>::const_iterator test_iter;
+typedef std::vector<TestRecord>::iterator test_iter;
 
 // global data 
-std::vector<TestRecord_ptr> tests;
+std::vector<TestRecord> tests;
 
 /////////////////////////////////////////////////////////
 // Miscellaneous functions
 /////////////////////////////////////////////////////////
+
+double GetSine(const Point64& a, const Point64& b, const Point64& c)
+{
+  Point64 ab = Point64(b.x - a.x, b.y - a.y);
+  Point64 bc = Point64(b.x - c.x, b.y - c.y);
+  double dp = DotProduct(ab,bc);
+  double distSqr1 = DistanceSqr(a, b);
+  double distSqr2 = DistanceSqr(b, c);
+  // cos(A)^2 = dp^2/DistSqr(ab)/DistSqr(bc)
+  double cosSqr = dp * dp / distSqr1 / distSqr2;
+  // cos2A = cos(A)^2 * 2 - 1
+  double cos2 = cosSqr * 2 - 1;
+  // sinA = Sqrt(1-cos2A)
+  return std::sqrt(1 - cos2);
+}
 
 static inline Point64 ReflectPoint(const Point64& pt, const Point64& pivot)
 {
@@ -220,11 +236,10 @@ static void BM_GIP_Current(benchmark::State& state)
   Point64 ip;
   for (auto _ : state)
   {
-    test_iter cit = tests.cbegin();
-    for (; cit != tests.cend(); ++cit)
+    for (test_iter cit = tests.begin(); cit != tests.end(); ++cit)
     {
-      GIP_Current((*cit)->pt1, (*cit)->pt2, (*cit)->pt3, (*cit)->pt4, ip);
-      (*cit)->results[0] = ip;
+      GIP_Current((*cit).pt1, (*cit).pt2, (*cit).pt3, (*cit).pt4, ip);
+      (*cit).results[0] = ip;
     }
   }
 }
@@ -234,11 +249,10 @@ static void BM_GIP_Func_F(benchmark::State& state)
   Point64 ip;
   for (auto _ : state)
   {
-    test_iter cit = tests.cbegin();
-    for (; cit != tests.cend(); ++cit)
+    for (test_iter cit = tests.begin(); cit != tests.end(); ++cit)
     {
-      GIP_Func_F((*cit)->pt1, (*cit)->pt2, (*cit)->pt3, (*cit)->pt4, ip);
-      (*cit)->results[1] = ip;
+      GIP_Func_F((*cit).pt1, (*cit).pt2, (*cit).pt3, (*cit).pt4, ip);
+      (*cit).results[1] = ip;
     }
   }
 }
@@ -248,11 +262,10 @@ static void BM_GIP_F_Mod(benchmark::State& state)
   Point64 ip;
   for (auto _ : state)
   {
-    test_iter cit = tests.cbegin();
-    for (; cit != tests.cend(); ++cit)
+    for (test_iter cit = tests.begin(); cit != tests.end(); ++cit)
     {
-      GIP_F_Mod((*cit)->pt1, (*cit)->pt2, (*cit)->pt3, (*cit)->pt4, ip);
-      (*cit)->results[2] = ip;
+      GIP_F_Mod((*cit).pt1, (*cit).pt2, (*cit).pt3, (*cit).pt4, ip);
+      (*cit).results[2] = ip;
     }
   }
 }
@@ -265,11 +278,14 @@ int main(int argc, char** argv)
 {
 
   const int participants = 3;
+  const double deg_as_rad = 1.0 * PI / 180;
+
   //setup benchmarking ...
   benchmark::Initialize(0, nullptr);
   BENCHMARK(BM_GIP_Current);
   BENCHMARK(BM_GIP_Func_F);
   BENCHMARK(BM_GIP_F_Mod);
+  benchmark::Counter();
 
   bool first_pass = true;
   for (int current_pow10 = 12; current_pow10 <= 18; ++current_pow10)
@@ -280,48 +296,52 @@ int main(int argc, char** argv)
     int64_t max_coord = static_cast<int64_t>(pow(10, current_pow10));
     for (int64_t i = 0; i < 10000; ++i)
     {
-      Point64 ip1    = MakeRandomPoint(-max_coord, max_coord);
-      Point64 ip2    = MakeRandomPoint(-max_coord, max_coord);
+      Point64 ip1 = MakeRandomPoint(-max_coord, max_coord);
+      Point64 ip2 = MakeRandomPoint(-max_coord, max_coord);
       Point64 actual = MidPoint(ip1, ip2);
-      Point64 ip3    = MakeRandomPoint(-max_coord, max_coord);
-      Point64 ip4    = ReflectPoint(ip3, actual);
+      Point64 ip3 = MakeRandomPoint(-max_coord, max_coord);
+      Point64 ip4 = ReflectPoint(ip3, actual);
       Point64 _;
-      // excluding any segments that are collinear
-      if (!GIP_Current(ip1, ip2, ip3, ip4, _)) continue;
-      tests.push_back(std::make_unique<TestRecord>(participants, actual, ip1, ip2, ip3, ip4));
+
+      // the closer segments are to collinear, the less accurate are
+      // calculations that determine intersection points.
+      // So exclude segments that are **almost** collinear. eg. sin(1deg) ~= 0.017
+      if (std::abs(GetSine(ip1, actual, ip3)) < 0.017) continue; 
+      // alternatively, only exclude segments that are collinear
+      //if (!CrossProduct(ip1, actual, ip3)) continue;
+      tests.push_back(TestRecord(participants, actual, ip1, ip2, ip3, ip4));
     }
 
     if (first_pass)
     {
-      // only **benchmark** the GetIntersectPoint functions once because changing
+      // only benchmark the GetIntersectPoint functions once because changing
       // the maximum range of coordinates won't affect function performance.
       first_pass = false;
       std::cout << std::endl << SetConsoleTextColor(green_bold) <<
-        "Benchmark GetIntersectPoint performance ... " << SetConsoleTextColor(reset) << 
+        "Benchmark GetIntersectPoint performance ... " << SetConsoleTextColor(reset) <<
         std::endl << std::endl;
       // using each test function in the callback functions above, benchmarking 
       // will calculate and store intersect points for each TestRecord 
       benchmark::RunSpecifiedBenchmarks(benchmark::CreateDefaultDisplayReporter());
 
       std::cout << std::endl << std::endl << SetConsoleTextColor(green_bold) <<
-        "Compare function accuracy ..." << SetConsoleTextColor(reset) << std::endl << 
-        "and show how it deteriorates when using very large coordinate ranges." << std::endl << 
-        "Distance error is the distance between the calculated and actual intersection points." << std::endl << 
+        "Compare function accuracy ..." << SetConsoleTextColor(reset) << std::endl <<
+        "and show how it deteriorates when using very large coordinate ranges." << std::endl <<
+        "Distance error is the distance between the calculated and actual intersection points." << std::endl <<
         "The largest errors will occur whenever intersecting segments are almost collinear." << std::endl;
-    } 
+    }
     else
     {
       for (int i = 0; i < participants; ++i)
       {
         // although we're not benchmarking, we still need to collect the calculated
-        // intersect points of each TestRecord using each participating test function
+        // intersect points of each TestRecord for each participating function.
         Point64 ip;
         GipFunction gip_func = GetGipFunc(i);
-        test_iter cit = tests.cbegin();
-        for (; cit != tests.cend(); ++cit)
+        for (test_iter cit = tests.begin(); cit != tests.end(); ++cit)
         {
-          gip_func((*cit)->pt1, (*cit)->pt2, (*cit)->pt3, (*cit)->pt4, ip);
-          (*cit)->results[i] = ip;
+          gip_func((*cit).pt1, (*cit).pt2, (*cit).pt3, (*cit).pt4, ip);
+          (*cit).results[i] = ip;
         }
       }
     }
@@ -329,24 +349,23 @@ int main(int argc, char** argv)
     double avg_dists[participants] = { 0 };
     double worst_dists[participants] = { 0 };
 
-    std::vector<TestRecord_ptr>::const_iterator cit = tests.cbegin();
-    for (; cit != tests.cend(); ++cit)
+    for (test_iter cit = tests.begin(); cit != tests.end(); ++cit)
       for (int i = 0; i < participants; ++i)
       {
-        double dist = Distance((*cit)->actual, (*cit)->results[i]);
+        double dist = Distance((*cit).actual, (*cit).results[i]);
         avg_dists[i] += dist;
         if (dist > worst_dists[i])  worst_dists[i] = dist;
       }
 
     std::cout << std::endl << SetConsoleTextColor(cyan_bold) <<
-      "Coordinate ranges between  +/-10^" << current_pow10 << 
+      "Coordinate ranges between  +/-10^" << current_pow10 <<
       SetConsoleTextColor(reset) << std::endl;
 
     for (int i = 0; i < participants; ++i)
     {
       avg_dists[i] /= tests.size();
-      std::cout << std::fixed << GetGipFuncName(i) << 
-        ": average distance error = " << std::setprecision(2) << avg_dists[i] << 
+      std::cout << std::fixed << GetGipFuncName(i) <<
+        ": average distance error = " << std::setprecision(2) << avg_dists[i] <<
         "; largest dist. = " << std::setprecision(0) << worst_dists[i] << std::endl;
     }
     tests.clear();

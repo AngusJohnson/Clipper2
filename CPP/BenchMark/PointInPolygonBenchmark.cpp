@@ -308,10 +308,7 @@ inline PipFunction GetPIPFunc(int index)
 }
 
 /////////////////////////////////////////////////////////
-// Test functions
-/////////////////////////////////////////////////////////
-
-// DoErrorTest1
+// Error checking functions
 /////////////////////////////////////////////////////////
 
 static void DoErrorTest1_internal(const Path64& pts_of_int, const Paths64& paths,
@@ -359,8 +356,6 @@ static void DoErrorTest1(int index)
     pip_func, PointInPolygonResult::IsInside);
 }
 
-// DoErrorTest2
-/////////////////////////////////////////////////////////
 static void DoErrorTest2(int index)
 {
   PipFunction pip_func = GetPIPFunc(index);
@@ -395,12 +390,15 @@ int main(int argc, char** argv)
     std::endl;
 
   //////////////////////////////////////////////////////////////
+  // 1. Very basic error testing 
+  //////////////////////////////////////////////////////////////
+
   std::cout << std::endl << SetConsoleTextColor(yellow_bold) <<
     "Tests for errors #1:" << SetConsoleTextColor(reset) << std::endl << 
     "(Reusing 'TestPolytreeHoles' tests)" << std::endl << std::endl;
-  //////////////////////////////////////////////////////////////
 
-  // #1. path is constant but points of interest change
+
+  // 1a. use const path with changing points of interest
 
   Paths64 subject, subject_open, clip;
   ClipType ct = ClipType::None;
@@ -419,13 +417,12 @@ int main(int argc, char** argv)
 
   for (int i = 0; i < 3; ++i) DoErrorTest1(i);
 
-  //////////////////////////////////////////////////////////////
+
+  // 1b. Use a const point of interest (10,10) against various paths
+
   std::cout << std::endl << SetConsoleTextColor(yellow_bold) <<
     "Tests for errors #2:" << SetConsoleTextColor(reset) << std::endl <<
     "(Testing with 'unusual' polygons)" << std::endl << std::endl;
-  //////////////////////////////////////////////////////////////
-
-  // #2. point of interest is now constant (10,10) but path changes
 
   mp = Point64(10, 10);
   paths.clear();
@@ -453,11 +450,10 @@ int main(int argc, char** argv)
   for (int i = 0; i < 3; ++i) DoErrorTest2(i);
   std::cout << std::endl;
 
+  // 2. Benchmark functions
 
-  //////////////////////////////////////////////////////////////
   std::cout << std::endl << SetConsoleTextColor(cyan_bold) <<
     "Benchmarking ..." << SetConsoleTextColor(reset) << std::endl;
-  //////////////////////////////////////////////////////////////
 
   int width = 600000, height = 400000; count = 10000000;
   mp = Point64(width / 2, height / 2);
@@ -465,7 +461,7 @@ int main(int argc, char** argv)
 
   std::cout << std::endl << SetConsoleTextColor(yellow_bold) <<
     "Benchmarks 1:" << SetConsoleTextColor(reset) << std::endl;
-  //////////////////////////////////////////////////////////////
+
   paths.clear();
   for (int i = 0; i < 5; ++i)
     paths.push_back(Ellipse(mp, width / 2.0, height / 2.0, count));
@@ -484,11 +480,9 @@ int main(int argc, char** argv)
   BENCHMARK(BM_PIP3)->Apply(CustomArguments); // Hao et al. (2018)
   benchmark::RunSpecifiedBenchmarks(benchmark::CreateDefaultDisplayReporter());
   
-  //benchmark::ClearRegisteredBenchmarks(); // same arguments, just different data
-
   std::cout << std::endl << std::endl << SetConsoleTextColor(yellow_bold) <<
     "Benchmarks 2:" << SetConsoleTextColor(reset) << std::endl;
-  //////////////////////////////////////////////////////////////
+
   std::cout << "A random self-intersecting polygon (" <<
     width << " x " << height << ")" << std::endl <<
     "Edge count =  " << count << ". " << std::endl <<
@@ -502,7 +496,7 @@ int main(int argc, char** argv)
   pipResults.resize(3);
   for (size_t i = 0; i < 3; ++i) pipResults[i].resize(paths.size());
 
-  // rerun benchmarks but this time using different polygons
+  // rerun benchmarks using different polygons
   benchmark::RunSpecifiedBenchmarks(benchmark::CreateDefaultDisplayReporter());
 
   std::cout << std::endl;
