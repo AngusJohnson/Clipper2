@@ -1,6 +1,6 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  18 November 2023                                                *
+* Date      :  13 December 2023                                                *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2023                                         *
 * Purpose   :  This module provides a simple interface to the Clipper Library  *
@@ -47,7 +47,7 @@ namespace Clipper2Lib {
     const PathsD& subjects, const PathsD& clips, int precision = 2)
   {
     int error_code = 0;
-    CheckPrecision(precision, error_code);
+    CheckPrecisionRange(precision, error_code);
     PathsD result;
     if (error_code) return result;
     ClipperD clipper(precision);
@@ -63,7 +63,7 @@ namespace Clipper2Lib {
   {
     polytree.Clear();
     int error_code = 0;
-    CheckPrecision(precision, error_code);
+    CheckPrecisionRange(precision, error_code);
     if (error_code) return;
     ClipperD clipper(precision);
     clipper.AddSubject(subjects);
@@ -104,7 +104,7 @@ namespace Clipper2Lib {
   {
     PathsD result;
     int error_code = 0;
-    CheckPrecision(precision, error_code);
+    CheckPrecisionRange(precision, error_code);
     if (error_code) return result;
     ClipperD clipper(precision);
     clipper.AddSubject(subjects);
@@ -149,7 +149,7 @@ namespace Clipper2Lib {
     int precision = 2, double arc_tolerance = 0.0)
   {
     int error_code = 0;
-    CheckPrecision(precision, error_code);
+    CheckPrecisionRange(precision, error_code);
     if (!delta) return paths;
     if (error_code) return PathsD();
     const double scale = std::pow(10, precision);
@@ -219,7 +219,7 @@ namespace Clipper2Lib {
   {
     if (rect.IsEmpty() || paths.empty()) return PathsD();
     int error_code = 0;
-    CheckPrecision(precision, error_code);
+    CheckPrecisionRange(precision, error_code);
     if (error_code) return PathsD();
     const double scale = std::pow(10, precision);
     Rect64 r = ScaleRect<int64_t, double>(rect, scale);
@@ -251,7 +251,7 @@ namespace Clipper2Lib {
   {
     if (rect.IsEmpty() || lines.empty()) return PathsD();
     int error_code = 0;
-    CheckPrecision(precision, error_code);
+    CheckPrecisionRange(precision, error_code);
     if (error_code) return PathsD();
     const double scale = std::pow(10, precision);
     Rect64 r = ScaleRect<int64_t, double>(rect, scale);
@@ -545,7 +545,7 @@ namespace Clipper2Lib {
   inline PathD TrimCollinear(const PathD& path, int precision, bool is_open_path = false)
   {
     int error_code = 0;
-    CheckPrecision(precision, error_code);
+    CheckPrecisionRange(precision, error_code);
     if (error_code) return PathD();
     const double scale = std::pow(10, precision);
     Path64 p = ScalePath<int64_t, double>(path, scale, error_code);

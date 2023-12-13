@@ -1,6 +1,6 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  22 November 2023                                                *
+* Date      :  13 December 2023                                                *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2023                                         *
 * Purpose   :  This is the main polygon clipping module                        *
@@ -530,7 +530,7 @@ namespace Clipper2Lib {
 	public:
 		explicit ClipperD(int precision = 2) : ClipperBase()
 		{
-			CheckPrecision(precision, error_code_);
+			CheckPrecisionRange(precision, error_code_);
 			// to optimize scaling / descaling precision
 			// set the scale to a power of double's radix (2) (#25)
 			scale_ = std::pow(std::numeric_limits<double>::radix,

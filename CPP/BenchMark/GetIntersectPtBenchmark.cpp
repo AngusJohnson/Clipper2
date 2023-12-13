@@ -38,6 +38,40 @@ public:
 //////////////////////////////////////////////////////////////////////////////////////
 
 
+/////////////////////////////////////////////////////////
+// Miscellaneous functions
+/////////////////////////////////////////////////////////
+
+double GetSineAbc(const Point64& a, const Point64& b, const Point64& c)
+{
+  double dpB = DotProduct(a, b, c);
+  double SqrCosB = dpB * dpB / (DistanceSqr(a, b) * DistanceSqr(b, c));
+  double cos2B = SqrCosB * 2 - 1; // trig. itentity
+  return std::sqrt(1 - cos2B);    // sin(B) = Sqrt(1-cos(2B))
+}
+
+static inline Point64 ReflectPoint(const Point64& pt, const Point64& pivot)
+{
+  return Point64(pivot.x + (pivot.x - pt.x), pivot.y + (pivot.y - pt.y));
+}
+
+static inline Point64 MidPoint(const Point64& p1, const Point64& p2)
+{
+  Point64 result;
+  result.x = (p1.x + p2.x) / 2;
+  result.y = (p1.y + p2.y) / 2;
+  return result;
+}
+
+static inline Point64 MakeRandomPoint(int64_t min_val, int64_t max_val)
+{
+  std::random_device rd;
+  std::mt19937 gen(rd());
+  std::uniform_int_distribution<int64_t> x(min_val, max_val);
+  std::uniform_int_distribution<int64_t> y(min_val, max_val);
+  return Point64(x(gen), y(gen));
+}
+
 typedef std::function<bool(const Point64&, const Point64&,
   const Point64&, const Point64&, Point64&)> GipFunction;
 
@@ -106,7 +140,9 @@ static bool GIP_Func_F(const Point64& ln1a, const Point64& ln1b,
 
 /////////////////////////////////////////////////////////
 // GIP_F_Mod: Modified GIP_Func_F (see above).
-//            Uses static_cast instead of nearbyint.
+// Uses static_cast instead of nearbyint. Surprisingly,
+// while faster here, this is much slower than GIP_Func_F 
+// when replacing GetIntersectPoint() in clipper.core.h.
 /////////////////////////////////////////////////////////
 #define CC_MIN(x,y) ((x)>(y)?(y):(x))
 #define CC_MAX(x,y) ((x)<(y)?(y):(x))
@@ -160,46 +196,6 @@ typedef std::vector<TestRecord>::iterator test_iter;
 // global data 
 std::vector<TestRecord> tests;
 
-/////////////////////////////////////////////////////////
-// Miscellaneous functions
-/////////////////////////////////////////////////////////
-
-double GetSine(const Point64& a, const Point64& b, const Point64& c)
-{
-  Point64 ab = Point64(b.x - a.x, b.y - a.y);
-  Point64 bc = Point64(b.x - c.x, b.y - c.y);
-  double dp = DotProduct(ab,bc);
-  double distSqr1 = DistanceSqr(a, b);
-  double distSqr2 = DistanceSqr(b, c);
-  // cos(A)^2 = dp^2/DistSqr(ab)/DistSqr(bc)
-  double cosSqr = dp * dp / distSqr1 / distSqr2;
-  // cos2A = cos(A)^2 * 2 - 1
-  double cos2 = cosSqr * 2 - 1;
-  // sinA = Sqrt(1-cos2A)
-  return std::sqrt(1 - cos2);
-}
-
-static inline Point64 ReflectPoint(const Point64& pt, const Point64& pivot)
-{
-  return Point64(pivot.x + (pivot.x - pt.x), pivot.y + (pivot.y - pt.y));
-}
-
-static inline Point64 MidPoint(const Point64& p1, const Point64& p2)
-{
-  Point64 result;
-  result.x = (p1.x + p2.x) / 2;
-  result.y = (p1.y + p2.y) / 2;
-  return result;
-}
-
-static inline Point64 MakeRandomPoint(int64_t min_val, int64_t max_val)
-{
-  std::random_device rd;
-  std::mt19937 gen(rd());
-  std::uniform_int_distribution<int64_t> x(min_val, max_val);
-  std::uniform_int_distribution<int64_t> y(min_val, max_val);
-  return Point64(x(gen), y(gen));
-}
 
 static inline GipFunction GetGipFunc(int index)
 {
@@ -285,7 +281,6 @@ int main(int argc, char** argv)
   BENCHMARK(BM_GIP_Current);
   BENCHMARK(BM_GIP_Func_F);
   BENCHMARK(BM_GIP_F_Mod);
-  benchmark::Counter();
 
   bool first_pass = true;
   for (int current_pow10 = 12; current_pow10 <= 18; ++current_pow10)
@@ -294,7 +289,7 @@ int main(int argc, char** argv)
     // at their midpoints, while using random coordinates that are 
     // restricted to the specified power of 10 range
     int64_t max_coord = static_cast<int64_t>(pow(10, current_pow10));
-    for (int64_t i = 0; i < 10000; ++i)
+    for (int64_t i = 0; i < 100000; ++i)
     {
       Point64 ip1 = MakeRandomPoint(-max_coord, max_coord);
       Point64 ip2 = MakeRandomPoint(-max_coord, max_coord);
@@ -306,7 +301,7 @@ int main(int argc, char** argv)
       // the closer segments are to collinear, the less accurate are
       // calculations that determine intersection points.
       // So exclude segments that are **almost** collinear. eg. sin(1deg) ~= 0.017
-      if (std::abs(GetSine(ip1, actual, ip3)) < 0.017) continue; 
+      if (std::abs(GetSineAbc(ip1, actual, ip3)) < 0.017) continue;
       // alternatively, only exclude segments that are collinear
       //if (!CrossProduct(ip1, actual, ip3)) continue;
       tests.push_back(TestRecord(participants, actual, ip1, ip2, ip3, ip4));

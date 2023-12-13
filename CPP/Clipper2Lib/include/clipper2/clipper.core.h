@@ -1,6 +1,6 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  9 December 2023                                                 *
+* Date      :  13 December 2023                                                *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2023                                         *
 * Purpose   :  Core Clipper Library structures and functions                   *
@@ -58,10 +58,10 @@ namespace Clipper2Lib
   static const double PI = 3.141592653589793238;
 #endif
 
-#ifdef CLIPPER2_MAX_PRECISION
-  const int MAX_DECIMAL_PRECISION = CLIPPER2_MAX_PRECISION;
+#ifdef CLIPPER2_MAX_DECIMAL_PRECISION
+  const int CLIPPER2_MAX_DEC_PRECISION = CLIPPER2_MAX_DECIMAL_PRECISION;
 #else
-  const int MAX_DECIMAL_PRECISION = 8; // see Discussions #564
+  const int CLIPPER2_MAX_DEC_PRECISION = 8; // see Discussions #564
 #endif
 
   static const int64_t MAX_COORD = INT64_MAX >> 2;
@@ -242,6 +242,14 @@ namespace Clipper2Lib
     (std::numeric_limits<double>::max)(),
     (std::numeric_limits<double>::max)());
 
+  template<typename T>
+  static inline Point<T> MidPoint(const Point<T>& p1, const Point<T>& p2)
+  {
+    Point<T> result;
+    result.x = (p1.x + p2.x) / 2;
+    result.y = (p1.y + p2.y) / 2;
+    return result;
+  }
 
   // Rect ------------------------------------------------------------------------
 
@@ -623,18 +631,19 @@ namespace Clipper2Lib
 
   // Miscellaneous ------------------------------------------------------------
 
-  inline void CheckPrecision(int& precision, int& error_code)
+  inline void CheckPrecisionRange(int& precision, int& error_code)
   {
-    if (precision >= -MAX_DECIMAL_PRECISION && precision <= MAX_DECIMAL_PRECISION) return;
+    if (precision >= -CLIPPER2_MAX_DEC_PRECISION &&
+      precision <= CLIPPER2_MAX_DEC_PRECISION) return;
     error_code |= precision_error_i; // non-fatal error
-    DoError(precision_error_i);      // does nothing unless exceptions enabled
-    precision = precision > 0 ? MAX_DECIMAL_PRECISION : -MAX_DECIMAL_PRECISION;
+    DoError(precision_error_i);      // does nothing when exceptions are disabled
+    precision = precision > 0 ? CLIPPER2_MAX_DEC_PRECISION : -CLIPPER2_MAX_DEC_PRECISION;
   }
 
-  inline void CheckPrecision(int& precision)
+  inline void CheckPrecisionRange(int& precision)
   {
     int error_code = 0;
-    CheckPrecision(precision, error_code);
+    CheckPrecisionRange(precision, error_code);
   }
 
   template <typename T>
@@ -721,6 +730,40 @@ namespace Clipper2Lib
     return Area<T>(poly) >= 0;
   }
 
+#if CLIPPER2_HI_PRECISION 
+  // caution: this will compromise performance
+  // https://github.com/AngusJohnson/Clipper2/issues/317#issuecomment-1314023253
+  // See also CPP/BenchMark/GetIntersectPtBenchmark.cpp
+  #define CC_MIN(x,y) ((x)>(y)?(y):(x))
+  #define CC_MAX(x,y) ((x)<(y)?(y):(x))
+  inline bool GetIntersectPoint(const Point64& ln1a, const Point64& ln1b,
+    const Point64& ln2a, const Point64& ln2b, Point64& ip)
+  {
+    double ln1dy = (double)(ln1b.y - ln1a.y);
+    double ln1dx = (double)(ln1a.x - ln1b.x);
+    double ln2dy = (double)(ln2b.y - ln2a.y);
+    double ln2dx = (double)(ln2a.x - ln2b.x);
+    double det = (ln2dy * ln1dx) - (ln1dy * ln2dx);
+    if (det == 0.0) return false;
+    int64_t bb0minx = CC_MIN(ln1a.x, ln1b.x);
+    int64_t bb0miny = CC_MIN(ln1a.y, ln1b.y);
+    int64_t bb0maxx = CC_MAX(ln1a.x, ln1b.x);
+    int64_t bb0maxy = CC_MAX(ln1a.y, ln1b.y);
+    int64_t bb1minx = CC_MIN(ln2a.x, ln2b.x);
+    int64_t bb1miny = CC_MIN(ln2a.y, ln2b.y);
+    int64_t bb1maxx = CC_MAX(ln2a.x, ln2b.x);
+    int64_t bb1maxy = CC_MAX(ln2a.y, ln2b.y);
+    int64_t originx = (CC_MIN(bb0maxx, bb1maxx) + CC_MAX(bb0minx, bb1minx)) >> 1;
+    int64_t originy = (CC_MIN(bb0maxy, bb1maxy) + CC_MAX(bb0miny, bb1miny)) >> 1;
+    double ln0c = (ln1dy * (double)(ln1a.x - originx)) + (ln1dx * (double)(ln1a.y - originy));
+    double ln1c = (ln2dy * (double)(ln2a.x - originx)) + (ln2dx * (double)(ln2a.y - originy));
+    double hitx = ((ln1dx * ln1c) - (ln2dx * ln0c)) / det;
+    double hity = ((ln2dy * ln0c) - (ln1dy * ln1c)) / det;
+    ip.x = originx + (int64_t)nearbyint(hitx);
+    ip.y = originy + (int64_t)nearbyint(hity);
+    return true;
+}
+#else 
   inline bool GetIntersectPoint(const Point64& ln1a, const Point64& ln1b,
     const Point64& ln2a, const Point64& ln2b, Point64& ip)
   {
@@ -733,15 +776,16 @@ namespace Clipper2Lib
     double det = dy1 * dx2 - dy2 * dx1;
     if (det == 0.0) return false;
     double t = ((ln1a.x - ln2a.x) * dy2 - (ln1a.y - ln2a.y) * dx2) / det;
-    if (t <= 0.0) ip = ln1a;        // ?? check further (see also #568)
-    else if (t >= 1.0) ip = ln1b;   // ?? check further
+    if (t <= 0.0) ip = ln1a;        
+    else if (t >= 1.0) ip = ln1b;
     else
     {
       ip.x = static_cast<int64_t>(ln1a.x + t * dx1);
       ip.y = static_cast<int64_t>(ln1a.y + t * dy1);
-    }
+  }
     return true;
   }
+#endif
 
   inline bool SegmentsIntersect(const Point64& seg1a, const Point64& seg1b,
     const Point64& seg2a, const Point64& seg2b, bool inclusive = false)
