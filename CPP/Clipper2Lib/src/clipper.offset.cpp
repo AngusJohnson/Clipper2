@@ -216,53 +216,6 @@ void ClipperOffset::BuildNormals(const Path64& path)
 	norms.push_back(GetUnitNormal(*path_stop_iter, *(path.cbegin())));
 }
 
-inline PointD TranslatePoint(const PointD& pt, double dx, double dy)
-{
-#ifdef USINGZ
-	return PointD(pt.x + dx, pt.y + dy, pt.z);
-#else
-	return PointD(pt.x + dx, pt.y + dy);
-#endif
-}
-
-inline PointD ReflectPoint(const PointD& pt, const PointD& pivot)
-{
-#ifdef USINGZ
-	return PointD(pivot.x + (pivot.x - pt.x), pivot.y + (pivot.y - pt.y), pt.z);
-#else
-	return PointD(pivot.x + (pivot.x - pt.x), pivot.y + (pivot.y - pt.y));
-#endif
-}
-
-PointD IntersectPoint(const PointD& pt1a, const PointD& pt1b,
-	const PointD& pt2a, const PointD& pt2b)
-{
-	if (pt1a.x == pt1b.x) //vertical
-	{
-		if (pt2a.x == pt2b.x) return PointD(0, 0);
-
-		double m2 = (pt2b.y - pt2a.y) / (pt2b.x - pt2a.x);
-		double b2 = pt2a.y - m2 * pt2a.x;
-		return PointD(pt1a.x, m2 * pt1a.x + b2);
-	}
-	else if (pt2a.x == pt2b.x) //vertical
-	{
-		double m1 = (pt1b.y - pt1a.y) / (pt1b.x - pt1a.x);
-		double b1 = pt1a.y - m1 * pt1a.x;
-		return PointD(pt2a.x, m1 * pt2a.x + b1);
-	}
-	else
-	{
-		double m1 = (pt1b.y - pt1a.y) / (pt1b.x - pt1a.x);
-		double b1 = pt1a.y - m1 * pt1a.x;
-		double m2 = (pt2b.y - pt2a.y) / (pt2b.x - pt2a.x);
-		double b2 = pt2a.y - m2 * pt2a.x;
-		if (m1 == m2) return PointD(0, 0);
-		double x = (b2 - b1) / (m1 - m2);
-		return PointD(x, m1 * x + b1);
-	}
-}
-
 void ClipperOffset::DoBevel(const Path64& path, size_t j, size_t k)
 {
 	PointD pt1, pt2;
@@ -304,10 +257,8 @@ void ClipperOffset::DoSquare(const Path64& path, size_t j, size_t k)
 	if (j == k)
 	{
 		PointD pt4 = PointD(pt3.x + vec.x * group_delta_, pt3.y + vec.y * group_delta_);
-		PointD pt = IntersectPoint(pt1, pt2, pt3, pt4);
-#ifdef USINGZ
-		pt.z = ptQ.z;
-#endif
+		PointD pt = ptQ;
+		GetIntersectPoint(pt1, pt2, pt3, pt4, pt);
 		//get the second intersect point through reflecion
 		path_out.push_back(Point64(ReflectPoint(pt, ptQ)));
 		path_out.push_back(Point64(pt));
@@ -315,10 +266,8 @@ void ClipperOffset::DoSquare(const Path64& path, size_t j, size_t k)
 	else
 	{
 		PointD pt4 = GetPerpendicD(path[j], norms[k], group_delta_);
-		PointD pt = IntersectPoint(pt1, pt2, pt3, pt4);
-#ifdef USINGZ
-		pt.z = ptQ.z;
-#endif
+		PointD pt = ptQ;
+		GetIntersectPoint(pt1, pt2, pt3, pt4, pt);
 		path_out.push_back(Point64(pt));
 		//get the second intersect point through reflecion
 		path_out.push_back(Point64(ReflectPoint(pt, ptQ)));

@@ -252,10 +252,13 @@ static PointInPolygonResult PIP3(const Point64&pt, const Path64&path)
 // global data structures
 /////////////////////////////////////////////////////////
 
+const Path64 points_of_interest_outside = 
+  MakePath({ 21887,10420, 21726,10825, 21662,10845, 21617,10890 });
+const Path64 points_of_interest_inside =
+  MakePath({ 21887,10430, 21843,10520, 21810,10686, 21900,10461 });
+
 Point64 mp;
 Paths64 paths;
-Path64 points_of_interest_outside;
-Path64 points_of_interest_inside;
 std::vector < std::vector<PointInPolygonResult> > pipResults;
 
 
@@ -397,26 +400,20 @@ int main(int argc, char** argv)
     "Tests for errors #1:" << SetConsoleTextColor(reset) << std::endl << 
     "(Reusing 'TestPolytreeHoles' tests)" << std::endl << std::endl;
 
-
-  // 1a. use const path with changing points of interest
+  // 1a. use const paths (PolytreeHoleOwner2.txt) with changing points of interest
 
   Paths64 subject, subject_open, clip;
-  ClipType ct = ClipType::None;
-  FillRule fr = FillRule::EvenOdd;
-  int64_t area = 0, count = 0;
+  int64_t _, __;
+  ClipType ___;
+  FillRule ____;
   const std::string test_file = "../../../../../Tests/PolytreeHoleOwner2.txt";
-  points_of_interest_outside =
-    MakePath({ 21887,10420, 21726,10825, 21662,10845, 21617,10890 });
-  points_of_interest_inside =
-    MakePath({ 21887,10430, 21843,10520, 21810,10686, 21900,10461 });
   if (!FileExists(test_file)) return 1;
   std::ifstream ifs(test_file);
   if (!ifs || !ifs.good()) return 1;
-  LoadTestNum(ifs, 1, paths, subject_open, clip, area, count, ct, fr);
+  LoadTestNum(ifs, 1, paths, subject_open, clip, _, __, ___, ____);
   ifs.close();
-
+    
   for (int i = 0; i < 3; ++i) DoErrorTest1(i);
-
 
   // 1b. Use a const point of interest (10,10) against various paths
 
@@ -454,8 +451,11 @@ int main(int argc, char** argv)
 
   std::cout << std::endl << SetConsoleTextColor(cyan_bold) <<
     "Benchmarking ..." << SetConsoleTextColor(reset) << std::endl;
+  std::cout << "Note: function performance varies depending on the proportion of edges" << 
+    std::endl << "that intersect with an imaginary horizontal line passing through the" <<
+    std::endl << "point of interest." << std::endl << std::endl;
 
-  int width = 600000, height = 400000; count = 10000000;
+  unsigned int width = 600000, height = 400000, count = 10000000;
   mp = Point64(width / 2, height / 2);
 
 

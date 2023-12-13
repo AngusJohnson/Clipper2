@@ -736,36 +736,48 @@ namespace Clipper2Lib
   // See also CPP/BenchMark/GetIntersectPtBenchmark.cpp
   #define CC_MIN(x,y) ((x)>(y)?(y):(x))
   #define CC_MAX(x,y) ((x)<(y)?(y):(x))
-  inline bool GetIntersectPoint(const Point64& ln1a, const Point64& ln1b,
-    const Point64& ln2a, const Point64& ln2b, Point64& ip)
+  template<typename T>
+  inline bool GetIntersectPoint(const Point<T>& ln1a, const Point<T>& ln1b,
+    const Point<T>& ln2a, const Point<T>& ln2b, Point<T>& ip)
   {
-    double ln1dy = (double)(ln1b.y - ln1a.y);
-    double ln1dx = (double)(ln1a.x - ln1b.x);
-    double ln2dy = (double)(ln2b.y - ln2a.y);
-    double ln2dx = (double)(ln2a.x - ln2b.x);
+    double ln1dy = static_cast<double>(ln1b.y - ln1a.y);
+    double ln1dx = static_cast<double>(ln1a.x - ln1b.x);
+    double ln2dy = static_cast<double>(ln2b.y - ln2a.y);
+    double ln2dx = static_cast<double>(ln2a.x - ln2b.x);
     double det = (ln2dy * ln1dx) - (ln1dy * ln2dx);
     if (det == 0.0) return false;
-    int64_t bb0minx = CC_MIN(ln1a.x, ln1b.x);
-    int64_t bb0miny = CC_MIN(ln1a.y, ln1b.y);
-    int64_t bb0maxx = CC_MAX(ln1a.x, ln1b.x);
-    int64_t bb0maxy = CC_MAX(ln1a.y, ln1b.y);
-    int64_t bb1minx = CC_MIN(ln2a.x, ln2b.x);
-    int64_t bb1miny = CC_MIN(ln2a.y, ln2b.y);
-    int64_t bb1maxx = CC_MAX(ln2a.x, ln2b.x);
-    int64_t bb1maxy = CC_MAX(ln2a.y, ln2b.y);
-    int64_t originx = (CC_MIN(bb0maxx, bb1maxx) + CC_MAX(bb0minx, bb1minx)) >> 1;
-    int64_t originy = (CC_MIN(bb0maxy, bb1maxy) + CC_MAX(bb0miny, bb1miny)) >> 1;
-    double ln0c = (ln1dy * (double)(ln1a.x - originx)) + (ln1dx * (double)(ln1a.y - originy));
-    double ln1c = (ln2dy * (double)(ln2a.x - originx)) + (ln2dx * (double)(ln2a.y - originy));
+    T bb0minx = CC_MIN(ln1a.x, ln1b.x);
+    T bb0miny = CC_MIN(ln1a.y, ln1b.y);
+    T bb0maxx = CC_MAX(ln1a.x, ln1b.x);
+    T bb0maxy = CC_MAX(ln1a.y, ln1b.y);
+    T bb1minx = CC_MIN(ln2a.x, ln2b.x);
+    T bb1miny = CC_MIN(ln2a.y, ln2b.y);
+    T bb1maxx = CC_MAX(ln2a.x, ln2b.x);
+    T bb1maxy = CC_MAX(ln2a.y, ln2b.y);
+    T originx = (CC_MIN(bb0maxx, bb1maxx) + CC_MAX(bb0minx, bb1minx)) >> 1;
+    T originy = (CC_MIN(bb0maxy, bb1maxy) + CC_MAX(bb0miny, bb1miny)) >> 1;
+    double ln0c = (ln1dy * static_cast<double>(ln1a.x - originx)) + 
+      (ln1dx * static_cast<double>(ln1a.y - originy));
+    double ln1c = (ln2dy * static_cast<double>(ln2a.x - originx)) + 
+      (ln2dx * static_cast<double>(ln2a.y - originy));
     double hitx = ((ln1dx * ln1c) - (ln2dx * ln0c)) / det;
     double hity = ((ln2dy * ln0c) - (ln1dy * ln1c)) / det;
-    ip.x = originx + (int64_t)nearbyint(hitx);
-    ip.y = originy + (int64_t)nearbyint(hity);
+    if constexpr (std::numeric_limits<T>::is_integer)
+    {
+      ip.x = originx + (T)nearbyint(hitx);
+      ip.y = originy + (T)nearbyint(hity);
+    }
+    else
+    {
+      ip.x = originx + static_cast<T>(hitx);
+      ip.y = originy + static_cast<T>(hity);
+    }
     return true;
 }
 #else 
-  inline bool GetIntersectPoint(const Point64& ln1a, const Point64& ln1b,
-    const Point64& ln2a, const Point64& ln2b, Point64& ip)
+  template<typename T>
+  inline bool GetIntersectPoint(const Point<T>& ln1a, const Point<T>& ln1b,
+    const Point<T>& ln2a, const Point<T>& ln2b, Point<T>& ip)
   {
     // https://en.wikipedia.org/wiki/Line%E2%80%93line_intersection
     double dx1 = static_cast<double>(ln1b.x - ln1a.x);
@@ -780,12 +792,33 @@ namespace Clipper2Lib
     else if (t >= 1.0) ip = ln1b;
     else
     {
-      ip.x = static_cast<int64_t>(ln1a.x + t * dx1);
-      ip.y = static_cast<int64_t>(ln1a.y + t * dy1);
+      ip.x = static_cast<T>(ln1a.x + t * dx1);
+      ip.y = static_cast<T>(ln1a.y + t * dy1);
   }
     return true;
   }
 #endif
+
+  template<typename T>
+  inline Point<T> TranslatePoint(const Point<T>& pt, double dx, double dy)
+  {
+#ifdef USINGZ
+    return Point<T>(pt.x + dx, pt.y + dy, pt.z);
+#else
+    return Point<T>(pt.x + dx, pt.y + dy);
+#endif
+  }
+
+
+  template<typename T>
+  inline Point<T> ReflectPoint(const Point<T>& pt, const Point<T>& pivot)
+  {
+#ifdef USINGZ
+    return Point<T>(pivot.x + (pivot.x - pt.x), pivot.y + (pivot.y - pt.y), pt.z);
+#else
+    return Point<T>(pivot.x + (pivot.x - pt.x), pivot.y + (pivot.y - pt.y));
+#endif
+  }
 
   inline bool SegmentsIntersect(const Point64& seg1a, const Point64& seg1b,
     const Point64& seg2a, const Point64& seg2b, bool inclusive = false)

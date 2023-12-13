@@ -50,19 +50,6 @@ double GetSineAbc(const Point64& a, const Point64& b, const Point64& c)
   return std::sqrt(1 - cos2B);    // sin(B) = Sqrt(1-cos(2B))
 }
 
-static inline Point64 ReflectPoint(const Point64& pt, const Point64& pivot)
-{
-  return Point64(pivot.x + (pivot.x - pt.x), pivot.y + (pivot.y - pt.y));
-}
-
-static inline Point64 MidPoint(const Point64& p1, const Point64& p2)
-{
-  Point64 result;
-  result.x = (p1.x + p2.x) / 2;
-  result.y = (p1.y + p2.y) / 2;
-  return result;
-}
-
 static inline Point64 MakeRandomPoint(int64_t min_val, int64_t max_val)
 {
   std::random_device rd;
@@ -89,8 +76,8 @@ static bool GIP_Current(const Point64& ln1a, const Point64& ln1b,
   double det = dy1 * dx2 - dy2 * dx1;
   if (det == 0.0) return false;
   double t = ((double)(ln1a.x - ln2a.x) * dy2 - (double)(ln1a.y - ln2a.y) * dx2) / det;
-  if (t <= 0.0) ip = ln1a;        // ?? check further (see also #568)
-  else if (t >= 1.0) ip = ln1b;   // ?? check further
+  if (t <= 0.0) ip = ln1a;
+  else if (t >= 1.0) ip = ln1b;
   else
   {
     ip.x = static_cast<int64_t>(ln1a.x + t * dx1);
@@ -105,7 +92,6 @@ static bool GIP_Current(const Point64& ln1a, const Point64& ln1b,
 /////////////////////////////////////////////////////////
 #define CC_MIN(x,y) ((x)>(y)?(y):(x))
 #define CC_MAX(x,y) ((x)<(y)?(y):(x))
-#define DETECT_HIT_OVERFLOW (0)
 static bool GIP_Func_F(const Point64& ln1a, const Point64& ln1b,
   const Point64& ln2a, const Point64& ln2b, Point64& ip)
 {
@@ -129,10 +115,6 @@ static bool GIP_Func_F(const Point64& ln1a, const Point64& ln1b,
   double ln1c = (ln2dy * (double)(ln2a.x - originx)) + (ln2dx * (double)(ln2a.y - originy));
   double hitx = ((ln1dx * ln1c) - (ln2dx * ln0c)) / det;
   double hity = ((ln2dy * ln0c) - (ln1dy * ln1c)) / det;
-#if DETECT_HIT_OVERFLOW
-  if (fmax(fabs((double)originx + hitx),
-    fabs((double)originy + hity)) >= (double)(INT64_MAX - 1))  return false;
-#endif
   ip.x = originx + (int64_t)nearbyint(hitx);
   ip.y = originy + (int64_t)nearbyint(hity);
   return true;
@@ -140,13 +122,13 @@ static bool GIP_Func_F(const Point64& ln1a, const Point64& ln1b,
 
 /////////////////////////////////////////////////////////
 // GIP_F_Mod: Modified GIP_Func_F (see above).
-// Uses static_cast instead of nearbyint. Surprisingly,
-// while faster here, this is much slower than GIP_Func_F 
-// when replacing GetIntersectPoint() in clipper.core.h.
+// Replaces nearbyint with static_cast. Surprisingly, while
+// this function is a little faster here than GIP_Func_F, 
+// it's much slower than GIP_Func_F when using it as a
+// GetIntersectPoint() replacement in clipper.core.h.
 /////////////////////////////////////////////////////////
 #define CC_MIN(x,y) ((x)>(y)?(y):(x))
 #define CC_MAX(x,y) ((x)<(y)?(y):(x))
-#define DETECT_HIT_OVERFLOW (0)
 static bool GIP_F_Mod(const Point64& ln1a, const Point64& ln1b,
   const Point64& ln2a, const Point64& ln2b, Point64& ip)
 {
@@ -170,14 +152,11 @@ static bool GIP_F_Mod(const Point64& ln1a, const Point64& ln1b,
   double ln1c = (ln2dy * (double)(ln2a.x - originx)) + (ln2dx * (double)(ln2a.y - originy));
   double hitx = ((ln1dx * ln1c) - (ln2dx * ln0c)) / det;
   double hity = ((ln2dy * ln0c) - (ln1dy * ln1c)) / det;
-#if DETECT_HIT_OVERFLOW
-  if (fmax(fabs((double)originx + hitx),
-    fabs((double)originy + hity)) >= (double)(INT64_MAX - 1))  return false;
-#endif
   ip.x = originx + static_cast<int64_t>(hitx);
   ip.y = originy + static_cast<int64_t>(hity);
   return true;
 }
+
 
 struct TestRecord
 {
@@ -274,7 +253,6 @@ int main(int argc, char** argv)
 {
 
   const int participants = 3;
-  const double deg_as_rad = 1.0 * PI / 180;
 
   //setup benchmarking ...
   benchmark::Initialize(0, nullptr);
