@@ -242,12 +242,19 @@ namespace Clipper2Lib
       minimaList.Add(lm);
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    internal static void EnsureCapacity<T>(this List<T> list, int minCapacity)
+    {
+      if(list.Capacity < minCapacity)
+        list.Capacity = minCapacity;
+    }
+
     internal static void AddPathsToVertexList(Paths64 paths, PathType polytype, bool isOpen,
       List<LocalMinima> minimaList, List<Vertex> vertexList)
     {
       int totalVertCnt = 0;
       foreach (Path64 path in paths) totalVertCnt += path.Count;
-      vertexList.Capacity = vertexList.Count + totalVertCnt;
+      vertexList.EnsureCapacity(vertexList.Count + totalVertCnt);
 
       foreach (Path64 path in paths)
       {
@@ -800,7 +807,7 @@ namespace Clipper2Lib
         _isSortedMinimaList = true;
       }
 
-      _scanlineList.Capacity = _minimaList.Count;
+      _scanlineList.EnsureCapacity(_minimaList.Count);
       for (int i = _minimaList.Count - 1; i >= 0; i--)
         _scanlineList.Add(_minimaList[i].vertex.pt.Y);
 
@@ -2982,8 +2989,8 @@ private void DoHorizontal(Active horz)
     {
       solutionClosed.Clear();
       solutionOpen.Clear();
-      solutionClosed.Capacity = _outrecList.Count;
-      solutionOpen.Capacity = _outrecList.Count;
+      solutionClosed.EnsureCapacity(_outrecList.Count);
+      solutionOpen.EnsureCapacity(_outrecList.Count);
       
       int i = 0;
       // _outrecList.Count is not static here because
@@ -3089,7 +3096,7 @@ private void DoHorizontal(Active horz)
       polytree.Clear();
       solutionOpen.Clear();
       if (_hasOpenPaths)
-        solutionOpen.Capacity = _outrecList.Count;
+        solutionOpen.EnsureCapacity(_outrecList.Count);
 
       int i = 0;
       // _outrecList.Count is not static here because
@@ -3354,10 +3361,10 @@ private void DoHorizontal(Active horz)
       ClearSolutionOnly();
       if (!success) return false;
 
-      solutionClosed.Capacity = solClosed64.Count;
+      solutionClosed.EnsureCapacity(solClosed64.Count);
       foreach (Path64 path in solClosed64)
         solutionClosed.Add(Clipper.ScalePathD(path, _invScale));
-      solutionOpen.Capacity = solOpen64.Count;
+      solutionOpen.EnsureCapacity(solOpen64.Count);
       foreach (Path64 path in solOpen64)
         solutionOpen.Add(Clipper.ScalePathD(path, _invScale));
 
@@ -3394,7 +3401,7 @@ private void DoHorizontal(Active horz)
       if (!success) return false;
       if (oPaths.Count > 0)
       {
-        openPaths.Capacity = oPaths.Count;        
+        openPaths.EnsureCapacity(oPaths.Count);
         foreach (Path64 path in oPaths)
           openPaths.Add(Clipper.ScalePathD(path, _invScale));
       }
