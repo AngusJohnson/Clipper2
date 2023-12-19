@@ -23,17 +23,15 @@ void test1() {
 
   ClipperOffset co;
   co.SetDeltaCallback([delta](const Path64& path,
-    const PathD& path_norms, size_t curr_idx, size_t prev_idx) 
+    const PathD& path_norms, size_t curr_idx, size_t prev_idx)
     {
-    // gradually scale down the offset to a minimum of 25% of delta
-    double high = static_cast<double>(path.size() - 1) * 1.25;
-    return (high - curr_idx) / high * delta;
+      // gradually scale down the offset to a minimum of 25% of delta
+      double high = static_cast<double>(path.size() - 1) * 1.25;
+      return (high - curr_idx) / high * delta;
     });
 
-  Path64 ellipse = Ellipse(Rect64(0, 0, 200 * scale, 180 * scale));
-  size_t el_size = ellipse.size() * 0.9;
-  ellipse.resize(el_size);
-  Paths64 subject = { ellipse };
+  Paths64 subject{ Ellipse(Rect64(0, 0, 200 * scale, 180 * scale)) };
+  subject[0].resize(subject[0].size() * 0.9);
 
   co.AddPaths(subject, JoinType::Miter, EndType::Round);
   Paths64 solution;
@@ -53,17 +51,15 @@ void test2() {
   double delta = 10 * scale;
 
   ClipperOffset co;
-  co.SetDeltaCallback([delta](const Path64& path, 
+  co.SetDeltaCallback([delta](const Path64& path,
     const PathD& path_norms, size_t curr_idx, size_t prev_idx) {
-    // calculate offset based on distance from the middle of the path
-    double mid_idx = static_cast<double>(path.size()) / 2.0;
-    return delta * (1.0 - 0.70 * (std::fabs(curr_idx - mid_idx) / mid_idx));
+      // calculate offset based on distance from the middle of the path
+      double mid_idx = static_cast<double>(path.size()) / 2.0;
+      return delta * (1.0 - 0.70 * (std::fabs(curr_idx - mid_idx) / mid_idx));
     });
 
-  Path64 ellipse = Ellipse(Rect64(0, 0, 200 * scale, 180 * scale));
-  size_t el_size = ellipse.size() * 0.9;
-  ellipse.resize(el_size);
-  Paths64 subject = { ellipse };
+  Paths64 subject{ Ellipse(Rect64(0, 0, 200 * scale, 180 * scale)) };
+  subject[0].resize(subject[0].size() * 0.9);
 
   co.AddPaths(subject, JoinType::Miter, EndType::Round);
   Paths64 solution;
@@ -85,12 +81,12 @@ void test3() {
   ClipperOffset co;
   co.AddPaths(subject, JoinType::Miter, EndType::Polygon);
 
-  co.SetDeltaCallback([radius](const Path64& path, 
+  co.SetDeltaCallback([radius](const Path64& path,
     const PathD& path_norms, size_t curr_idx, size_t prev_idx) {
-    // when multiplying the x & y of edge unit normal vectors, the value will be 
-    // largest (0.5) when edges are at 45 deg. and least (-0.5) at negative 45 deg.
-    double delta = path_norms[curr_idx].y * path_norms[curr_idx].x;
-    return radius * 0.5 + radius * delta;
+      // when multiplying the x & y of edge unit normal vectors, the value will be 
+      // largest (0.5) when edges are at 45 deg. and least (-0.5) at negative 45 deg.
+      double delta = path_norms[curr_idx].y * path_norms[curr_idx].x;
+      return radius * 0.5 + radius * delta;
     });
 
   //  solution
