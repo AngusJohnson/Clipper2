@@ -730,7 +730,7 @@ namespace Clipper2Lib
     return Area<T>(poly) >= 0;
   }
 
-#if CLIPPER2_HI_PRECISION 
+#if CLIPPER2_HI_PRECISION
   // caution: this will compromise performance
   // https://github.com/AngusJohnson/Clipper2/issues/317#issuecomment-1314023253
   // See also CPP/BenchMark/GetIntersectPtBenchmark.cpp
@@ -756,9 +756,9 @@ namespace Clipper2Lib
     T bb1maxy = CC_MAX(ln2a.y, ln2b.y);
     T originx = (CC_MIN(bb0maxx, bb1maxx) + CC_MAX(bb0minx, bb1minx)) >> 1;
     T originy = (CC_MIN(bb0maxy, bb1maxy) + CC_MAX(bb0miny, bb1miny)) >> 1;
-    double ln0c = (ln1dy * static_cast<double>(ln1a.x - originx)) + 
+    double ln0c = (ln1dy * static_cast<double>(ln1a.x - originx)) +
       (ln1dx * static_cast<double>(ln1a.y - originy));
-    double ln1c = (ln2dy * static_cast<double>(ln2a.x - originx)) + 
+    double ln1c = (ln2dy * static_cast<double>(ln2a.x - originx)) +
       (ln2dx * static_cast<double>(ln2a.y - originy));
     double hitx = ((ln1dx * ln1c) - (ln2dx * ln0c)) / det;
     double hity = ((ln2dy * ln0c) - (ln1dy * ln1c)) / det;
@@ -774,7 +774,7 @@ namespace Clipper2Lib
     }
     return true;
 }
-#else 
+#else
   template<typename T>
   inline bool GetIntersectPoint(const Point<T>& ln1a, const Point<T>& ln1b,
     const Point<T>& ln2a, const Point<T>& ln2b, Point<T>& ip)
@@ -788,7 +788,7 @@ namespace Clipper2Lib
     double det = dy1 * dx2 - dy2 * dx1;
     if (det == 0.0) return false;
     double t = ((ln1a.x - ln2a.x) * dy2 - (ln1a.y - ln2a.y) * dx2) / det;
-    if (t <= 0.0) ip = ln1a;        
+    if (t <= 0.0) ip = ln1a;
     else if (t >= 1.0) ip = ln1b;
     else
     {
