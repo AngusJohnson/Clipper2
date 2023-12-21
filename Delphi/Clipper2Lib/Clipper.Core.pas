@@ -2,7 +2,7 @@ unit Clipper.Core;
 
 (*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  5 November 2023                                                 *
+* Date      :  21 December 2023                                                *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2023                                         *
 * Purpose   :  Core Clipper Library module                                     *
@@ -337,6 +337,11 @@ procedure QuickSort(SortList: TPointerList;
 
 procedure CheckPrecisionRange(var precision: integer);
 
+function Iif(eval: Boolean; trueVal, falseVal: Boolean): Boolean; overload;
+function Iif(eval: Boolean; trueVal, falseVal: integer): integer; overload;
+function Iif(eval: Boolean; trueVal, falseVal: Int64): Int64; overload;
+function Iif(eval: Boolean; trueVal, falseVal: double): double; overload;
+
 const
   MaxInt64    = 9223372036854775807;
   MinInt64    = -MaxInt64;
@@ -653,6 +658,34 @@ end;
 
 //------------------------------------------------------------------------------
 // Miscellaneous Functions ...
+//------------------------------------------------------------------------------
+
+function Iif(eval: Boolean; trueVal, falseVal: Boolean): Boolean;
+  {$IFDEF INLINING} inline; {$ENDIF}
+begin
+  if eval then Result := trueVal else Result := falseVal;
+end;
+//------------------------------------------------------------------------------
+
+function Iif(eval: Boolean; trueVal, falseVal: integer): integer;
+  {$IFDEF INLINING} inline; {$ENDIF}
+begin
+  if eval then Result := trueVal else Result := falseVal;
+end;
+//------------------------------------------------------------------------------
+
+function Iif(eval: Boolean; trueVal, falseVal: Int64): Int64;
+  {$IFDEF INLINING} inline; {$ENDIF}
+begin
+  if eval then Result := trueVal else Result := falseVal;
+end;
+//------------------------------------------------------------------------------
+
+function Iif(eval: Boolean; trueVal, falseVal: double): double;
+  {$IFDEF INLINING} inline; {$ENDIF}
+begin
+  if eval then Result := trueVal else Result := falseVal;
+end;
 //------------------------------------------------------------------------------
 
 procedure CheckPrecisionRange(var precision: integer);

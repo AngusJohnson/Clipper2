@@ -1,6 +1,6 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  28 November 2023                                                *
+* Date      :  21 December 2023                                                *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2023                                         *
 * Purpose   :  Path Offset (Inflate/Shrink)                                    *
@@ -516,6 +516,13 @@ void ClipperOffset::DoGroupOffset(Group& group)
 
 		if (pathLen == 1) // single point
 		{
+			if (deltaCallback64_)
+			{
+				group_delta_ = deltaCallback64_(*path_in_it, norms, 0, 0);
+				if (group.is_reversed) group_delta_ = -group_delta_;
+				abs_delta = std::fabs(group_delta_);
+			}
+
 			if (group_delta_ < 1) continue;
 			const Point64& pt = (*path_in_it)[0];
 			//single vertex so build a circle or square ...

@@ -1,6 +1,6 @@
 ﻿/*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  28 November 2023                                                *
+* Date      :  21 December 2023                                                *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2023                                         *
 * Purpose   :  Path Offset (Inflate/Shrink)                                    *
@@ -420,13 +420,21 @@ namespace Clipper2Lib
       if (j == k)
       {
         double absDelta = Math.Abs(_groupDelta);
-        pt1 = new Point64(path[j].X - absDelta * _normals[j].x, path[j].Y - absDelta * _normals[j].y);
-        pt2 = new Point64(path[j].X + absDelta * _normals[j].x, path[j].Y + absDelta * _normals[j].y);
+        pt1 = new Point64(
+          path[j].X - absDelta * _normals[j].x, 
+          path[j].Y - absDelta * _normals[j].y);
+        pt2 = new Point64(
+          path[j].X + absDelta * _normals[j].x, 
+          path[j].Y + absDelta * _normals[j].y);
       }
       else
       {
-        pt1 = new Point64(path[j].X + _groupDelta * _normals[k].x, path[j].Y + _groupDelta * _normals[k].y);
-        pt2 = new Point64(path[j].X + _groupDelta * _normals[j].x, path[j].Y + _groupDelta * _normals[j].y);
+        pt1 = new Point64(
+          path[j].X + _groupDelta * _normals[k].x,
+          path[j].Y + _groupDelta * _normals[k].y);
+        pt2 = new Point64(
+          path[j].X + _groupDelta * _normals[j].x, 
+          path[j].Y + _groupDelta * _normals[j].y);
       }
       pathOut.Add(pt1);
       pathOut.Add(pt2);
@@ -742,6 +750,13 @@ namespace Clipper2Lib
         if (cnt == 1)
         {
           Point64 pt = p[0];
+
+          if (DeltaCallback != null)
+          {
+            _groupDelta = DeltaCallback(p, _normals, 0, 0);
+            if (group.pathsReversed) _groupDelta = -_groupDelta;
+            absDelta = Math.Abs(_groupDelta);
+          }
 
           // single vertex so build a circle or square ...
           if (group.endType == EndType.Round)

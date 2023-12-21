@@ -2,7 +2,7 @@ unit Clipper.RectClip;
 
 (*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  9 September 2023                                                *
+* Date      :  21 December 2023                                                *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2023                                         *
 * Purpose   :  FAST rectangular clipping                                       *
@@ -282,7 +282,7 @@ function GetAdjacentLocation(loc: TLocation; isClockwise: Boolean): TLocation;
 var
   delta: integer;
 begin
-  if isClockwise then delta := 1 else delta := 3;
+  delta := Iif(isClockwise, 1 , 3);
   Result := TLocation((Ord(loc) + delta) mod 4);
 end;
 //------------------------------------------------------------------------------
@@ -291,9 +291,9 @@ function IsClockwise(prev, curr: TLocation;
   const prevPt, currPt, rectMidPt: TPoint64): Boolean;
   {$IFDEF INLINING} inline; {$ENDIF}
 begin
-  if AreOpposites(prev, curr) then
-    Result := CrossProduct(prevPt, rectMidPt, currPt) < 0 else
-    Result := HeadingClockwise(prev, curr);
+  Result := Iif(AreOpposites(prev, curr),
+    CrossProduct(prevPt, rectMidPt, currPt) < 0,
+    HeadingClockwise(prev, curr));
 end;
 //------------------------------------------------------------------------------
 
@@ -517,9 +517,7 @@ var
   cnrIdx: integer;
 begin
   if prev = curr then Exit;
-  if (HeadingClockwise(prev, curr)) then
-    cnrIdx := Ord(prev) else
-    cnrIdx := Ord(curr);
+  cnrIdx := Iif(HeadingClockwise(prev, curr), Ord(prev), Ord(curr));
   Add(fRectPath[cnrIdx]);
 end;
 //------------------------------------------------------------------------------

@@ -2,7 +2,7 @@ unit Clipper.Offset;
 
 (*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  28 November 2023                                                *
+* Date      :  21 December 2023                                                *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2023                                         *
 * Purpose   :  Path Offset (Inflate/Shrink)                                    *
@@ -426,9 +426,7 @@ end;
 function ToggleBoolIf(val, condition: Boolean): Boolean;
   {$IFDEF INLINING} inline; {$ENDIF}
 begin
-  if condition then
-    Result := not val else
-    Result := val;
+  Result := Iif(condition, not val, val);
 end;
 //------------------------------------------------------------------------------
 
@@ -444,13 +442,10 @@ begin
   if group.endType = etPolygon then
   begin
     if (group.lowestPathIdx < 0) then fDelta := Abs(fDelta);
-    if group.reversed then
-      fGroupDelta := -fDelta else
-      fGroupDelta := fDelta;
-  end else
-  begin
-    fGroupDelta := Abs(fDelta);// * 0.5;
-  end;
+    fGroupDelta := Iif(group.reversed, -fDelta, fDelta);
+  end
+  else
+    fGroupDelta := Abs(fDelta);
 
   absDelta := Abs(fGroupDelta);
 	if not ValidateBounds(group.boundsList, absDelta) then
@@ -467,9 +462,10 @@ begin
 		// curve imprecision that's allowed is based on the size of the
 		// offset (delta). Obviously very large offsets will almost always
 		// require much less precision. See also offset_triginometry2.svg
-    if fArcTolerance > 0.01 then
-      arcTol := Min(absDelta, fArcTolerance) else
-      arcTol := Log10(2 + absDelta) * 0.25; // empirically derived
+    arcTol := Iif(fArcTolerance > 0.01,
+      Min(absDelta, fArcTolerance),
+      Log10(2 + absDelta) * 0.25); // empirically derived
+
     //http://www.angusj.com/clipper2/Docs/Trigonometry.htm
     stepsPer360 := Pi / ArcCos(1 - arcTol / absDelta);
 		if (stepsPer360 > absDelta * Pi) then
@@ -493,6 +489,14 @@ begin
     begin
       if fGroupDelta < 1 then Continue;
       pt0 := fInPath[0];
+
+      if Assigned(fDeltaCallback64) then
+      begin
+        fGroupDelta := fDeltaCallback64(fInPath, fNorms, 0, 0);
+        if TGroup(fGroupList[0]).reversed then fGroupDelta := -fGroupDelta;
+        absDelta := Abs(fGroupDelta);
+      end;
+
       if (group.endType = etRound) then
       begin
         r := absDelta;
@@ -955,9 +959,9 @@ begin
     // when fDeltaCallback64 is assigned, fGroupDelta won't be constant,
     // so we'll need to do the following calculations for *every* vertex.
     absDelta := Abs(fGroupDelta);
-    if fArcTolerance > 0.01 then
-      arcTol := Min(absDelta, fArcTolerance) else
-      arcTol := Log10(2 + absDelta) * 0.25; // empirically derived
+    arcTol := Iif(fArcTolerance > 0.01,
+      Min(absDelta, fArcTolerance),
+      Log10(2 + absDelta) * 0.25); // empirically derived
     //http://www.angusj.com/clipper2/Docs/Trigonometry.htm
     stepsPer360 := Pi / ArcCos(1 - arcTol / absDelta);
 		if (stepsPer360 > absDelta * Pi) then

@@ -2,7 +2,7 @@ unit Clipper;
 
 (*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  18 November 2023                                                *
+* Date      :  21 December 2023                                                *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2023                                         *
 * Purpose   :  This module provides a simple interface to the Clipper Library  *
@@ -836,9 +836,8 @@ begin
   b := pt.Y - line1.Y;
   c := line2.X - line1.X;
   d := line2.Y - line1.Y;
-  if (c = 0) and (d = 0) then
-    result := 0 else
-    result := Sqr(a * d - c * b) / (c * c + d * d);
+  result := Iif((c = 0) and (d = 0),
+    0, Sqr(a * d - c * b) / (c * c + d * d));
 end;
 
 //------------------------------------------------------------------------------
@@ -865,7 +864,7 @@ begin
   Result := nil;
   highI := High(path);
 
-  if isClosedPath then minHigh := 2 else minHigh := 1;
+  minHigh := Iif(isClosedPath, 2, 1);
   if highI < minHigh then Exit;
 
   SetLength(srArray, highI +1);
@@ -874,9 +873,8 @@ begin
     pt      := path[0];
     prev    := @srArray[highI];
     next    := @srArray[1];
-    if isClosedPath then
-      pdSqrd  := PerpendicDistSqrd(path[0], path[highI], path[1]) else
-      pdSqrd  := invalidD;
+    pdSqrd  := Iif(isClosedPath,
+      PerpendicDistSqrd(path[0], path[highI], path[1]), invalidD);
   end;
 
   with srArray[highI] do
@@ -884,9 +882,8 @@ begin
     pt      := path[highI];
     prev    := @srArray[highI-1];
     next    := @srArray[0];
-    if isClosedPath then
-      pdSqrd  := PerpendicDistSqrd(path[highI], path[highI-1], path[0]) else
-      pdSqrd  := invalidD;
+    pdSqrd  := Iif(isClosedPath,
+      PerpendicDistSqrd(path[highI], path[highI-1], path[0]), invalidD);
   end;
 
   for i := 1 to highI -1 do
