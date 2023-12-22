@@ -2,7 +2,7 @@ unit Clipper.Minkowski;
 
 (*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  15 October 2022                                                 *
+* Date      :  21 December 2023                                                *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  Minkowski Addition and Difference                               *
 * License   :  http://www.boost.org/LICENSE_1_0.txt                            *
@@ -51,9 +51,7 @@ var
   tmp: TPaths64;
   quad: TPath64;
 begin
-  if IsClosed then
-    delta := 0 else
-    delta := 1;
+  delta := Iif(IsClosed, 0 , 1);
   baseLen := Length(Base);
   pathLen := Length(Path);
   setLength(tmp, pathLen);
@@ -71,10 +69,7 @@ begin
 
   SetLength(quad, 4);
   SetLength(Result, (pathLen - delta) * baseLen);
-
-  if IsClosed then
-    g := pathLen - 1 else
-    g := 0;
+  g := Iif(IsClosed, pathLen - 1, 0);
 
   for i := delta to pathLen - 1 do
   begin

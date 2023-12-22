@@ -33,7 +33,7 @@ namespace Clipper2Lib {
 
 	//Note: all clipping operations except for Difference are commutative.
 	enum class ClipType { None, Intersection, Union, Difference, Xor };
-	
+
 	enum class PathType { Subject, Clip };
 	enum class JoinWith { None, Left, Right };
 
@@ -106,7 +106,7 @@ namespace Clipper2Lib {
 	//Important: UP and DOWN here are premised on Y-axis positive down
 	//displays, which is the orientation used in Clipper's development.
 	///////////////////////////////////////////////////////////////////
-	
+
 	struct Active {
 		Point64 bot;
 		Point64 top;
@@ -251,7 +251,7 @@ namespace Clipper2Lib {
 		void JoinOutrecPaths(Active &e1, Active &e2);
 		void FixSelfIntersects(OutRec* outrec);
 		void DoSplitOp(OutRec* outRec, OutPt* splitOp);
-		
+
 		inline void AddTrialHorzJoin(OutPt* op);
 		void ConvertHorzSegsToJoins();
 		void ProcessHorzJoins();
@@ -331,7 +331,7 @@ namespace Clipper2Lib {
 			unsigned lvl = Level();
 			//Even levels except level 0
 			return lvl && !(lvl & 1);
-		}		
+		}
 	};
 
 	typedef typename std::vector<std::unique_ptr<PolyPath64>> PolyPath64List;
@@ -420,7 +420,7 @@ namespace Clipper2Lib {
 
 		void SetScale(double value) { scale_ = value; }
 		double Scale() const { return scale_; }
-		
+
 		PolyPathD* AddChild(const Path64& path) override
 		{
 			int error_code = 0;

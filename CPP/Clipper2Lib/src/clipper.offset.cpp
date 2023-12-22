@@ -1,6 +1,6 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  28 November 2023                                                *
+* Date      :  21 December 2023                                                *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2023                                         *
 * Purpose   :  Path Offset (Inflate/Shrink)                                    *
@@ -67,7 +67,7 @@ int GetLowestClosedPathIdx(std::vector<Rect64>& boundsList)
 	int i = -1, result = -1;
 	Point64 botPt = Point64(INT64_MAX, INT64_MIN);
 	for (const Rect64& r : boundsList)
-	{		
+	{
 		++i;
 		if (!r.IsValid()) continue; // ignore invalid paths
 		else if (r.bottom > botPt.y || (r.bottom == botPt.y && r.left < botPt.x))
@@ -103,7 +103,7 @@ inline double Hypot(double x, double y)
 }
 
 inline PointD NormalizeVector(const PointD& vec)
-{	
+{
 	double h = Hypot(vec.x, vec.y);
 	if (AlmostZero(h)) return PointD(0,0);
 	double inverseHypot = 1 / h;
@@ -358,7 +358,7 @@ void ClipperOffset::OffsetPoint(Group& group, const Path64& path, size_t j, size
 		// is concave
 		path_out.push_back(GetPerpendic(path[j], norms[k], group_delta_));
 		// this extra point is the only (simple) way to ensure that
-	  // path reversals are fully cleaned with the trailing clipper		
+	  // path reversals are fully cleaned with the trailing clipper
 		path_out.push_back(path[j]); // (#405)
 		path_out.push_back(GetPerpendic(path[j], norms[j], group_delta_));
 	}
@@ -394,7 +394,7 @@ void ClipperOffset::OffsetOpenJoined(Group& group, const Path64& path)
 	OffsetPolygon(group, path);
 	Path64 reverse_path(path);
 	std::reverse(reverse_path.begin(), reverse_path.end());
-	
+
 	//rebuild normals // BuildNormals(path);
 	std::reverse(norms.begin(), norms.end());
 	norms.push_back(norms[0]);
@@ -408,7 +408,7 @@ void ClipperOffset::OffsetOpenPath(Group& group, const Path64& path)
 {
 	// do the line start cap
 	if (deltaCallback64_) group_delta_ = deltaCallback64_(path, norms, 0, 0);
-	
+
 	if (std::fabs(group_delta_) <= floating_point_tolerance)
 		path_out.push_back(path[0]);
 	else
@@ -426,7 +426,7 @@ void ClipperOffset::OffsetOpenPath(Group& group, const Path64& path)
 			break;
 		}
 	}
-	
+
 	size_t highI = path.size() - 1;
 	// offset the left side going forward
 	for (Path64::size_type j = 1, k = 0; j < highI; k = j, ++j)
@@ -516,6 +516,13 @@ void ClipperOffset::DoGroupOffset(Group& group)
 
 		if (pathLen == 1) // single point
 		{
+			if (deltaCallback64_)
+			{
+				group_delta_ = deltaCallback64_(*path_in_it, norms, 0, 0);
+				if (group.is_reversed) group_delta_ = -group_delta_;
+				abs_delta = std::fabs(group_delta_);
+			}
+
 			if (group_delta_ < 1) continue;
 			const Point64& pt = (*path_in_it)[0];
 			//single vertex so build a circle or square ...

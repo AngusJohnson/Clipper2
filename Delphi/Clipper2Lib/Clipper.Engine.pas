@@ -2,7 +2,7 @@ unit Clipper.Engine;
 
 (*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  1 December 2023                                                 *
+* Date      :  21 December 2023                                                *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2023                                         *
 * Purpose   :  This is the main polygon clipping module                        *
@@ -1721,23 +1721,18 @@ begin
       if (Abs(e2.windCnt) > 1) then
       begin
         // outside prev poly but still inside another.
-        if (e2.windDx * e.windDx < 0) then
-          // reversing direction so use the same WC
-          e.windCnt := e2.windCnt else
-          // otherwise keep 'reducing' the WC by 1 (ie towards 0) ...
-          e.windCnt := e2.windCnt + e.windDx;
+        e.windCnt := Iif(e2.windDx * e.windDx < 0,
+          e2.windCnt, // reversing direction so use the same WC
+          e2.windCnt + e.windDx);
       end
       // now outside all polys of same polytype so set own WC ...
       else e.windCnt := e.windDx;
     end else
     begin
       //'e' must be inside 'e2'
-      if (e2.windDx * e.windDx < 0) then
-        // reversing direction so use the same WC
-        e.windCnt := e2.windCnt
-      else
-        // otherwise keep 'increasing' the WC by 1 (ie away from 0) ...
-        e.windCnt := e2.windCnt + e.windDx;
+      e.windCnt := Iif(e2.windDx * e.windDx < 0,
+        e2.windCnt, // reversing direction so use the same WC
+        e2.windCnt + e.windDx); // else keep 'increasing' the WC
     end;
     e.windCnt2 := e2.windCnt2;
     e2 := e2.nextInAEL;
@@ -1778,8 +1773,8 @@ begin
       else if not IsOpen(e2) then inc(cnt1);
       e2 := e2.nextInAEL;
     end;
-    if Odd(cnt1) then e.windCnt := 1 else e.windCnt := 0;
-    if Odd(cnt2) then e.windCnt2 := 1 else e.windCnt2 := 0;
+    e.windCnt  := Iif(Odd(cnt1), 1, 0);
+    e.windCnt2 := Iif(Odd(cnt2), 1, 0);
   end else
   begin
     // if FClipType in [ctUnion, ctDifference] then e.WindCnt := e.WindDx;
@@ -2637,12 +2632,10 @@ begin
       e2.windCnt := e1WindCnt;
     end else
     begin
-      if e1.windCnt + e2.windDx = 0 then
-        e1.windCnt := -e1.windCnt else
-        Inc(e1.windCnt, e2.windDx);
-      if e2.windCnt - e1.windDx = 0 then
-        e2.windCnt := -e2.windCnt else
-        Dec(e2.windCnt, e1.windDx);
+      e1.windCnt := Iif(e1.windCnt + e2.windDx = 0,
+        -e1.windCnt, e1.windCnt + e2.windDx);
+      e2.windCnt := Iif(e2.windCnt - e1.windDx = 0,
+        -e2.windCnt, e2.windCnt - e1.windDx);
     end;
   end else
   begin
@@ -2909,14 +2902,14 @@ function HorzontalsOverlap(const horz1a, horz1b, horz2a, horz2b: TPoint64): bool
 begin
   if horz1a.X < horz1b.X then
   begin
-    if horz2a.X < horz2b.X then
-      Result := HorzOverlapWithLRSet(horz1a, horz1b, horz2a, horz2b) else
-      Result := HorzOverlapWithLRSet(horz1a, horz1b, horz2b, horz2a);
+    Result := Iif(horz2a.X < horz2b.X,
+      HorzOverlapWithLRSet(horz1a, horz1b, horz2a, horz2b),
+      HorzOverlapWithLRSet(horz1a, horz1b, horz2b, horz2a));
   end else
   begin
-    if horz2a.X < horz2b.X then
-      Result := HorzOverlapWithLRSet(horz1b, horz1a, horz2a, horz2b) else
-      Result := HorzOverlapWithLRSet(horz1b, horz1a, horz2b, horz2a);
+    Result := Iif(horz2a.X < horz2b.X,
+      HorzOverlapWithLRSet(horz1b, horz1a, horz2a, horz2b),
+      HorzOverlapWithLRSet(horz1b, horz1a, horz2b, horz2a));
   end;
 end;
 //------------------------------------------------------------------------------
@@ -3175,12 +3168,8 @@ begin
       ip := GetClosestPointOnSegment(ip, e2.bot, e2.top)
     else
     begin
-      if (ip.Y < topY) then
-        ip.Y := topY else
-        ip.Y := fBotY;
-      if (absDx1 < absDx2)  then
-        ip.X := TopX(e1, ip.Y) else
-        ip.X := TopX(e2, ip.Y);
+      ip.Y := Iif(ip.Y < topY, topY , fBotY);
+      ip.X := Iif(absDx1 < absDx2, TopX(e1, ip.Y), TopX(e2, ip.Y));
     end;
   end;
   new(node);
@@ -4031,9 +4020,7 @@ end;
 
 function  TPolyPathBase.GetIsHole: Boolean;
 begin
-  if not Assigned(Parent) then
-    Result := false else
-    Result := not Odd(GetLevel);
+  Result := Iif(Assigned(Parent), not Odd(GetLevel), false);
 end;
 //------------------------------------------------------------------------------
 
