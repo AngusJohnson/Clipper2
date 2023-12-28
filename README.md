@@ -47,6 +47,9 @@ The <b>Clipper2</b> library performs **intersection**, **union**, **difference**
 <hr>
 
 ### Ports to other languages
-**Java**: https://github.com/micycle1/Clipper2-java/<br>
-**Kotlin**: https://github.com/Monkey-Maestro/clipper2-kotlin<br>
-**golang**: https://github.com/epit3d/goclipper2
+| lang. | link |
+| ------ | ------ |
+| **WASM** | https://github.com/ErikSom/Clipper2-WASM/ |
+| **Java** | https://github.com/micycle1/Clipper2-java/ |
+| **Kotlin** | https://github.com/Monkey-Maestro/clipper2-kotlin |
+| **golang** | https://github.com/epit3d/goclipper2 |
