@@ -5,7 +5,7 @@
 using namespace Clipper2Lib;
 TEST(Clipper2Tests, TestOffsets) {
   std::ifstream ifs("Offsets.txt");
-  if(!ifs.good()) return;
+  ASSERT_TRUE(ifs.good());
   for (int test_number = 1; test_number <= 2; ++test_number)
   {
     ClipperOffset co;

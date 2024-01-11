@@ -5,7 +5,6 @@ using namespace Clipper2Lib;
 TEST(Clipper2Tests, TestPolytreeHoles1)
 {
   std::ifstream ifs("PolytreeHoleOwner.txt");
-  ASSERT_TRUE(ifs);
   ASSERT_TRUE(ifs.good());
   Paths64 subject, subject_open, clip;
   PolyTree64 solution;

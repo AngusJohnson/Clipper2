@@ -20,7 +20,6 @@ inline bool IsInList(int num, const int (&intArray)[N])
 TEST(Clipper2Tests, TestMultiplePolygons)
 {
   std::ifstream ifs("Polygons.txt");
-  ASSERT_TRUE(ifs);
   ASSERT_TRUE(ifs.good());
   const int start_num = 1;
   const int end_num = 1000;
