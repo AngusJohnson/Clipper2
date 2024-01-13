@@ -1,8 +1,8 @@
 ﻿/*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  21 December 2023                                                *
+* Date      :  13 January 2024                                                 *
 * Website   :  http://www.angusj.com                                           *
-* Copyright :  Angus Johnson 2010-2023                                         *
+* Copyright :  Angus Johnson 2010-2024                                         *
 * Purpose   :  Path Offset (Inflate/Shrink)                                    *
 * License   :  http://www.boost.org/LICENSE_1_0.txt                            *
 *******************************************************************************/
@@ -420,21 +420,39 @@ namespace Clipper2Lib
       if (j == k)
       {
         double absDelta = Math.Abs(_groupDelta);
+#if USINGZ
         pt1 = new Point64(
           path[j].X - absDelta * _normals[j].x, 
-          path[j].Y - absDelta * _normals[j].y);
+          path[j].Y - absDelta * _normals[j].y, path[j].Z);
         pt2 = new Point64(
           path[j].X + absDelta * _normals[j].x, 
+          path[j].Y + absDelta * _normals[j].y, path[j].Z);
+#else
+        pt1 = new Point64(
+          path[j].X - absDelta * _normals[j].x,
+          path[j].Y - absDelta * _normals[j].y);
+        pt2 = new Point64(
+          path[j].X + absDelta * _normals[j].x,
           path[j].Y + absDelta * _normals[j].y);
+#endif
       }
       else
       {
+#if USINGZ
+        pt1 = new Point64(
+          path[j].X + _groupDelta * _normals[k].x,
+          path[j].Y + _groupDelta * _normals[k].y, path[j].Z);
+        pt2 = new Point64(
+          path[j].X + _groupDelta * _normals[j].x,
+          path[j].Y + _groupDelta * _normals[j].y, path[j].Z);
+#else
         pt1 = new Point64(
           path[j].X + _groupDelta * _normals[k].x,
           path[j].Y + _groupDelta * _normals[k].y);
         pt2 = new Point64(
-          path[j].X + _groupDelta * _normals[j].x, 
+          path[j].X + _groupDelta * _normals[j].x,
           path[j].Y + _groupDelta * _normals[j].y);
+#endif
       }
       pathOut.Add(pt1);
       pathOut.Add(pt2);

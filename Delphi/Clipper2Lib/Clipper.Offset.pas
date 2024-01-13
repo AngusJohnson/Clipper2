@@ -2,9 +2,9 @@ unit Clipper.Offset;
 
 (*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  21 December 2023                                                *
+* Date      :  13 January 2024                                                 *
 * Website   :  http://www.angusj.com                                           *
-* Copyright :  Angus Johnson 2010-2023                                         *
+* Copyright :  Angus Johnson 2010-2024                                         *
 * Purpose   :  Path Offset (Inflate/Shrink)                                    *
 * License   :  http://www.boost.org/LICENSE_1_0.txt                            *
 *******************************************************************************)
@@ -850,20 +850,38 @@ begin
   if k = j then
   begin
 		absDelta :=  abs(fGroupDelta);
+{$IFDEF USINGZ}
+		AddPoint(
+      fInPath[j].x - absDelta * fNorms[j].x,
+      fInPath[j].y - absDelta * fNorms[j].y, fInPath[j].z);
+		AddPoint(
+      fInPath[j].x + absDelta * fNorms[j].x,
+      fInPath[j].y + absDelta * fNorms[j].y, fInPath[j].z);
+{$ELSE}
 		AddPoint(
       fInPath[j].x - absDelta * fNorms[j].x,
       fInPath[j].y - absDelta * fNorms[j].y);
 		AddPoint(
       fInPath[j].x + absDelta * fNorms[j].x,
       fInPath[j].y + absDelta * fNorms[j].y);
+{$ENDIF}
   end else
   begin
+{$IFDEF USINGZ}
+		AddPoint(
+      fInPath[j].x + fGroupDelta * fNorms[k].x,
+      fInPath[j].y + fGroupDelta * fNorms[k].y, fInPath[j].z);
+		AddPoint(
+      fInPath[j].x + fGroupDelta * fNorms[j].x,
+      fInPath[j].y + fGroupDelta * fNorms[j].y, fInPath[j].z);
+{$ELSE}
 		AddPoint(
       fInPath[j].x + fGroupDelta * fNorms[k].x,
       fInPath[j].y + fGroupDelta * fNorms[k].y);
 		AddPoint(
       fInPath[j].x + fGroupDelta * fNorms[j].x,
       fInPath[j].y + fGroupDelta * fNorms[j].y);
+{$ENDIF}
   end;
 end;
 //------------------------------------------------------------------------------
