@@ -363,7 +363,7 @@ void ClipperOffset::OffsetPolygon(Group& group, const Path64& path, bool is_shri
 	// that the polygon has shrunk too far and that it should be discarded.
 	// See also - #593 & #715
 	if (is_shrinking && area // area == 0.0 when JoinType::Joined
-		&& ((area < 0) != Area(path_out) < 0)) return;
+		&& ((area < 0) != (Area(path_out) < 0))) return;
 	
 	solution.push_back(path_out);
 }

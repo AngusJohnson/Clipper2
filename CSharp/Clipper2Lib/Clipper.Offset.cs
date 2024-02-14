@@ -610,7 +610,7 @@ namespace Clipper2Lib
       // that the polygon has shrunk too far and that it should be discarded.
       // See also - #593 & #715
       if (is_shrinking && area != 0 && // area == 0.0 when JoinType.Joined
-        ((area < 0) != Clipper.Area(pathOut) < 0)) return;
+        ((area < 0) != (Clipper.Area(pathOut) < 0))) return;
 
       _solution.Add(pathOut);
     }
