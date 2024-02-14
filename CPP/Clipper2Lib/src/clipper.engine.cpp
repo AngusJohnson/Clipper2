@@ -1,8 +1,8 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  1 December 2023                                                 *
+* Date      :  14 February 2024                                                *
 * Website   :  http://www.angusj.com                                           *
-* Copyright :  Angus Johnson 2010-2023                                         *
+* Copyright :  Angus Johnson 2010-2024                                         *
 * Purpose   :  This is the main polygon clipping module                        *
 * License   :  http://www.boost.org/LICENSE_1_0.txt                            *
 *******************************************************************************/
@@ -31,11 +31,11 @@ namespace Clipper2Lib {
 
   static const Rect64 invalid_rect = Rect64(false);
 
-  // Every closed path (or polygon) is made up of a series of vertices forming
-  // edges that alternate between going up (relative to the Y-axis) and going
-  // down. Edges consecutively going up or consecutively going down are called
-  // 'bounds' (ie sides if they're simple polygons). 'Local Minima' refer to
-  // vertices where descending bounds become ascending ones.
+  // Every closed path (ie polygon) is made up of a series of vertices forming edge 
+  // 'bounds' that alternate between ascending bounds (containing edges going up 
+  // relative to the Y-axis) and descending bounds. 'Local Minima' refers to
+  // vertices where ascending and descending bounds join at the bottom, and
+  // 'Local Maxima' are where ascending and descending bounds join at the top.
 
   struct Scanline {
     int64_t y = 0;
@@ -1574,7 +1574,7 @@ namespace Clipper2Lib {
     outrec->pts = prevOp;
 
     Point64 ip;
-    GetIntersectPoint(prevOp->pt, splitOp->pt,
+    GetSegmentIntersectPt(prevOp->pt, splitOp->pt,
       splitOp->next->pt, nextNextOp->pt, ip);
 
 #ifdef USINGZ
@@ -2302,7 +2302,7 @@ namespace Clipper2Lib {
   void ClipperBase::AddNewIntersectNode(Active& e1, Active& e2, int64_t top_y)
   {
     Point64 ip;
-    if (!GetIntersectPoint(e1.bot, e1.top, e2.bot, e2.top, ip))
+    if (!GetSegmentIntersectPt(e1.bot, e1.top, e2.bot, e2.top, ip))
       ip = Point64(e1.curr_x, top_y); //parallel edges
 
     //rounding errors can occasionally place the calculated intersection
@@ -2768,7 +2768,7 @@ namespace Clipper2Lib {
 
     if (check_curr_x)
     {
-      if (DistanceFromLineSqrd(pt, prev->bot, prev->top) > 0.25) return;
+      if (PerpendicDistFromLineSqrd(pt, prev->bot, prev->top) > 0.25) return;
     }
     else if (e.curr_x != prev->curr_x) return;
     if (CrossProduct(e.top, pt, prev->top)) return;
@@ -2796,7 +2796,7 @@ namespace Clipper2Lib {
 
     if (check_curr_x)
     {
-      if (DistanceFromLineSqrd(pt, next->bot, next->top) > 0.35) return;
+      if (PerpendicDistFromLineSqrd(pt, next->bot, next->top) > 0.35) return;
     }
     else if (e.curr_x != next->curr_x) return;
     if (CrossProduct(e.top, pt, next->top)) return;
@@ -2868,7 +2868,7 @@ namespace Clipper2Lib {
         op2 = op2->next;
     }
 
-    if (path.size() == 3 && IsVerySmallTriangle(*op2)) return false;
+    if (!isOpen && path.size() == 3 && IsVerySmallTriangle(*op2)) return false;
     else return true;
   }
 

@@ -1,8 +1,8 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  19 November 2023                                                *
+* Date      :  14 February 2024                                                *
 * Website   :  http://www.angusj.com                                           *
-* Copyright :  Angus Johnson 2010-2023                                         *
+* Copyright :  Angus Johnson 2010-2024                                         *
 * Purpose   :  Path Offset (Inflate/Shrink)                                    *
 * License   :  http://www.boost.org/LICENSE_1_0.txt                            *
 *******************************************************************************/
@@ -35,7 +35,8 @@ private:
 	public:
 		Paths64 paths_in;
 		std::vector<bool> is_hole_list;
-		std::vector<Rect64> bounds_list;
+		std::vector<double> areas_list;
+		//std::vector<Rect64> bounds_list;
 		int lowest_path_idx = -1;
 		bool is_reversed = false;
 		JoinType join_type;
@@ -74,7 +75,7 @@ private:
 	void DoMiter(const Path64& path, size_t j, size_t k, double cos_a);
 	void DoRound(const Path64& path, size_t j, size_t k, double angle);
 	void BuildNormals(const Path64& path);
-	void OffsetPolygon(Group& group, const Path64& path);
+	void OffsetPolygon(Group& group, const Path64& path, bool is_shrinking, double area);
 	void OffsetOpenJoined(Group& group, const Path64& path);
 	void OffsetOpenPath(Group& group, const Path64& path);
 	void OffsetPoint(Group& group, const Path64& path, size_t j, size_t k);

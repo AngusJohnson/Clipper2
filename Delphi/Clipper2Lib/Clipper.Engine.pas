@@ -2,9 +2,9 @@ unit Clipper.Engine;
 
 (*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  21 December 2023                                                *
+* Date      :  14 February 2024                                                *
 * Website   :  http://www.angusj.com                                           *
-* Copyright :  Angus Johnson 2010-2023                                         *
+* Copyright :  Angus Johnson 2010-2024                                         *
 * Purpose   :  This is the main polygon clipping module                        *
 * License   :  http://www.boost.org/LICENSE_1_0.txt                            *
 *******************************************************************************)
@@ -1125,7 +1125,7 @@ begin
     Exit;
   end;
 
-  if (cnt = 3) and IsVerySmallTriangle(op) then
+  if (cnt = 3) and not IsOpen and IsVerySmallTriangle(op) then
   begin
     Result := false;
     Exit;
@@ -2150,7 +2150,7 @@ begin
   prevOp := splitOp.prev;
   nextNextOp := splitOp.next.next;
   outrec.pts := prevOp;
-  GetIntersectPoint(
+  GetSegmentIntersectPt(
     prevOp.pt, splitOp.pt, splitOp.next.pt, nextNextOp.pt, ip);
 {$IFDEF USINGZ}
   if Assigned(fZCallback) then
@@ -2378,7 +2378,7 @@ begin
 
   if checkCurrX then
   begin
-    if DistanceFromLineSqrd(pt, prev.bot, prev.top) > 0.25 then Exit
+    if PerpendicDistFromLineSqrd(pt, prev.bot, prev.top) > 0.25 then Exit
   end else if (e.currX <> prev.currX) then Exit;
 
   if (CrossProduct(e.top, pt, prev.top) <> 0) then Exit;
@@ -2409,7 +2409,7 @@ begin
 
   if (checkCurrX) then
   begin
-    if DistanceFromLineSqrd(pt, next.bot, next.top) > 0.25 then Exit
+    if PerpendicDistFromLineSqrd(pt, next.bot, next.top) > 0.25 then Exit
   end
   else if (e.currX <> next.currX) then Exit;
 
@@ -3148,7 +3148,7 @@ var
   absDx1, absDx2: double;
   node: PIntersectNode;
 begin
-  if not GetIntersectPoint(e1.bot, e1.top, e2.bot, e2.top, ip) then
+  if not GetSegmentIntersectPt(e1.bot, e1.top, e2.bot, e2.top, ip) then
     ip := Point64(e1.currX, topY);
   // Rounding errors can occasionally place the calculated intersection
   // point either below or above the scanbeam, so check and correct ...

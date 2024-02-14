@@ -1,6 +1,6 @@
 ﻿/*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  13 January 2024                                                 *
+* Date      :  14 February 2024                                                *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2024                                         *
 * Purpose   :  Path Offset (Inflate/Shrink)                                    *
@@ -9,6 +9,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Runtime.CompilerServices;
 
 namespace Clipper2Lib
@@ -36,7 +37,7 @@ namespace Clipper2Lib
     private class Group
     {
       internal Paths64 inPaths;
-      internal List<Rect64> boundsList;
+      internal List<double> areasList;
       internal List<bool> isHoleList;
       internal JoinType joinType;
       internal EndType endType;
@@ -53,17 +54,19 @@ namespace Clipper2Lib
         foreach(Path64 path in paths)
           inPaths.Add(Clipper.StripDuplicates(path, isJoined));
 
-        // get bounds of each path --> boundsList
-        boundsList = new List<Rect64>(inPaths.Count);
-        GetMultiBounds(inPaths, boundsList);
-
         if (endType == EndType.Polygon)
         {
-          lowestPathIdx = GetLowestPathIdx(boundsList);
           isHoleList = new List<bool>(inPaths.Count);
+          areasList = new List<double>(inPaths.Count);
 
           foreach (Path64 path in inPaths)
-            isHoleList.Add(Clipper.Area(path) < 0);
+          {
+            double a = Clipper.Area(path);
+            areasList.Add(a);
+            isHoleList.Add(a < 0);
+          }
+
+          lowestPathIdx = GetLowestPathIdx(inPaths);
           // the lowermost path must be an outer path, so if its orientation is negative,
           // then flag that the whole group is 'reversed' (will negate delta etc.)
           // as this is much more efficient than reversing every path.
@@ -75,6 +78,7 @@ namespace Clipper2Lib
         {
           lowestPathIdx = -1;
           isHoleList = new List<bool>(new bool[inPaths.Count]);
+          areasList = new List<double>(new double[inPaths.Count]);
           pathsReversed = false;
         }
       }
@@ -253,66 +257,27 @@ namespace Clipper2Lib
     {
       DeltaCallback = deltaCallback;
       Execute(1.0, solution);
-    }
-
-    internal static void GetMultiBounds(Paths64 paths, List<Rect64> boundsList)
-    {
-      boundsList.EnsureCapacity(paths.Count);
-      foreach (Path64 path in paths)
-      {
-        if (path.Count < 1)
-        {
-          boundsList.Add(InvalidRect64);
-          continue;
-        }
-
-        Point64 pt1 = path[0];
-        Rect64 r = new Rect64(pt1.X, pt1.Y, pt1.X, pt1.Y);
-        foreach (Point64 pt in path)
-        {
-          if (pt.Y > r.bottom) r.bottom = pt.Y;
-          else if (pt.Y < r.top) r.top = pt.Y;
-          if (pt.X > r.right) r.right = pt.X;
-          else if (pt.X < r.left) r.left = pt.X;
-        }
-        boundsList.Add(r);
-      }
-    }
-
-    internal static bool ValidateBounds(List<Rect64> boundsList, double delta)
-    {
-      int int_delta = (int)delta;
-
-      Point64 botPt = new Point64(int.MaxValue, int.MinValue);
-      foreach (Rect64 r in boundsList)
-	    {
-        if (!r.IsValid()) continue; // ignore invalid paths
-        else if (r.left < MIN_COORD + int_delta ||
-          r.right > MAX_COORD + int_delta ||
-          r.top < MIN_COORD + int_delta ||
-          r.bottom > MAX_COORD + int_delta) return false;
-      }
-      return true;
-    }
-
-    internal static int GetLowestPathIdx(List<Rect64> boundsList)
+    }    
+    
+    internal static int GetLowestPathIdx(Paths64 paths)
     {
       int result = -1;
-      Point64 botPt = new Point64(long.MaxValue, long.MinValue);
-      for (int i = 0; i < boundsList.Count; i++)
+      Point64 botPt = new Point64(Int64.MaxValue, Int64.MinValue);
+      for (int i = 0; i < paths.Count; ++i)
       {
-        Rect64 r = boundsList[i];
-        if (!r.IsValid()) continue; // ignore invalid paths
-        else if (r.bottom > botPt.Y || (r.bottom == botPt.Y && r.left < botPt.X))
-        {
-          botPt = new Point64(r.left, r.bottom);
+        foreach (Point64 pt in paths[i])
+		    {
+          if ((pt.Y < botPt.Y) ||
+            ((pt.Y == botPt.Y) && (pt.X >= botPt.X))) continue;
           result = i;
+          botPt.X = pt.X;
+          botPt.Y = pt.Y;
         }
       }
-      return result;
+	    return result;
     }
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+  [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static PointD TranslatePoint(PointD pt, double dx, double dy)
     {
 #if USINGZ
@@ -580,6 +545,8 @@ namespace Clipper2Lib
 
     private void OffsetPoint(Group group, Path64 path, int j, ref int k)
     {
+      if (path[j] == path[k]) { k = j; return; }
+
       // Let A = change in angle where edges join
       // A == 0: ie no change in angle (flat join)
       // A == PI: edges 'spike'
@@ -632,22 +599,29 @@ namespace Clipper2Lib
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private void OffsetPolygon(Group group, Path64 path)
+    private void OffsetPolygon(Group group, Path64 path, bool is_shrinking, double area)
     {
       pathOut = new Path64();
       int cnt = path.Count, prev = cnt - 1;
       for (int i = 0; i < cnt; i++)
         OffsetPoint(group, path, i, ref prev);
+
+      // make sure that polygon areas aren't reversing which would indicate
+      // that the polygon has shrunk too far and that it should be discarded.
+      // See also - #593 & #715
+      if (is_shrinking && area != 0 && // area == 0.0 when JoinType.Joined
+        ((area < 0) != Clipper.Area(pathOut) < 0)) return;
+
       _solution.Add(pathOut);
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private void OffsetOpenJoined(Group group, Path64 path)
     {
-      OffsetPolygon(group, path);
+      OffsetPolygon(group, path, false, 0);
       path = Clipper.ReversePath(path);
       BuildNormals(path);
-      OffsetPolygon(group, path);
+      OffsetPolygon(group, path, true, 0);
     }
 
     private void OffsetOpenPath(Group group, Path64 path)
@@ -710,11 +684,6 @@ namespace Clipper2Lib
       _solution.Add(pathOut);
     }
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static bool ToggleBoolIf(bool val, bool condition)
-    {
-      return condition ? !val : val;
-    }
     private void DoGroupOffset(Group group)
     {
       if (group.endType == EndType.Polygon)
@@ -728,8 +697,6 @@ namespace Clipper2Lib
         _groupDelta = Math.Abs(_delta);
 
       double absDelta = Math.Abs(_groupDelta);
-      if (!ValidateBounds(group.boundsList, absDelta))
-          throw new Exception(coord_range_error);
 
       _joinType = group.joinType;
       _endType = group.endType;
@@ -751,13 +718,16 @@ namespace Clipper2Lib
         _stepsPerRad = stepsPer360 / (2 * Math.PI);
       }
 
+      double min_area = Math.PI * Clipper.Sqr(_groupDelta);
       using List<Path64>.Enumerator pathIt = group.inPaths.GetEnumerator();
-      using List<Rect64>.Enumerator boundsIt = group.boundsList.GetEnumerator();
       using List<bool>.Enumerator isHoleIt = group.isHoleList.GetEnumerator();
-      while (pathIt.MoveNext() && boundsIt.MoveNext() && isHoleIt.MoveNext())
+      using List<double>.Enumerator areaIt = group.areasList.GetEnumerator();
+      while (pathIt.MoveNext() && isHoleIt.MoveNext() && areaIt.MoveNext())
       {
-        Rect64 pathBounds = boundsIt.Current;
-        if (!pathBounds.IsValid()) continue;
+        bool isShrinking =
+          (group.endType == EndType.Polygon) &&
+          (group.pathsReversed == ((_groupDelta < 0) == isHoleIt.Current));
+        if (isShrinking && (Math.Abs(areaIt.Current) < min_area)) continue;
 
         Path64 p = pathIt.Current;
         bool isHole = isHoleIt.Current;
@@ -800,19 +770,13 @@ namespace Clipper2Lib
         } // end of offsetting a single point 
 
 
-        // when shrinking outer paths, make sure they can shrink this far (#593)
-        // also when shrinking holes, make sure they too can shrink this far (#715)
-        if (((_groupDelta > 0) == ToggleBoolIf(isHole, group.pathsReversed)) &&
-          (Math.Min(pathBounds.Width, pathBounds.Height) <= -_groupDelta * 2))
-            continue;
-
         if (cnt == 2 && group.endType == EndType.Joined)
           _endType = (group.joinType == JoinType.Round) ?
             EndType.Round :
             EndType.Square;
 
         BuildNormals(p);
-        if (_endType == EndType.Polygon) OffsetPolygon(group, p);
+        if (_endType == EndType.Polygon) OffsetPolygon(group, p, isShrinking, areaIt.Current);
         else if (_endType == EndType.Joined) OffsetOpenJoined(group, p);
         else OffsetOpenPath(group, p);
       }

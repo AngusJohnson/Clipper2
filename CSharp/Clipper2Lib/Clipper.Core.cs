@@ -1,8 +1,8 @@
 ﻿/*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  1 October 2023                                                  *
+* Date      :  14 February 2024                                                *
 * Website   :  http://www.angusj.com                                           *
-* Copyright :  Angus Johnson 2010-2023                                         *
+* Copyright :  Angus Johnson 2010-2024                                         *
 * Purpose   :  Core structures and functions for the Clipper Library           *
 * License   :  http://www.boost.org/LICENSE_1_0.txt                            *
 *******************************************************************************/
@@ -11,6 +11,7 @@
 using System;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 
 namespace Clipper2Lib
 {
@@ -508,7 +509,7 @@ namespace Clipper2Lib
     {
       string s = "";
       foreach (PointD p in this)
-        s = s + p.ToString(precision) + " ";
+        s = s + p.ToString(precision) + ", ";
       return s;
     }
   }
@@ -634,7 +635,7 @@ namespace Clipper2Lib
 
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static bool GetIntersectPoint(Point64 ln1a,
+    public static bool GetSegmentIntersectPt(Point64 ln1a,
       Point64 ln1b, Point64 ln2a, Point64 ln2b, out Point64 ip)
     {
       double dy1 = (ln1b.Y - ln1a.Y);

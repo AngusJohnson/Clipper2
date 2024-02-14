@@ -1,8 +1,8 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  22 December 2023                                                *
+* Date      :  14 February 2024                                                *
 * Website   :  http://www.angusj.com                                           *
-* Copyright :  Angus Johnson 2010-2023                                         *
+* Copyright :  Angus Johnson 2010-2024                                         *
 * Purpose   :  Core Clipper Library structures and functions                   *
 * License   :  http://www.boost.org/LICENSE_1_0.txt                            *
 *******************************************************************************/
@@ -677,15 +677,17 @@ namespace Clipper2Lib
   }
 
   template <typename T>
-  inline double DistanceFromLineSqrd(const Point<T>& pt, const Point<T>& ln1, const Point<T>& ln2)
+  inline double PerpendicDistFromLineSqrd(const Point<T>& pt,
+    const Point<T>& line1, const Point<T>& line2)
   {
     //perpendicular distance of point (x³,y³) = (Ax³ + By³ + C)/Sqrt(A² + B²)
     //see http://en.wikipedia.org/wiki/Perpendicular_distance
-    double A = static_cast<double>(ln1.y - ln2.y);
-    double B = static_cast<double>(ln2.x - ln1.x);
-    double C = A * ln1.x + B * ln1.y;
-    C = A * pt.x + B * pt.y - C;
-    return (C * C) / (A * A + B * B);
+    double a = static_cast<double>(pt.x - line1.x);
+    double b = static_cast<double>(pt.y - line1.y);
+    double c = static_cast<double>(line2.x - line1.x);
+    double d = static_cast<double>(line2.y - line1.y);
+    if (c == 0 && d == 0) return 0;
+    return Sqr(a * d - c * b) / (c * c + d * d);
   }
 
   template <typename T>
@@ -705,7 +707,7 @@ namespace Clipper2Lib
     }
     if (cnt & 1)
       a += static_cast<double>(it2->y + it1->y) * (it2->x - it1->x);
-    return a * 0.5;
+    return (a * 0.5);
   }
 
   template <typename T>
@@ -737,7 +739,7 @@ namespace Clipper2Lib
   #define CC_MIN(x,y) ((x)>(y)?(y):(x))
   #define CC_MAX(x,y) ((x)<(y)?(y):(x))
   template<typename T>
-  inline bool GetIntersectPoint(const Point<T>& ln1a, const Point<T>& ln1b,
+  inline bool GetSegmentIntersectPt(const Point<T>& ln1a, const Point<T>& ln1b,
     const Point<T>& ln2a, const Point<T>& ln2b, Point<T>& ip)
   {
     double ln1dy = static_cast<double>(ln1b.y - ln1a.y);
@@ -787,7 +789,7 @@ namespace Clipper2Lib
 }
 #else
   template<typename T>
-  inline bool GetIntersectPoint(const Point<T>& ln1a, const Point<T>& ln1b,
+  inline bool GetSegmentIntersectPt(const Point<T>& ln1a, const Point<T>& ln1b,
     const Point<T>& ln2a, const Point<T>& ln2b, Point<T>& ip)
   {
     // https://en.wikipedia.org/wiki/Line%E2%80%93line_intersection

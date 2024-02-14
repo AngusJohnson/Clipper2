@@ -2,9 +2,9 @@ unit Clipper.Core;
 
 (*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  21 December 2023                                                *
+* Date      :  14 February 2024                                                *
 * Website   :  http://www.angusj.com                                           *
-* Copyright :  Angus Johnson 2010-2023                                         *
+* Copyright :  Angus Johnson 2010-2024                                         *
 * Purpose   :  Core Clipper Library module                                     *
 *              Contains structures and functions used throughout the library   *
 * License   :  http://www.boost.org/LICENSE_1_0.txt                            *
@@ -172,8 +172,8 @@ function DistanceSqr(const pt1, pt2: TPoint64): double; overload;
   {$IFDEF INLINING} inline; {$ENDIF}
 function DistanceSqr(const pt1, pt2: TPointD): double; overload;
   {$IFDEF INLINING} inline; {$ENDIF}
-function DistanceFromLineSqrd(const pt, linePt1, linePt2: TPoint64): double; overload;
-function DistanceFromLineSqrd(const pt, linePt1, linePt2: TPointD): double; overload;
+function PerpendicDistFromLineSqrd(const pt, linePt1, linePt2: TPoint64): double; overload;
+function PerpendicDistFromLineSqrd(const pt, linePt1, linePt2: TPointD): double; overload;
 
 function SegmentsIntersect(const s1a, s1b, s2a, s2b: TPoint64;
   inclusive: Boolean = false): boolean; {$IFDEF INLINING} inline; {$ENDIF}
@@ -315,7 +315,7 @@ procedure AppendPaths(var paths: TPathsD; const extra: TPathsD); overload;
 
 function ArrayOfPathsToPaths(const ap: TArrayOfPaths): TPaths64;
 
-function GetIntersectPoint(const ln1a, ln1b, ln2a, ln2b: TPoint64;
+function GetSegmentIntersectPt(const ln1a, ln1b, ln2a, ln2b: TPoint64;
   out ip: TPoint64): Boolean;
 
 function PointInPolygon(const pt: TPoint64; const polygon: TPath64): TPointInPolygonResult;
@@ -1886,7 +1886,7 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-function DistanceFromLineSqrd(const pt, linePt1, linePt2: TPoint64): double;
+function PerpendicDistFromLineSqrd(const pt, linePt1, linePt2: TPoint64): double;
 var
   a,b,c: double;
 begin
@@ -1897,11 +1897,13 @@ begin
 	b := (linePt2.X - linePt1.X);
 	c := a * linePt1.X + b * linePt1.Y;
 	c := a * pt.x + b * pt.y - c;
-	Result := (c * c) / (a * a + b * b);
+   if (a = 0) and (b = 0) then
+    Result := 0 else
+	  Result := (c * c) / (a * a + b * b);
 end;
 //---------------------------------------------------------------------------
 
-function DistanceFromLineSqrd(const pt, linePt1, linePt2: TPointD): double;
+function PerpendicDistFromLineSqrd(const pt, linePt1, linePt2: TPointD): double;
 var
   a,b,c: double;
 begin
@@ -1909,7 +1911,9 @@ begin
 	b := (linePt2.X - linePt1.X);
 	c := a * linePt1.X + b * linePt1.Y;
 	c := a * pt.x + b * pt.y - c;
-	Result := (c * c) / (a * a + b * b);
+  if (a = 0) and (b = 0) then
+    Result := 0 else
+	  Result := (c * c) / (a * a + b * b);
 end;
 //---------------------------------------------------------------------------
 
@@ -1989,7 +1993,7 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-function GetIntersectPoint(const ln1a, ln1b, ln2a, ln2b: TPoint64;
+function GetSegmentIntersectPt(const ln1a, ln1b, ln2a, ln2b: TPoint64;
   out ip: TPoint64): Boolean;
 var
   dx1,dy1, dx2,dy2, t, cp: double;
@@ -2174,20 +2178,6 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-function PerpendicDistFromLineSqrd(const pt, line1, line2: TPoint64): double; overload;
-var
-  a,b,c,d: double;
-begin
-  a := pt.X - line1.X;
-  b := pt.Y - line1.Y;
-  c := line2.X - line1.X;
-  d := line2.Y - line1.Y;
-  if (c = 0) and (d = 0) then
-    result := 0 else
-    result := Sqr(a * d - c * b) / (c * c + d * d);
-end;
-//------------------------------------------------------------------------------
-
 procedure RDP(const path: TPath64; startIdx, endIdx: integer;
   epsilonSqrd: double; var boolArray: TArrayOfBoolean); overload;
 var
@@ -2214,20 +2204,6 @@ begin
   boolArray[idx] := true;
   if idx > startIdx + 1 then RDP(path, startIdx, idx, epsilonSqrd, boolArray);
   if endIdx > idx + 1 then RDP(path, idx, endIdx, epsilonSqrd, boolArray);
-end;
-//------------------------------------------------------------------------------
-
-function PerpendicDistFromLineSqrd(const pt, line1, line2: TPointD): double; overload;
-var
-  a,b,c,d: double;
-begin
-  a := pt.X - line1.X;
-  b := pt.Y - line1.Y;
-  c := line2.X - line1.X;
-  d := line2.Y - line1.Y;
-  if (c = 0) and (d = 0) then
-    result := 0 else
-    result := Sqr(a * d - c * b) / (c * c + d * d);
 end;
 //------------------------------------------------------------------------------
 

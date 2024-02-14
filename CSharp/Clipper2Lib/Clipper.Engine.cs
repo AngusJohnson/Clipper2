@@ -1,8 +1,8 @@
 ﻿/*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  1 December 2023                                                 *
+* Date      :  14 February 2024                                                *
 * Website   :  http://www.angusj.com                                           *
-* Copyright :  Angus Johnson 2010-2023                                         *
+* Copyright :  Angus Johnson 2010-2024                                         *
 * Purpose   :  This is the main polygon clipping module                        *
 * Thanks    :  Special thanks to Thong Nguyen, Guus Kuiper, Phil Stopford,     *
 *           :  and Daniel Gosnell for their invaluable assistance with C#.     *
@@ -1901,7 +1901,7 @@ namespace Clipper2Lib
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private void AddNewIntersectNode(Active ae1, Active ae2, long topY)
     {
-      if (!InternalClipper.GetIntersectPoint(
+      if (!InternalClipper.GetSegmentIntersectPt(
         ae1.bot, ae1.top, ae2.bot, ae2.top, out Point64 ip))
           ip = new Point64(ae1.curX, topY);
 
@@ -2856,7 +2856,7 @@ private void DoHorizontal(Active horz)
       outrec.pts = prevOp;
       OutPt result = prevOp;
 
-      InternalClipper.GetIntersectPoint(
+      InternalClipper.GetSegmentIntersectPt(
           prevOp.pt, splitOp.pt, splitOp.next.pt, nextNextOp.pt, out Point64 ip);
 
 #if USINGZ
@@ -2981,7 +2981,7 @@ private void DoHorizontal(Active horz)
           op2 = op2.next!;
       }
 
-      if (path.Count == 3 && IsVerySmallTriangle(op2)) return false;
+      if (path.Count == 3 && !isOpen && IsVerySmallTriangle(op2)) return false;
       else return true;
     }
 

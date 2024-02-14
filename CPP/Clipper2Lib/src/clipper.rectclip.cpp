@@ -113,7 +113,7 @@ namespace Clipper2Lib {
     if ((res3 > 0) == (res4 > 0)) return false;
 
     // segments must intersect to get here
-    return GetIntersectPoint(p1, p2, p3, p4, ip);
+    return GetSegmentIntersectPt(p1, p2, p3, p4, ip);
   }
 
   inline bool GetIntersection(const Path64& rectPath,

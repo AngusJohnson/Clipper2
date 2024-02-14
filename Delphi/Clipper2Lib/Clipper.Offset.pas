@@ -32,17 +32,17 @@ type
   TDeltaCallback64 = function (const path: TPath64;
     const path_norms: TPathD; currIdx, prevIdx: integer): double of object;
 
-  TRect64Array = array of TRect64;
+  TDoubleArray = array of double;
   BooleanArray = array of Boolean;
 
   TGroup = class
-	  paths     : TPaths64;
-	  joinType  : TJoinType;
-	  endType   : TEndType;
-    reversed  : Boolean;
-    lowestPathIdx: integer;
-    boundsList: TRect64Array;
-    isHoleList: BooleanArray;
+	  paths         : TPaths64;
+	  joinType      : TJoinType;
+	  endType       : TEndType;
+    reversed      : Boolean;
+    lowestPathIdx : integer;
+    areasList     : TDoubleArray;
+    isHoleList    : BooleanArray;
     constructor Create(const pathsIn: TPaths64; jt: TJoinType; et: TEndType);
   end;
 
@@ -86,7 +86,7 @@ type
 
     procedure BuildNormals;
     procedure DoGroupOffset(group: TGroup);
-    procedure OffsetPolygon;
+    procedure OffsetPolygon(isShrinking: Boolean; area_: double);
     procedure OffsetOpenJoined;
     procedure OffsetOpenPath;
     function CalcSolutionCapacity: integer;
@@ -139,79 +139,6 @@ const
 
 //------------------------------------------------------------------------------
 //  Miscellaneous offset support functions
-//------------------------------------------------------------------------------
-
-procedure GetMultiBounds(const paths: TPaths64; var list: TRect64Array);
-var
-  i,j, len, len2: integer;
-  path: TPath64;
-  pt1, pt: TPoint64;
-  r: TRect64;
-begin
-  len := Length(paths);
-	for i := 0 to len -1 do
-	begin
-    path := paths[i];
-    len2 := Length(path);
-		if len2 < 1 then
-		begin
-      list[i] := InvalidRect64;
-			continue;
-    end;
-    pt1 := path[0];
-    r := Rect64(pt1.X, pt1.Y, pt1.X, pt1.Y);
-	  for j := 1 to len2 -1 do
-    begin
-      pt := path[j];
-			if (pt.y > r.bottom) then r.bottom := pt.y
-			else if (pt.y < r.top) then r.top := pt.y;
-			if (pt.x > r.right) then r.right := pt.x
-			else if (pt.x < r.left) then r.left := pt.x;
-    end;
-    list[i] := r;
-	end;
-end;
-//------------------------------------------------------------------------------
-
-function ValidateBounds(const boundsList: TRect64Array; delta: double): Boolean;
-var
-  i: integer;
-  iDelta, big, small: Int64;
-begin
-  Result := false;
-	iDelta := Round(delta);
-  big := MaxCoord - iDelta;
-  small := MinCoord + iDelta;
-	for i := 0 to High(boundsList) do
-    with boundsList[i] do
-    begin
-      if not IsValid then continue; // skip invalid paths
-      if (left < small) or (right > big) or
-        (top < small) or (bottom > big) then Exit;
-    end;
-  Result := true;
-end;
-//------------------------------------------------------------------------------
-
-function GetLowestClosedPathIdx(const boundsList: TRect64Array): integer;
-var
-  i: integer;
-  botPt: TPoint64;
-begin
-	Result := -1;
-	botPt := Point64(MaxInt64, MinInt64);
-	for i := 0 to High(boundsList) do
-    with boundsList[i] do
-    begin
-      if not IsValid or IsEmpty then Continue;
-      if (bottom > botPt.y) or
-        ((bottom = botPt.Y) and (left < botPt.X)) then
-      begin
-        botPt := Point64(left, bottom);
-        Result := i;
-      end;
-    end;
-end;
 //------------------------------------------------------------------------------
 
 function DotProduct(const vec1, vec2: TPointD): double;
@@ -273,21 +200,21 @@ end;
 function GetLowestPolygonIdx(const paths: TPaths64): integer;
 var
   i,j: integer;
-  lp: TPoint64;
-  p: TPath64;
+  botPt: TPoint64;
 begin
 	Result := -1;
-  lp := Point64(0, -MaxInt64);
-	for i := 0 to High(paths) do
-	begin
-		p := paths[i];
-		for j := 0 to High(p) do
-    begin
-      if (p[j].Y < lp.Y) or
-        ((p[j].Y = lp.Y) and (p[j].X >= lp.X)) then Continue;
-      Result := i;
-      lp := p[j];
-    end;
+  botPt := Point64(MaxInt64, MinInt64);
+  for i := 0 to High(paths) do
+  begin
+    for j := 0 to High(paths[i]) do
+      with paths[i][j] do
+      begin
+        if (Y < botPt.Y) or
+          ((Y = botPt.Y) and (X >= botPt.X)) then Continue;
+        result := i;
+        botPt.X := X;
+        botPt.Y := Y;
+      end;
   end;
 end;
 //------------------------------------------------------------------------------
@@ -305,6 +232,7 @@ end;
 constructor TGroup.Create(const pathsIn: TPaths64; jt: TJoinType; et: TEndType);
 var
   i, len: integer;
+  a: double;
   isJoined: boolean;
   pb: PBoolean;
 begin
@@ -319,20 +247,21 @@ begin
 
   reversed := false;
 	SetLength(isHoleList, len);
-	SetLength(boundsList, len);
-  GetMultiBounds(paths, boundsList);
+	SetLength(areasList, len);
   if (et = etPolygon) then
   begin
-	  lowestPathIdx := GetLowestClosedPathIdx(boundsList);
-    if lowestPathIdx < 0 then Exit;
     pb := @isHoleList[0];
     for i := 0 to len -1 do
     begin
-      pb^ := Area(paths[i]) < 0; inc(pb);
+      a := Area(paths[i]);
+      pb^ := a < 0;
+      inc(pb);
     end;
+
     // the lowermost path must be an outer path, so if its orientation is
     // negative, then flag that the whole group is 'reversed' (so negate
     // delta etc.) as this is much more efficient than reversing every path.
+	  lowestPathIdx := GetLowestPolygonIdx(pathsIn);
     reversed := (lowestPathIdx >= 0) and isHoleList[lowestPathIdx];
     if not reversed then Exit;
     pb := @isHoleList[0];
@@ -423,18 +352,12 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-function ToggleBoolIf(val, condition: Boolean): Boolean;
-  {$IFDEF INLINING} inline; {$ENDIF}
-begin
-  Result := Iif(condition, not val, val);
-end;
-//------------------------------------------------------------------------------
-
 procedure TClipperOffset.DoGroupOffset(group: TGroup);
 var
   i,j, len, steps: Integer;
-  r, stepsPer360, arcTol: Double;
+  r, stepsPer360, minArea, arcTol: Double;
   absDelta: double;
+  isShrinking: Boolean;
   rec: TRect64;
   pt0: TPoint64;
 begin
@@ -448,8 +371,6 @@ begin
     fGroupDelta := Abs(fDelta);
 
   absDelta := Abs(fGroupDelta);
-	if not ValidateBounds(group.boundsList, absDelta) then
-    Raise EClipper2LibException(rsClipper_CoordRangeError);
 
   fJoinType := group.joinType;
   fEndType := group.endType;
@@ -476,9 +397,13 @@ begin
     fStepsPerRad := stepsPer360 / TwoPi;
   end;
 
+  minArea := PI * Sqr(fGroupDelta);
   for i := 0 to High(group.paths) do
   begin
-    if not group.boundsList[i].IsValid then Continue;
+    isShrinking := (group.endType = etPolygon) and
+      (group.reversed = ((fGroupDelta < 0) = group.isHoleList[i]));
+    if (isShrinking and (Abs(group.areasList[i]) < minArea)) then
+      Continue;
 
     fInPath := group.paths[i];
     fNorms := nil;
@@ -521,13 +446,6 @@ begin
       Continue;
     end; // end of offsetting a single point
 
-		// when shrinking outer paths, make sure they can shrink this far (#593)
-		// also when shrinking holes, make sure they too can shrink this far (#715)
-    with group do
-      if ((fGroupDelta > 0) = ToggleBoolIf(isHoleList[i], reversed)) and
-        (Min(boundsList[i].Width, boundsList[i].Height) <= -fGroupDelta *2) then
-          Continue;
-
     if (len = 2) and (group.endType = etJoined) then
     begin
       if fJoinType = jtRound then
@@ -536,9 +454,12 @@ begin
     end;
 
     BuildNormals;
-    if fEndType = etPolygon then OffsetPolygon
-    else if fEndType = etJoined then OffsetOpenJoined
-    else OffsetOpenPath;
+    if fEndType = etPolygon then
+      OffsetPolygon(isShrinking, group.areasList[i])
+    else if fEndType = etJoined then
+      OffsetOpenJoined
+    else
+      OffsetOpenPath;
   end;
 end;
 //------------------------------------------------------------------------------
@@ -579,27 +500,33 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-procedure TClipperOffset.OffsetPolygon;
+procedure TClipperOffset.OffsetPolygon(isShrinking: Boolean; area_: double);
 var
   i,j: integer;
 begin
   j := high(fInPath);
   for i := 0 to high(fInPath) do
     OffsetPoint(i, j);
+
+  // make sure that polygon areas aren't reversing which would indicate
+  // that the polygon has shrunk too far and that it should be discarded.
+  // See also - #593 & #715
+  if isShrinking and (area_ <> 0) and // area = 0.0 when JoinType.Joined
+    ((area_ < 0) <> (Area(fOutPath) < 0)) then Exit;
+
   UpdateSolution;
 end;
 //------------------------------------------------------------------------------
 
 procedure TClipperOffset.OffsetOpenJoined;
 begin
-  OffsetPolygon;
+  OffsetPolygon(false, 0);
   fInPath := ReversePath(fInPath);
   // Rebuild normals // BuildNormals;
   fNorms := ReversePath(fNorms);
   fNorms := ShiftPath(fNorms, 1);
   fNorms := NegatePath(fNorms);
-
-  OffsetPolygon;
+  OffsetPolygon(true, 0);
 end;
 //------------------------------------------------------------------------------
 

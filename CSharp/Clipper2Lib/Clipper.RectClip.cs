@@ -332,7 +332,7 @@ namespace Clipper2Lib
       }
 
       // segments must intersect to get here
-      return InternalClipper.GetIntersectPoint(p1, p2, p3, p4, out ip);
+      return InternalClipper.GetSegmentIntersectPt(p1, p2, p3, p4, out ip);
     }
   
 

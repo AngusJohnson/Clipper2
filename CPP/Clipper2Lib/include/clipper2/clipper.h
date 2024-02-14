@@ -614,18 +614,6 @@ namespace Clipper2Lib {
     return result;
   }
 
-  template <typename T>
-  inline double PerpendicDistFromLineSqrd(const Point<T>& pt,
-    const Point<T>& line1, const Point<T>& line2)
-  {
-    double a = static_cast<double>(pt.x - line1.x);
-    double b = static_cast<double>(pt.y - line1.y);
-    double c = static_cast<double>(line2.x - line1.x);
-    double d = static_cast<double>(line2.y - line1.y);
-    if (c == 0 && d == 0) return 0;
-    return Sqr(a * d - c * b) / (c * c + d * d);
-  }
-
   inline size_t GetNext(size_t current, size_t high,
     const std::vector<bool>& flags)
   {
