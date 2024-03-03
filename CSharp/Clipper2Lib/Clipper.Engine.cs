@@ -1,6 +1,6 @@
 ﻿/*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  14 February 2024                                                *
+* Date      :  28 February 2024                                                *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2024                                         *
 * Purpose   :  This is the main polygon clipping module                        *
@@ -153,22 +153,6 @@ namespace Clipper2Lib
     public List<int>? splits = null;
     public OutRec? recursiveSplit;
   };
-
-  internal struct HorzSegSorter : IComparer<HorzSegment>
-  {
-    public readonly int Compare(HorzSegment? hs1, HorzSegment? hs2)
-    {
-      if (hs1 == null || hs2 == null) return 0;
-      if (hs1.rightOp == null)
-      {
-        return hs2.rightOp == null ? 0 : 1;
-      }
-      else if (hs2.rightOp == null)
-        return -1;
-      else
-        return hs1.leftOp!.pt.X.CompareTo(hs2.leftOp!.pt.X);
-    }
-  }
 
   internal class HorzSegment
   {
@@ -2539,13 +2523,26 @@ private void DoHorizontal(Active horz)
       return result;
     }
 
+    private int HorzSegSort(HorzSegment? hs1, HorzSegment? hs2)
+    {
+      if (hs1 == null || hs2 == null) return 0;
+      if (hs1.rightOp == null)
+      {
+        return hs2.rightOp == null ? 0 : 1;
+      }
+      else if (hs2.rightOp == null)
+        return -1;
+      else
+        return hs1.leftOp!.pt.X.CompareTo(hs2.leftOp!.pt.X);
+    }
+
     private void ConvertHorzSegsToJoins()
     {
       int k = 0;
       foreach (HorzSegment hs in _horzSegList)
         if (UpdateHorzSegment(hs)) k++;
       if (k < 2) return;
-      _horzSegList.Sort(new HorzSegSorter());
+      _horzSegList.Sort(HorzSegSort);
 
       for (int i = 0; i < k -1; i++)
       {
