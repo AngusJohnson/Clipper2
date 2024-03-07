@@ -1,6 +1,6 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  14 February 2024                                                *
+* Date      :  8 March 2024                                                    *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2024                                         *
 * Purpose   :  Path Offset (Inflate/Shrink)                                    *
@@ -325,7 +325,7 @@ void ClipperOffset::OffsetPoint(Group& group, const Path64& path, size_t j, size
 		return;
 	}
 
-	if (cos_a > -0.99 && (sin_a * group_delta_ < 0)) // test for concavity first (#593)
+	if (cos_a > -0.999 && (sin_a * group_delta_ < 0)) // test for concavity first (#593)
 	{
 		// is concave
 		path_out.push_back(GetPerpendic(path[j], norms[k], group_delta_));
@@ -461,11 +461,11 @@ void ClipperOffset::DoGroupOffset(Group& group)
 
 	if (group.join_type == JoinType::Round || group.end_type == EndType::Round)
 	{
-		// calculate a sensible number of steps (for 360 deg for the given offset)
-		// arcTol - when arc_tolerance_ is undefined (0), the amount of
-		// curve imprecision that's allowed is based on the size of the
-		// offset (delta). Obviously very large offsets will almost always
-		// require much less precision. See also offset_triginometry2.svg
+		// calculate the number of steps required to approximate a circle
+		// (see http://www.angusj.com/clipper2/Docs/Trigonometry.htm)
+		// arcTol - when arc_tolerance_ is undefined (0) then curve imprecision
+		// will be relative to the size of the offset (delta). Obviously very
+		//large offsets will almost always require much less precision.
 		double arcTol = (arc_tolerance_ > floating_point_tolerance ?
 			std::min(abs_delta, arc_tolerance_) :
 			std::log10(2 + abs_delta) * default_arc_tolerance);

@@ -2,7 +2,7 @@ unit Clipper.Offset;
 
 (*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  13 January 2024                                                 *
+* Date      :  8 March 2024                                                    *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2024                                         *
 * Purpose   :  Path Offset (Inflate/Shrink)                                    *
@@ -375,19 +375,17 @@ begin
   fJoinType := group.joinType;
   fEndType := group.endType;
 
-  // calculate a sensible number of steps (for 360 deg for the given offset
   if (group.joinType = jtRound) or (group.endType = etRound) then
   begin
-		// calculate a sensible number of steps (for 360 deg for the given offset)
-		// arcTol - when arc_tolerance_ is undefined (0), the amount of
-		// curve imprecision that's allowed is based on the size of the
-		// offset (delta). Obviously very large offsets will almost always
-		// require much less precision. See also offset_triginometry2.svg
+		// calculate the number of steps required to approximate a circle
+    // (see http://www.angusj.com/clipper2/Docs/Trigonometry.htm)
+		// arcTol - when arc_tolerance_ is undefined (0) then curve imprecision
+    // will be relative to the size of the offset (delta). Obviously very
+    //large offsets will almost always require much less precision.
     arcTol := Iif(fArcTolerance > 0.01,
       Min(absDelta, fArcTolerance),
       Log10(2 + absDelta) * 0.25); // empirically derived
 
-    //http://www.angusj.com/clipper2/Docs/Trigonometry.htm
     stepsPer360 := Pi / ArcCos(1 - arcTol / absDelta);
 		if (stepsPer360 > absDelta * Pi) then
 			stepsPer360 := absDelta * Pi;  // avoid excessive precision
@@ -974,7 +972,7 @@ begin
   end;
 
   //test for concavity first (#593)
-  if (cosA > -0.99) and (sinA * fGroupDelta < 0) then
+  if (cosA > -0.999) and (sinA * fGroupDelta < 0) then
   begin
     // is concave
     AddPoint(GetPerpendic(fInPath[j], fNorms[k], fGroupDelta));
