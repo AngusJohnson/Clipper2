@@ -1,6 +1,6 @@
 ﻿/*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  8 March 2024                                                    *
+* Date      :  14 March 2024                                                   *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2024                                         *
 * Purpose   :  Path Offset (Inflate/Shrink)                                    *
@@ -678,7 +678,7 @@ namespace Clipper2Lib
         }
 
       // offset the left side going back
-      for (int i = highI, k = 0; i > 0; i--)
+      for (int i = highI -1, k = highI; i > 0; i--)
         OffsetPoint(group, path, i, ref k);
 
       _solution.Add(pathOut);

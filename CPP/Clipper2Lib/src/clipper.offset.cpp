@@ -1,6 +1,6 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  8 March 2024                                                    *
+* Date      :  14 March 2024                                                   *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2024                                         *
 * Purpose   :  Path Offset (Inflate/Shrink)                                    *
@@ -438,7 +438,7 @@ void ClipperOffset::OffsetOpenPath(Group& group, const Path64& path)
 		}
 	}
 
-	for (size_t j = highI, k = 0; j > 0; k = j, --j)
+	for (size_t j = highI -1, k = highI; j > 0; k = j, --j)
 		OffsetPoint(group, path, j, k);
 	solution.push_back(path_out);
 }

@@ -2,7 +2,7 @@ unit Clipper.Offset;
 
 (*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  8 March 2024                                                    *
+* Date      :  14 March 2024                                                   *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2024                                         *
 * Purpose   :  Path Offset (Inflate/Shrink)                                    *
@@ -576,8 +576,8 @@ begin
   end;
 
   // offset the left side going back
-  k := 0;
-  for i := highI downto 1 do //and stop at 1!
+  k := highI;
+  for i := highI -1 downto 1 do //and stop at 1!
     OffsetPoint(i, k);
 
   UpdateSolution;
