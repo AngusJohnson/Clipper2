@@ -1,8 +1,9 @@
 #include <gtest/gtest.h>
 #include "clipper2/clipper.offset.h"
 #include "ClipFileLoad.h"
-//#include "clipper.svg.utils.h"
+
 using namespace Clipper2Lib;
+
 TEST(Clipper2Tests, TestOffsets) {
   std::ifstream ifs("Offsets.txt");
   ASSERT_TRUE(ifs.good());
@@ -69,6 +70,7 @@ TEST(Clipper2Tests, TestOffsets2) { // see #448 & #456
   EXPECT_GE(min_dist + 1, delta - arc_tol); // +1 for rounding errors
   EXPECT_LE(solution[0].size(), 21);
 }
+
 TEST(Clipper2Tests, TestOffsets3) // see #424
 {
   Paths64 subjects = {{
@@ -94,6 +96,7 @@ TEST(Clipper2Tests, TestOffsets3) // see #424
   Paths64 solution = InflatePaths(subjects, -209715, JoinType::Miter, EndType::Polygon);
   EXPECT_LE(solution[0].size() - subjects[0].size(), 1);
 }
+
 TEST(Clipper2Tests, TestOffsets4) // see #482
 {
   Paths64 paths = { { {0, 0}, {20000, 200},
@@ -121,6 +124,7 @@ TEST(Clipper2Tests, TestOffsets4) // see #482
   //std::cout << solution[0].size() << std::endl;
   EXPECT_GT(solution[0].size(), 5);
 }
+
 TEST(Clipper2Tests, TestOffsets5) // modified from #593 (tests offset clean up)
 {
   Paths64 subject = {
@@ -348,6 +352,7 @@ TEST(Clipper2Tests, TestOffsets5) // modified from #593 (tests offset clean up)
   Paths64 solution = InflatePaths(subject, -10000, JoinType::Round, EndType::Polygon);
   EXPECT_EQ(solution.size(), 2);
 }
+
 TEST(Clipper2Tests, TestOffsets6) // also modified from #593 (tests rounded ends)
 {
   Paths64 subjects = {
@@ -370,6 +375,7 @@ TEST(Clipper2Tests, TestOffsets6) // also modified from #593 (tests rounded ends
   double area = Area<int64_t>(solution[1]);
   EXPECT_LT(area, -47500);
 }
+
 TEST(Clipper2Tests, TestOffsets7) // (#593 & #715)
 {
   Paths64 solution;
@@ -387,6 +393,7 @@ TEST(Clipper2Tests, TestOffsets7) // (#593 & #715)
   solution = InflatePaths(subject, -50, JoinType::Miter, EndType::Polygon);
   EXPECT_EQ(solution.size(), 0);
 }
+
 struct OffsetQual
 {
   PointD smallestInSub;   // smallestInSub & smallestInSol are the points in subject and solution
@@ -394,6 +401,7 @@ struct OffsetQual
   PointD largestInSub;    // largestInSub & largestInSol are the points in subject and solution
   PointD largestInSol;    // that define the place that most exceeds the expected offset
 };
+
 template<typename T>
 inline PointD GetClosestPointOnSegment(const PointD& offPt,
   const Point<T>& seg1, const Point<T>& seg2)
@@ -410,6 +418,7 @@ inline PointD GetClosestPointOnSegment(const PointD& offPt,
     static_cast<double>(seg1.x) + (q * dx),
     static_cast<double>(seg1.y) + (q * dy));
 }
+
 template<typename T>
 static OffsetQual GetOffsetQuality(const Path<T>& subject, const Path<T>& solution, const double delta)
 {
@@ -462,6 +471,7 @@ static OffsetQual GetOffsetQuality(const Path<T>& subject, const Path<T>& soluti
   }
   return oq;
 }
+
 TEST(Clipper2Tests, TestOffsets8) // (#724)
 {
   Paths64 subject = { MakePath({
@@ -567,6 +577,7 @@ TEST(Clipper2Tests, TestOffsets8) // (#724)
   EXPECT_LE(offset - smallestDist - rounding_tolerance, arc_tol);
   EXPECT_LE(largestDist - offset  - rounding_tolerance, arc_tol);
 }
+
 TEST(Clipper2Tests, TestOffsets9) // (#733)
 {
   // solution orientations should match subject orientations UNLESS
@@ -603,3 +614,47 @@ TEST(Clipper2Tests, TestOffsets9) // (#733)
   solution = InflatePaths(subject, -15, JoinType::Miter, EndType::Polygon);
   EXPECT_EQ(solution.size(), 0);
 }
+
+TEST(Clipper2Tests, TestOffsets10) // see #715
+{
+  Paths64 subjects = {
+         {{508685336, -435806096},
+          {509492982, -434729201},
+          {509615525, -434003092},
+          {509615525, 493372891},
+          {509206033, 494655198},
+          {508129138, 495462844},
+          {507403029, 495585387},
+          {-545800889, 495585387},
+          {-547083196, 495175895},
+          {-547890842, 494099000},
+          {-548013385, 493372891},
+          {-548013385, -434003092},
+          {-547603893, -435285399},
+          {-546526998, -436093045},
+          {-545800889, -436215588},
+          {507403029, -436215588}},
+         {{106954765, -62914568},
+          {106795129, -63717113},
+          {106340524, -64397478},
+          {105660159, -64852084},
+          {104857613, -65011720},
+          {104055068, -64852084},
+          {103374703, -64397478},
+          {102920097, -63717113},
+          {102760461, -62914568},
+          {102920097, -62112022},
+          {103374703, -61431657},
+          {104055068, -60977052},
+          {104857613, -60817416},
+          {105660159, -60977052},
+          {106340524, -61431657},
+          {106795129, -62112022}} };
+
+  Clipper2Lib::ClipperOffset offseter(2, 104857.61318750000);
+  Paths64 solution;
+  offseter.AddPaths(subjects, Clipper2Lib::JoinType::Round, Clipper2Lib::EndType::Polygon);
+  offseter.Execute(-2212495.6382562499, solution);
+  EXPECT_EQ(solution.size(), 2);
+}
+

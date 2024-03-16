@@ -37,8 +37,6 @@ namespace Clipper2Lib
     private class Group
     {
       internal Paths64 inPaths;
-      internal List<double> areasList;
-      internal List<bool> isHoleList;
       internal JoinType joinType;
       internal EndType endType;
       internal bool pathsReversed;
@@ -56,29 +54,15 @@ namespace Clipper2Lib
 
         if (endType == EndType.Polygon)
         {
-          isHoleList = new List<bool>(inPaths.Count);
-          areasList = new List<double>(inPaths.Count);
-
-          foreach (Path64 path in inPaths)
-          {
-            double a = Clipper.Area(path);
-            areasList.Add(a);
-            isHoleList.Add(a < 0);
-          }
-
           lowestPathIdx = GetLowestPathIdx(inPaths);
           // the lowermost path must be an outer path, so if its orientation is negative,
           // then flag that the whole group is 'reversed' (will negate delta etc.)
           // as this is much more efficient than reversing every path.
-          pathsReversed = (lowestPathIdx >= 0) && isHoleList[lowestPathIdx];
-          if (pathsReversed)
-            for (int i = 0; i < isHoleList.Count; i++) isHoleList[i] = !isHoleList[i];
+          pathsReversed = (lowestPathIdx >= 0) && (Clipper.Area(inPaths[lowestPathIdx]) < 0);
         }
         else
         {
           lowestPathIdx = -1;
-          isHoleList = new List<bool>(new bool[inPaths.Count]);
-          areasList = new List<double>(new double[inPaths.Count]);
           pathsReversed = false;
         }
       }
@@ -599,29 +583,22 @@ namespace Clipper2Lib
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private void OffsetPolygon(Group group, Path64 path, bool is_shrinking, double area)
+    private void OffsetPolygon(Group group, Path64 path)
     {
       pathOut = new Path64();
       int cnt = path.Count, prev = cnt - 1;
       for (int i = 0; i < cnt; i++)
         OffsetPoint(group, path, i, ref prev);
-
-      // make sure that polygon areas aren't reversing which would indicate
-      // that the polygon has shrunk too far and that it should be discarded.
-      // See also - #593 & #715
-      if (is_shrinking && area != 0 && // area == 0.0 when JoinType.Joined
-        ((area < 0) != (Clipper.Area(pathOut) < 0))) return;
-
       _solution.Add(pathOut);
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private void OffsetOpenJoined(Group group, Path64 path)
     {
-      OffsetPolygon(group, path, false, 0);
+      OffsetPolygon(group, path);
       path = Clipper.ReversePath(path);
       BuildNormals(path);
-      OffsetPolygon(group, path, true, 0);
+      OffsetPolygon(group, path);
     }
 
     private void OffsetOpenPath(Group group, Path64 path)
@@ -720,17 +697,9 @@ namespace Clipper2Lib
 
       double min_area = Math.PI * Clipper.Sqr(_groupDelta);
       using List<Path64>.Enumerator pathIt = group.inPaths.GetEnumerator();
-      using List<bool>.Enumerator isHoleIt = group.isHoleList.GetEnumerator();
-      using List<double>.Enumerator areaIt = group.areasList.GetEnumerator();
-      while (pathIt.MoveNext() && isHoleIt.MoveNext() && areaIt.MoveNext())
+      while (pathIt.MoveNext())
       {
-        bool isShrinking =
-          (group.endType == EndType.Polygon) &&
-          (group.pathsReversed == ((_groupDelta < 0) == isHoleIt.Current));
-        if (isShrinking && (Math.Abs(areaIt.Current) < min_area)) continue;
-
         Path64 p = pathIt.Current;
-        bool isHole = isHoleIt.Current;
 
         pathOut = new Path64();
         int cnt = p.Count;
@@ -776,7 +745,7 @@ namespace Clipper2Lib
             EndType.Square;
 
         BuildNormals(p);
-        if (_endType == EndType.Polygon) OffsetPolygon(group, p, isShrinking, areaIt.Current);
+        if (_endType == EndType.Polygon) OffsetPolygon(group, p);
         else if (_endType == EndType.Joined) OffsetOpenJoined(group, p);
         else OffsetOpenPath(group, p);
       }

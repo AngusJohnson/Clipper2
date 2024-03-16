@@ -2,7 +2,7 @@ unit Clipper.Offset;
 
 (*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  14 March 2024                                                   *
+* Date      :  17 March 2024                                                   *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2024                                         *
 * Purpose   :  Path Offset (Inflate/Shrink)                                    *
@@ -41,8 +41,6 @@ type
 	  endType       : TEndType;
     reversed      : Boolean;
     lowestPathIdx : integer;
-    areasList     : TDoubleArray;
-    isHoleList    : BooleanArray;
     constructor Create(const pathsIn: TPaths64; jt: TJoinType; et: TEndType);
   end;
 
@@ -86,7 +84,7 @@ type
 
     procedure BuildNormals;
     procedure DoGroupOffset(group: TGroup);
-    procedure OffsetPolygon(isShrinking: Boolean; area_: double);
+    procedure OffsetPolygon;
     procedure OffsetOpenJoined;
     procedure OffsetOpenPath;
     function CalcSolutionCapacity: integer;
@@ -246,29 +244,13 @@ begin
     paths[i] := StripDuplicates(pathsIn[i], isJoined);
 
   reversed := false;
-	SetLength(isHoleList, len);
-	SetLength(areasList, len);
   if (et = etPolygon) then
   begin
-    pb := @isHoleList[0];
-    for i := 0 to len -1 do
-    begin
-      a := Area(paths[i]);
-      pb^ := a < 0;
-      inc(pb);
-    end;
-
     // the lowermost path must be an outer path, so if its orientation is
     // negative, then flag that the whole group is 'reversed' (so negate
     // delta etc.) as this is much more efficient than reversing every path.
 	  lowestPathIdx := GetLowestPolygonIdx(pathsIn);
-    reversed := (lowestPathIdx >= 0) and isHoleList[lowestPathIdx];
-    if not reversed then Exit;
-    pb := @isHoleList[0];
-    for i := 0 to len -1 do
-    begin
-      pb^ := not pb^; inc(pb);
-    end;
+    reversed := (lowestPathIdx >= 0) and (Area(pathsIn[lowestPathIdx]) < 0);
   end else
     lowestPathIdx := -1;
 end;
@@ -355,7 +337,7 @@ end;
 procedure TClipperOffset.DoGroupOffset(group: TGroup);
 var
   i,j, len, steps: Integer;
-  r, stepsPer360, minArea, arcTol: Double;
+  r, stepsPer360, arcTol: Double;
   absDelta: double;
   isShrinking: Boolean;
   rec: TRect64;
@@ -395,14 +377,8 @@ begin
     fStepsPerRad := stepsPer360 / TwoPi;
   end;
 
-  minArea := PI * Sqr(fGroupDelta);
   for i := 0 to High(group.paths) do
   begin
-    isShrinking := (group.endType = etPolygon) and
-      (group.reversed = ((fGroupDelta < 0) = group.isHoleList[i]));
-    if (isShrinking and (Abs(group.areasList[i]) < minArea)) then
-      Continue;
-
     fInPath := group.paths[i];
     fNorms := nil;
     len := Length(fInPath);
@@ -453,7 +429,7 @@ begin
 
     BuildNormals;
     if fEndType = etPolygon then
-      OffsetPolygon(isShrinking, group.areasList[i])
+      OffsetPolygon
     else if fEndType = etJoined then
       OffsetOpenJoined
     else
@@ -498,33 +474,26 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-procedure TClipperOffset.OffsetPolygon(isShrinking: Boolean; area_: double);
+procedure TClipperOffset.OffsetPolygon;
 var
   i,j: integer;
 begin
   j := high(fInPath);
   for i := 0 to high(fInPath) do
     OffsetPoint(i, j);
-
-  // make sure that polygon areas aren't reversing which would indicate
-  // that the polygon has shrunk too far and that it should be discarded.
-  // See also - #593 & #715
-  if isShrinking and (area_ <> 0) and // area = 0.0 when JoinType.Joined
-    ((area_ < 0) <> (Area(fOutPath) < 0)) then Exit;
-
   UpdateSolution;
 end;
 //------------------------------------------------------------------------------
 
 procedure TClipperOffset.OffsetOpenJoined;
 begin
-  OffsetPolygon(false, 0);
+  OffsetPolygon;
   fInPath := ReversePath(fInPath);
   // Rebuild normals // BuildNormals;
   fNorms := ReversePath(fNorms);
   fNorms := ShiftPath(fNorms, 1);
   fNorms := NegatePath(fNorms);
-  OffsetPolygon(true, 0);
+  OffsetPolygon;
 end;
 //------------------------------------------------------------------------------
 
@@ -537,16 +506,28 @@ begin
   if Assigned(fDeltaCallback64) then
     fGroupDelta := fDeltaCallback64(fInPath, fNorms, 0, 0);
 
-  // do the line start cap
-  if Abs(fGroupDelta) < Tolerance then
+  if (Abs(fGroupDelta) < Tolerance) and
+    not Assigned(fDeltaCallback64) then
   begin
-    AddPoint(fInPath[0]);
-  end else
-  case fEndType of
-    etButt: DoBevel(0, 0);
-    etRound: DoRound(0,0, PI);
-    else DoSquare(0, 0);
+    inc(highI);
+    SetLength(fOutPath, highI);
+    Move(fInPath[0], fOutPath, highI + SizeOf(TPointD));
+    fOutPathLen := highI;
+    Exit;
   end;
+
+  // do the line start cap
+  if Assigned(fDeltaCallback64) then
+    fGroupDelta := fDeltaCallback64(fInPath, fNorms, 0, 0);
+
+  if (Abs(fGroupDelta) < Tolerance) then
+    AddPoint(fInPath[0])
+  else
+    case fEndType of
+      etButt: DoBevel(0, 0);
+      etRound: DoRound(0,0, PI);
+      else DoSquare(0, 0);
+    end;
 
   // offset the left side going forward
   k := 0;
@@ -939,7 +920,7 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-procedure TClipperOffset.OffsetPoint(j: Integer; var k: integer);
+  procedure TClipperOffset.OffsetPoint(j: Integer; var k: integer);
 var
   sinA, cosA: Double;
 begin

@@ -125,30 +125,18 @@ ClipperOffset::Group::Group(const Paths64& _paths, JoinType _join_type, EndType 
 
 	if (end_type == EndType::Polygon)
 	{
-		is_hole_list.reserve(paths_in.size());
-		areas_list.reserve(paths_in.size());
-		for (const Path64& path : paths_in)
-		{
-			double a = Area(path);
-			areas_list.push_back(a);
-			is_hole_list.push_back(a < 0);
-		}
 		lowest_path_idx = GetLowestClosedPathIdx(paths_in);
 		// the lowermost path must be an outer path, so if its orientation is negative,
 		// then flag the whole group is 'reversed' (will negate delta etc.)
 		// as this is much more efficient than reversing every path.
-		is_reversed = (lowest_path_idx >= 0) && is_hole_list[lowest_path_idx];
-		if (is_reversed) is_hole_list.flip();
+		is_reversed = (lowest_path_idx >= 0) && Area(paths_in[lowest_path_idx]) < 0;
 	}
 	else
 	{
 		lowest_path_idx = -1;
 		is_reversed = false;
-		is_hole_list.resize(paths_in.size());
-		areas_list.resize(paths_in.size());
 	}
 }
-
 
 //------------------------------------------------------------------------------
 // ClipperOffset methods
@@ -353,24 +341,17 @@ void ClipperOffset::OffsetPoint(Group& group, const Path64& path, size_t j, size
 		DoSquare(path, j, k);
 }
 
-void ClipperOffset::OffsetPolygon(Group& group, const Path64& path, bool is_shrinking, double area)
+void ClipperOffset::OffsetPolygon(Group& group, const Path64& path)
 {
 	path_out.clear();
 	for (Path64::size_type j = 0, k = path.size() - 1; j < path.size(); k = j, ++j)
-		OffsetPoint(group, path, j, k);
-
-	// make sure that polygon areas aren't reversing which would indicate
-	// that the polygon has shrunk too far and that it should be discarded.
-	// See also - #593 & #715
-	if (is_shrinking && area // area == 0.0 when JoinType::Joined
-		&& ((area < 0) != (Area(path_out) < 0))) return;
-	
+		OffsetPoint(group, path, j, k);	
 	solution.push_back(path_out);
 }
 
 void ClipperOffset::OffsetOpenJoined(Group& group, const Path64& path)
 {
-	OffsetPolygon(group, path, false, 0);
+	OffsetPolygon(group, path);
 	Path64 reverse_path(path);
 	std::reverse(reverse_path.begin(), reverse_path.end());
 
@@ -380,7 +361,7 @@ void ClipperOffset::OffsetOpenJoined(Group& group, const Path64& path)
 	norms.erase(norms.begin());
 	NegatePath(norms);
 
-	OffsetPolygon(group, reverse_path, true, 0);
+	OffsetPolygon(group, reverse_path);
 }
 
 void ClipperOffset::OffsetOpenPath(Group& group, const Path64& path)
@@ -477,17 +458,10 @@ void ClipperOffset::DoGroupOffset(Group& group)
 		steps_per_rad_ = steps_per_360 / (2 * PI);
 	}
 
-	double min_area = PI * Sqr(group_delta_);
-	std::vector<bool>::const_iterator is_hole_it = group.is_hole_list.cbegin();
-	std::vector<double>::const_iterator area_it = group.areas_list.cbegin();
+	//double min_area = PI * Sqr(group_delta_);
 	Paths64::const_iterator path_in_it = group.paths_in.cbegin();
-	for ( ; path_in_it != group.paths_in.cend(); ++path_in_it, ++is_hole_it, ++area_it)
+	for ( ; path_in_it != group.paths_in.cend(); ++path_in_it)
 	{
-		bool is_shrinking = 
-			(group.end_type == EndType::Polygon) &&
-			(group.is_reversed == ((group_delta_ < 0) == *is_hole_it));
-		if (is_shrinking && (std::fabs(*area_it) < min_area)) continue;
-
 		Path64::size_type pathLen = path_in_it->size();
 		path_out.clear();
 
@@ -532,7 +506,7 @@ void ClipperOffset::DoGroupOffset(Group& group)
 			  EndType::Square;
 
 		BuildNormals(*path_in_it);
-		if (end_type_ == EndType::Polygon) OffsetPolygon(group, *path_in_it, is_shrinking, *area_it);
+		if (end_type_ == EndType::Polygon) OffsetPolygon(group, *path_in_it);
 		else if (end_type_ == EndType::Joined) OffsetOpenJoined(group, *path_in_it);
 		else OffsetOpenPath(group, *path_in_it);
 	}
