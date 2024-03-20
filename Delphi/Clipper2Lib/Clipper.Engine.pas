@@ -2,7 +2,7 @@ unit Clipper.Engine;
 
 (*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  14 February 2024                                                *
+* Date      :  21 March 2024                                                   *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2024                                         *
 * Purpose   :  This is the main polygon clipping module                        *
@@ -282,7 +282,7 @@ type
     function ClearSolutionOnly: Boolean;
     procedure ExecuteInternal(clipType: TClipType;
       fillRule: TFillRule; usingPolytree: Boolean);
-    function  BuildPaths(out closedPaths, openPaths: TPaths64): Boolean;
+    function  BuildPaths(var closedPaths, openPaths: TPaths64): Boolean;
     function  BuildTree(polytree: TPolyPathBase; out openPaths: TPaths64): Boolean;
   {$IFDEF USINGZ}
     procedure SetZ( e1, e2: PActive; var intersectPt: TPoint64);
@@ -3665,17 +3665,15 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-function TClipperBase.BuildPaths(out closedPaths, openPaths: TPaths64): Boolean;
+function TClipperBase.BuildPaths(var closedPaths, openPaths: TPaths64): Boolean;
 var
-  i, cntClosed, cntOpen: Integer;
+  i: Integer;
+  closedCnt, openCnt: integer;
   outRec: POutRec;
 begin
+  closedCnt := Length(closedPaths);
+  openCnt := Length(openPaths);
   try
-    cntClosed := 0; cntOpen := 0;
-    SetLength(closedPaths, FOutRecList.Count);
-    if FHasOpenPaths then
-      SetLength(openPaths, FOutRecList.Count);
-
     i := 0;
     while i < FOutRecList.Count do
     begin
@@ -3685,22 +3683,21 @@ begin
 
       if outRec.isOpen then
       begin
+        SetLength(openPaths, openCnt +1);
         if BuildPath(outRec.pts, FReverseSolution,
-          true, openPaths[cntOpen]) then
-            inc(cntOpen);
+          true, openPaths[openCnt]) then inc(openCnt);
       end else
       begin
         // nb: CleanCollinear can add to FOutRecList
         CleanCollinear(outRec);
         // closed paths should always return a Positive orientation
         // except when ReverseSolution == true
+        SetLength(closedPaths, closedCnt +1);
         if BuildPath(outRec.pts, FReverseSolution,
-          false, closedPaths[cntClosed]) then
-            inc(cntClosed);
+          false, closedPaths[closedCnt]) then
+            inc(closedCnt);
       end;
     end;
-    SetLength(closedPaths, cntClosed);
-    SetLength(openPaths, cntOpen);
     result := true;
   except
     result := false;
