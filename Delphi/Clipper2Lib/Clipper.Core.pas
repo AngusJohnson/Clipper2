@@ -2,7 +2,7 @@ unit Clipper.Core;
 
 (*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  14 February 2024                                                *
+* Date      :  24 March 2024                                                   *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2024                                         *
 * Purpose   :  Core Clipper Library module                                     *
@@ -829,6 +829,9 @@ begin
   begin
     result[i].X := Round(path[i].X * sx);
     result[i].Y := Round(path[i].Y * sy);
+{$IFDEF USINGZ}
+    result[i].Z := path[i].Z;
+{$ENDIF}
   end;
 end;
 //------------------------------------------------------------------------------
@@ -845,10 +848,16 @@ begin
   j := 1;
   result[0].X := Round(path[0].X * sx);
   result[0].Y := Round(path[0].Y * sy);
+{$IFDEF USINGZ}
+  result[0].Z := path[0].Z;
+{$ENDIF}
   for i := 1 to len -1 do
   begin
     result[j].X := Round(path[i].X * sx);
     result[j].Y := Round(path[i].Y * sy);
+{$IFDEF USINGZ}
+    result[j].Z := path[i].Z;
+{$ENDIF}
     if (result[j].X <> result[j-1].X) or
       (result[j].Y <> result[j-1].Y) then inc(j);
   end;
@@ -866,10 +875,16 @@ begin
   j := 1;
   result[0].X := Round(path[0].X * scale);
   result[0].Y := Round(path[0].Y * scale);
+{$IFDEF USINGZ}
+  result[0].Z := path[0].Z;
+{$ENDIF}
   for i := 1 to len -1 do
   begin
     result[j].X := Round(path[i].X * scale);
     result[j].Y := Round(path[i].Y * scale);
+{$IFDEF USINGZ}
+    result[j].Z := path[i].Z;
+{$ENDIF}
     if (result[j].X <> result[j-1].X) or
       (result[j].Y <> result[j-1].Y) then inc(j);
   end;
@@ -887,6 +902,9 @@ begin
   begin
     result[i].X := Round(path[i].X * scale);
     result[i].Y := Round(path[i].Y * scale);
+{$IFDEF USINGZ}
+    result[i].Z := path[i].Z;
+{$ENDIF}
   end;
 end;
 //------------------------------------------------------------------------------
@@ -926,6 +944,9 @@ begin
   begin
     result[i].X := path[i].X * sx;
     result[i].Y := path[i].Y * sy;
+{$IFDEF USINGZ}
+    result[i].Z := path[i].Z;
+{$ENDIF}
   end;
 end;
 //------------------------------------------------------------------------------
@@ -939,6 +960,9 @@ begin
   begin
     result[i].X := path[i].X * sx;
     result[i].Y := path[i].Y * sy;
+{$IFDEF USINGZ}
+    result[i].Z := path[i].Z;
+{$ENDIF}
   end;
 end;
 //------------------------------------------------------------------------------
@@ -989,6 +1013,9 @@ begin
     begin
       result[i][j].X := (paths[i][j].X * sx);
       result[i][j].Y := (paths[i][j].Y * sy);
+{$IFDEF USINGZ}
+      result[i][j].Z := paths[i][j].Z;
+{$ENDIF}
     end;
   end;
 end;
@@ -1008,6 +1035,9 @@ begin
     begin
       result[i][j].X := paths[i][j].X * sx;
       result[i][j].Y := paths[i][j].Y * sy;
+{$IFDEF USINGZ}
+      result[i][j].Z := paths[i][j].Z;
+{$ENDIF}
     end;
   end;
 end;
@@ -1103,6 +1133,9 @@ begin
   begin
     Result[i].X := Round(pathD[i].X);
     Result[i].Y := Round(pathD[i].Y);
+{$IFDEF USINGZ}
+    Result[i].Z := pathD[i].Z;
+{$ENDIF}
   end;
 end;
 //------------------------------------------------------------------------------
@@ -1117,6 +1150,9 @@ begin
   begin
     Result[i].X := path[i].X;
     Result[i].Y := path[i].Y;
+{$IFDEF USINGZ}
+    Result[i].Z := path[i].Z;
+{$ENDIF}
   end;
 end;
 //------------------------------------------------------------------------------
@@ -2011,6 +2047,9 @@ begin
   else if t >= 1.0 then ip := ln1b;
   ip.X :=  Trunc(ln1a.X + t * dx1);
   ip.Y :=  Trunc(ln1a.Y + t * dy1);
+{$IFDEF USINGZ}
+  ip.Z := 0;
+{$ENDIF}
 end;
 //------------------------------------------------------------------------------
 

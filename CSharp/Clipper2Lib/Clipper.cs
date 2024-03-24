@@ -633,6 +633,26 @@ namespace Clipper2Lib
       return p;
     }
 
+#if USINGZ
+    public static Path64 MakePathZ(long[] arr)
+    {
+      int len = arr.Length / 3;
+      Path64 p = new Path64(len);
+      for (int i = 0; i < len; i++)
+        p.Add(new Point64(arr[i * 3], arr[i * 3 + 1], arr[i * 3 + 2]));
+      return p;
+    }
+    public static PathD MakePathZ(double[] arr)
+    {
+      int len = arr.Length / 3;
+      PathD p = new PathD(len);
+      for (int i = 0; i < len; i++)
+        p.Add(new PointD(arr[i * 3], arr[i * 3 + 1], (long)arr[i * 3 + 2]));
+      return p;
+    }
+#endif
+
+
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static double Sqr(double value)
     {

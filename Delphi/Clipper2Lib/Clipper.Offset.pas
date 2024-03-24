@@ -2,7 +2,7 @@ unit Clipper.Offset;
 
 (*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  17 March 2024                                                   *
+* Date      :  24 March 2024                                                   *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2024                                         *
 * Purpose   :  Path Offset (Inflate/Shrink)                                    *
@@ -70,12 +70,18 @@ type
     fDeltaCallback64    : TDeltaCallback64;
 {$IFDEF USINGZ}
     fZCallback64 : TZCallback64;
+    procedure ZCB(const bot1, top1, bot2, top2: TPoint64;
+      var intersectPt: TPoint64);
     procedure AddPoint(x,y: double; z: Int64); overload;
-{$ELSE}
-    procedure AddPoint(x,y: double); overload;
-{$ENDIF}
     procedure AddPoint(const pt: TPoint64); overload;
       {$IFDEF INLINING} inline; {$ENDIF}
+    procedure AddPoint(const pt: TPoint64; newZ: Int64); overload;
+      {$IFDEF INLINING} inline; {$ENDIF}
+{$ELSE}
+    procedure AddPoint(x,y: double); overload;
+    procedure AddPoint(const pt: TPoint64); overload;
+      {$IFDEF INLINING} inline; {$ENDIF}
+{$ENDIF}
     procedure DoSquare(j, k: Integer);
     procedure DoBevel(j, k: Integer);
     procedure DoMiter(j, k: Integer; cosA: Double);
@@ -619,6 +625,10 @@ begin
     PreserveCollinear := fPreserveCollinear;
     // the solution should retain the orientation of the input
     ReverseSolution := fReverseSolution <> pathsReversed;
+{$IFDEF USINGZ}
+    ZCallback := ZCB;
+{$ENDIF}
+
     AddSubject(fSolution);
     if assigned(fSolutionTree) then
       Execute(ctUnion, fillRule, fSolutionTree, dummy);
@@ -673,6 +683,20 @@ end;
 //------------------------------------------------------------------------------
 
 {$IFDEF USINGZ}
+procedure TClipperOffset.ZCB(const bot1, top1, bot2, top2: TPoint64;
+  var intersectPt: TPoint64);
+begin
+  if (bot1.Z <> 0) and
+    ((bot1.Z = bot2.Z) or (bot1.Z = top2.Z)) then intersectPt.Z := bot1.Z
+  else if (bot2.Z <> 0) and (bot2.Z = top1.Z) then intersectPt.Z := bot2.Z
+  else if (top1.Z <> 0) and (top1.Z = top2.Z) then intersectPt.Z := top1.Z
+  else if Assigned(ZCallback) then
+    ZCallback(bot1, top1, bot2, top2, intersectPt);
+end;
+{$ENDIF}
+//------------------------------------------------------------------------------
+
+{$IFDEF USINGZ}
 procedure TClipperOffset.AddPoint(x,y: double; z: Int64);
 {$ELSE}
 procedure TClipperOffset.AddPoint(x,y: double);
@@ -696,15 +720,26 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-procedure TClipperOffset.AddPoint(const pt: TPoint64);
-begin
 {$IFDEF USINGZ}
-  AddPoint(pt.X, pt.Y, pt.Z);
-{$ELSE}
-  AddPoint(pt.X, pt.Y);
-{$ENDIF}
+procedure TClipperOffset.AddPoint(const pt: TPoint64; newZ: Int64);
+begin
+  AddPoint(pt.X, pt.Y, newZ);
 end;
 //------------------------------------------------------------------------------
+
+procedure TClipperOffset.AddPoint(const pt: TPoint64);
+begin
+  AddPoint(pt.X, pt.Y, pt.Z);
+end;
+//------------------------------------------------------------------------------
+
+{$ELSE}
+procedure TClipperOffset.AddPoint(const pt: TPoint64);
+begin
+  AddPoint(pt.X, pt.Y);
+end;
+//------------------------------------------------------------------------------
+{$ENDIF}
 
 function IntersectPoint(const ln1a, ln1b, ln2a, ln2b: TPointD): TPointD;
 var
@@ -956,11 +991,19 @@ begin
   if (cosA > -0.999) and (sinA * fGroupDelta < 0) then
   begin
     // is concave
+{$IFDEF USINGZ}
+    AddPoint(GetPerpendic(fInPath[j], fNorms[k], fGroupDelta), fInPath[j].Z);
+{$ELSE}
     AddPoint(GetPerpendic(fInPath[j], fNorms[k], fGroupDelta));
+{$ENDIF}
     // this extra point is the only (simple) way to ensure that
     // path reversals are fully cleaned with the trailing clipper
     AddPoint(fInPath[j]); // (#405)
+{$IFDEF USINGZ}
+    AddPoint(GetPerpendic(fInPath[j], fNorms[j], fGroupDelta), fInPath[j].Z);
+{$ELSE}
     AddPoint(GetPerpendic(fInPath[j], fNorms[j], fGroupDelta));
+{$ENDIF}
   end
   else if (cosA > 0.999) and (fJoinType <> jtRound) then
   begin

@@ -22,8 +22,8 @@
 namespace Clipper2Lib {
 
   static const unsigned subj_brush_clr = 0x1800009C;
-  static const unsigned subj_stroke_clr = 0xCCB3B3DA;
-  static const unsigned clip_brush_clr = 0x129C0000; 
+  static const unsigned subj_stroke_clr = 0xFFB3B3DA;
+  static const unsigned clip_brush_clr = 0x129C0000;
   static const unsigned clip_stroke_clr = 0xCCFFA07A;
   static const unsigned solution_brush_clr = 0x4466FF66;
 
@@ -52,7 +52,7 @@ namespace Clipper2Lib {
       svg.AddPaths(path, false, fillrule, 0x0, subj_stroke_clr, 0.8, false);
       PathsD tmp = Union(path, svg.Fill_Rule());
       svg.AddPaths(tmp, false, fillrule, subj_brush_clr, subj_stroke_clr, 0.8, false);
-    } 
+    }
     else
       svg.AddPaths(path, false, fillrule, subj_brush_clr, subj_stroke_clr, 0.8, false);
   }
@@ -105,7 +105,7 @@ namespace Clipper2Lib {
   inline void SvgAddSolution(SvgWriter& svg, const Paths64 &path, FillRule fillrule, bool show_coords)
   {
     svg.AddPaths(TransformPaths<double, int64_t>(path),
-      false, fillrule, solution_brush_clr, 0xFF003300, 1.2, show_coords);
+      false, fillrule, solution_brush_clr, 0xFF003300, 1.0, show_coords);
   }
 
 
@@ -116,7 +116,7 @@ namespace Clipper2Lib {
   }
 
 
-  inline void SvgAddOpenSolution(SvgWriter& svg, const Paths64& path, 
+  inline void SvgAddOpenSolution(SvgWriter& svg, const Paths64& path,
     FillRule fillrule, bool show_coords, bool is_joined = false)
   {
     svg.AddPaths(TransformPaths<double, int64_t>(path),

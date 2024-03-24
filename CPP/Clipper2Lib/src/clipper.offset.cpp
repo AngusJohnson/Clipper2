@@ -1,6 +1,6 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  14 March 2024                                                   *
+* Date      :  24 March 2024                                                   *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2024                                         *
 * Purpose   :  Path Offset (Inflate/Shrink)                                    *
@@ -316,11 +316,19 @@ void ClipperOffset::OffsetPoint(Group& group, const Path64& path, size_t j, size
 	if (cos_a > -0.999 && (sin_a * group_delta_ < 0)) // test for concavity first (#593)
 	{
 		// is concave
+#ifdef USINGZ
+		path_out.push_back(Point64(GetPerpendic(path[j], norms[k], group_delta_), path[j].z));
+#else
 		path_out.push_back(GetPerpendic(path[j], norms[k], group_delta_));
+#endif
 		// this extra point is the only (simple) way to ensure that
 		// path reversals are fully cleaned with the trailing clipper
 		path_out.push_back(path[j]); // (#405)
+#ifdef USINGZ
+		path_out.push_back(Point64(GetPerpendic(path[j], norms[j], group_delta_), path[j].z));
+#else
 		path_out.push_back(GetPerpendic(path[j], norms[j], group_delta_));
+#endif
 	}
 	else if (cos_a > 0.999 && join_type_ != JoinType::Round)
 	{
@@ -346,7 +354,7 @@ void ClipperOffset::OffsetPolygon(Group& group, const Path64& path)
 	path_out.clear();
 	for (Path64::size_type j = 0, k = path.size() - 1; j < path.size(); k = j, ++j)
 		OffsetPoint(group, path, j, k);	
-	solution.push_back(path_out);
+	solution->push_back(path_out);
 }
 
 void ClipperOffset::OffsetOpenJoined(Group& group, const Path64& path)
@@ -421,7 +429,7 @@ void ClipperOffset::OffsetOpenPath(Group& group, const Path64& path)
 
 	for (size_t j = highI -1, k = highI; j > 0; k = j, --j)
 		OffsetPoint(group, path, j, k);
-	solution.push_back(path_out);
+	solution->push_back(path_out);
 }
 
 void ClipperOffset::DoGroupOffset(Group& group)
@@ -496,7 +504,7 @@ void ClipperOffset::DoGroupOffset(Group& group)
 #endif
 			}
 
-			solution.push_back(path_out);
+			solution->push_back(path_out);
 			continue;
 		} // end of offsetting a single point
 
@@ -512,6 +520,16 @@ void ClipperOffset::DoGroupOffset(Group& group)
 	}
 }
 
+#ifdef USINGZ
+void ClipperOffset::ZCB(const Point64& bot1, const Point64& top1,
+	const Point64& bot2, const Point64& top2, Point64& ip)
+{
+	if (bot1.z && (bot1.z == bot2.z) || (bot1.z == top2.z)) ip.z = bot1.z;
+	else if (bot2.z && (bot2.z == top1.z)) ip.z = bot2.z;
+	else if (top1.z && (top1.z == top2.z)) ip.z = top1.z;
+	else if (zCallback64_) zCallback64_(bot1, top1, bot2, top2, ip);
+}
+#endif
 
 size_t ClipperOffset::CalcSolutionCapacity()
 {
@@ -537,40 +555,35 @@ bool ClipperOffset::CheckReverseOrientation()
 void ClipperOffset::ExecuteInternal(double delta)
 {
 	error_code_ = 0;
-	solution.clear();
 	if (groups_.size() == 0) return;
-	solution.reserve(CalcSolutionCapacity());
+	solution->reserve(CalcSolutionCapacity());
 
 	if (std::abs(delta) < 0.5) // ie: offset is insignificant
 	{
 		Paths64::size_type sol_size = 0;
 		for (const Group& group : groups_) sol_size += group.paths_in.size();
-		solution.reserve(sol_size);
+		solution->reserve(sol_size);
 		for (const Group& group : groups_)
-			copy(group.paths_in.begin(), group.paths_in.end(), back_inserter(solution));
-		return;
+			copy(group.paths_in.begin(), group.paths_in.end(), back_inserter(*solution));
 	}
-
-	temp_lim_ = (miter_limit_ <= 1) ?
-		2.0 :
-		2.0 / (miter_limit_ * miter_limit_);
-
-	delta_ = delta;
-	std::vector<Group>::iterator git;
-	for (git = groups_.begin(); git != groups_.end(); ++git)
+	else
 	{
-		DoGroupOffset(*git);
-		if (!error_code_) continue; // all OK
-		solution.clear();
+
+		temp_lim_ = (miter_limit_ <= 1) ?
+			2.0 :
+			2.0 / (miter_limit_ * miter_limit_);
+
+		delta_ = delta;
+		std::vector<Group>::iterator git;
+		for (git = groups_.begin(); git != groups_.end(); ++git)
+		{
+			DoGroupOffset(*git);
+			if (!error_code_) continue; // all OK
+			solution->clear();
+		}
 	}
-}
 
-void ClipperOffset::Execute(double delta, Paths64& paths)
-{
-	paths.clear();
-
-	ExecuteInternal(delta);
-	if (!solution.size()) return;
+	if (!solution->size()) return;
 
 	bool paths_reversed = CheckReverseOrientation();
 	//clean up self-intersections ...
@@ -579,41 +592,45 @@ void ClipperOffset::Execute(double delta, Paths64& paths)
 	//the solution should retain the orientation of the input
 	c.ReverseSolution(reverse_solution_ != paths_reversed);
 #ifdef USINGZ
-	if (zCallback64_) { c.SetZCallback(zCallback64_); }
+	auto fp = std::bind(&ClipperOffset::ZCB, this, std::placeholders::_1,
+		std::placeholders::_2, std::placeholders::_3,
+		std::placeholders::_4, std::placeholders::_5);
+	c.SetZCallback(fp);
 #endif
-	c.AddSubject(solution);
-	if (paths_reversed)
-		c.Execute(ClipType::Union, FillRule::Negative, paths);
+	c.AddSubject(*solution);
+	if (solution_tree)
+	{
+		if (paths_reversed)
+			c.Execute(ClipType::Union, FillRule::Negative, *solution_tree);
+		else
+			c.Execute(ClipType::Union, FillRule::Positive, *solution_tree);
+	}
 	else
-		c.Execute(ClipType::Union, FillRule::Positive, paths);
+	{
+		if (paths_reversed)
+			c.Execute(ClipType::Union, FillRule::Negative, *solution);
+		else
+			c.Execute(ClipType::Union, FillRule::Positive, *solution);
+	}
+}
+
+void ClipperOffset::Execute(double delta, Paths64& paths)
+{
+	paths.clear();
+	solution = &paths;
+	solution_tree = nullptr;
+	ExecuteInternal(delta);
 }
 
 
 void ClipperOffset::Execute(double delta, PolyTree64& polytree)
 {
 	polytree.Clear();
-
+	solution_tree = &polytree;
+	solution = new Paths64();
 	ExecuteInternal(delta);
-	if (!solution.size()) return;
-
-	bool paths_reversed = CheckReverseOrientation();
-	//clean up self-intersections ...
-	Clipper64 c;
-	c.PreserveCollinear(false);
-	//the solution should retain the orientation of the input
-	c.ReverseSolution (reverse_solution_ != paths_reversed);
-#ifdef USINGZ
-	if (zCallback64_) {
-		c.SetZCallback(zCallback64_);
-	}
-#endif
-	c.AddSubject(solution);
-
-
-	if (paths_reversed)
-		c.Execute(ClipType::Union, FillRule::Negative, polytree);
-	else
-		c.Execute(ClipType::Union, FillRule::Positive, polytree);
+	delete solution;
+	solution = nullptr;
 }
 
 void ClipperOffset::Execute(DeltaCallback64 delta_cb, Paths64& paths)

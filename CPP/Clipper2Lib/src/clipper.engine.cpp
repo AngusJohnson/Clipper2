@@ -1,6 +1,6 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  14 February 2024                                                *
+* Date      :  24 March 2024                                                   *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2024                                         *
 * Purpose   :  This is the main polygon clipping module                        *
@@ -2168,6 +2168,7 @@ namespace Clipper2Lib {
       horz_seg_list_.end(),
       [](HorzSegment& hs) { return UpdateHorzSegment(hs); });
     if (j < 2) return;
+
     std::stable_sort(horz_seg_list_.begin(), horz_seg_list_.end(), HorzSegSorter());
 
     HorzSegmentList::iterator hs1 = horz_seg_list_.begin(), hs2;

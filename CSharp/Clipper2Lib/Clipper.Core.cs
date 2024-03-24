@@ -1,6 +1,6 @@
 ﻿/*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  14 February 2024                                                *
+* Date      :  24 March 2024                                                   *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2024                                         *
 * Purpose   :  Core structures and functions for the Clipper Library           *
@@ -85,7 +85,7 @@ namespace Clipper2Lib
       return new Point64(lhs.X - rhs.X, lhs.Y - rhs.Y, lhs.Z - rhs.Z);
     }
 
-    public override string ToString()
+    public readonly override string ToString()
     {
       return $"{X},{Y},{Z} "; // nb: trailing space
     }
@@ -216,7 +216,7 @@ namespace Clipper2Lib
       this.z = z;
     }
 
-    public string ToString(int precision = 2)
+    public readonly string ToString(int precision = 2)
     {
       return string.Format($"{{0:F{precision}}},{{1:F{precision}}},{{2:D}}", x,y,z);
     }

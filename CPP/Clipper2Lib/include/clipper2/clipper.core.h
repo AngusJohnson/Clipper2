@@ -1,6 +1,6 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  14 February 2024                                                *
+* Date      :  24 March 2024                                                   *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2024                                         *
 * Purpose   :  Core Clipper Library structures and functions                   *
@@ -139,6 +139,12 @@ namespace Clipper2Lib
     explicit Point<T>(const Point<T2>& p)
     {
       Init(p.x, p.y, p.z);
+    }
+
+    template <typename T2>
+    explicit Point<T>(const Point<T2>& p, int64_t z_)
+    {
+      Init(p.x, p.y, z_);
     }
 
     Point operator * (const double scale) const

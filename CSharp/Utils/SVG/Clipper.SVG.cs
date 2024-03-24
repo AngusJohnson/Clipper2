@@ -1,8 +1,8 @@
 ﻿/*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  16 September 2022                                               *
+* Date      :  24 March 2024                                                   *
 * Website   :  http://www.angusj.com                                           *
-* Copyright :  Angus Johnson 2010-2022                                         *
+* Copyright :  Angus Johnson 2010-2024                                         *
 * License   :  http://www.boost.org/LICENSE_1_0.txt                            *
 *******************************************************************************/
 
@@ -56,9 +56,9 @@ namespace Clipper2Lib
       public readonly string text;
       public readonly int fontSize;
       public readonly uint fontColor;
-      public readonly int posX;
-      public readonly int posY;
-      public TextInfo(string text, int x, int y,
+      public readonly double posX;
+      public readonly double posY;
+      public TextInfo(string text, double x, double y,
         int fontsize = 12, uint fontcolor = black)
       {
         this.text = text;
@@ -190,7 +190,7 @@ namespace Clipper2Lib
     }
 
 
-    public void AddText(string cap, int posX, int posY, int fontSize, uint fontClr = black)
+    public void AddText(string cap, double posX, double posY, int fontSize, uint fontClr = black)
     {
       textInfos.Add(new TextInfo(cap, posX, posY, fontSize, fontClr));
     }
@@ -283,17 +283,18 @@ namespace Clipper2Lib
 
         if (pi.ShowCoords)
         {
-          writer.Write("<g font-family=\"{0}\" font-size=\"{1}\" fill=\"{2}\">\n", coordStyle.FontName, coordStyle.FontSize, ColorToHtml(coordStyle.FontColor));
+          writer.Write("<g font-family=\"{0}\" font-size=\"{1}\" fill=\"{2}\">\n", 
+            coordStyle.FontName, coordStyle.FontSize, ColorToHtml(coordStyle.FontColor));
           foreach (PathD path in pi.paths)
           {
             foreach (PointD pt in path)
             {
 #if USINGZ
-              writer.Write(string.Format(
-                  "<text x=\"{0}\" y=\"{1}\">{2},{3},{4}</text>\n",
-                  (int)(pt.x * scale + offsetX), (int)(pt.y * scale + offsetY), pt.x, pt.y, pt.z));
+              writer.Write("<text x=\"{0:f2}\" y=\"{1:f2}\">{2:f2},{3:f2},{4}</text>\n", 
+                (pt.x * scale + offsetX), (pt.y * scale + offsetY), pt.x, pt.y, pt.z);
 #else
-              writer.Write("<text x=\"{0:f2}\" y=\"{1:f2}\">{2},{3}</text>\n", (pt.x * scale + offsetX), (pt.y * scale + offsetY), pt.x, pt.y);
+              writer.Write("<text x=\"{0:f2}\" y=\"{1:f2}\">{2:f2},{3:f2}</text>\n", 
+                (pt.x * scale + offsetX), (pt.y * scale + offsetY), pt.x, pt.y);
 #endif
             }
           }
@@ -304,8 +305,10 @@ namespace Clipper2Lib
       foreach (TextInfo captionInfo in textInfos)
       {
         writer.Write("<g font-family=\"Verdana\" font-style=\"normal\" " +
-                     "font-weight=\"normal\" font-size=\"{0}\" fill=\"{1}\">\n", captionInfo.fontSize, ColorToHtml(captionInfo.fontColor));
-        writer.Write("<text x=\"{0}\" y=\"{1}\">{2}</text>\n</g>\n", captionInfo.posX * scale + offsetX, captionInfo.posY * scale + offsetX, captionInfo.text);
+                     "font-weight=\"normal\" font-size=\"{0}\" fill=\"{1}\">\n", 
+                     captionInfo.fontSize, ColorToHtml(captionInfo.fontColor));
+        writer.Write("<text x=\"{0:f2}\" y=\"{1:f2}\">{2}</text>\n</g>\n", 
+          captionInfo.posX * scale + offsetX, captionInfo.posY * scale + offsetY, captionInfo.text);
       }
 
       writer.Write("</svg>\n");
