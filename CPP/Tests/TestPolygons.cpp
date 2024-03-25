@@ -106,3 +106,18 @@ TEST(Clipper2Tests, TestHorzSpikes) //#720
   c.Execute(Clipper2Lib::ClipType::Union, Clipper2Lib::FillRule::NonZero, paths);
   EXPECT_GE(paths.size(), 1);
 }
+
+TEST(Clipper2Tests, TestCollinearOnMacOs) //#777
+{
+  Clipper2Lib::Paths64 subject;
+  subject.push_back(Clipper2Lib::MakePath({ 0, -453054451,0, -433253797,-455550000, 0 }));
+  subject.push_back(Clipper2Lib::MakePath({ 0, -433253797,0, 0,-455550000, 0 }));
+  Clipper2Lib::Clipper64 clipper;
+  clipper.PreserveCollinear(false);
+  clipper.AddSubject(subject);
+  Clipper2Lib::Paths64 solution;
+  clipper.Execute(Clipper2Lib::ClipType::Union, Clipper2Lib::FillRule::NonZero, solution);
+  ASSERT_EQ(solution.size(), 1);
+  EXPECT_EQ(solution[0].size(), 3);
+  EXPECT_EQ(IsPositive(subject[0]), IsPositive(solution[0]));
+}
