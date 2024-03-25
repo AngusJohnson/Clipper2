@@ -1,6 +1,6 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  24 March 2024                                                   *
+* Date      :  25 March 2024                                                   *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2024                                         *
 * Purpose   :  This is the main polygon clipping module                        *
@@ -1118,6 +1118,16 @@ namespace Clipper2Lib {
     }
   }
 
+  inline bool IsCollinear(const Point64& pt1, 
+    const Point64& sharedPt, const Point64& pt2) // #777
+  {
+#ifdef __APPLE__
+    double cp = CrossProduct(pt1, sharedPt, pt2);
+    return std::fabs(cp) < 0.00000001;
+#else
+    return CrossProduct(pt1, sharedPt, pt2) == 0;
+#endif
+  }
 
   bool IsValidAelOrder(const Active& resident, const Active& newcomer)
   {
@@ -1150,8 +1160,8 @@ namespace Clipper2Lib {
     //resident must also have just been inserted
     else if (resident.is_left_bound != newcomerIsLeft)
       return newcomerIsLeft;
-    else if (CrossProduct(PrevPrevVertex(resident)->pt,
-      resident.bot, resident.top) == 0) return true;
+    else if (IsCollinear(PrevPrevVertex(resident)->pt,
+      resident.bot, resident.top)) return true;
     else
       //compare turning direction of the alternate bound
       return (CrossProduct(PrevPrevVertex(resident)->pt,
@@ -1527,7 +1537,6 @@ namespace Clipper2Lib {
     return new_op;
   }
 
-
   void ClipperBase::CleanCollinear(OutRec* outrec)
   {
     outrec = GetRealOutRec(outrec);
@@ -1542,7 +1551,7 @@ namespace Clipper2Lib {
     for (; ; )
     {
       //NB if preserveCollinear == true, then only remove 180 deg. spikes
-      if ((CrossProduct(op2->prev->pt, op2->pt, op2->next->pt) == 0) &&
+      if (IsCollinear(op2->prev->pt, op2->pt, op2->next->pt) &&
         (op2->pt == op2->prev->pt ||
           op2->pt == op2->next->pt || !preserve_collinear_ ||
           DotProduct(op2->prev->pt, op2->pt, op2->next->pt) < 0))
