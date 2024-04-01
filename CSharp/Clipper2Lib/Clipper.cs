@@ -589,7 +589,7 @@ namespace Clipper2Lib
         if (pt.y < result.top) result.top = pt.y;
         if (pt.y > result.bottom) result.bottom = pt.y;
       }
-      return result.left == double.MaxValue ? new RectD() : result;
+      return Math.Abs(result.left - double.MaxValue) < InternalClipper.floatingPointTolerance ? new RectD() : result;
     }
 
     public static RectD GetBounds(PathsD paths)
@@ -603,7 +603,7 @@ namespace Clipper2Lib
           if (pt.y < result.top) result.top = pt.y;
           if (pt.y > result.bottom) result.bottom = pt.y;
         }
-      return result.left == double.MaxValue ? new RectD() : result;
+      return Math.Abs(result.left - double.MaxValue) < InternalClipper.floatingPointTolerance ? new RectD() : result;
     }
 
     public static Path64 MakePath(int[] arr)
