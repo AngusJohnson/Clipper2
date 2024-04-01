@@ -41,7 +41,7 @@ namespace Clipper2Lib
     protected Rect64 pathBounds_;
     protected List<OutPt2?> results_;
     protected List<OutPt2?>[] edges_;
-    protected int currIdx_ = -1;
+    protected int currIdx_;
     internal RectClip64(Rect64 rect)
     {
       currIdx_ = -1;
