@@ -2157,7 +2157,7 @@ private void DoHorizontal(Active horz)
           if (ae.vertexTop == vertex_max)
           {
             // do this first!!
-            if (IsHotEdge(horz) && IsJoined(ae!)) Split(ae, ae.top);
+            if (IsHotEdge(horz) && IsJoined(ae)) Split(ae, ae.top);
 
             if (IsHotEdge(horz))
             {
@@ -2443,7 +2443,7 @@ private void DoHorizontal(Active horz)
       OutPt op = outrec.pts!;
       do
       {
-        op!.outrec = outrec;
+        op.outrec = outrec;
         op = op.next!;
       } while (op != outrec.pts);
     }
@@ -2714,7 +2714,7 @@ private void DoHorizontal(Active horz)
         OutRec or2 = GetRealOutRec(j.op2!.outrec)!;
 
         OutPt op1b = j.op1.next!;
-        OutPt op2b = j.op2.prev!;
+        OutPt op2b = j.op2.prev;
         j.op1.next = j.op2;
         j.op2.prev = j.op1;
         op1b.prev = op2b;
@@ -2850,7 +2850,6 @@ private void DoHorizontal(Active horz)
       OutPt prevOp = splitOp.prev;
       OutPt nextNextOp = splitOp.next!.next!;
       outrec.pts = prevOp;
-      OutPt result = prevOp;
 
       InternalClipper.GetSegmentIntersectPt(
           prevOp.pt, splitOp.pt, splitOp.next.pt, nextNextOp.pt, out Point64 ip);
@@ -3049,7 +3048,7 @@ private void DoHorizontal(Active horz)
         OutRec? split = GetRealOutRec(_outrecList[i]);
         if (split == null || split == outrec || split.recursiveSplit == outrec) continue;
         split.recursiveSplit = outrec; //#599
-        if (split!.splits != null && CheckSplitOwner(outrec, split.splits)) return true;
+        if (split.splits != null && CheckSplitOwner(outrec, split.splits)) return true;
         if (IsValidOwner(outrec, split) && 
           CheckBounds(split) && 
           split.bounds.Contains(outrec.bounds) &&
