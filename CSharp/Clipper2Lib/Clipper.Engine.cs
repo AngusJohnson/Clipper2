@@ -13,7 +13,6 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Reflection.Emit;
 using System.Runtime.CompilerServices;
 
 namespace Clipper2Lib
@@ -147,10 +146,10 @@ namespace Clipper2Lib
     public Active? backEdge;
     public OutPt? pts;
     public PolyPathBase? polypath;
-    public Rect64 bounds = new Rect64();
+    public Rect64 bounds;
     public Path64 path = new Path64();
     public bool isOpen;
-    public List<int>? splits = null;
+    public List<int>? splits;
     public OutRec? recursiveSplit;
   };
 
