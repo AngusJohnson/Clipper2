@@ -473,7 +473,6 @@ namespace Clipper2Lib
 
   public class Path64 : List<Point64> 
   {
-    private Path64() : base() { }
     public Path64(int capacity = 0) : base(capacity) { }
     public Path64(IEnumerable<Point64> path) : base(path) { }
     public override string ToString()
@@ -487,21 +486,19 @@ namespace Clipper2Lib
 
   public class Paths64 : List<Path64>
   {
-    private Paths64() : base() { }
     public Paths64(int capacity = 0) : base(capacity) { }
     public Paths64(IEnumerable<Path64> paths) : base(paths) { }
     public override string ToString()
     {
       string s = "";
       foreach (Path64 p in this)
-        s = s + p.ToString() + "\n";
+        s = s + p + "\n";
       return s;
     }
   }
 
   public class PathD : List<PointD>
   {
-    private PathD() : base() { }
     public PathD(int capacity = 0) : base(capacity) { }
     public PathD(IEnumerable<PointD> path) : base(path) { }
     public string ToString(int precision = 2)
@@ -515,7 +512,6 @@ namespace Clipper2Lib
 
   public class PathsD : List<PathD>
   {
-    private PathsD() : base() { }
     public PathsD(int capacity = 0) : base(capacity) { }
     public PathsD(IEnumerable<PathD> paths) : base(paths) { }
     public string ToString(int precision = 2)
