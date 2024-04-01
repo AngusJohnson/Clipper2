@@ -9,7 +9,6 @@
 
 using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Runtime.CompilerServices;
 
 namespace Clipper2Lib
@@ -74,7 +73,7 @@ namespace Clipper2Lib
     private Path64 pathOut = new Path64();
     private readonly PathD _normals = new PathD();
     private Paths64 _solution = new Paths64();
-    private PolyTree64? _solutionTree = null;
+    private PolyTree64? _solutionTree;
 
     private double _groupDelta; //*0.5 for open paths; *-1.0 for negative areas
     private double _delta;
@@ -454,7 +453,7 @@ namespace Clipper2Lib
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private void DoMiter(Group group, Path64 path, int j, int k, double cosA)
+    private void DoMiter(Path64 path, int j, int k, double cosA)
     {
       double q = _groupDelta / (cosA + 1);
 #if USINGZ
@@ -558,12 +557,12 @@ namespace Clipper2Lib
       else if ((cosA > 0.999) && (_joinType != JoinType.Round))
       {
         // almost straight - less than 2.5 degree (#424, #482, #526 & #724) 
-        DoMiter(group, path, j, k, cosA);
+        DoMiter(path, j, k, cosA);
       }
       else if (_joinType == JoinType.Miter)
       {
         // miter unless the angle is sufficiently acute to exceed ML
-        if (cosA > _mitLimSqr - 1) DoMiter(group, path, j, k, cosA);
+        if (cosA > _mitLimSqr - 1) DoMiter(path, j, k, cosA);
         else DoSquare(path, j, k);
       }
       else if (_joinType == JoinType.Round)
@@ -689,7 +688,6 @@ namespace Clipper2Lib
         _stepsPerRad = stepsPer360 / (2 * Math.PI);
       }
 
-      double min_area = Math.PI * Clipper.Sqr(_groupDelta);
       using List<Path64>.Enumerator pathIt = group.inPaths.GetEnumerator();
       while (pathIt.MoveNext())
       {
