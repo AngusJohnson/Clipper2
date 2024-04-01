@@ -195,7 +195,7 @@ namespace Clipper2Lib
     private static void AddToEdge(List<OutPt2?> edge, OutPt2 op)
     {
       if (op.edge != null) return;
-      op.edge = edge!;
+      op.edge = edge;
       edge.Add(op);
     }
 
@@ -931,7 +931,7 @@ namespace Clipper2Lib
       while (op2 != null && op2 != op)
       {
         if (InternalClipper.CrossProduct(
-          op2!.prev!.pt, op2.pt, op2!.next!.pt) == 0)
+          op2.prev!.pt, op2.pt, op2.next!.pt) == 0)
         {
           op = op2.prev;
           op2 = UnlinkOp(op2);
@@ -995,7 +995,7 @@ namespace Clipper2Lib
       OutPt2 op2 = op.next!;
       while (op2 != op)
       {
-        result.Add(op2!.pt);
+        result.Add(op2.pt);
         op2 = op2.next!;
       }
       return result;
