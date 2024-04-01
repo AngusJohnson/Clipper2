@@ -1054,8 +1054,10 @@ namespace Clipper2Lib
       else
       {
         while (result.Count > 2 && InternalClipper.CrossProduct(
-          result[result.Count - 1], result[result.Count - 2], result[0]) == 0)
-            result.RemoveAt(result.Count - 1);
+                 result[result.Count - 1], result[result.Count - 2], result[0]) == 0)
+        {
+          result.RemoveAt(result.Count - 1);
+        }
         if (result.Count < 3)
           result.Clear();
       }
