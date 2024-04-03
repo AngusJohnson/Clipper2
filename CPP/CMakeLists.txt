@@ -306,7 +306,7 @@ install(FILES ${CLIPPER2_PCFILES} DESTINATION ${CMAKE_INSTALL_LIBDIR}/pkgconfig)
 include(CMakePackageConfigHelpers)
 include(GNUInstallDirs)
 
-write_basic_package_version_file("${PROJECT_BINARY_DIR}/Clipper2ConfigVersion.cmake" COMPATIBILITY AnyNewerVersion)
+write_basic_package_version_file("${PROJECT_BINARY_DIR}/Clipper2ConfigVersion.cmake" COMPATIBILITY SameMajorVersion)
 
 configure_package_config_file(
     "Clipper2Config.cmake.in" 
