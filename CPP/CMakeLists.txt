@@ -288,7 +288,12 @@ set(CLIPPER2_PCFILES "")
 foreach(lib ${CLIPPER2_LIBS})
   set(pc "${CMAKE_CURRENT_BINARY_DIR}/${lib}.pc")
   list(APPEND CLIPPER2_PCFILES ${pc})
-  CONFIGURE_FILE(Clipper2.pc.cmakein "${pc}" @ONLY)
+  if (lib STREQUAL "Clipper2Z")
+    set(PCFILE_LIB_SUFFIX "Z")
+  else()
+    set(PCFILE_LIB_SUFFIX "")
+  endif()
+  configure_file(Clipper2.pc.cmakein "${pc}" @ONLY)
 endforeach()
 
 install(TARGETS ${CLIPPER2_LIBS}
@@ -329,7 +334,7 @@ install(
     EXPORT 
         Clipper2-targets
     NAMESPACE 
-        Clipper2:: 
+        Clipper2::
     FILE 
         Clipper2Targets.cmake 
     DESTINATION 
