@@ -60,13 +60,14 @@ if (NOT (CLIPPER2_USINGZ STREQUAL "ONLY"))
 
   target_compile_definitions(
     Clipper2 PUBLIC
-    CLIPPER2_MAX_DECIMAL_PRECISION=${CLIPPER2_MAX_DECIMAL_PRECISION}
-    $<$<BOOL:${CLIPPER2_HI_PRECISION}>:CLIPPER2_HI_PRECISION>
+      CLIPPER2_MAX_DECIMAL_PRECISION=${CLIPPER2_MAX_DECIMAL_PRECISION}
+      $<$<BOOL:${CLIPPER2_HI_PRECISION}>:CLIPPER2_HI_PRECISION>
   )
 
-
-  target_include_directories(Clipper2
-    PUBLIC Clipper2Lib/include
+  target_include_directories(
+    Clipper2 PUBLIC 
+      $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/Clipper2Lib/include>
+      $<INSTALL_INTERFACE:include>
   )
 
   if (MSVC)
@@ -84,13 +85,14 @@ if (NOT (CLIPPER2_USINGZ STREQUAL "OFF"))
 
   target_compile_definitions(
     Clipper2Z PUBLIC
-    USINGZ
-    CLIPPER2_MAX_DECIMAL_PRECISION=${CLIPPER2_MAX_DECIMAL_PRECISION}
-    $<$<BOOL:${CLIPPER2_HI_PRECISION}>:CLIPPER2_HI_PRECISION>
+      USINGZ
+      CLIPPER2_MAX_DECIMAL_PRECISION=${CLIPPER2_MAX_DECIMAL_PRECISION}
+      $<$<BOOL:${CLIPPER2_HI_PRECISION}>:CLIPPER2_HI_PRECISION>
   )
-
-  target_include_directories(Clipper2Z
-    PUBLIC Clipper2Lib/include
+  target_include_directories(
+    Clipper2Z PUBLIC 
+      $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/Clipper2Lib/include>
+      $<INSTALL_INTERFACE:include>
   )
 
   if (MSVC)
@@ -286,13 +288,59 @@ set(CLIPPER2_PCFILES "")
 foreach(lib ${CLIPPER2_LIBS})
   set(pc "${CMAKE_CURRENT_BINARY_DIR}/${lib}.pc")
   list(APPEND CLIPPER2_PCFILES ${pc})
-  CONFIGURE_FILE(Clipper2.pc.cmakein "${pc}" @ONLY)
+  if (lib STREQUAL "Clipper2Z")
+    set(PCFILE_LIB_SUFFIX "Z")
+  else()
+    set(PCFILE_LIB_SUFFIX "")
+  endif()
+  configure_file(Clipper2.pc.cmakein "${pc}" @ONLY)
 endforeach()
 
 install(TARGETS ${CLIPPER2_LIBS}
         PUBLIC_HEADER DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/clipper2
 )
 install(FILES ${CLIPPER2_PCFILES} DESTINATION ${CMAKE_INSTALL_LIBDIR}/pkgconfig)
+
+
+# create package config file
+include(CMakePackageConfigHelpers)
+include(GNUInstallDirs)
+
+write_basic_package_version_file("${PROJECT_BINARY_DIR}/Clipper2ConfigVersion.cmake" COMPATIBILITY SameMajorVersion)
+
+configure_package_config_file(
+    "Clipper2Config.cmake.in" 
+    "${PROJECT_BINARY_DIR}/Clipper2Config.cmake"
+    INSTALL_DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/clipper2
+)
+
+export(TARGETS ${CLIPPER2_LIBS} FILE "${PROJECT_BINARY_DIR}/Clipper2Targets.cmake")
+
+# installation
+install(TARGETS ${CLIPPER2_LIBS} EXPORT Clipper2-targets
+        PUBLIC_HEADER DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/clipper2
+        LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+)
+
+install(
+    FILES 
+        ${PROJECT_BINARY_DIR}/Clipper2Config.cmake 
+        ${PROJECT_BINARY_DIR}/Clipper2ConfigVersion.cmake 
+    DESTINATION 
+        ${CMAKE_INSTALL_LIBDIR}/cmake/clipper2
+)
+
+install(
+    EXPORT 
+        Clipper2-targets
+    NAMESPACE 
+        Clipper2::
+    FILE 
+        Clipper2Targets.cmake 
+    DESTINATION 
+        ${CMAKE_INSTALL_LIBDIR}/cmake/clipper2
+)
+
 
 # disable exceptions
 #string(REGEX REPLACE "/W[3|4]" "/w" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
