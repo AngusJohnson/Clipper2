@@ -1261,7 +1261,6 @@ namespace Clipper2Lib
           while (rightBound.nextInAEL != null &&
                  IsValidAelOrder(rightBound.nextInAEL, rightBound))
           {
-            IntersectEdges(rightBound, rightBound.nextInAEL, rightBound.bot);
             SwapPositionsInAEL(rightBound, rightBound.nextInAEL);
           }
 
@@ -1548,263 +1547,6 @@ namespace Clipper2Lib
       return result;
     }
 
-    private OutPt? IntersectEdges(Active ae1, Active ae2, Point64 pt)
-    {
-      OutPt? resultOp = null;
-
-      // MANAGE OPEN PATH INTERSECTIONS SEPARATELY ...
-      if (_hasOpenPaths && (IsOpen(ae1) || IsOpen(ae2)))
-      {
-        if (IsOpen(ae1) && IsOpen(ae2)) return null;
-        // the following line avoids duplicating quite a bit of code
-        if (IsOpen(ae2)) SwapActives(ref ae1, ref ae2);
-        if (IsJoined(ae2)) Split(ae2, pt); // needed for safety
-
-        if (_cliptype == ClipType.Union)
-        {
-          if (!IsHotEdge(ae2)) return null;
-        }
-        else if (ae2.localMin.polytype == PathType.Subject)
-          return null;
-
-        switch (_fillrule)
-        {
-          case FillRule.Positive:
-            if (ae2.windCount != 1) return null; break;
-          case FillRule.Negative:
-            if (ae2.windCount != -1) return null; break;
-          default:
-            if (Math.Abs(ae2.windCount) != 1) return null; break;
-        }
-
-        // toggle contribution ...
-        if (IsHotEdge(ae1))
-        {
-          resultOp = AddOutPt(ae1, pt);
-#if USINGZ
-          SetZ(ae1, ae2, ref resultOp.pt);
-#endif
-          if (IsFront(ae1))
-            ae1.outrec!.frontEdge = null;
-          else
-            ae1.outrec!.backEdge = null;
-          ae1.outrec = null;
-        }
-
-        // horizontal edges can pass under open paths at a LocMins
-        else if (pt == ae1.localMin.vertex.pt &&
-          !IsOpenEnd(ae1.localMin.vertex))
-        {
-          // find the other side of the LocMin and
-          // if it's 'hot' join up with it ...
-          Active? ae3 = FindEdgeWithMatchingLocMin(ae1);
-          if (ae3 != null && IsHotEdge(ae3))
-          {
-            ae1.outrec = ae3.outrec;
-            if (ae1.windDx > 0)
-              SetSides(ae3.outrec!, ae1, ae3);
-            else
-              SetSides(ae3.outrec!, ae3, ae1);
-            return ae3.outrec!.pts;
-          }
-
-          resultOp = StartOpenPath(ae1, pt);
-        }
-        else
-          resultOp = StartOpenPath(ae1, pt);
-
-#if USINGZ
-        SetZ(ae1, ae2, ref resultOp.pt);
-#endif
-        return resultOp;
-      }
-
-      // MANAGING CLOSED PATHS FROM HERE ON
-      if (IsJoined(ae1)) Split(ae1, pt);
-      if (IsJoined(ae2)) Split(ae2, pt);
-
-      // UPDATE WINDING COUNTS...
-
-      int oldE1WindCount, oldE2WindCount;
-      if (ae1.localMin.polytype == ae2.localMin.polytype)
-      {
-        if (_fillrule == FillRule.EvenOdd)
-        {
-          oldE1WindCount = ae1.windCount;
-          ae1.windCount = ae2.windCount;
-          ae2.windCount = oldE1WindCount;
-        }
-        else
-        {
-          if (ae1.windCount + ae2.windDx == 0)
-            ae1.windCount = -ae1.windCount;
-          else
-            ae1.windCount += ae2.windDx;
-          if (ae2.windCount - ae1.windDx == 0)
-            ae2.windCount = -ae2.windCount;
-          else
-            ae2.windCount -= ae1.windDx;
-        }
-      }
-      else
-      {
-        if (_fillrule != FillRule.EvenOdd)
-          ae1.windCount2 += ae2.windDx;
-        else
-          ae1.windCount2 = (ae1.windCount2 == 0 ? 1 : 0);
-        if (_fillrule != FillRule.EvenOdd)
-          ae2.windCount2 -= ae1.windDx;
-        else
-          ae2.windCount2 = (ae2.windCount2 == 0 ? 1 : 0);
-      }
-
-      switch (_fillrule)
-      {
-        case FillRule.Positive:
-          oldE1WindCount = ae1.windCount;
-          oldE2WindCount = ae2.windCount;
-          break;
-        case FillRule.Negative:
-          oldE1WindCount = -ae1.windCount;
-          oldE2WindCount = -ae2.windCount;
-          break;
-        default:
-          oldE1WindCount = Math.Abs(ae1.windCount);
-          oldE2WindCount = Math.Abs(ae2.windCount);
-          break;
-      }
-
-      bool e1WindCountIs0or1 = oldE1WindCount == 0 || oldE1WindCount == 1;
-      bool e2WindCountIs0or1 = oldE2WindCount == 0 || oldE2WindCount == 1;
-
-      if ((!IsHotEdge(ae1) && !e1WindCountIs0or1) || (!IsHotEdge(ae2) && !e2WindCountIs0or1)) return null;
-
-      // NOW PROCESS THE INTERSECTION ...
-
-      // if both edges are 'hot' ...
-      if (IsHotEdge(ae1) && IsHotEdge(ae2))
-      {
-        if ((oldE1WindCount != 0 && oldE1WindCount != 1) || (oldE2WindCount != 0 && oldE2WindCount != 1) ||
-            (ae1.localMin.polytype != ae2.localMin.polytype && _cliptype != ClipType.Xor))
-        {
-          resultOp = AddLocalMaxPoly(ae1, ae2, pt);
-#if USINGZ
-          if (resultOp != null)
-            SetZ(ae1, ae2, ref resultOp.pt);
-#endif
-        }
-        else if (IsFront(ae1) || (ae1.outrec == ae2.outrec))
-        {
-          // this 'else if' condition isn't strictly needed but
-          // it's sensible to split polygons that ony touch at
-          // a common vertex (not at common edges).
-          resultOp = AddLocalMaxPoly(ae1, ae2, pt);
-#if USINGZ
-          OutPt op2 = AddLocalMinPoly(ae1, ae2, pt);
-          if (resultOp != null)
-            SetZ(ae1, ae2, ref resultOp.pt);
-          SetZ(ae1, ae2, ref op2.pt);
-#else
-          AddLocalMinPoly(ae1, ae2, pt);
-#endif
-        }
-        else
-        {
-          // can't treat as maxima & minima
-          resultOp = AddOutPt(ae1, pt);
-#if USINGZ
-          OutPt op2 = AddOutPt(ae2, pt);
-          SetZ(ae1, ae2, ref resultOp.pt);
-          SetZ(ae1, ae2, ref op2.pt);
-#else
-          AddOutPt(ae2, pt);
-#endif
-          SwapOutrecs(ae1, ae2);
-        }
-      }
-
-      // if one or other edge is 'hot' ...
-      else if (IsHotEdge(ae1))
-      {
-        resultOp = AddOutPt(ae1, pt);
-#if USINGZ
-        SetZ(ae1, ae2, ref resultOp.pt);
-#endif
-        SwapOutrecs(ae1, ae2);
-      }
-      else if (IsHotEdge(ae2))
-      {
-        resultOp = AddOutPt(ae2, pt);
-#if USINGZ
-        SetZ(ae1, ae2, ref resultOp.pt);
-#endif
-        SwapOutrecs(ae1, ae2);
-      }
-
-      // neither edge is 'hot'
-      else
-      {
-        long e1Wc2, e2Wc2;
-        switch (_fillrule)
-        {
-          case FillRule.Positive:
-            e1Wc2 = ae1.windCount2;
-            e2Wc2 = ae2.windCount2;
-            break;
-          case FillRule.Negative:
-            e1Wc2 = -ae1.windCount2;
-            e2Wc2 = -ae2.windCount2;
-            break;
-          default:
-            e1Wc2 = Math.Abs(ae1.windCount2);
-            e2Wc2 = Math.Abs(ae2.windCount2);
-            break;
-        }
-
-        if (!IsSamePolyType(ae1, ae2))
-        {
-          resultOp = AddLocalMinPoly(ae1, ae2, pt);
-#if USINGZ
-          SetZ(ae1, ae2, ref resultOp.pt);
-#endif
-        }
-        else if (oldE1WindCount == 1 && oldE2WindCount == 1)
-        {
-          resultOp = null;
-          switch (_cliptype)
-          {
-            case ClipType.Union:
-              if (e1Wc2 > 0 && e2Wc2 > 0) return null;
-              resultOp = AddLocalMinPoly(ae1, ae2, pt);
-              break;
-
-            case ClipType.Difference:
-              if (((GetPolyType(ae1) == PathType.Clip) && (e1Wc2 > 0) && (e2Wc2 > 0)) ||
-                  ((GetPolyType(ae1) == PathType.Subject) && (e1Wc2 <= 0) && (e2Wc2 <= 0)))
-              {
-                resultOp = AddLocalMinPoly(ae1, ae2, pt);
-              }
-
-              break;
-
-            case ClipType.Xor:
-              resultOp = AddLocalMinPoly(ae1, ae2, pt);
-              break;
-
-            default: // ClipType.Intersection:
-              if (e1Wc2 <= 0 || e2Wc2 <= 0) return null;
-              resultOp = AddLocalMinPoly(ae1, ae2, pt);
-              break;
-          }
-#if USINGZ
-          if (resultOp != null) SetZ(ae1, ae2, ref resultOp.pt);
-#endif
-        }
-      }
-
-      return resultOp;
-    }
-
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private void DeleteFromAEL(Active ae)
     {
@@ -2021,7 +1763,6 @@ namespace Clipper2Lib
         }
 
         IntersectNode node = _intersectList[i];
-        IntersectEdges(node.edge1, node.edge2, node.pt);
         SwapPositionsInAEL(node.edge1, node.edge2);
 
         node.edge1.curX = node.pt.X;
@@ -2207,7 +1948,6 @@ private void DoHorizontal(Active horz)
 
           if (isLeftToRight)
           {
-            IntersectEdges(horz, ae, pt);
             SwapPositionsInAEL(horz, ae);
             CheckJoinLeft(ae, pt);
             horz.curX = ae.curX;
@@ -2215,7 +1955,6 @@ private void DoHorizontal(Active horz)
           }
           else
           {
-            IntersectEdges(ae, horz, pt);
             SwapPositionsInAEL(ae, horz);
             CheckJoinRight(ae, pt);
             horz.curX = ae.curX;
@@ -2333,7 +2072,6 @@ private void DoHorizontal(Active horz)
       // process any edges between maxima pair ...
       while (nextE != maxPair)
       {
-        IntersectEdges(ae, nextE!, ae.top);
         SwapPositionsInAEL(ae, nextE!);
         nextE = ae.nextInAEL;
       }
