@@ -1784,6 +1784,7 @@ namespace Clipper2Lib {
 
   OutPt* ClipperBase::IntersectEdges(Active& e1, Active& e2, const Point64& pt)
   {
+    return nullptr;
     //MANAGE OPEN PATH INTERSECTIONS SEPARATELY ...
     if (has_open_paths_ && (IsOpen(e1) || IsOpen(e2)))
     {
