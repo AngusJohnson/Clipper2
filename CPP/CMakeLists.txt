@@ -210,10 +210,12 @@ if(USE_EXTERNAL_GTEST)
   find_package(GTest REQUIRED)
 else()
   include(GoogleTest)
-  execute_process(
-    COMMAND "git" "clone" "https://github.com/google/googletest"
-    WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}/Tests
-  )
+  if(NOT EXISTS ${PROJECT_SOURCE_DIR}/Tests/googletest)
+    execute_process(
+      COMMAND "git" "clone" "https://github.com/google/googletest"
+      WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}/Tests
+    )
+  endif()
   add_subdirectory("${PROJECT_SOURCE_DIR}/Tests/googletest/")
   set_target_properties(gtest gtest_main PROPERTIES FOLDER GTest)
 endif()
