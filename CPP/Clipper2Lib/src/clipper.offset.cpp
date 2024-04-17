@@ -1,6 +1,6 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  24 March 2024                                                   *
+* Date      :  17 April 2024                                                   *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2024                                         *
 * Purpose   :  Path Offset (Inflate/Shrink)                                    *
@@ -315,15 +315,18 @@ void ClipperOffset::OffsetPoint(Group& group, const Path64& path, size_t j, size
 
 	if (cos_a > -0.999 && (sin_a * group_delta_ < 0)) // test for concavity first (#593)
 	{
-		// is concave
+		// is concave (so insert 3 points that will create a negative region)
 #ifdef USINGZ
 		path_out.push_back(Point64(GetPerpendic(path[j], norms[k], group_delta_), path[j].z));
 #else
 		path_out.push_back(GetPerpendic(path[j], norms[k], group_delta_));
 #endif
-		// this extra point is the only (simple) way to ensure that
-		// path reversals are fully cleaned with the trailing clipper
-		path_out.push_back(path[j]); // (#405)
+		
+		// this extra point is the only simple way to ensure that path reversals
+		// (ie over-shrunk paths) are fully cleaned out with the trailing union op.
+		// However it's probably safe to skip this whenever an angle is almost flat.
+		if (cos_a < 0.99) path_out.push_back(path[j]); // (#405)
+
 #ifdef USINGZ
 		path_out.push_back(Point64(GetPerpendic(path[j], norms[j], group_delta_), path[j].z));
 #else

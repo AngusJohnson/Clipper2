@@ -1,6 +1,6 @@
 ﻿/*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  28 February 2024                                                *
+* Date      :  17 April 2024                                                   *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2024                                         *
 * Purpose   :  This is the main polygon clipping module                        *
@@ -1548,33 +1548,34 @@ namespace Clipper2Lib
       return result;
     }
 
-    private OutPt? IntersectEdges(Active ae1, Active ae2, Point64 pt)
+    private void IntersectEdges(Active ae1, Active ae2, Point64 pt)
     {
       OutPt? resultOp = null;
-
       // MANAGE OPEN PATH INTERSECTIONS SEPARATELY ...
       if (_hasOpenPaths && (IsOpen(ae1) || IsOpen(ae2)))
       {
-        if (IsOpen(ae1) && IsOpen(ae2)) return null;
+        if (IsOpen(ae1) && IsOpen(ae2)) return;
         // the following line avoids duplicating quite a bit of code
         if (IsOpen(ae2)) SwapActives(ref ae1, ref ae2);
         if (IsJoined(ae2)) Split(ae2, pt); // needed for safety
 
         if (_cliptype == ClipType.Union)
         {
-          if (!IsHotEdge(ae2)) return null;
+          if (!IsHotEdge(ae2)) return;
         }
-        else if (ae2.localMin.polytype == PathType.Subject)
-          return null;
+        else if (ae2.localMin.polytype == PathType.Subject) return;
 
         switch (_fillrule)
         {
           case FillRule.Positive:
-            if (ae2.windCount != 1) return null; break;
+            if (ae2.windCount != 1) return; 
+            break;
           case FillRule.Negative:
-            if (ae2.windCount != -1) return null; break;
+            if (ae2.windCount != -1) return; 
+            break;
           default:
-            if (Math.Abs(ae2.windCount) != 1) return null; break;
+            if (Math.Abs(ae2.windCount) != 1) return; 
+            break;
         }
 
         // toggle contribution ...
@@ -1605,7 +1606,7 @@ namespace Clipper2Lib
               SetSides(ae3.outrec!, ae1, ae3);
             else
               SetSides(ae3.outrec!, ae3, ae1);
-            return ae3.outrec!.pts;
+            return;
           }
 
           resultOp = StartOpenPath(ae1, pt);
@@ -1616,7 +1617,7 @@ namespace Clipper2Lib
 #if USINGZ
         SetZ(ae1, ae2, ref resultOp.pt);
 #endif
-        return resultOp;
+        return;
       }
 
       // MANAGING CLOSED PATHS FROM HERE ON
@@ -1677,7 +1678,8 @@ namespace Clipper2Lib
       bool e1WindCountIs0or1 = oldE1WindCount == 0 || oldE1WindCount == 1;
       bool e2WindCountIs0or1 = oldE2WindCount == 0 || oldE2WindCount == 1;
 
-      if ((!IsHotEdge(ae1) && !e1WindCountIs0or1) || (!IsHotEdge(ae2) && !e2WindCountIs0or1)) return null;
+      if ((!IsHotEdge(ae1) && !e1WindCountIs0or1) || 
+        (!IsHotEdge(ae2) && !e2WindCountIs0or1)) return;
 
       // NOW PROCESS THE INTERSECTION ...
 
@@ -1770,11 +1772,11 @@ namespace Clipper2Lib
         }
         else if (oldE1WindCount == 1 && oldE2WindCount == 1)
         {
-          resultOp = null;
+          resultOp = null; 
           switch (_cliptype)
           {
             case ClipType.Union:
-              if (e1Wc2 > 0 && e2Wc2 > 0) return null;
+              if (e1Wc2 > 0 && e2Wc2 > 0) return;
               resultOp = AddLocalMinPoly(ae1, ae2, pt);
               break;
 
@@ -1792,7 +1794,7 @@ namespace Clipper2Lib
               break;
 
             default: // ClipType.Intersection:
-              if (e1Wc2 <= 0 || e2Wc2 <= 0) return null;
+              if (e1Wc2 <= 0 || e2Wc2 <= 0) return;
               resultOp = AddLocalMinPoly(ae1, ae2, pt);
               break;
           }
@@ -1801,8 +1803,6 @@ namespace Clipper2Lib
 #endif
         }
       }
-
-      return resultOp;
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]

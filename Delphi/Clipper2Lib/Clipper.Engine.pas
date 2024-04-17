@@ -2,7 +2,7 @@ unit Clipper.Engine;
 
 (*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  21 March 2024                                                   *
+* Date      :  17 April 2024                                                   *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2024                                         *
 * Purpose   :  This is the main polygon clipping module                        *
@@ -239,7 +239,7 @@ type
     function  PopHorz(out e: PActive): Boolean; {$IFDEF INLINING} inline; {$ENDIF}
     function  StartOpenPath(e: PActive; const pt: TPoint64): POutPt;
     procedure UpdateEdgeIntoAEL(var e: PActive);
-    function  IntersectEdges(e1, e2: PActive; pt: TPoint64): POutPt;
+    procedure IntersectEdges(e1, e2: PActive; pt: TPoint64);
     procedure DeleteEdges(var e: PActive);
     procedure DeleteFromAEL(e: PActive);
     procedure AdjustCurrXAndCopyToSEL(topY: Int64);
@@ -287,7 +287,7 @@ type
   {$IFDEF USINGZ}
     procedure SetZ( e1, e2: PActive; var intersectPt: TPoint64);
     property  ZCallback : TZCallback64 read fZCallback write fZCallback;
-    property  DefaultZ : Int64 READ fDefaultZ write fDefaultZ;
+    property  DefaultZ : Int64 read fDefaultZ write fDefaultZ;
   {$ENDIF}
     property  Succeeded : Boolean read FSucceeded;
   public
@@ -1462,7 +1462,11 @@ end;
 
 procedure TClipperBase.SetZ(e1, e2: PActive; var intersectPt: TPoint64);
 begin
-  if not Assigned(fZCallback) then Exit;
+  if not Assigned(fZCallback) then
+  begin
+    intersectPt.Z := 0;
+    Exit;
+  end;
 
   // prioritize subject vertices over clip vertices
   // and pass the subject vertices before clip vertices in the callback
@@ -2551,14 +2555,13 @@ end;
 {$IFNDEF USINGZ}
 {$HINTS OFF}
 {$ENDIF}
-function TClipperBase.IntersectEdges(e1, e2: PActive; pt: TPoint64): POutPt;
+procedure TClipperBase.IntersectEdges(e1, e2: PActive; pt: TPoint64);
 var
   e1WindCnt, e2WindCnt, e1WindCnt2, e2WindCnt2: Integer;
   e3: PActive;
-  op2: POutPt;
+  resultOp, op2: POutPt;
 begin
-  Result := nil;
-
+  resultOp := nil;
   // MANAGE OPEN PATH INTERSECTIONS SEPARATELY ...
   if FHasOpenPaths and (IsOpen(e1) or IsOpen(e2)) then
   begin
@@ -2583,7 +2586,7 @@ begin
     // toggle contribution ...
     if IsHotEdge(e1) then
     begin
-      Result := AddOutPt(e1, pt);
+      resultOp := AddOutPt(e1, pt);
       if IsFront(e1) then
         e1.outrec.frontE := nil else
         e1.outrec.backE := nil;
@@ -2605,15 +2608,14 @@ begin
         if e1.windDx > 0 then
           SetSides(e3.outrec, e1, e3) else
           SetSides(e3.outrec, e3, e1);
-        Result := e3.outrec.pts;
         Exit;
       end else
-        Result := StartOpenPath(e1, pt);
+        resultOp := StartOpenPath(e1, pt);
     end else
-      Result := StartOpenPath(e1, pt);
+      resultOp := StartOpenPath(e1, pt);
 
     {$IFDEF USINGZ}
-    SetZ(e1, e2, Result.pt);
+    SetZ(e1, e2, resultOp.pt);
     {$ENDIF}
     Exit;
   end;
@@ -2677,7 +2679,7 @@ begin
     if not (e1WindCnt in [0,1]) or not (e2WindCnt in [0,1]) or
       (not IsSamePolyType(e1, e2) and (fClipType <> ctXor)) then
     begin
-      Result := AddLocalMaxPoly(e1, e2, pt);
+      resultOp := AddLocalMaxPoly(e1, e2, pt);
       {$IFDEF USINGZ}
       if Assigned(Result) then SetZ(e1, e2, Result.pt);
       {$ENDIF}
@@ -2687,7 +2689,7 @@ begin
       // this 'else if' condition isn't strictly needed but
       // it's sensible to split polygons that ony touch at
       // a common vertex (not at common edges).
-      Result := AddLocalMaxPoly(e1, e2, pt);
+      resultOp := AddLocalMaxPoly(e1, e2, pt);
       {$IFDEF USINGZ}
       op2 := AddLocalMinPoly(e1, e2, pt);
       if Assigned(Result) then SetZ(e1, e2, Result.pt);
@@ -2698,7 +2700,7 @@ begin
     end else
     begin
       // can't treat as maxima & minima
-      Result := AddOutPt(e1, pt);
+      resultOp := AddOutPt(e1, pt);
       {$IFDEF USINGZ}
       op2 := AddOutPt(e2, pt);
       SetZ(e1, e2, Result.pt);
@@ -2713,7 +2715,7 @@ begin
   // if one or other edge is 'hot' ...
   else if IsHotEdge(e1) then
   begin
-    Result := AddOutPt(e1, pt);
+    resultOp := AddOutPt(e1, pt);
     {$IFDEF USINGZ}
     SetZ(e1, e2, Result.pt);
     {$ENDIF}
@@ -2721,7 +2723,7 @@ begin
   end
   else if IsHotEdge(e2) then
   begin
-    Result := AddOutPt(e2, pt);
+    resultOp := AddOutPt(e2, pt);
     {$IFDEF USINGZ}
     SetZ(e1, e2, Result.pt);
     {$ENDIF}
@@ -2751,29 +2753,29 @@ begin
 
     if not IsSamePolyType(e1, e2) then
     begin
-      Result := AddLocalMinPoly(e1, e2, pt, false);
+      resultOp := AddLocalMinPoly(e1, e2, pt, false);
       {$IFDEF USINGZ}
       SetZ(e1, e2, Result.pt);
       {$ENDIF}
     end
     else if (e1WindCnt = 1) and (e2WindCnt = 1) then
     begin
-      Result := nil;
+      resultOp := nil;
       case FClipType of
         ctIntersection:
           if (e1WindCnt2 <= 0) or (e2WindCnt2 <= 0) then Exit
-          else Result := AddLocalMinPoly(e1, e2, pt, false);
+          else resultOp := AddLocalMinPoly(e1, e2, pt, false);
         ctUnion:
           if (e1WindCnt2 <= 0) and (e2WindCnt2 <= 0) then
-            Result := AddLocalMinPoly(e1, e2, pt, false);
+            resultOp := AddLocalMinPoly(e1, e2, pt, false);
         ctDifference:
           if ((GetPolyType(e1) = ptClip) and
                 (e1WindCnt2 > 0) and (e2WindCnt2 > 0)) or
               ((GetPolyType(e1) = ptSubject) and
                 (e1WindCnt2 <= 0) and (e2WindCnt2 <= 0)) then
-            Result := AddLocalMinPoly(e1, e2, pt, false);
+            resultOp := AddLocalMinPoly(e1, e2, pt, false);
         else // xOr
-            Result := AddLocalMinPoly(e1, e2, pt, false);
+            resultOp := AddLocalMinPoly(e1, e2, pt, false);
       end;
       {$IFDEF USINGZ}
       if assigned(Result) then SetZ(e1, e2, Result.pt);

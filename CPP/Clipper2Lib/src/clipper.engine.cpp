@@ -1,6 +1,6 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  25 March 2024                                                   *
+* Date      :  17 April 2024                                                   *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2024                                         *
 * Purpose   :  This is the main polygon clipping module                        *
@@ -1121,7 +1121,7 @@ namespace Clipper2Lib {
   inline bool IsCollinear(const Point64& pt1, 
     const Point64& sharedPt, const Point64& pt2) // #777
   {
-#ifdef __APPLE__
+#ifdef __aarch64__
     double cp = CrossProduct(pt1, sharedPt, pt2);
     return std::fabs(cp) < 0.00000001;
 #else
@@ -1782,12 +1782,12 @@ namespace Clipper2Lib {
   }
 
 
-  OutPt* ClipperBase::IntersectEdges(Active& e1, Active& e2, const Point64& pt)
+  void ClipperBase::IntersectEdges(Active& e1, Active& e2, const Point64& pt)
   {
     //MANAGE OPEN PATH INTERSECTIONS SEPARATELY ...
     if (has_open_paths_ && (IsOpen(e1) || IsOpen(e2)))
     {
-      if (IsOpen(e1) && IsOpen(e2)) return nullptr;
+      if (IsOpen(e1) && IsOpen(e2)) return;
       Active* edge_o, * edge_c;
       if (IsOpen(e1))
       {
@@ -1801,22 +1801,27 @@ namespace Clipper2Lib {
       }
       if (IsJoined(*edge_c)) Split(*edge_c, pt); // needed for safety
 
-      if (abs(edge_c->wind_cnt) != 1) return nullptr;
+      if (abs(edge_c->wind_cnt) != 1) return;
       switch (cliptype_)
       {
       case ClipType::Union:
-        if (!IsHotEdge(*edge_c)) return nullptr;
+        if (!IsHotEdge(*edge_c)) return;
         break;
       default:
         if (edge_c->local_min->polytype == PathType::Subject)
-          return nullptr;
+          return;
       }
 
       switch (fillrule_)
       {
-      case FillRule::Positive: if (edge_c->wind_cnt != 1) return nullptr; break;
-      case FillRule::Negative: if (edge_c->wind_cnt != -1) return nullptr; break;
-      default: if (std::abs(edge_c->wind_cnt) != 1) return nullptr; break;
+      case FillRule::Positive: 
+        if (edge_c->wind_cnt != 1) return; 
+        break;
+      case FillRule::Negative: 
+        if (edge_c->wind_cnt != -1) return; 
+        break;
+      default: 
+        if (std::abs(edge_c->wind_cnt) != 1) return; 
       }
 
       OutPt* resultOp;
@@ -1843,7 +1848,7 @@ namespace Clipper2Lib {
             SetSides(*e3->outrec, *edge_o, *e3);
           else
             SetSides(*e3->outrec, *e3, *edge_o);
-          return e3->outrec->pts;
+          return;
         }
         else
           resultOp = StartOpenPath(*edge_o, pt);
@@ -1854,7 +1859,7 @@ namespace Clipper2Lib {
 #ifdef USINGZ
       if (zCallback_) SetZ(*edge_o, *edge_c, resultOp->pt);
 #endif
-      return resultOp;
+      return;
     } // end of an open path intersection
 
     //MANAGING CLOSED PATHS FROM HERE ON
@@ -1923,10 +1928,9 @@ namespace Clipper2Lib {
     const bool e1_windcnt_in_01 = old_e1_windcnt == 0 || old_e1_windcnt == 1;
     const bool e2_windcnt_in_01 = old_e2_windcnt == 0 || old_e2_windcnt == 1;
 
-    if ((!IsHotEdge(e1) && !e1_windcnt_in_01) || (!IsHotEdge(e2) && !e2_windcnt_in_01))
-    {
-      return nullptr;
-    }
+    if ((!IsHotEdge(e1) && !e1_windcnt_in_01) || 
+      (!IsHotEdge(e2) && !e2_windcnt_in_01))
+        return;
 
     //NOW PROCESS THE INTERSECTION ...
     OutPt* resultOp = nullptr;
@@ -2048,7 +2052,6 @@ namespace Clipper2Lib {
 #endif
       }
     }
-    return resultOp;
   }
 
   inline void ClipperBase::DeleteFromAEL(Active& e)

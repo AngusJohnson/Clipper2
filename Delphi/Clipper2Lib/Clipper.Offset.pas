@@ -2,7 +2,7 @@ unit Clipper.Offset;
 
 (*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  24 March 2024                                                   *
+* Date      :  17 April 2024                                                   *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2024                                         *
 * Purpose   :  Path Offset (Inflate/Shrink)                                    *
@@ -996,9 +996,11 @@ begin
 {$ELSE}
     AddPoint(GetPerpendic(fInPath[j], fNorms[k], fGroupDelta));
 {$ENDIF}
-    // this extra point is the only (simple) way to ensure that
-    // path reversals are fully cleaned with the trailing clipper
-    AddPoint(fInPath[j]); // (#405)
+		// this extra point is the only simple way to ensure that path reversals
+		// (ie over-shrunk paths) are fully cleaned out with the trailing union op.
+		// However it's probably safe to skip this whenever an angle is almost flat.
+		if (cosA < 0.99) then
+      AddPoint(fInPath[j]); // (#405)
 {$IFDEF USINGZ}
     AddPoint(GetPerpendic(fInPath[j], fNorms[j], fGroupDelta), fInPath[j].Z);
 {$ELSE}
