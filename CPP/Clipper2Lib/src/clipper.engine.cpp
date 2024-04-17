@@ -1824,11 +1824,17 @@ namespace Clipper2Lib {
         if (std::abs(edge_c->wind_cnt) != 1) return; 
       }
 
+#ifdef USINGZ
       OutPt* resultOp;
+#endif
       //toggle contribution ...
       if (IsHotEdge(*edge_o))
       {
+#ifdef USINGZ
         resultOp = AddOutPt(*edge_o, pt);
+#else
+        AddOutPt(*edge_o, pt);
+#endif
         if (IsFront(*edge_o)) edge_o->outrec->front_edge = nullptr;
         else edge_o->outrec->back_edge = nullptr;
         edge_o->outrec = nullptr;
@@ -1851,10 +1857,18 @@ namespace Clipper2Lib {
           return;
         }
         else
+#ifdef USINGZ
           resultOp = StartOpenPath(*edge_o, pt);
+#else
+          StartOpenPath(*edge_o, pt);
+#endif
       }
       else
+#ifdef USINGZ
         resultOp = StartOpenPath(*edge_o, pt);
+#else
+        StartOpenPath(*edge_o, pt);
+#endif
 
 #ifdef USINGZ
       if (zCallback_) SetZ(*edge_o, *edge_c, resultOp->pt);
@@ -1933,16 +1947,20 @@ namespace Clipper2Lib {
         return;
 
     //NOW PROCESS THE INTERSECTION ...
+#ifdef USINGZ
     OutPt* resultOp = nullptr;
+#endif
     //if both edges are 'hot' ...
     if (IsHotEdge(e1) && IsHotEdge(e2))
     {
       if ((old_e1_windcnt != 0 && old_e1_windcnt != 1) || (old_e2_windcnt != 0 && old_e2_windcnt != 1) ||
         (e1.local_min->polytype != e2.local_min->polytype && cliptype_ != ClipType::Xor))
       {
-        resultOp = AddLocalMaxPoly(e1, e2, pt);
 #ifdef USINGZ
+        resultOp = AddLocalMaxPoly(e1, e2, pt);
         if (zCallback_ && resultOp) SetZ(e1, e2, resultOp->pt);
+#else
+        AddLocalMaxPoly(e1, e2, pt);
 #endif
       }
       else if (IsFront(e1) || (e1.outrec == e2.outrec))
@@ -1951,19 +1969,20 @@ namespace Clipper2Lib {
         //it's sensible to split polygons that ony touch at
         //a common vertex (not at common edges).
 
-        resultOp = AddLocalMaxPoly(e1, e2, pt);
 #ifdef USINGZ
+        resultOp = AddLocalMaxPoly(e1, e2, pt);
         OutPt* op2 = AddLocalMinPoly(e1, e2, pt);
         if (zCallback_ && resultOp) SetZ(e1, e2, resultOp->pt);
         if (zCallback_) SetZ(e1, e2, op2->pt);
 #else
+        AddLocalMaxPoly(e1, e2, pt);
         AddLocalMinPoly(e1, e2, pt);
 #endif
       }
       else
       {
-        resultOp = AddOutPt(e1, pt);
 #ifdef USINGZ
+        resultOp = AddOutPt(e1, pt);
         OutPt* op2 = AddOutPt(e2, pt);
         if (zCallback_)
         {
@@ -1971,6 +1990,7 @@ namespace Clipper2Lib {
           SetZ(e1, e2, op2->pt);
         }
 #else
+        AddOutPt(e1, pt);
         AddOutPt(e2, pt);
 #endif
         SwapOutrecs(e1, e2);
@@ -1978,17 +1998,21 @@ namespace Clipper2Lib {
     }
     else if (IsHotEdge(e1))
     {
-      resultOp = AddOutPt(e1, pt);
 #ifdef USINGZ
+      resultOp = AddOutPt(e1, pt);
       if (zCallback_) SetZ(e1, e2, resultOp->pt);
+#else
+      AddOutPt(e1, pt);
 #endif
       SwapOutrecs(e1, e2);
     }
     else if (IsHotEdge(e2))
     {
-      resultOp = AddOutPt(e2, pt);
 #ifdef USINGZ
+      resultOp = AddOutPt(e2, pt);
       if (zCallback_) SetZ(e1, e2, resultOp->pt);
+#else
+      AddOutPt(e2, pt);
 #endif
       SwapOutrecs(e1, e2);
     }
@@ -2018,33 +2042,53 @@ namespace Clipper2Lib {
 
       if (!IsSamePolyType(e1, e2))
       {
-        resultOp = AddLocalMinPoly(e1, e2, pt, false);
 #ifdef USINGZ
+        resultOp = AddLocalMinPoly(e1, e2, pt, false);
         if (zCallback_) SetZ(e1, e2, resultOp->pt);
+#else
+        AddLocalMinPoly(e1, e2, pt, false);
 #endif
       }
       else if (old_e1_windcnt == 1 && old_e2_windcnt == 1)
       {
+#ifdef USINGZ
         resultOp = nullptr;
+#endif
         switch (cliptype_)
         {
         case ClipType::Union:
           if (e1Wc2 <= 0 && e2Wc2 <= 0)
+#ifdef USINGZ
             resultOp = AddLocalMinPoly(e1, e2, pt, false);
+#else
+            AddLocalMinPoly(e1, e2, pt, false);
+#endif
           break;
         case ClipType::Difference:
           if (((GetPolyType(e1) == PathType::Clip) && (e1Wc2 > 0) && (e2Wc2 > 0)) ||
             ((GetPolyType(e1) == PathType::Subject) && (e1Wc2 <= 0) && (e2Wc2 <= 0)))
           {
+#ifdef USINGZ
             resultOp = AddLocalMinPoly(e1, e2, pt, false);
+#else
+            AddLocalMinPoly(e1, e2, pt, false);
+#endif
           }
           break;
         case ClipType::Xor:
+#ifdef USINGZ
           resultOp = AddLocalMinPoly(e1, e2, pt, false);
+#else
+          AddLocalMinPoly(e1, e2, pt, false);
+#endif
           break;
         default:
           if (e1Wc2 > 0 && e2Wc2 > 0)
+#ifdef USINGZ
             resultOp = AddLocalMinPoly(e1, e2, pt, false);
+#else
+            AddLocalMinPoly(e1, e2, pt, false);
+#endif
           break;
         }
 #ifdef USINGZ
