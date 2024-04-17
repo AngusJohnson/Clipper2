@@ -692,7 +692,7 @@ namespace Clipper2Lib
       using List<Path64>.Enumerator pathIt = group.inPaths.GetEnumerator();
       while (pathIt.MoveNext())
       {
-        Path64 p = pathIt.Current;
+        Path64 p = pathIt.Current!;
 
         pathOut = new Path64();
         int cnt = p.Count;
