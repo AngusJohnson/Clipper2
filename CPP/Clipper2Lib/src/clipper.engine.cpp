@@ -1121,9 +1121,9 @@ namespace Clipper2Lib {
   inline bool IsCollinear(const Point64& pt1, 
     const Point64& sharedPt, const Point64& pt2) // #777
   {
-#ifdef __APPLE__
+#ifdef __aarch64__
     double cp = CrossProduct(pt1, sharedPt, pt2);
-    return std::fabs(cp) < 0.00000001;
+    return std::fabs(cp) < 0.0000001;
 #else
     return CrossProduct(pt1, sharedPt, pt2) == 0;
 #endif
