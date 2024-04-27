@@ -824,7 +824,7 @@ namespace Clipper2Lib {
     OutPt2* op2 = op->next;
     while (op2 && op2 != op)
     {
-      if (!IsCollinear(op2->prev->pt,
+      if (IsCollinear(op2->prev->pt,
         op2->pt, op2->next->pt))
       {
         op = op2->prev;
