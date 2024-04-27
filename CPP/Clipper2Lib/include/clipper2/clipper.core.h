@@ -143,13 +143,13 @@ namespace Clipper2Lib
     }
 
     template <typename T2>
-    explicit Point<T>(const Point<T2>& p)
+    explicit Point(const Point<T2>& p)
     {
       Init(p.x, p.y, p.z);
     }
 
     template <typename T2>
-    explicit Point<T>(const Point<T2>& p, int64_t z_)
+    explicit Point(const Point<T2>& p, int64_t z_)
     {
       Init(p.x, p.y, z_);
     }
