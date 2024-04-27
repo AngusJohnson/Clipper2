@@ -1,8 +1,8 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  13 December 2023                                                *
+* Date      :  27 April 2024                                                   *
 * Website   :  http://www.angusj.com                                           *
-* Copyright :  Angus Johnson 2010-2023                                         *
+* Copyright :  Angus Johnson 2010-2024                                         *
 * Purpose   :  This module provides a simple interface to the Clipper Library  *
 * License   :  http://www.boost.org/LICENSE_1_0.txt                            *
 *******************************************************************************/
@@ -510,9 +510,9 @@ namespace Clipper2Lib {
 
     if (!is_open_path)
     {
-      while (srcIt != stop && !CrossProduct(*stop, *srcIt, *(srcIt + 1)))
+      while (srcIt != stop && IsCollinear(*stop, *srcIt, *(srcIt + 1)))
         ++srcIt;
-      while (srcIt != stop && !CrossProduct(*(stop - 1), *stop, *srcIt))
+      while (srcIt != stop && IsCollinear(*(stop - 1), *stop, *srcIt))
         --stop;
       if (srcIt == stop) return Path64();
     }
@@ -521,7 +521,7 @@ namespace Clipper2Lib {
     dst.push_back(*prevIt);
     for (; srcIt != stop; ++srcIt)
     {
-      if (CrossProduct(*prevIt, *srcIt, *(srcIt + 1)))
+      if (!IsCollinear(*prevIt, *srcIt, *(srcIt + 1)))
       {
         prevIt = srcIt;
         dst.push_back(*prevIt);
@@ -530,12 +530,12 @@ namespace Clipper2Lib {
 
     if (is_open_path)
       dst.push_back(*srcIt);
-    else if (CrossProduct(*prevIt, *stop, dst[0]))
+    else if (!IsCollinear(*prevIt, *stop, dst[0]))
       dst.push_back(*stop);
     else
     {
       while (dst.size() > 2 &&
-        !CrossProduct(dst[dst.size() - 1], dst[dst.size() - 2], dst[0]))
+        IsCollinear(dst[dst.size() - 1], dst[dst.size() - 2], dst[0]))
           dst.pop_back();
       if (dst.size() < 3) return Path64();
     }

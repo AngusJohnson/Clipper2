@@ -1,6 +1,6 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  17 April 2024                                                   *
+* Date      :  27 April 2024                                                   *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2024                                         *
 * Purpose   :  This is the main polygon clipping module                        *
@@ -1116,17 +1116,6 @@ namespace Clipper2Lib {
         e2 = e2->next_in_ael;
       }
     }
-  }
-
-  inline bool IsCollinear(const Point64& pt1, 
-    const Point64& sharedPt, const Point64& pt2) // #777
-  {
-#ifdef __aarch64__
-    double cp = CrossProduct(pt1, sharedPt, pt2);
-    return std::fabs(cp) < 0.0000001;
-#else
-    return CrossProduct(pt1, sharedPt, pt2) == 0;
-#endif
   }
 
   bool IsValidAelOrder(const Active& resident, const Active& newcomer)
@@ -2828,7 +2817,7 @@ namespace Clipper2Lib {
       if (PerpendicDistFromLineSqrd(pt, prev->bot, prev->top) > 0.25) return;
     }
     else if (e.curr_x != prev->curr_x) return;
-    if (CrossProduct(e.top, pt, prev->top)) return;
+    if (!IsCollinear(e.top, pt, prev->top)) return;
 
     if (e.outrec->idx == prev->outrec->idx)
       AddLocalMaxPoly(*prev, e, pt);
@@ -2856,7 +2845,7 @@ namespace Clipper2Lib {
       if (PerpendicDistFromLineSqrd(pt, next->bot, next->top) > 0.35) return;
     }
     else if (e.curr_x != next->curr_x) return;
-    if (CrossProduct(e.top, pt, next->top)) return;
+    if (!IsCollinear(e.top, pt, next->top)) return;
 
     if (e.outrec->idx == next->outrec->idx)
       AddLocalMaxPoly(e, *next, pt);

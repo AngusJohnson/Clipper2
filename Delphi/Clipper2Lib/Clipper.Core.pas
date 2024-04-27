@@ -2,7 +2,7 @@ unit Clipper.Core;
 
 (*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  24 March 2024                                                   *
+* Date      :  27 April 2024                                                   *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2024                                         *
 * Purpose   :  Core Clipper Library module                                     *
@@ -154,7 +154,8 @@ function IsPositive(const path: TPath64): Boolean; overload;
 function IsPositive(const path: TPathD): Boolean; overload;
   {$IFDEF INLINING} inline; {$ENDIF}
 
-function __Trunc(val: double): Int64; {$IFDEF INLINE} inline; {$ENDIF}
+function IsCollinear(const pt1, pt2, pt3: TPoint64): Boolean;
+  {$IFDEF INLINING} inline; {$ENDIF}
 
 function CrossProduct(const pt1, pt2, pt3: TPoint64): double; overload;
   {$IFDEF INLINING} inline; {$ENDIF}
@@ -1863,6 +1864,18 @@ begin
 end;
 //------------------------------------------------------------------------------
 
+function IsCollinear(const pt1, pt2, pt3: TPoint64): Boolean;
+var
+  a,b,c,d: double; // avoids potential int overflow
+begin
+  a := (pt2.X - pt1.X);
+  b := (pt2.Y - pt1.Y);
+  c := (pt3.X - pt2.X);
+  d := (pt3.Y - pt2.Y);
+  result := a * d = b * c;
+end;
+//------------------------------------------------------------------------------
+
 function CrossProduct(const pt1, pt2, pt3: TPoint64): double;
 begin
   result := CrossProduct(
@@ -1961,20 +1974,28 @@ begin
   Result := nil;
   len := Length(path);
   while (len > 2) and
-   (CrossProduct(path[len-2], path[len-1], path[0]) = 0) do dec(len);
+   (IsCollinear(path[len-2], path[len-1], path[0])) do dec(len);
   SetLength(Result, len);
   if (len < 2) then Exit;
   prev := path[len -1];
   j := 0;
   for i := 0 to len -2 do
   begin
-    if CrossProduct(prev, path[i], path[i+1]) = 0 then Continue;
+    if IsCollinear(prev, path[i], path[i+1]) then Continue;
     Result[j] := path[i];
     inc(j);
     prev := path[i];
   end;
   Result[j] := path[len -1];
   SetLength(Result, j+1);
+end;
+//------------------------------------------------------------------------------
+
+function GetSign(const val: double): integer; {$IFDEF INLINING} inline; {$ENDIF}
+begin
+  if val = 0 then Result := 0
+  else if val < 0 then Result := -1
+  else Result := 1;
 end;
 //------------------------------------------------------------------------------
 
@@ -1997,35 +2018,11 @@ begin
       (res3 <> 0) or (res4 <> 0); // ensures not collinear
   end else
   begin
-    result := (CrossProduct(s1a, s2a, s2b) * CrossProduct(s1b, s2a, s2b) < 0) and
-      (CrossProduct(s2a, s1a, s1b) * CrossProduct(s2b, s1a, s1b) < 0);
+    result := (GetSign(CrossProduct(s1a, s2a, s2b)) *
+      GetSign(CrossProduct(s1b, s2a, s2b)) < 0) and
+      (GetSign(CrossProduct(s2a, s1a, s1b)) *
+      GetSign(CrossProduct(s2b, s1a, s1b)) < 0);
   end;
-end;
-//------------------------------------------------------------------------------
-
-function __Trunc(val: double): Int64; {$IFDEF INLINE} inline; {$ENDIF}
-var
-  exp: integer;
-  i64: UInt64 absolute val;
-const
-  shl51: UInt64 =  UInt64(1) shl 51;
-begin
-  Result := 0;
-  if i64 = 0 then Exit;
-  exp := Integer(Cardinal(i64 shr 52) and $7FF) - 1023;
-  //nb: when exp == 1024 then val == INF or NAN.
-  if exp < 0 then
-    Exit
-  else if exp > 52 then
-  begin
-    Result := ((i64 and $1FFFFFFFFFFFFF) shl (exp - 52)) or (UInt64(1) shl exp)
-  end else
-  begin
-    Result := ((i64 and $1FFFFFFFFFFFFF) shr (52 - exp)) or (UInt64(1) shl exp);
-    //the following line will round
-    //if (i64 and (shl51 shr (exp)) <> 0) then inc(Result);
-  end;
-  if val < 0 then Result := -Result;
 end;
 //------------------------------------------------------------------------------
 

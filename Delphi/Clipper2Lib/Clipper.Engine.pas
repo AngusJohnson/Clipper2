@@ -2,7 +2,7 @@ unit Clipper.Engine;
 
 (*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  17 April 2024                                                   *
+* Date      :  27 April 2024                                                   *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2024                                         *
 * Purpose   :  This is the main polygon clipping module                        *
@@ -1838,8 +1838,8 @@ begin
   // resident must also have just been inserted
   else if IsLeftBound(resident) <> newcomerIsLeft then
     Result := newcomerIsLeft
-  else if (CrossProduct(PrevPrevVertex(resident).pt,
-    resident.bot, resident.top) = 0) then
+  else if IsCollinear(PrevPrevVertex(resident).pt,
+    resident.bot, resident.top) then
       Result := true
   else
     // otherwise compare turning direction of the alternate bound
@@ -2109,7 +2109,7 @@ begin
     //   a duplicate point OR
     //   not preserving collinear points OR
     //   is a 180 degree 'spike'
-    if (CrossProduct(op2.prev.pt, op2.pt, op2.next.pt) = 0) and
+    if IsCollinear(op2.prev.pt, op2.pt, op2.next.pt) and
       (PointsEqual(op2.pt,op2.prev.pt) or
       PointsEqual(op2.pt,op2.next.pt) or
       not FPreserveCollinear or
@@ -2385,7 +2385,7 @@ begin
     if PerpendicDistFromLineSqrd(pt, prev.bot, prev.top) > 0.25 then Exit
   end else if (e.currX <> prev.currX) then Exit;
 
-  if (CrossProduct(e.top, pt, prev.top) <> 0) then Exit;
+  if not IsCollinear(e.top, pt, prev.top) then Exit;
 
   if (e.outrec.idx = prev.outrec.idx) then
     AddLocalMaxPoly(prev, e, pt)
@@ -2417,7 +2417,7 @@ begin
   end
   else if (e.currX <> next.currX) then Exit;
 
-  if (CrossProduct(e.top, pt, next.top) <> 0) then Exit;
+  if not IsCollinear(e.top, pt, next.top) then Exit;
   if e.outrec.idx = next.outrec.idx then
     AddLocalMaxPoly(e, next, pt)
   else if e.outrec.idx < next.outrec.idx then

@@ -660,6 +660,17 @@ namespace Clipper2Lib
   }
 
   template <typename T>
+  inline bool IsCollinear(const Point<T>& pt1,
+    const Point<T>& sharedPt, const Point<T>& pt2) // #777
+  {
+    const double a = static_cast<double>(sharedPt.x - pt1.x);
+    const double b = static_cast<double>(pt2.y - sharedPt.y);
+    const double c = static_cast<double>(sharedPt.y - pt1.y);
+    const double d = static_cast<double>(pt2.x - sharedPt.x);
+    return a * b == c * d;
+  }
+
+  template <typename T>
   inline double CrossProduct(const Point<T>& pt1, const Point<T>& pt2, const Point<T>& pt3) {
     return (static_cast<double>(pt2.x - pt1.x) * static_cast<double>(pt3.y -
       pt2.y) - static_cast<double>(pt2.y - pt1.y) * static_cast<double>(pt3.x - pt2.x));
@@ -846,6 +857,13 @@ namespace Clipper2Lib
 #endif
   }
 
+  template<typename T>
+  inline int GetSign(const T& val) 
+  { 
+    if (!val) return 0; 
+    return (val > 0) ? 1 : -1;
+  }
+
   inline bool SegmentsIntersect(const Point64& seg1a, const Point64& seg1b,
     const Point64& seg2a, const Point64& seg2b, bool inclusive = false)
   {
@@ -860,10 +878,10 @@ namespace Clipper2Lib
       return (res1 || res2 || res3 || res4); // ensures not collinear
     }
     else {
-      return (CrossProduct(seg1a, seg2a, seg2b) *
-        CrossProduct(seg1b, seg2a, seg2b) < 0) &&
-        (CrossProduct(seg2a, seg1a, seg1b) *
-          CrossProduct(seg2b, seg1a, seg1b) < 0);
+      return (GetSign(CrossProduct(seg1a, seg2a, seg2b)) *
+        GetSign(CrossProduct(seg1b, seg2a, seg2b)) < 0) &&
+        (GetSign(CrossProduct(seg2a, seg1a, seg1b)) *
+          GetSign(CrossProduct(seg2b, seg1a, seg1b)) < 0);
     }
   }
 

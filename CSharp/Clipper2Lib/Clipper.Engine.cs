@@ -1,6 +1,6 @@
 ﻿/*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  17 April 2024                                                   *
+* Date      :  27 April 2024                                                   *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2024                                         *
 * Purpose   :  This is the main polygon clipping module                        *
@@ -1112,8 +1112,8 @@ namespace Clipper2Lib
       // resident must also have just been inserted
       if (resident.isLeftBound != newcomerIsLeft)
         return newcomerIsLeft;
-      if (InternalClipper.CrossProduct(PrevPrevVertex(resident).pt,
-            resident.bot, resident.top) == 0) return true;
+      if (InternalClipper.IsCollinear(PrevPrevVertex(resident).pt,
+            resident.bot, resident.top)) return true;
       // compare turning direction of the alternate bound
       return (InternalClipper.CrossProduct(PrevPrevVertex(resident).pt,
         newcomer.bot, PrevPrevVertex(newcomer).pt) > 0) == newcomerIsLeft;
@@ -2395,7 +2395,7 @@ private void DoHorizontal(Active horz)
         if (Clipper.PerpendicDistFromLineSqrd(pt, prev.bot, prev.top) > 0.25) return;
       }
       else if (e.curX != prev.curX) return;
-      if (InternalClipper.CrossProduct(e.top, pt, prev.top) != 0) return;
+      if (!InternalClipper.IsCollinear(e.top, pt, prev.top)) return;
 
       if (e.outrec!.idx == prev.outrec!.idx)
         AddLocalMaxPoly(prev, e, pt);
@@ -2424,8 +2424,7 @@ private void DoHorizontal(Active horz)
         if (Clipper.PerpendicDistFromLineSqrd(pt, next.bot, next.top) > 0.25) return;
       }
       else if (e.curX != next.curX) return;
-      if (InternalClipper.CrossProduct(e.top, pt, next.top) != 0)
-          return;
+      if (!InternalClipper.IsCollinear(e.top, pt, next.top)) return;
 
       if (e.outrec!.idx == next.outrec!.idx)
         AddLocalMaxPoly(e, next, pt);
@@ -2821,7 +2820,7 @@ private void DoHorizontal(Active horz)
       for (; ; )
       {
         // NB if preserveCollinear == true, then only remove 180 deg. spikes
-        if ((InternalClipper.CrossProduct(op2!.prev.pt, op2.pt, op2.next!.pt) == 0) &&
+        if ((InternalClipper.IsCollinear(op2!.prev.pt, op2.pt, op2.next!.pt)) &&
           ((op2.pt == op2.prev.pt) || (op2.pt == op2.next.pt) || !PreserveCollinear ||
           (InternalClipper.DotProduct(op2.prev.pt, op2.pt, op2.next.pt) < 0)))
         {

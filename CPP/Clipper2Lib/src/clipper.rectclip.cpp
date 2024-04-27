@@ -1,8 +1,8 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  8 September 2023                                                *
+* Date      :  27 April 2024                                                   *
 * Website   :  http://www.angusj.com                                           *
-* Copyright :  Angus Johnson 2010-2023                                         *
+* Copyright :  Angus Johnson 2010-2024                                         *
 * Purpose   :  FAST rectangular clipping                                       *
 * License   :  http://www.boost.org/LICENSE_1_0.txt                            *
 *******************************************************************************/
@@ -589,8 +589,7 @@ namespace Clipper2Lib {
       OutPt2* op2 = op;
       do
       {
-        if (!CrossProduct(op2->prev->pt,
-          op2->pt, op2->next->pt))
+        if (IsCollinear(op2->prev->pt, op2->pt, op2->next->pt))
         {
           if (op2 == op)
           {
@@ -825,8 +824,8 @@ namespace Clipper2Lib {
     OutPt2* op2 = op->next;
     while (op2 && op2 != op)
     {
-      if (CrossProduct(op2->prev->pt,
-        op2->pt, op2->next->pt) == 0)
+      if (!IsCollinear(op2->prev->pt,
+        op2->pt, op2->next->pt))
       {
         op = op2->prev;
         op2 = UnlinkOp(op2);

@@ -2,7 +2,7 @@ unit Clipper.RectClip;
 
 (*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  14 February 2024                                                *
+* Date      :  27 April 2024                                                   *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2024                                         *
 * Purpose   :  FAST rectangular clipping                                       *
@@ -840,7 +840,7 @@ begin
 
     op2 := op;
     repeat
-      if (CrossProduct(op2.prev.pt, op2.pt, op2.next.pt) = 0) then
+      if IsCollinear(op2.prev.pt, op2.pt, op2.next.pt) then
       begin
         if op2 = op then
         begin
@@ -1082,7 +1082,7 @@ begin
   op2 := op.next;
   while Assigned(op2) and (op2 <> op) do
   begin
-    if (CrossProduct(op2.prev.pt, op2.pt, op2.next.pt) = 0) then
+    if IsCollinear(op2.prev.pt, op2.pt, op2.next.pt) then
     begin
       op := op2.prev;
       op2 := DisposeOp(op2);

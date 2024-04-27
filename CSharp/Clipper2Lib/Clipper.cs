@@ -1,8 +1,8 @@
 ﻿/*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  18 October 2023                                                 *
+* Date      :  27 April 2024                                                   *
 * Website   :  http://www.angusj.com                                           *
-* Copyright :  Angus Johnson 2010-2023                                         *
+* Copyright :  Angus Johnson 2010-2024                                         *
 * Purpose   :  This module contains simple functions that will likely cover    *
 *              most polygon boolean and offsetting needs, while also avoiding  *
 *              the inherent complexities of the other modules.                 *
@@ -1022,10 +1022,9 @@ namespace Clipper2Lib
       int i = 0;
       if (!isOpen)
       {
-        while (i < len - 1 && InternalClipper.CrossProduct(
-          path[len - 1], path[i], path[i + 1]) == 0) i++;
-        while (i < len - 1 && InternalClipper.CrossProduct(
-          path[len - 2], path[len - 1], path[i]) == 0) len--;
+        while (i < len - 1 && 
+          InternalClipper.IsCollinear(path[len - 1], path[i], path[i + 1])) i++;
+        while (i < len - 1 && InternalClipper.IsCollinear(path[len - 2], path[len - 1], path[i])) len--;
       }
 
       if (len - i < 3)
@@ -1040,21 +1039,19 @@ namespace Clipper2Lib
       result.Add(last);
       for (i++; i < len - 1; i++)
       {
-        if (InternalClipper.CrossProduct(
-              last, path[i], path[i + 1]) == 0) continue;
+        if (InternalClipper.IsCollinear(last, path[i], path[i + 1])) continue;
         last = path[i];
         result.Add(last);
       }
 
       if (isOpen)
         result.Add(path[len - 1]);
-      else if (InternalClipper.CrossProduct(
-        last, path[len - 1], result[0]) != 0)
+      else if (!InternalClipper.IsCollinear(last, path[len - 1], result[0]))
         result.Add(path[len - 1]);
       else
       {
-        while (result.Count > 2 && InternalClipper.CrossProduct(
-                 result[result.Count - 1], result[result.Count - 2], result[0]) == 0)
+        while (result.Count > 2 && InternalClipper.IsCollinear(
+                 result[result.Count - 1], result[result.Count - 2], result[0]))
         {
           result.RemoveAt(result.Count - 1);
         }
