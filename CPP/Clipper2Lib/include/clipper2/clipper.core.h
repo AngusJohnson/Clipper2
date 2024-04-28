@@ -663,10 +663,10 @@ namespace Clipper2Lib
   inline bool IsCollinear(const Point<T>& pt1,
     const Point<T>& sharedPt, const Point<T>& pt2) // #777
   {
-    const double a = static_cast<double>(sharedPt.x - pt1.x);
-    const double b = static_cast<double>(pt2.y - sharedPt.y);
-    const double c = static_cast<double>(sharedPt.y - pt1.y);
-    const double d = static_cast<double>(pt2.x - sharedPt.x);
+    const auto a = sharedPt.x - pt1.x;
+    const auto b = pt2.y - sharedPt.y;
+    const auto c = sharedPt.y - pt1.y;
+    const auto d = pt2.x - sharedPt.x;
     return a * b == c * d;
   }
 
