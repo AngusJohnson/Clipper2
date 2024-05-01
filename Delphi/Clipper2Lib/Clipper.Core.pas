@@ -1866,7 +1866,7 @@ end;
 
 function IsCollinear(const pt1, pt2, pt3: TPoint64): Boolean;
 var
-  a,b,c,d: double; // avoids potential int overflow
+  a,b,c,d: Int64;
 begin
   a := (pt2.X - pt1.X);
   b := (pt2.Y - pt1.Y);

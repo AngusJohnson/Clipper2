@@ -604,9 +604,8 @@ namespace Clipper2Lib
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static bool IsCollinear(Point64 pt1, Point64 pt2, Point64 pt3)
     {
-      // typecast to double to avoid potential int overflow
-      return (double) (pt2.X - pt1.X) * (double) (pt3.Y - pt2.Y) ==
-        (double) (pt2.Y - pt1.Y) * (double) (pt3.X - pt2.X);
+      return (pt2.X - pt1.X) * (pt3.Y - pt2.Y) ==
+             (pt2.Y - pt1.Y) * (pt3.X - pt2.X);
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
