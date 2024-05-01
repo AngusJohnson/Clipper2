@@ -228,6 +228,7 @@ endif()
 
   set(ClipperTests_SRC
     Tests/TestExportHeaders.cpp
+    Tests/TestIsCollinear.cpp
     Tests/TestLines.cpp
     Tests/TestOffsets.cpp
     Tests/TestOffsetOrientation.cpp
