@@ -2,7 +2,7 @@ unit Clipper.Core;
 
 (*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  27 April 2024                                                   *
+* Date      :  3 May 2024                                                      *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2024                                         *
 * Purpose   :  Core Clipper Library module                                     *
@@ -1864,16 +1864,16 @@ begin
 end;
 //------------------------------------------------------------------------------
 
+{$OVERFLOWCHECKS OFF}
 function IsCollinear(const pt1, pt2, pt3: TPoint64): Boolean;
 var
-  a,b,c,d: Int64;
+  a,b: Int64;
 begin
-  a := (pt2.X - pt1.X);
-  b := (pt2.Y - pt1.Y);
-  c := (pt3.X - pt2.X);
-  d := (pt3.Y - pt2.Y);
-  result := a * d = b * c;
+  a := (pt2.X - pt1.X) * (pt3.Y - pt2.Y);
+  b := (pt2.Y - pt1.Y) * (pt3.X - pt2.X);
+  result := a = b;
 end;
+{$OVERFLOWCHECKS ON}
 //------------------------------------------------------------------------------
 
 function CrossProduct(const pt1, pt2, pt3: TPoint64): double;

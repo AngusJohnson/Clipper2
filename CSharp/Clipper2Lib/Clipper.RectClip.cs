@@ -1,6 +1,6 @@
 ﻿/*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  27 April 2024                                                   *
+* Date      :  7 May 2024                                                      *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2024                                         *
 * Purpose   :  FAST rectangular clipping                                       *
@@ -1014,6 +1014,7 @@ namespace Clipper2Lib
         if (i > highI)
         {
           foreach (Point64 pt in path) Add(pt);
+          return;
         }                   
         if (prev == Location.inside) loc = Location.inside;
         i = 1;
@@ -1050,7 +1051,7 @@ namespace Clipper2Lib
           // intersect pt but we'll also need the first intersect pt (ip2)
           crossingLoc = prev;
           GetIntersection(rectPath_, prevPt, path[i], ref crossingLoc, out Point64 ip2);
-          Add(ip2);
+          Add(ip2, true);
           Add(ip);
         }
         else // path must be exiting rect

@@ -2,7 +2,7 @@ unit Clipper;
 
 (*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  27 April 2024                                                   *
+* Date      :  7 May 2024                                                      *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2024                                         *
 * Purpose   :  This module provides a simple interface to the Clipper Library  *
@@ -42,6 +42,7 @@ const
   frNonZero   = Clipper.Core.frNonZero;
   frPositive  = Clipper.Core.frPositive;
   frNegative  = Clipper.Core.frNegative;
+  jtBevel     = Clipper.Offset.jtBevel;
   jtSquare    = Clipper.Offset.jtSquare;
   jtRound     = Clipper.Offset.jtRound;
   jtMiter     = Clipper.Offset.jtMiter;
