@@ -382,10 +382,10 @@ namespace Clipper2Lib
     }
     else
     {
-      result.left = rect.left * scale;
-      result.top = rect.top * scale;
-      result.right = rect.right * scale;
-      result.bottom = rect.bottom * scale;
+      result.left = static_cast<T1>(rect.left * scale);
+      result.top = static_cast<T1>(rect.top * scale);
+      result.right = static_cast<T1>(rect.right * scale);
+      result.bottom = static_cast<T1>(rect.bottom * scale);
     }
     return result;
   }
@@ -437,10 +437,10 @@ namespace Clipper2Lib
     T ymax = std::numeric_limits<T>::lowest();
     for (const auto& p : path)
     {
-      if (p.x < xmin) xmin = p.x;
-      if (p.x > xmax) xmax = p.x;
-      if (p.y < ymin) ymin = p.y;
-      if (p.y > ymax) ymax = p.y;
+      if (p.x < xmin) xmin = static_cast<T>(p.x);
+      if (p.x > xmax) xmax = static_cast<T>(p.x);
+      if (p.y < ymin) ymin = static_cast<T>(p.y);
+      if (p.y > ymax) ymax = static_cast<T>(p.y);
     }
     return Rect<T>(xmin, ymin, xmax, ymax);
   }
@@ -455,10 +455,10 @@ namespace Clipper2Lib
     for (const Path<T2>& path : paths)
       for (const Point<T2>& p : path)
       {
-        if (p.x < xmin) xmin = p.x;
-        if (p.x > xmax) xmax = p.x;
-        if (p.y < ymin) ymin = p.y;
-        if (p.y > ymax) ymax = p.y;
+        if (p.x < xmin) xmin = static_cast<T>(p.x);
+        if (p.x > xmax) xmax = static_cast<T>(p.x);
+        if (p.y < ymin) ymin = static_cast<T>(p.y);
+        if (p.y > ymax) ymax = static_cast<T>(p.y);
       }
     return Rect<T>(xmin, ymin, xmax, ymax);
   }
