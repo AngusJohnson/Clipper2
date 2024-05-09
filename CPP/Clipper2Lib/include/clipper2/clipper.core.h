@@ -660,62 +660,23 @@ namespace Clipper2Lib
     CheckPrecisionRange(precision, error_code);
   }
 
-  class MultiplicationResult
-  {
-  public:
-    MultiplicationResult(uint64_t result, uint64_t carry)
-      : result(result), carry(carry)
-    {}
-
-    bool operator==(const MultiplicationResult& that) const
-    {
-      return this->result == that.result && this->carry == that.carry;
-    };
-
-  private:
-    uint64_t result;
-    uint64_t carry;
-  };
-
-  inline uint64_t High(uint64_t x)
-  {
-    return x >> 32;
-  }
-
-  inline uint64_t Low(uint64_t x)
-  {
-    return ((1ULL << 32) - 1) & x;
-  }
-
-  // adapted from: https://stackoverflow.com/a/1815371/19254
-  inline MultiplicationResult Multiply(uint64_t a, uint64_t b)
-  {
-    uint64_t x = Low(a) * Low(b);
-    uint64_t s0 = Low(x);
-
-    x = High(a) * Low(b) + High(x);
-
-    uint64_t s1 = Low(x);
-    uint64_t s2 = High(x);
-
-    x = s1 + Low(a) * High(b);
-    s1 = Low(x);
-
-    x = s2 + High(a) * High(b) + High(x);
-    s2 = Low(x);
-
-    const uint64_t s3 = High(x);
-
-    const uint64_t result = s1 << 32 | s0;
-    const uint64_t carry  = s3 << 32 | s2;
-
-    return MultiplicationResult{ result, carry };
-  };
-
   inline bool DidMultiplicationWrap(uintmax_t a, uintmax_t b, uintmax_t ab)
   {
     assert(ab == a * b);
     return a != 0 && ab / a != b;
+  }
+
+  inline uint64_t CalculateCarry(uint64_t a, uint64_t b)
+  {
+    // adapted from: https://stackoverflow.com/a/1815391/19254
+    const uint64_t a0 = a & ((1LL << 32) - 1);
+    const uint64_t a1 = a >> 32;
+    const uint64_t b0 = b & ((1LL << 32) - 1);
+    const uint64_t b1 = b >> 32;
+    const uint64_t d11 = a1 * b0 + (a0 * b0 >> 32);
+    const uint64_t d12 = a0 * b1;
+    const uint64_t c1 = (d11 > 18446744073709551615 - d12) ? 1 : 0;
+    return a1 * b1 + c1;
   }
 
   template <typename T>
@@ -740,10 +701,10 @@ namespace Clipper2Lib
       return true;
     }
 
-    const auto ab2 = Multiply(a, b);
-    const auto cd2 = Multiply(c, d);
+    const auto carry_ab = CalculateCarry(a, b);
+    const auto carry_cd = CalculateCarry(c, d);
 
-    return ab2 == cd2;
+    return carry_ab == carry_cd;
   }
 
   template <typename T>
