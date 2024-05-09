@@ -19,7 +19,6 @@
 #include <algorithm>
 #include <climits>
 #include <numeric>
-#include <assert.h>
 #include "clipper2/clipper.version.h"
 
 namespace Clipper2Lib
@@ -660,11 +659,47 @@ namespace Clipper2Lib
     CheckPrecisionRange(precision, error_code);
   }
 
-  inline bool DidMultiplicationWrap(uintmax_t a, uintmax_t b, uintmax_t ab)
+  struct MultiplyWrap
   {
-    assert(ab == a * b);
-    return a != 0 && ab / a != b;
-  }
+    MultiplyWrap(intmax_t a, intmax_t b)
+    {
+      sign = 1;
+      Init(a, abs_a);
+      Init(b, abs_b);
+      abs_result = abs_a * abs_b;
+    }
+
+    static bool IsDifferentForSure(const MultiplyWrap& a, const MultiplyWrap& b)
+    {
+      if (a.abs_result != b.abs_result) return true;
+      if (a.abs_result == 0 && b.abs_result == 0) return false;
+      return a.sign != b.sign;
+    };
+
+    bool IsWrap() const
+    {
+      return abs_a != 0 && abs_result / abs_a != abs_b;
+    }
+
+    private:
+    void Init(intmax_t value, uintmax_t& abs_value)
+    {
+      if (value >= 0)
+      {
+        abs_value = static_cast<uintmax_t>(value);
+      }
+      else
+      {
+        abs_value = static_cast<uintmax_t>(-value);
+        sign *= -1;
+      }
+    }
+
+    int8_t sign = 0;
+    uintmax_t abs_result = 0;
+    uintmax_t abs_a = 0;
+    uintmax_t abs_b = 0;
+  };
 
   inline uint64_t CalculateCarry(uint64_t a, uint64_t b)
   {
@@ -683,20 +718,20 @@ namespace Clipper2Lib
   inline bool IsCollinear(const Point<T>& pt1,
     const Point<T>& sharedPt, const Point<T>& pt2) // #777
   {
-    const auto a = static_cast<uintmax_t>(sharedPt.x - pt1.x);
-    const auto b = static_cast<uintmax_t>(pt2.y - sharedPt.y);
-    const auto c = static_cast<uintmax_t>(sharedPt.y - pt1.y);
-    const auto d = static_cast<uintmax_t>(pt2.x - sharedPt.x);
+    const auto a = sharedPt.x - pt1.x;
+    const auto b = pt2.y - sharedPt.y;
+    const auto c = sharedPt.y - pt1.y;
+    const auto d = pt2.x - sharedPt.x;
 
-    const auto ab = a * b;
-    const auto cd = c * d;
+    const auto ab = MultiplyWrap(a, b);
+    const auto cd = MultiplyWrap(c, d);
 
-    if (ab != cd)
+    if (MultiplyWrap::IsDifferentForSure(ab, cd))
     {
       return false;
     }
 
-    if (!DidMultiplicationWrap(a, b, ab) && !DidMultiplicationWrap(c, d, cd))
+    if (!ab.IsWrap() && !cd.IsWrap())
     {
       return true;
     }
