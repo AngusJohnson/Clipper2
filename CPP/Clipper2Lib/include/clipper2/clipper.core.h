@@ -19,6 +19,7 @@
 #include <algorithm>
 #include <climits>
 #include <numeric>
+#include <assert.h>
 #include "clipper2/clipper.version.h"
 
 namespace Clipper2Lib
@@ -659,6 +660,64 @@ namespace Clipper2Lib
     CheckPrecisionRange(precision, error_code);
   }
 
+  class MultiplicationResult
+  {
+  public:
+    MultiplicationResult(uint64_t result, uint64_t carry)
+      : result(result), carry(carry)
+    {}
+
+    bool operator==(const MultiplicationResult& that) const
+    {
+      return this->result == that.result && this->carry == that.carry;
+    };
+
+  private:
+    uint64_t result;
+    uint64_t carry;
+  };
+
+  inline uint64_t High(uint64_t x)
+  {
+    return x >> 32;
+  }
+
+  inline uint64_t Low(uint64_t x)
+  {
+    return ((1ULL << 32) - 1) & x;
+  }
+
+  // adapted from: https://stackoverflow.com/a/1815371/19254
+  inline MultiplicationResult Multiply(uint64_t a, uint64_t b)
+  {
+    uint64_t x = Low(a) * Low(b);
+    uint64_t s0 = Low(x);
+
+    x = High(a) * Low(b) + High(x);
+
+    uint64_t s1 = Low(x);
+    uint64_t s2 = High(x);
+
+    x = s1 + Low(a) * High(b);
+    s1 = Low(x);
+
+    x = s2 + High(a) * High(b) + High(x);
+    s2 = Low(x);
+
+    const uint64_t s3 = High(x);
+
+    const uint64_t result = s1 << 32 | s0;
+    const uint64_t carry  = s3 << 32 | s2;
+
+    return MultiplicationResult{ result, carry };
+  };
+
+  inline bool DidMultiplicationWrap(uintmax_t a, uintmax_t b, uintmax_t ab)
+  {
+    assert(ab == a * b);
+    return a != 0 && ab / a != b;
+  }
+
   template <typename T>
   inline bool IsCollinear(const Point<T>& pt1,
     const Point<T>& sharedPt, const Point<T>& pt2) // #777
@@ -667,7 +726,24 @@ namespace Clipper2Lib
     const auto b = static_cast<uintmax_t>(pt2.y - sharedPt.y);
     const auto c = static_cast<uintmax_t>(sharedPt.y - pt1.y);
     const auto d = static_cast<uintmax_t>(pt2.x - sharedPt.x);
-    return a * b == c * d;
+
+    const auto ab = a * b;
+    const auto cd = c * d;
+
+    if (ab != cd)
+    {
+      return false;
+    }
+
+    if (!DidMultiplicationWrap(a, b, ab) && !DidMultiplicationWrap(c, d, cd))
+    {
+      return true;
+    }
+
+    const auto ab2 = Multiply(a, b);
+    const auto cd2 = Multiply(c, d);
+
+    return ab2 == cd2;
   }
 
   template <typename T>
