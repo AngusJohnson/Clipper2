@@ -710,7 +710,7 @@ namespace Clipper2Lib
     const uint64_t b1 = b >> 32;
     const uint64_t d11 = a1 * b0 + (a0 * b0 >> 32);
     const uint64_t d12 = a0 * b1;
-    const uint64_t c1 = (d11 > 18446744073709551615 - d12) ? 1 : 0;
+    const uint64_t c1 = (d11 > std::numeric_limits<uint64_t>::max() - d12) ? 1 : 0;
     return a1 * b1 + c1;
   }
 
