@@ -659,15 +659,55 @@ namespace Clipper2Lib
     CheckPrecisionRange(precision, error_code);
   }
 
+  inline int Sign(int64_t x)
+  {
+    return (x > 0) - (x < 0);
+  }
+
+  inline uint64_t CalculateCarry(uint64_t a, uint64_t b)
+  {
+    // adapted from: https://stackoverflow.com/a/1815391/19254
+    const uint64_t a0 = a & ((1ull << 32) - 1);
+    const uint64_t a1 = a >> 32;
+    const uint64_t b0 = b & ((1ull << 32) - 1);
+    const uint64_t b1 = b >> 32;
+    const uint64_t d11 = a1 * b0 + (a0 * b0 >> 32);
+    const uint64_t d12 = a0 * b1;
+    const uint64_t c1 = (d11 > (std::numeric_limits<uint64_t>::max)() - d12) ? 1 : 0;
+    return a1 * b1 + c1;
+  }
+
+  // returns true if (and only if) a * b == c * d
+  inline bool ProductIsEqual(int64_t a, int64_t b, int64_t c, int64_t d)
+  {
+    const auto abs_a = static_cast<uint64_t>(std::abs(a));
+    const auto abs_b = static_cast<uint64_t>(std::abs(b));
+    const auto abs_c = static_cast<uint64_t>(std::abs(c));
+    const auto abs_d = static_cast<uint64_t>(std::abs(d));
+
+    // NB: the multiplication here may potentially wrap
+    const auto abs_ab = abs_a * abs_b;
+    const auto abs_cd = abs_c * abs_d;
+
+    const auto sign_ab = Sign(a) * Sign(b);
+    const auto sign_cd = Sign(c) * Sign(d);
+
+    const auto carry_ab = CalculateCarry(abs_a, abs_b);
+    const auto carry_cd = CalculateCarry(abs_c, abs_d);
+
+    return abs_ab == abs_cd && sign_ab == sign_cd && carry_ab == carry_cd;
+  }
+
   template <typename T>
   inline bool IsCollinear(const Point<T>& pt1,
     const Point<T>& sharedPt, const Point<T>& pt2) // #777
   {
-    const auto a = static_cast<uintmax_t>(sharedPt.x - pt1.x);
-    const auto b = static_cast<uintmax_t>(pt2.y - sharedPt.y);
-    const auto c = static_cast<uintmax_t>(sharedPt.y - pt1.y);
-    const auto d = static_cast<uintmax_t>(pt2.x - sharedPt.x);
-    return a * b == c * d;
+    const auto a = sharedPt.x - pt1.x;
+    const auto b = pt2.y - sharedPt.y;
+    const auto c = sharedPt.y - pt1.y;
+    const auto d = pt2.x - sharedPt.x;
+
+    return ProductIsEqual(a, b, c, d);
   }
 
   template <typename T>
