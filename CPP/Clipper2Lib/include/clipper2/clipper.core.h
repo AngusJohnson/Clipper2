@@ -666,17 +666,18 @@ namespace Clipper2Lib
 
   inline uint64_t CalcOverflowCarry(uint64_t a, uint64_t b)
   {
-    const uint64_t aHi = a & 0xFFFFFFFF00000000;
     const uint64_t aLo = a & 0xFFFFFFFF;
-    const uint64_t bHi = b & 0xFFFFFFFF00000000;
+    //const uint64_t aHi = a & 0xFFFFFFFF00000000;
+    const uint64_t aHiShr = a >> 32;
+
     const uint64_t bLo = b & 0xFFFFFFFF;
+    //const uint64_t bHi = b & 0xFFFFFFFF00000000;
+    const uint64_t bHiShr = b >> 32;
+
     // a * b == (aHi + aLo) * (bHi + bLo)
     // a * b == (aHi * bHi) + (aHi * bLo) + (aLo * bHi) + (aLo * bLo)
-    uint64_t carry = (aHi >> 32) * (bHi >> 32);
-    // but since (aHi * bLo) + (aLo * bHi) + (aLo * bLo) may also (just) overflow 
-    // do safely ... if ((aHi * bLo) + (aLo * bHi) + (aLo * bLo) > MAX_UINT64) ++carry
-    if ((aLo * bHi) + (aLo * bLo) > ((std::numeric_limits<uint64_t>::max)() - (aHi * bLo))) ++carry;
-    return carry;
+    //int overflow of 64bit a * 64bit b ==> 
+    return aHiShr * bHiShr + ((aHiShr * bLo) >> 32) + ((bHiShr * aLo) >> 32);
   }
 
   // returns true if (and only if) a * b == c * d
