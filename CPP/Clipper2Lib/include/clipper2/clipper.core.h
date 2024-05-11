@@ -1,6 +1,6 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  7 May 2024                                                      *
+* Date      :  11 May 2024                                                     *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2024                                         *
 * Purpose   :  Core Clipper Library structures and functions                   *
@@ -664,17 +664,19 @@ namespace Clipper2Lib
     return (x > 0) - (x < 0);
   }
 
-  inline uint64_t CalculateCarry(uint64_t a, uint64_t b)
+  inline uint64_t CalcOverflowCarry(uint64_t a, uint64_t b)
   {
-    // adapted from: https://stackoverflow.com/a/1815391/19254
-    const uint64_t a0 = a & ((1ull << 32) - 1);
-    const uint64_t a1 = a >> 32;
-    const uint64_t b0 = b & ((1ull << 32) - 1);
-    const uint64_t b1 = b >> 32;
-    const uint64_t d11 = a1 * b0 + (a0 * b0 >> 32);
-    const uint64_t d12 = a0 * b1;
-    const uint64_t c1 = (d11 > (std::numeric_limits<uint64_t>::max)() - d12) ? 1 : 0;
-    return a1 * b1 + c1;
+    const uint64_t aHi = a & 0xFFFFFFFF00000000;
+    const uint64_t aLo = a & 0xFFFFFFFF;
+    const uint64_t bHi = b & 0xFFFFFFFF00000000;
+    const uint64_t bLo = b & 0xFFFFFFFF;
+    // a * b == (aHi + aLo) * (bHi + bLo)
+    // a * b == (aHi * bHi) + (aHi * bLo) + (aLo * bHi) + (aLo * bLo)
+    uint64_t carry = (aHi >> 32) * (bHi >> 32);
+    // but since (aHi * bLo) + (aLo * bHi) + (aLo * bLo) may also (just) overflow 
+    // do safely ... if ((aHi * bLo) + (aLo * bHi) + (aLo * bLo) > MAX_UINT64) ++carry
+    if ((aLo * bHi) + (aLo * bLo) > ((std::numeric_limits<uint64_t>::max)() - (aHi * bLo))) ++carry;
+    return carry;
   }
 
   // returns true if (and only if) a * b == c * d
@@ -685,16 +687,16 @@ namespace Clipper2Lib
     const auto abs_c = static_cast<uint64_t>(std::abs(c));
     const auto abs_d = static_cast<uint64_t>(std::abs(d));
 
-    // NB: the multiplication here may potentially wrap
+    // the multiplications here can potentially overflow
+    // but any overflows will be compared further below.
     const auto abs_ab = abs_a * abs_b;
     const auto abs_cd = abs_c * abs_d;
 
     const auto sign_ab = Sign(a) * Sign(b);
     const auto sign_cd = Sign(c) * Sign(d);
 
-    const auto carry_ab = CalculateCarry(abs_a, abs_b);
-    const auto carry_cd = CalculateCarry(abs_c, abs_d);
-
+    const auto carry_ab = CalcOverflowCarry(abs_a, abs_b);
+    const auto carry_cd = CalcOverflowCarry(abs_c, abs_d);
     return abs_ab == abs_cd && sign_ab == sign_cd && carry_ab == carry_cd;
   }
 

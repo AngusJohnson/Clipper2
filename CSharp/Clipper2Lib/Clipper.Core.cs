@@ -1,6 +1,6 @@
 ﻿/*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  27 April 2024                                                   *
+* Date      :  10 May 2024                                                     *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2024                                         *
 * Purpose   :  Core structures and functions for the Clipper Library           *
@@ -480,7 +480,8 @@ namespace Clipper2Lib
     {
       string s = "";
       foreach (Point64 p in this)
-        s = s + p.ToString() + " ";
+        s = s + p.ToString() + ", ";
+      if (s != "") s = s.Remove(s.Length - 2);
       return s;
     }
   }
@@ -509,6 +510,7 @@ namespace Clipper2Lib
       string s = "";
       foreach (PointD p in this)
         s = s + p.ToString(precision) + ", ";
+      if (s != "") s = s.Remove(s.Length - 2);
       return s;
     }
   }
@@ -577,6 +579,13 @@ namespace Clipper2Lib
     private static readonly string
       precision_range_error = "Error: Precision is out of range.";
 
+    public static double CrossProduct(Point64 pt1, Point64 pt2, Point64 pt3)
+    {
+      // typecast to double to avoid potential int overflow
+      return ((double) (pt2.X - pt1.X) * (pt3.Y - pt2.Y) -
+              (double) (pt2.Y - pt1.Y) * (pt3.X - pt2.X));
+    }
+    
 #if USINGZ
     public static Path64 SetZ(Path64 path, long Z)
     {
@@ -595,14 +604,6 @@ namespace Clipper2Lib
     internal static bool IsAlmostZero(double value)
     {
       return (Math.Abs(value) <= floatingPointTolerance);
-    }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    internal static double CrossProduct(Point64 pt1, Point64 pt2, Point64 pt3)
-    {
-      // typecast to double to avoid potential int overflow
-      return ((double) (pt2.X - pt1.X) * (pt3.Y - pt2.Y) -
-              (double) (pt2.Y - pt1.Y) * (pt3.X - pt2.X));
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]

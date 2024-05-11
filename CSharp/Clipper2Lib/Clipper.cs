@@ -1,6 +1,6 @@
 ﻿/*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  27 April 2024                                                   *
+* Date      :  10 May 2024                                                     *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2024                                         *
 * Purpose   :  This module contains simple functions that will likely cover    *
@@ -654,9 +654,51 @@ namespace Clipper2Lib
 
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static double Sqr(double value)
+    public static double Sqr(double val)
     {
-      return value * value;
+      return val * val;
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static double Sqr(long val)
+    {
+      return (double) val * (double) val;
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static double DistanceSqr(Point64 pt1, Point64 pt2)
+    {
+      return Sqr(pt1.X - pt2.X) + Sqr(pt1.Y - pt2.Y);
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static Point64 MidPoint(Point64 pt1, Point64 pt2)
+    {
+      return new Point64((pt1.X + pt2.X) / 2, (pt1.Y + pt2.Y) / 2);
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static PointD MidPoint(PointD pt1, PointD pt2)
+    {
+      return new PointD((pt1.x + pt2.x) / 2, (pt1.y + pt2.y) / 2);
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static void InflateRect(ref Rect64 rec, int dx, int dy)
+    {
+      rec.left -= dx;
+      rec.right += dx;
+      rec.top -= dy;
+      rec.bottom += dy;
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static void InflateRect(ref RectD rec, double dx, double dy)
+    {
+      rec.left -= dx;
+      rec.right += dx;
+      rec.top -= dy;
+      rec.bottom += dy;
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
