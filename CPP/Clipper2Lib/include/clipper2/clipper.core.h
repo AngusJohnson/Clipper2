@@ -664,7 +664,18 @@ namespace Clipper2Lib
     return (x > 0) - (x < 0); 
   }
 
-  inline uint64_t CalcOverflowCarry(uint64_t a, uint64_t b) // #834
+  struct MultiplicationResult
+  {
+    const uint64_t result = 0;
+    const uint64_t carry = 0;
+
+    bool operator==(const MultiplicationResult& other) const
+    {
+      return result == other.result && carry == other.carry;
+    };
+  };
+
+  inline MultiplicationResult Multiply(uint64_t a, uint64_t b) // #834
   {
     const auto lo = [](uint64_t x) { return x & 0xFFFFFFFF; };
     const auto hi = [](uint64_t x) { return x >> 32; };
@@ -675,32 +686,29 @@ namespace Clipper2Lib
     const uint64_t x3 = lo(a) * hi(b) + lo(x2);
     const uint64_t x4 = hi(a) * hi(b) + hi(x2) + hi(x3);
 
-    return x4;
+    const uint64_t result = lo(x3) << 32 | lo(x1);
+    const uint64_t carry  = x4;
+
+    return { result, carry };
   }
 
   // returns true if (and only if) a * b == c * d
   inline bool ProductsAreEqual(int64_t a, int64_t b, int64_t c, int64_t d)
   {
-    // nb: unsigned values will be needed for CalcOverflowCarry(), and also
-    //     for the straightforward multiplication itself because signed
-    //     arithmetic overflow is undefined behavior
+    // nb: unsigned values needed for calculating overflow carry
     const auto abs_a = static_cast<uint64_t>(std::abs(a));
     const auto abs_b = static_cast<uint64_t>(std::abs(b));
     const auto abs_c = static_cast<uint64_t>(std::abs(c));
     const auto abs_d = static_cast<uint64_t>(std::abs(d));
 
-    // the multiplications here can potentially overflow, but
-    // any overflows will be compared using CalcOverflowCarry()
-    const auto abs_ab = abs_a * abs_b;
-    const auto abs_cd = abs_c * abs_d;
+    const auto abs_ab = Multiply(abs_a, abs_b);
+    const auto abs_cd = Multiply(abs_c, abs_d);
 
     // nb: it's important to differentiate 0 values here from other values
     const auto sign_ab = TriSign(a) * TriSign(b);
     const auto sign_cd = TriSign(c) * TriSign(d);
 
-    const auto carry_ab = CalcOverflowCarry(abs_a, abs_b);
-    const auto carry_cd = CalcOverflowCarry(abs_c, abs_d);
-    return abs_ab == abs_cd && sign_ab == sign_cd && carry_ab == carry_cd;
+    return abs_ab == abs_cd && sign_ab == sign_cd;
   }
 
   template <typename T>
