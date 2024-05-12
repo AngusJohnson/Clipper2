@@ -666,17 +666,16 @@ namespace Clipper2Lib
 
   inline uint64_t CalcOverflowCarry(uint64_t a, uint64_t b) // #834
   {
-    // given aLo = (a & 0xFFFFFFFF) and
-    // aHi = (a & 0xFFFFFFFF00000000) and similarly with b, then
-    // a * b == (aHi + aLo) * (bHi + bLo)
-    // a * b == (aHi * bHi) + (aHi * bLo) + (aLo * bHi) + (aLo * bLo)
-    
-    const uint64_t aLo = a & 0xFFFFFFFF;
-    const uint64_t aHi = a >> 32; // this avoids repeating shifts
-    const uint64_t bLo = b & 0xFFFFFFFF;
-    const uint64_t bHi = b >> 32; 
-    // integer overflow of multiplying the unsigned 64bits a and b ==>
-    return aHi * bHi + ((aHi * bLo) >> 32) + ((bHi * aLo) >> 32);
+    const auto lo = [](uint64_t x) { return x & 0xFFFFFFFF; };
+    const auto hi = [](uint64_t x) { return x >> 32; };
+
+    // https://stackoverflow.com/a/1815371/1158913
+    const uint64_t x1 = lo(a) * lo(b);
+    const uint64_t x2 = hi(a) * lo(b) + hi(x1);
+    const uint64_t x3 = lo(a) * hi(b) + lo(x2);
+    const uint64_t x4 = hi(a) * hi(b) + hi(x2) + hi(x3);
+
+    return hi(x4) << 32 | lo(x4);
   }
 
   // returns true if (and only if) a * b == c * d
