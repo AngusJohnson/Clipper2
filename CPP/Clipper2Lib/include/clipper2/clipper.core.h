@@ -681,7 +681,9 @@ namespace Clipper2Lib
   // returns true if (and only if) a * b == c * d
   inline bool ProductsAreEqual(int64_t a, int64_t b, int64_t c, int64_t d)
   {
-    // nb: unsigned values will be needed for CalcOverflowCarry()
+    // nb: unsigned values will be needed for CalcOverflowCarry(), and also
+    //     for the straightforward multiplication itself because signed
+    //     arithmetic overflow is undefined behavior
     const auto abs_a = static_cast<uint64_t>(std::abs(a));
     const auto abs_b = static_cast<uint64_t>(std::abs(b));
     const auto abs_c = static_cast<uint64_t>(std::abs(c));
