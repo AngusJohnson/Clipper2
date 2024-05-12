@@ -675,7 +675,7 @@ namespace Clipper2Lib
     const uint64_t x3 = lo(a) * hi(b) + lo(x2);
     const uint64_t x4 = hi(a) * hi(b) + hi(x2) + hi(x3);
 
-    return hi(x4) << 32 | lo(x4);
+    return x4;
   }
 
   // returns true if (and only if) a * b == c * d
