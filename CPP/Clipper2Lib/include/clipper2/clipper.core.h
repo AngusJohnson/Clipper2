@@ -1,6 +1,6 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  11 May 2024                                                     *
+* Date      :  12 May 2024                                                     *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2024                                         *
 * Purpose   :  Core Clipper Library structures and functions                   *
@@ -659,42 +659,43 @@ namespace Clipper2Lib
     CheckPrecisionRange(precision, error_code);
   }
 
-  inline int Sign(int64_t x)
+  inline int TriSign(int64_t x) // returns 0, 1 or -1
   {
-    return (x > 0) - (x < 0);
+    return (x > 0) - (x < 0); 
   }
 
-  inline uint64_t CalcOverflowCarry(uint64_t a, uint64_t b)
+  inline uint64_t CalcOverflowCarry(uint64_t a, uint64_t b) // #834
   {
-    const uint64_t aLo = a & 0xFFFFFFFF;
-    //const uint64_t aHi = a & 0xFFFFFFFF00000000;
-    const uint64_t aHiShr = a >> 32;
-
-    const uint64_t bLo = b & 0xFFFFFFFF;
-    //const uint64_t bHi = b & 0xFFFFFFFF00000000;
-    const uint64_t bHiShr = b >> 32;
-
+    // given aLo = (a & 0xFFFFFFFF) and
+    // aHi = (a & 0xFFFFFFFF00000000) and similarly with b, then
     // a * b == (aHi + aLo) * (bHi + bLo)
     // a * b == (aHi * bHi) + (aHi * bLo) + (aLo * bHi) + (aLo * bLo)
-    //int overflow of 64bit a * 64bit b ==> 
-    return aHiShr * bHiShr + ((aHiShr * bLo) >> 32) + ((bHiShr * aLo) >> 32);
+    
+    const uint64_t aLo = a & 0xFFFFFFFF;
+    const uint64_t aHi = a >> 32; // this avoids repeating shifts
+    const uint64_t bLo = b & 0xFFFFFFFF;
+    const uint64_t bHi = b >> 32; 
+    // integer overflow of multiplying the unsigned 64bits a and b ==>
+    return aHi * bHi + ((aHi * bLo) >> 32) + ((bHi * aLo) >> 32);
   }
 
   // returns true if (and only if) a * b == c * d
-  inline bool ProductIsEqual(int64_t a, int64_t b, int64_t c, int64_t d)
+  inline bool ProductsAreEqual(int64_t a, int64_t b, int64_t c, int64_t d)
   {
+    // nb: unsigned values will be needed for CalcOverflowCarry()
     const auto abs_a = static_cast<uint64_t>(std::abs(a));
     const auto abs_b = static_cast<uint64_t>(std::abs(b));
     const auto abs_c = static_cast<uint64_t>(std::abs(c));
     const auto abs_d = static_cast<uint64_t>(std::abs(d));
 
-    // the multiplications here can potentially overflow
-    // but any overflows will be compared further below.
+    // the multiplications here can potentially overflow, but
+    // any overflows will be compared using CalcOverflowCarry()
     const auto abs_ab = abs_a * abs_b;
     const auto abs_cd = abs_c * abs_d;
 
-    const auto sign_ab = Sign(a) * Sign(b);
-    const auto sign_cd = Sign(c) * Sign(d);
+    // nb: it's important to differentiate 0 values here from other values
+    const auto sign_ab = TriSign(a) * TriSign(b);
+    const auto sign_cd = TriSign(c) * TriSign(d);
 
     const auto carry_ab = CalcOverflowCarry(abs_a, abs_b);
     const auto carry_cd = CalcOverflowCarry(abs_c, abs_d);
@@ -709,9 +710,11 @@ namespace Clipper2Lib
     const auto b = pt2.y - sharedPt.y;
     const auto c = sharedPt.y - pt1.y;
     const auto d = pt2.x - sharedPt.x;
-
-    return ProductIsEqual(a, b, c, d);
+    // When checking for collinearity with very large coordinate values
+    // then ProductsAreEqual is more accurate than using CrossProduct.
+    return ProductsAreEqual(a, b, c, d);
   }
+
 
   template <typename T>
   inline double CrossProduct(const Point<T>& pt1, const Point<T>& pt2, const Point<T>& pt3) {

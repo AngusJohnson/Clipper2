@@ -1,6 +1,6 @@
 ﻿/*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  10 May 2024                                                     *
+* Date      :  12 May 2024                                                     *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2024                                         *
 * Purpose   :  Core structures and functions for the Clipper Library           *
@@ -585,7 +585,7 @@ namespace Clipper2Lib
       return ((double) (pt2.X - pt1.X) * (pt3.Y - pt2.Y) -
               (double) (pt2.Y - pt1.Y) * (pt3.X - pt2.X));
     }
-    
+
 #if USINGZ
     public static Path64 SetZ(Path64 path, long Z)
     {
@@ -595,22 +595,75 @@ namespace Clipper2Lib
     }
 #endif
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static void CheckPrecision(int precision)
     {
       if (precision < -8 || precision > 8)
         throw new Exception(precision_range_error);
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static bool IsAlmostZero(double value)
     {
       return (Math.Abs(value) <= floatingPointTolerance);
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    internal static bool IsCollinear(Point64 pt1, Point64 pt2, Point64 pt3)
+    internal static int TriSign(long x) // returns 0, 1 or -1
     {
-      return (pt2.X - pt1.X) * (pt3.Y - pt2.Y) ==
-             (pt2.Y - pt1.Y) * (pt3.X - pt2.X);
+      if (x < 0) return -1;
+      else if (x > 1) return 1;  
+      else return 0;
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    internal static ulong CalcOverflowCarry(ulong a, ulong b) // #834
+    {
+      // given aLo = (a & 0xFFFFFFFF) and
+      // aHi = (a & 0xFFFFFFFF00000000) and similarly with b, then
+      // a * b == (aHi + aLo) * (bHi + bLo)
+      // a * b == (aHi * bHi) + (aHi * bLo) + (aLo * bHi) + (aLo * bLo)
+
+      ulong aLo = a & 0xFFFFFFFF;
+      ulong aHi = a >> 32;
+      ulong bLo = b & 0xFFFFFFFF;
+      ulong bHi = b >> 32;
+      // integer overflow of multiplying the unsigned 64bits a and b ==>
+      return aHi * bHi + ((aHi * bLo) >> 32) + ((bHi * aLo) >> 32);
+    }
+
+    // returns true if (and only if) a * b == c * d
+    internal static bool ProductsAreEqual(long a, long b, long c, long d)
+    {
+      // nb: unsigned values will be needed for CalcOverflowCarry()
+      ulong absA = (ulong) Math.Abs(a);
+      ulong absB = (ulong) Math.Abs(b);
+      ulong absC = (ulong) Math.Abs(c);
+      ulong absD = (ulong) Math.Abs(d);
+      // the multiplications here can potentially overflow, but
+      // any overflows will be compared using CalcOverflowCarry()
+      ulong abs_ab = absA * absB;
+      ulong abs_cd = absC * absD;
+
+      // nb: it's important to differentiate 0 values here from other values
+      int sign_ab = TriSign(a) * TriSign(b);
+      int sign_cd = TriSign(c) * TriSign(d);
+
+      ulong carry_ab = CalcOverflowCarry(absA, absB);
+      ulong carry_cd = CalcOverflowCarry(absC, absD);
+      return abs_ab == abs_cd && sign_ab == sign_cd && carry_ab == carry_cd;
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    internal static bool IsCollinear(Point64 pt1, Point64 sharedPt, Point64 pt2)
+    {
+      long a = sharedPt.X - pt1.X;
+      long b = pt2.Y - sharedPt.Y;
+      long c = sharedPt.Y - pt1.Y;
+      long d = pt2.X - sharedPt.X;
+      // When checking for collinearity with very large coordinate values
+      // then ProductsAreEqual is more accurate than using CrossProduct.
+      return ProductsAreEqual(a, b, c, d);
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]

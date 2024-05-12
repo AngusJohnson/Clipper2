@@ -2,7 +2,7 @@ unit Clipper.Core;
 
 (*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  3 May 2024                                                      *
+* Date      :  12 May 2024                                                     *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2024                                         *
 * Purpose   :  Core Clipper Library module                                     *
@@ -154,8 +154,7 @@ function IsPositive(const path: TPath64): Boolean; overload;
 function IsPositive(const path: TPathD): Boolean; overload;
   {$IFDEF INLINING} inline; {$ENDIF}
 
-function IsCollinear(const pt1, pt2, pt3: TPoint64): Boolean;
-  {$IFDEF INLINING} inline; {$ENDIF}
+function IsCollinear(const pt1, sharedPt, pt2: TPoint64): Boolean;
 
 function CrossProduct(const pt1, pt2, pt3: TPoint64): double; overload;
   {$IFDEF INLINING} inline; {$ENDIF}
@@ -1864,16 +1863,75 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-{$OVERFLOWCHECKS OFF}
-function IsCollinear(const pt1, pt2, pt3: TPoint64): Boolean;
-var
-  a,b: Int64;
+function TriSign(val: Int64): integer; // returns 0, 1 or -1
+{$IFDEF INLINING} inline; {$ENDIF}
 begin
-  a := (pt2.X - pt1.X) * (pt3.Y - pt2.Y);
-  b := (pt2.Y - pt1.Y) * (pt3.X - pt2.X);
-  result := a = b;
+  if (val < 0) then Result := -1
+  else if (val > 1) then Result := 1
+  else Result := 0;
+end;
+//------------------------------------------------------------------------------
+
+function CalcOverflowCarry(a, b: UInt64): UInt64; // #834
+{$IFDEF INLINING} inline; {$ENDIF}
+var
+  aLo, aHi, bLo, bHi: UInt64;
+begin
+  // given aLo = (a and $FFFFFFFF) and
+  // aHi = (a and $FFFFFFFF00000000) and similarly with b, then
+  // a * b == (aHi + aLo) * (bHi + bLo)
+  // a * b == (aHi * bHi) + (aHi * bLo) + (aLo * bHi) + (aLo * bLo)
+  aLo := a and $FFFFFFFF;
+  aHi := a shr 32;  // this avoids multiple shifts
+  bLo := b and $FFFFFFFF;
+  bHi := b shr 32;
+  //integer overflow of multiplying the unsigned 64bits a and b ==>
+  Result := (aHi * bHi) + ((aHi * bLo) shr 32) + ((bHi * aLo) shr 32);
+end;
+//------------------------------------------------------------------------------
+
+{$OVERFLOWCHECKS OFF}
+function ProductsAreEqual(a, b, c, d: Int64): Boolean;
+var
+  absA,absB,absC,absD: UInt64;
+  absAB, absCD       : UInt64;
+  carryAB, carryCD   : UInt64;
+  signAB, signCD     : integer;
+begin
+  // nb: unsigned values will be needed for CalcOverflowCarry()
+  absA := UInt64(Abs(a));
+  absB := UInt64(Abs(b));
+  absC := UInt64(Abs(c));
+  absD := UInt64(Abs(d));
+
+  // the multiplications here can potentially overflow, but
+  // any overflows will be compared using CalcOverflowCarry()
+  absAB := absA * absB;
+  absCD := absC * absD;
+
+  // nb: it's important to differentiate 0 values here from other values
+  signAB := TriSign(a) * TriSign(b);
+  signCD := TriSign(c) * TriSign(d);
+
+  carryAB := CalcOverflowCarry(absA, absB);
+  carryCD := CalcOverflowCarry(absC, absD);
+  Result := (absAB = absCD) and (signAB = signCD) and (carryAB = carryCD);
 end;
 {$OVERFLOWCHECKS ON}
+//------------------------------------------------------------------------------
+
+function IsCollinear(const pt1, sharedPt, pt2: TPoint64): Boolean;
+var
+  a,b,c,d: Int64;
+begin
+  a := sharedPt.X - pt1.X;
+  b := pt2.Y - sharedPt.Y;
+  c := sharedPt.Y - pt1.Y;
+  d := pt2.X - sharedPt.X;
+  // When checking for collinearity with very large coordinate values
+  // then ProductsAreEqual is more accurate than using CrossProduct.
+  Result := ProductsAreEqual(a, b, c, d);
+end;
 //------------------------------------------------------------------------------
 
 function CrossProduct(const pt1, pt2, pt3: TPoint64): double;
