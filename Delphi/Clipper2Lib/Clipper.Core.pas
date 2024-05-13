@@ -2,7 +2,7 @@ unit Clipper.Core;
 
 (*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  12 May 2024                                                     *
+* Date      :  13 May 2024                                                     *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2024                                         *
 * Purpose   :  Core Clipper Library module                                     *
@@ -1872,30 +1872,29 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-function CalcOverflowCarry(a, b: UInt64): UInt64; // #834
+type
+  TMultiplyUInt64Result = record
+    lo64: UInt64;
+    hi64 : UInt64;
+  end;
+
+function MultiplyUInt64(a, b: UInt64): TMultiplyUInt64Result; // #834, #835
 {$IFDEF INLINING} inline; {$ENDIF}
 var
-  aLo, aHi, bLo, bHi: UInt64;
+  x1, x2, x3: UInt64;
 begin
-  // given aLo = (a and $FFFFFFFF) and
-  // aHi = (a and $FFFFFFFF00000000) and similarly with b, then
-  // a * b == (aHi + aLo) * (bHi + bLo)
-  // a * b == (aHi * bHi) + (aHi * bLo) + (aLo * bHi) + (aLo * bLo)
-  aLo := a and $FFFFFFFF;
-  aHi := a shr 32;  // this avoids multiple shifts
-  bLo := b and $FFFFFFFF;
-  bHi := b shr 32;
-  //integer overflow of multiplying the unsigned 64bits a and b ==>
-  Result := (aHi * bHi) + ((aHi * bLo) shr 32) + ((bHi * aLo) shr 32);
+  x1 := (a and $FFFFFFFF) * (b and $FFFFFFFF);
+  x2 := (a shr 32) * (b and $FFFFFFFF) + (x1 shr 32);
+  x3 := (a and $FFFFFFFF) * (b shr 32) + (x2 and $FFFFFFFF);
+  Result.lo64 := ((x3 and $FFFFFFFF) shl 32) or (x1 and $FFFFFFFF);
+  Result.hi64 := hi(a shr 32) * (b shr 32) + (x2 shr 32) + (x3 shr 32);
 end;
 //------------------------------------------------------------------------------
 
-{$OVERFLOWCHECKS OFF}
 function ProductsAreEqual(a, b, c, d: Int64): Boolean;
 var
   absA,absB,absC,absD: UInt64;
-  absAB, absCD       : UInt64;
-  carryAB, carryCD   : UInt64;
+  absAB, absCD       : TMultiplyUInt64Result;
   signAB, signCD     : integer;
 begin
   // nb: unsigned values will be needed for CalcOverflowCarry()
@@ -1904,20 +1903,16 @@ begin
   absC := UInt64(Abs(c));
   absD := UInt64(Abs(d));
 
-  // the multiplications here can potentially overflow, but
-  // any overflows will be compared using CalcOverflowCarry()
-  absAB := absA * absB;
-  absCD := absC * absD;
+  absAB := MultiplyUInt64(absA, absB);
+  absCD := MultiplyUInt64(absC, absD);
 
   // nb: it's important to differentiate 0 values here from other values
   signAB := TriSign(a) * TriSign(b);
   signCD := TriSign(c) * TriSign(d);
 
-  carryAB := CalcOverflowCarry(absA, absB);
-  carryCD := CalcOverflowCarry(absC, absD);
-  Result := (absAB = absCD) and (signAB = signCD) and (carryAB = carryCD);
+  Result := (absAB.lo64 = absCD.lo64) and
+    (absAB.hi64 = absCD.hi64) and (signAB = signCD);
 end;
-{$OVERFLOWCHECKS ON}
 //------------------------------------------------------------------------------
 
 function IsCollinear(const pt1, sharedPt, pt2: TPoint64): Boolean;

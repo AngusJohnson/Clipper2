@@ -1,6 +1,6 @@
 ﻿/*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  12 May 2024                                                     *
+* Date      :  13 May 2024                                                     *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2024                                         *
 * Purpose   :  Core structures and functions for the Clipper Library           *
@@ -616,20 +616,22 @@ namespace Clipper2Lib
       else return 0;
     }
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    internal static ulong CalcOverflowCarry(ulong a, ulong b) // #834
+    public struct MultiplyUInt64Result
     {
-      // given aLo = (a & 0xFFFFFFFF) and
-      // aHi = (a & 0xFFFFFFFF00000000) and similarly with b, then
-      // a * b == (aHi + aLo) * (bHi + bLo)
-      // a * b == (aHi * bHi) + (aHi * bLo) + (aLo * bHi) + (aLo * bLo)
+      public ulong lo64;
+      public ulong hi64;
+    }
 
-      ulong aLo = a & 0xFFFFFFFF;
-      ulong aHi = a >> 32;
-      ulong bLo = b & 0xFFFFFFFF;
-      ulong bHi = b >> 32;
-      // integer overflow of multiplying the unsigned 64bits a and b ==>
-      return aHi * bHi + ((aHi * bLo) >> 32) + ((bHi * aLo) >> 32);
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static MultiplyUInt64Result MultiplyUInt64(ulong a, ulong b) // #834,#835
+    {
+      ulong x1 = (a & 0xFFFFFFFF) * (b & 0xFFFFFFFF);
+      ulong x2 = (a >> 32) * (b & 0xFFFFFFFF) + (x1 >> 32);
+      ulong x3 = (a & 0xFFFFFFFF) * (b >> 32) + (x2 & 0xFFFFFFFF);
+      MultiplyUInt64Result result; 
+      result.lo64 = (x3 & 0xFFFFFFFF) << 32 | (x1 & 0xFFFFFFFF);
+      result.hi64 = (a >> 32) * (b >> 32) + (x2 >> 32) + (x3 >> 32);
+      return result;
     }
 
     // returns true if (and only if) a * b == c * d
@@ -640,18 +642,15 @@ namespace Clipper2Lib
       ulong absB = (ulong) Math.Abs(b);
       ulong absC = (ulong) Math.Abs(c);
       ulong absD = (ulong) Math.Abs(d);
-      // the multiplications here can potentially overflow, but
-      // any overflows will be compared using CalcOverflowCarry()
-      ulong abs_ab = absA * absB;
-      ulong abs_cd = absC * absD;
+
+      MultiplyUInt64Result mul_ab = MultiplyUInt64(absA, absB);
+      MultiplyUInt64Result mul_cd = MultiplyUInt64(absC, absD);
 
       // nb: it's important to differentiate 0 values here from other values
       int sign_ab = TriSign(a) * TriSign(b);
       int sign_cd = TriSign(c) * TriSign(d);
 
-      ulong carry_ab = CalcOverflowCarry(absA, absB);
-      ulong carry_cd = CalcOverflowCarry(absC, absD);
-      return abs_ab == abs_cd && sign_ab == sign_cd && carry_ab == carry_cd;
+      return mul_ab.lo64 == mul_cd.lo64 && mul_ab.hi64 == mul_cd.hi64 && sign_ab == sign_cd;
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]

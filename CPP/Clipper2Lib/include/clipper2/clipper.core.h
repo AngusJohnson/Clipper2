@@ -664,30 +664,27 @@ namespace Clipper2Lib
     return (x > 0) - (x < 0); 
   }
 
-  struct MultiplicationResult
+  struct MultiplyUInt64Result
   {
     const uint64_t result = 0;
     const uint64_t carry = 0;
 
-    bool operator==(const MultiplicationResult& other) const
+    bool operator==(const MultiplyUInt64Result& other) const
     {
       return result == other.result && carry == other.carry;
     };
   };
 
-  inline MultiplicationResult Multiply(uint64_t a, uint64_t b) // #834
+  inline MultiplyUInt64Result Multiply(uint64_t a, uint64_t b) // #834, #835
   {
     const auto lo = [](uint64_t x) { return x & 0xFFFFFFFF; };
     const auto hi = [](uint64_t x) { return x >> 32; };
 
-    // https://stackoverflow.com/a/1815371/1158913
     const uint64_t x1 = lo(a) * lo(b);
     const uint64_t x2 = hi(a) * lo(b) + hi(x1);
     const uint64_t x3 = lo(a) * hi(b) + lo(x2);
-    const uint64_t x4 = hi(a) * hi(b) + hi(x2) + hi(x3);
-
     const uint64_t result = lo(x3) << 32 | lo(x1);
-    const uint64_t carry  = x4;
+    const uint64_t carry = hi(a) * hi(b) + hi(x2) + hi(x3);
 
     return { result, carry };
   }
