@@ -281,11 +281,11 @@ static Path<T> ConvertCPath(T* path)
   T* v = path;
   size_t cnt = static_cast<size_t>(*v);
   v += 2; // skip 0 value
-  path.reserve(cnt);
+  result.reserve(cnt);
   for (size_t j = 0; j < cnt; ++j)
   {
     T x = *v++, y = *v++;
-    path.push_back(Point<T>(x, y));
+    result.push_back(Point<T>(x, y));
   }
   return result;
 }
