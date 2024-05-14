@@ -1,6 +1,6 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  14 February 2024                                                *
+* Date      :  14 May 2024                                                     *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2024                                         *
 * Purpose   :  This module exports the Clipper2 Library (ie DLL/so)            *
@@ -61,7 +61,8 @@ ____________________________________________________________
 As mentioned above, the very first CPolyPath structure is just a container
 that owns (both directly and indirectly) every other CPolyPath in the tree.
 Since this first CPolyPath has no path, instead of a path length, its very
-first value will contain the total length of the CPolytree array.
+first value will contain the total length of the CPolytree array (not its
+total bytes length).
 
 Again, all theses exported structures (CPaths64, CPathsD, CPolyTree64 & 
 CPolyTreeD) are arrays of either type int64_t or double, and the first 
@@ -268,6 +269,23 @@ CPathsD CreateCPathsDFromPaths64(const Paths64& paths, double scale)
       *v++ = pt.x * scale;
       *v++ = pt.y * scale;
     }
+  }
+  return result;
+}
+
+template <typename T>
+static Path<T> ConvertCPath(T* path)
+{
+  Path<T> result;
+  if (!path) return result;
+  T* v = path;
+  size_t cnt = static_cast<size_t>(*v);
+  v += 2; // skip 0 value
+  path.reserve(cnt);
+  for (size_t j = 0; j < cnt; ++j)
+  {
+    T x = *v++, y = *v++;
+    path.push_back(Point<T>(x, y));
   }
   return result;
 }
@@ -559,6 +577,22 @@ EXTERN_DLL_EXPORT CPathsD RectClipLinesD(const CRectD& rect,
   Paths64 pp = ConvertCPathsDToPaths64(paths, scale);
   Paths64 result = rcl.Execute(pp);
   return CreateCPathsDFromPaths64(result, 1 / scale);
+}
+
+EXTERN_DLL_EXPORT CPaths64 MinkowskiSum64(const CPath64& cpattern, const CPath64& cpath, bool is_closed)
+{
+  Path64 path = ConvertCPath(cpath);
+  Path64 pattern = ConvertCPath(cpattern);
+  Paths64 solution = MinkowskiSum(pattern, path, is_closed);
+  return CreateCPaths(solution);
+}
+
+EXTERN_DLL_EXPORT CPaths64 MinkowskiDiff64(const CPath64& cpattern, const CPath64& cpath, bool is_closed)
+{
+  Path64 path = ConvertCPath(cpath);
+  Path64 pattern = ConvertCPath(cpattern);
+  Paths64 solution = MinkowskiDiff(pattern, path, is_closed);
+  return CreateCPaths(solution);
 }
 
 }  // end Clipper2Lib namespace
