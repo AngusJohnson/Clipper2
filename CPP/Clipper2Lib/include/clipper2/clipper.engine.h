@@ -210,7 +210,7 @@ namespace Clipper2Lib {
 		std::vector<Vertex*> vertex_lists_;
 		std::priority_queue<int64_t> scanline_list_;
 		IntersectNodeList intersect_nodes_;
-    HorzSegmentList horz_seg_list_;
+        HorzSegmentList horz_seg_list_;
 		std::vector<HorzJoin> horz_join_list_;
 		void Reset();
 		inline void InsertScanline(int64_t y);
@@ -274,7 +274,10 @@ namespace Clipper2Lib {
 		bool CheckSplitOwner(OutRec* outrec, OutRecList* splits);
 		void RecursiveCheckOwners(OutRec* outrec, PolyPath* polypath);
 #ifdef USINGZ
-		ZCallback64 zCallback_ = nullptr;
+	public:
+		static ZCallback64 DefaultZCallback;
+	protected:
+		ZCallback64 zCallback_ = DefaultZCallback;
 		void SetZ(const Active& e1, const Active& e2, Point64& pt);
 #endif
 		void CleanUp();  // unlike Clear, CleanUp preserves added paths
