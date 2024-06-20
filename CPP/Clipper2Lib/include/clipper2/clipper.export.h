@@ -65,17 +65,21 @@ CPath is a special case of CPolyPath with C = 0 and no children after the
 coordinates.
 
 CPolytree64 and CPolytreeD:
-Have an indentical structure to CPaths, but the children are the more generalized 
-CPolyPath. CPaths is a special case of CPolyTree with only one level of children
+CPolytree has an identical structure to CPaths, but the children are the more 
+generalized CPolyPath. We can think of CPaths as a special case of CPolyTree 
+with only one level of children
 ___________________________________________
 |counter|polypath1|polypath2|...|polypathC|
 |A  , C |         |         |   |         |
 ___________________________________________
 
 CPolyTree and CPaths own the memory of the paths they contain. In the case
-of CPolyTree it is the memory of every CPolyPath in the tree. Just like for
-CPaths the first value (A) represents the number of elements in the array, and
-the size in bytes is A * sizeof(int64_t) or A * sizeof(double).
+of CPolyTree it is the memory of every CPolyPath in the tree. Just like for 
+CPaths the first value (A) represents the number of elements in the array, 
+and the size in bytes is A * sizeof(int64_t) or A * sizeof(double). 
+
+The value C represents the number of direct children meaning the number of 
+top-level CPolyPaths only.
 
 Again, all theses exported structures (CPaths64, CPathsD, CPolyTree64 & 
 CPolyTreeD) are arrays of either type int64_t or double, and the first 
