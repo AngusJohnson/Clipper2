@@ -19,7 +19,7 @@ type
 {$IFDEF CLIPPER_USE_POINTER_WRAPPERS}
 // Enumerated types
   TFillRule = Clipper.Dll.Enums.TFillRule;
-	TClipType = Clipper.Dll.Enums.TClipType;
+  TClipType = Clipper.Dll.Enums.TClipType;
   TJoinType = Clipper.Dll.Enums.TJoinType;
   TEndType = Clipper.Dll.Enums.TEndType;
 

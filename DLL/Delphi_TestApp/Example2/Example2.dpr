@@ -176,7 +176,7 @@ begin
 
   sol := Clipper.DLL.InflatePaths64(subj, 25, TJoinType.Round, TEndType.Polygon);
 
-  with TSvgWriter.Create(TFillRule.EvenOdd	) do
+  with TSvgWriter.Create(TFillRule.EvenOdd  ) do
   try
     AddPaths(subj, false, $1000BBFF, $800099FF, 0.8);
     AddPaths(sol, false, $2000FF00, $FF006600, 0.8);
@@ -298,7 +298,7 @@ begin
     MkDir(directory);
 
   WriteLn('RandomPaths 1');
-  DoRandomPaths('Random20 EvenOdd', 800,600, 50, TFillRule.NonZero	);
+  DoRandomPaths('Random20 EvenOdd', 800,600, 50, TFillRule.NonZero  );
 
   WriteLn('Star5 EvenOdd');
   Star5EvenOdd;

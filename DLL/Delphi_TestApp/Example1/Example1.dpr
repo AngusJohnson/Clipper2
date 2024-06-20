@@ -83,7 +83,7 @@ begin
         Path.Vertex[j].x := Path.Vertex[j].x + 210;
     end;
 
-    solution := InflatePaths64(subj, 20, TJointype.Bevel, TEndType.Butt	, 3);
+    solution := InflatePaths64(subj, 20, TJointype.Bevel, TEndType.Butt  , 3);
     AddPaths(subj, true, $2000BBFF, $800033FF, 0.8);
     AddPaths( solution, false, $2000FF00, $FF006600, 1.2, false);
     AddText('Bevel Joins; Butt Ends', 430, 210);
@@ -95,7 +95,7 @@ begin
         Path.Vertex[j].x := Path.Vertex[j].x + 210;
     end;
 
-    solution := InflatePaths64(subj, 20, TJointype.Round, TEndType.Round	, 3);
+    solution := InflatePaths64(subj, 20, TJointype.Round, TEndType.Round  , 3);
     AddPaths(subj, true, $2000BBFF, $800033FF, 0.8);
     AddPaths( solution, false, $2000FF00, $FF006600, 1.2, false);
     AddText('Round Joins; Round Ends', 640, 210);

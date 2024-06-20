@@ -14,7 +14,7 @@ type
 {$SCOPEDENUMS ON}
 {$Z1} 
   TFillRule = ( EvenOdd, NonZero, Positive, Negative );
-	TClipType = ( None, Intersection, Union, Difference, Exclusive {XOR} );
+  TClipType = ( None, Intersection, Union, Difference, Exclusive {XOR} );
 
   TJoinType = ( Square, Bevel, Round, Miter );
 //Square : Joins are 'squared' at exactly the offset distance (more complex code)
