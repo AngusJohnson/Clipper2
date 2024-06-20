@@ -743,7 +743,6 @@ typedef void (*DLLZCallback)(const Point64& e1bot, const Point64& e1top, const P
 
 EXTERN_DLL_EXPORT void SetDefaultZCallback(DLLZCallback callback)
 {
-    //how to deterine if the callback is a null ptr and set DefaultZCallback to nullptr in that case also
     if (callback)
         ClipperBase::DefaultZCallback = [callback](const Point64& e1bot, const Point64& e1top, const Point64 e2bot, const Point64& e2top, Point64& pt)
         { callback(e1bot, e1top, e2bot, e2top, pt);  };
