@@ -25,10 +25,10 @@ type
     public
       X, Y: T;
 
+    {$IFDEF CLIPPER_VERTEX_HAS_Z}   // Z can be utilized as data or Z coordinate (pointers are NativeUInt size)
       function Has(ThisType: TClass): Boolean;
       function DataOfType<Q: Class>: Q;
 
-    {$IFDEF CLIPPER_VERTEX_HAS_Z}   // Z can be utilized as data or Z coordinate (pointers are NativeUInt size)
     case integer of
       0: (Data: TObject); // make sure Pointer Size <= SizeOf T
       1: (Z: T);
@@ -352,7 +352,7 @@ begin
 end;
 
 
-class function  TClipperData<T>.CalculateElementCount(NumberOfPaths, NumberOfVertices: integer): integer; 
+class function  TClipperData<T>.TPaths.CalculateElementCount(NumberOfPaths, NumberOfVertices: integer): integer;
 Const
   PathHeaderElementCount = 2;  // _VertexCount: T, _Reserved: T;
   PathsHeaderElementCount = 2; // _ElementCount: T; _PathCount: T;
@@ -565,6 +565,7 @@ end;
 
 { TClipperData<T>.TVertex }
 
+{$IFDEF CLIPPER_VERTEX_HAS_Z}
 function TClipperData<T>.TVertex.DataOfType<Q>: Q;
 begin
   if Data is Q then
@@ -577,6 +578,7 @@ function TClipperData<T>.TVertex.Has(ThisType: TClass): Boolean;
 begin
   result :=  Data is ThisType;
 end;
+{$ENDIF}
 
 procedure TClipperData<T>.TVertex.SetValues(const X, Y: T);
 begin
