@@ -39,7 +39,7 @@ ____________________________________________________
 z-coordinates are output only if both the USINGZ pre-processor
 identifier exists
 
-Below we will see that CPath is a special case of CPolyPath
+Below we will see that CPath is a special case of the more general CPolyPath
 
 CPaths64 and CPathsD:
 These are also arrays containing any number of consecutive CPath64 or
@@ -52,7 +52,7 @@ _______________________________
 |A  , C |     |     |   |     |
 _______________________________
 
-Below we will see that CPolyTree is a special case of CPaths
+Below we will see that CPaths is a special case of the more general CPolyTree
 
 CPolyPath64 and CPolyPathD:
 These are simple arrays consisting of a series of path coordinates followed
