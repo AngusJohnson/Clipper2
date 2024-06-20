@@ -121,17 +121,21 @@ type
       Children: TArray<PTreeNode>;
     End;
 
-    // PolyTree
+    // TPolyTree has identical structure to TPaths, but the assumption is that
+    // TPaths will not contain paths with children (i.e. no PolyPaths).
+    // TPolyTree is exclusively used for output and the separation of
+    // TPaths and TPolyTree also allows distinction when processing input and
+    // output from the Clipper DLL so processing can be optimized for flat or
+    // nested structures
+
     PPolyTree = ^TPolyTree;
 
     TPolyTree = Record
     private
-      _NumberOfElements: T; //
-      _ChildCount: T;
-      Children: Array [0 .. 0] of TPath;  // only the first child can be directly indexed because we don't know the size of all subchildren etc.
+      _Data : TPaths; // Delphi does not allow record inheritance, but we can compose
 
-      function GetChildCount: int64;
-      function GetNumberOfElements: int64;
+      function GetChildCount: int64; inline;
+      function GetElementCount: int64; inline;
 
       class function LinkRecursively(Parent: PTreeNode; var ItPath: PPath; var NodeIdx: integer;
         const Nodes: TArray<TTreeNode>): PTreeNode; static;
@@ -139,10 +143,10 @@ type
     public
       function Root: TTreeRoot; // constructor of a navigable nested pointer structure
 
-      function FirstPath: PPath;
-      function NextPath(Path: PPath): PPath;  // traverses in memory order (depth first)
+      function FirstPath: PPath; inline;
+      function NextPath(Path: PPath): PPath; inline; // traverses in memory order (depth first)
 
-      property NumberOfElements: int64 read GetNumberOfElements;
+      property ElementCount: int64 read GetElementCount;
       property ChildCount: int64 read GetChildCount;
     End;
 
@@ -341,7 +345,6 @@ begin
 
   if NativeUInt(result) >= (NativeUInt(@self) + NativeUInt(ElementCount * SizeOf(T))) then
     result := nil;
-
 end;
 
 
@@ -454,30 +457,17 @@ end;
 
 function TClipperData<T>.TPolyTree.FirstPath: PPath;
 begin
-  if ChildCount = 0 then
-    exit(nil);
-
-  result := PPath(@Children[0]);
+  result := _Data.FirstPath;
 end;
 
 function TClipperData<T>.TPolyTree.GetChildCount: int64;
 begin
-{$IFDEF CLIPPER_DOUBLE_COORDINATES}
-  if GetTypeKind(T) = tkFloat then    //today we only support Double and Int64
-    result := trunc(PDouble(@_ChildCount)^)
-  else
-{$ENDIF}
-    result := PInt64(@_ChildCount)^;
+ result := _Data.Count;
 end;
 
-function TClipperData<T>.TPolyTree.GetNumberOfElements: int64;
+function TClipperData<T>.TPolyTree.GetElementCount: int64;
 begin
-{$IFDEF CLIPPER_DOUBLE_COORDINATES}
-  if GetTypeKind(T) = tkFloat then    //today we only support Double and Int64
-    result := trunc(PDouble(@_NumberOfElements)^)
-  else
-{$ENDIF}
-    result := PInt64(@_NumberOfElements)^;
+  result := _Data.ElementCount;
 end;
 
 class function TClipperData<T>.TPolyTree.LinkRecursively(Parent: PTreeNode; var ItPath: PPath; var NodeIdx: integer;
@@ -503,19 +493,8 @@ begin
 end;
 
 function TClipperData<T>.TPolyTree.NextPath(Path: PPath): PPath;
-var
-  ItVert: PVertex;
 begin
-  if Path = nil then
-    exit(FirstPath);
-
-  ItVert := @Path.VertexData[0];
-  Inc(ItVert, Path.VertexCount);
-  result := PPath(ItVert);   // TPolyPath is a TPath so this is legal
-
- if NativeUInt(result) >= (NativeUInt(@self) + NativeUInt(NumberOfElements * SizeOf(T))) then
-    result := nil;
-
+  result := _Data.NextPath(Path);
 end;
 
 function TClipperData<T>.TPolyTree.Root: TTreeRoot;
@@ -533,9 +512,9 @@ begin
 
   NodeCount := 0;
 {$POINTERMATH ON}
-  ItEnd := @PInt64(@Self)[NumberOfElements];
+  ItEnd := @PInt64(@Self)[ElementCount];
 {$POINTERMATH OFF}
-  ItPath := @Children[0];
+  ItPath := @_Data.PathData[0];
   repeat
     ItVert := @ItPath.VertexData[0];
     Inc(ItVert, ItPath.VertexCount);
@@ -546,7 +525,7 @@ begin
   SetLength(result.NodeStore, NodeCount);
 
   NodeIdx := 0;
-  ItPath := @Children[0];
+  ItPath := @_Data.PathData[0];
   SetLength(result.Children, ChildCount);
 
   for i := 0 to ChildCount - 1 do
@@ -639,20 +618,13 @@ end;
 
 procedure TPaths64Helper.ExpandBounds(var Bounds: TRect64);
 var
-  i: integer;
-  It: TClipperData64.PPath;
-  ItVert: TClipperData64.PVertex;
+  Path: TClipperData64.PPath;
 begin
-
-  It := @PathData;
-  It.ExpandBounds(Bounds);
-
-  for i := 1 to count-1 do
+  Path := FirstPath();
+  while Path <> nil do
   begin
-    ItVert := @It.VertexData[0];
-    Inc(ItVert, It.VertexCount);
-    It := TClipperData64.PPath(ItVert);
-    It.ExpandBounds(Bounds);
+    Path.ExpandBounds(Bounds);
+    Path := NextPath(Path);
   end;
 end;
 
@@ -671,29 +643,14 @@ end;
 { TPolyTree64Helper }
 
 procedure TPolyTree64Helper.ExpandBounds(var Bounds: TRect64);
-var
-  Path: TClipperData64.PPath;
 begin
-  Path := FirstPath();
-  while Path <> nil do
-  begin
-    Path.ExpandBounds(Bounds);
-    Path := NextPath(Path);
-  end;
+  _Data.ExpandBounds(Bounds);
 end;
 
 
 function TPolyTree64Helper.GetBounds: TRect64;
-var
-  ItVert: TClipperData64.PVertex;
 begin
-  if ChildCount = 0 then
-    exit;
-
-  itVert := @Children[0].VertexData[0];
-  result := TRect64.Create(ItVert.X, ItVert.Y, ItVert.X, itVert.Y);
-
-  ExpandBounds(result);
+  result := _Data.GetBounds;
 end;
 
 

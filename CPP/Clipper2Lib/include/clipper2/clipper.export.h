@@ -23,6 +23,11 @@ languages, these paths are converted into very simple array data structures
 (of either int64_t for CPath64 or double for CPathD) that can be parsed by 
 just about any programming language.
 
+The letters in the diagrams below can be interpreted as follows
+N: Number of vertices
+A: Array size
+C: Child count
+
 CPath64 and CPathD:
 These are arrays of consecutive x, y and optional z path coordinates 
 preceeded by a pair of values containing the path's length (N) and a 0 value.
@@ -41,18 +46,11 @@ These are also arrays containing any number of consecutive CPath64 or
 CPathD  structures. But preceeding these consecutive paths, there is pair of
 values that contain the total length of the array structure (A) and the 
 number of CPath64 or CPathD it contains (C). The space these structures will
-occupy in memory = A * sizeof(int64_t) or  A * sizeof(double) respectively. 
+occupy in memory = A * sizeof(int64_t) or A * sizeof(double) respectively. 
 _______________________________
 |counter|path1|path2|...|pathC|
-|A  , C |                     |
+|A  , C |     |     |   |     |
 _______________________________
-
-CPolytree64 and CPolytreeD:
-These are also arrays consisting of CPolyPath structures that represent
-individual paths in a tree structure. However, the very first (ie top)
-CPolyPath is just the tree container that doesn't have a path. And because
-of that, its structure will be very slightly different from the remaining
-CPolyPath. This difference will be discussed below.
 
 CPolyPath64 and CPolyPathD:
 These are simple arrays consisting of a series of path coordinates followed
@@ -66,11 +64,18 @@ _____________________________________________________________________________
 CPath is a special case of CPolyPath with C = 0 and no children after the 
 coordinates.
 
-As mentioned above, the very first CPolyPath structure is just a container
-that owns (both directly and indirectly) every other CPolyPath in the tree.
-Since this first CPolyPath has no path, instead of a path length, its very
-first value will contain the total length of the CPolytree array (not its
-total bytes length).
+CPolytree64 and CPolytreeD:
+Have an indentical structure to CPaths, but the children are the more generalized 
+CPolyPath. CPaths is a special case of CPolyTree with only one level of children
+___________________________________________
+|counter|polypath1|polypath2|...|polypathC|
+|A  , C |         |         |   |         |
+___________________________________________
+
+CPolyTree and CPaths own the memory of the paths they contain. In the case
+of CPolyTree it is the memory of every CPolyPath in the tree. Just like for
+CPaths the first value (A) represents the number of elements in the array, and
+the size in bytes is A * sizeof(int64_t) or A * sizeof(double).
 
 Again, all theses exported structures (CPaths64, CPathsD, CPolyTree64 & 
 CPolyTreeD) are arrays of either type int64_t or double, and the first 
