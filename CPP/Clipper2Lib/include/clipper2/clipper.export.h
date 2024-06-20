@@ -52,6 +52,8 @@ _______________________________
 |A  , C |     |     |   |     |
 _______________________________
 
+Below we will see that CPolyTree is a special case of CPaths
+
 CPolyPath64 and CPolyPathD:
 These are simple arrays consisting of a series of path coordinates followed
 by any number of child (ie nested) CPolyPath. Preceeding these are two values
@@ -64,8 +66,8 @@ _____________________________________________________________________________
 CPath is a special case of CPolyPath with C = 0 and no children after the 
 coordinates.
 
-CPolytree64 and CPolytreeD:
-CPolytree has an identical structure to CPaths, but the children are the more 
+CPolyTree64 and CPolyTreeD:
+CPolyTree has an identical structure to CPaths, but the children are the more 
 generalized CPolyPath. We can think of CPaths as a special case of CPolyTree 
 with only one level of children
 ___________________________________________
