@@ -32,9 +32,7 @@ ____________________________________________________
 ____________________________________________________
 
 z-coordinates are output only if both the USINGZ pre-processor
-identifier exists. Z-coordinates are stored as int64_t for both CPath64
-and CPathD. This allows external systems to also treat the z-coordinate
-as a pointer.
+identifier exists
 
 Below we will see that CPath is a special case of CPolyPath
 
