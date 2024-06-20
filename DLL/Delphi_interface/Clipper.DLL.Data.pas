@@ -94,6 +94,7 @@ type
     public
       class function Create(const NumberOfVerticesPerPath: TArray<Integer> ): PPaths; overload; static;
       class function Create(const ElementCount: integer): PPaths; overload; static;
+      class function CalculateElementCount(NumberOfPaths, NumberOfVertices: integer): integer; static;
       procedure Free;
 
       function FirstPath: PPath;
@@ -144,7 +145,6 @@ type
       property NumberOfElements: int64 read GetNumberOfElements;
       property ChildCount: int64 read GetChildCount;
     End;
-
 
     {$IFDEF CLIPPER_POINTER_WRAPPERS_ASSERTS}
     class procedure AssertSizesAreCorrect(); static;
@@ -352,6 +352,17 @@ begin
 end;
 
 
+class function  TClipperData<T>.CalculateElementCount(NumberOfPaths, NumberOfVertices: integer): integer; 
+Const
+  PathHeaderElementCount = 2;  // _VertexCount: T, _Reserved: T;
+  PathsHeaderElementCount = 2; // _ElementCount: T; _PathCount: T;
+begin
+   result := PathsHeaderElementCount +  // paths header
+             PathHeaderElementCount * NumberOfPaths + // each path's header
+             NumberOfVertices * Dimensionality;   // elements for each vertex
+end;
+
+
 class function TClipperData<T>.TPaths.Create(const NumberOfVerticesPerPath: TArray<Integer>): PPaths;
 var
   i, VertexCount: integer;
@@ -359,18 +370,13 @@ var
   It: PPath;
   ItVert: PVertex;
   ElementCount: int64;
-Const
-  PathHeaderElementCount = 2;  // _VertexCount: T, _Reserved: T;
-  PathsHeaderElementCount = 2; // _ElementCount: T; _PathCount: T;
 begin
   VertexCount := 0;
   for i := 0 to High(NumberOfVerticesPerPath) do
     Inc(VertexCount, NumberOfVerticesPerPath[i]);
 
-  ElementCount := PathsHeaderElementCount +
-      PathHeaderElementCount * Length(NumberOfVerticesPerPath) +
-      VertexCount * Dimensionality;
-
+  ElementCount := CalculateElementCount(Length(NumberOfVerticesPerPath), VertexCount);
+ 
   result := Create(ElementCount);
   result.Count := Length(NumberOfVerticesPerPath);
 
@@ -798,5 +804,4 @@ begin
 end;
 
 {$ENDIF}
-
 end.
