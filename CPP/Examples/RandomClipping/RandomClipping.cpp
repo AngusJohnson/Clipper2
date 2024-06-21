@@ -30,19 +30,19 @@ int GenerateRandomNumber(std::default_random_engine& rng, int min_value, int max
   return distribution(rng);
 }
 
-Paths64 GenerateRandomPaths(std::default_random_engine& rng,  int path_count, int edge_count)
+PathsI GenerateRandomPaths(std::default_random_engine& rng,  int path_count, int edge_count)
 {
-  if (!path_count) return Paths64();
+  if (!path_count) return PathsI();
   // with fewer paths, keep them closer to the center of the display ...
-  double center_x = display_width / 2.0; 
-  double center_y = display_height / 2.0;
-  double dx = center_x / 3.0 * (static_cast<double>(path_count) / max_paths);
-  double dy = center_y / 3.0 * (static_cast<double>(path_count) / max_paths);
-  std::normal_distribution<double> first_point_coordinate_x(0, dx);
-  std::normal_distribution<double> first_point_coordinate_y(0, dy);
+  Scalar center_x = display_width / 2.0; 
+  Scalar center_y = display_height / 2.0;
+  Scalar dx = center_x / 3.0 * (static_cast<Scalar>(path_count) / max_paths);
+  Scalar dy = center_y / 3.0 * (static_cast<Scalar>(path_count) / max_paths);
+  std::normal_distribution<Scalar> first_point_coordinate_x(0, dx);
+  std::normal_distribution<Scalar> first_point_coordinate_y(0, dy);
   std::uniform_int_distribution<int> orthogonal_dist_next_point(-100, 100);
 
-  Clipper2Lib::Paths64 result(path_count);
+  Clipper2Lib::PathsI result(path_count);
 
   for (int path = 0; path < path_count; ++path)
   {
@@ -102,7 +102,7 @@ void RandomTest(int path_count)
   int max_edges = path_count * 3;
   path_count = std::min(max_paths, path_count);
 
-  Paths64 subj, subj_open, clip, sol, sol_open;
+  PathsI subj, subj_open, clip, sol, sol_open;
   // generate exactly path_count subjects, between 0 & path_count open subjects, 
   // and between 1 & path_count clips 
   subj = GenerateRandomPaths(rng, path_count, GenerateRandomNumber(rng, 3, max_edges));
@@ -112,11 +112,11 @@ void RandomTest(int path_count)
     GenerateRandomNumber(rng, 1, path_count), GenerateRandomNumber(rng, 3, max_edges));
 
   //SaveTest("random.txt", false, &subj, &subj_open, &clip, 0, 0, cliptype, fillrule);
-  //int64_t area, cnt;
+  //Integer area, cnt;
   //std::ifstream ifs("random2.txt");
   //LoadTestNum(ifs, 1, subj, subj_open, clip, area, cnt, cliptype, fillrule);
 
-  Clipper64 c64;
+  ClipperI c64;
   c64.AddSubject(subj);
   c64.AddOpenSubject(subj_open);
   c64.AddClip(clip);

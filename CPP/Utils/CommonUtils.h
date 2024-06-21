@@ -5,7 +5,7 @@
 #include <random>
 #include "clipper2/clipper.h"
 
-Clipper2Lib::Path64 MakeRandomPoly(int width, int height, unsigned vertCnt)
+Clipper2Lib::PathI MakeRandomPoly(int width, int height, unsigned vertCnt)
 {
   std::random_device rd;
   std::mt19937 gen(rd());
@@ -13,14 +13,14 @@ Clipper2Lib::Path64 MakeRandomPoly(int width, int height, unsigned vertCnt)
   std::uniform_int_distribution<> h(0, height);
 
   using namespace Clipper2Lib;
-  Path64 result;
+  PathI result;
   result.reserve(vertCnt);
   for (unsigned i = 0; i < vertCnt; ++i)
-    result.push_back(Point64(w(gen), h(gen)));
+    result.push_back(PointI(w(gen), h(gen)));
   return result;
 }
 
-Clipper2Lib::PathD MakeRandomPolyD(int width, int height, unsigned vertCnt)
+Clipper2Lib::PathS MakeRandomPolyD(int width, int height, unsigned vertCnt)
 {
   std::random_device rd;
   std::mt19937 gen(rd());
@@ -28,10 +28,10 @@ Clipper2Lib::PathD MakeRandomPolyD(int width, int height, unsigned vertCnt)
   std::uniform_int_distribution<> h(0, height);
 
   using namespace Clipper2Lib;
-  PathD result;
+  PathS result;
   result.reserve(vertCnt);
   for (unsigned i = 0; i < vertCnt; ++i)
-    result.push_back(PointD(w(gen), h(gen)));
+    result.push_back(PointS(w(gen), h(gen)));
   return result;
 }
 

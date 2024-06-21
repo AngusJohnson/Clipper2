@@ -2,7 +2,7 @@
 #include "clipper2/clipper.h"
 using namespace Clipper2Lib;
 TEST(Clipper2Tests, TestNegativeOrientation) {
-  Paths64 subjects, clips, solution;
+  PathsI subjects, clips, solution;
   //also test MakePath using specified skip_chars (useful when pasting coords)
   subjects.push_back(MakePath({ 0,0, 0,100, 100,100, 100,0 }));
   subjects.push_back(MakePath({ 10,10, 10,110, 110,110, 110,10 }));

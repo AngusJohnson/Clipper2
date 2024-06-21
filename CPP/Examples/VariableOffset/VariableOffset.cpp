@@ -18,23 +18,23 @@ void System(const std::string& filename)
 
 void test1() {
 
-  int64_t const scale = 10;
-  double delta = 10 * scale;
+  Integer const scale = 10;
+  Scalar delta = 10 * scale;
 
   ClipperOffset co;
-  co.SetDeltaCallback([delta](const Path64& path,
-    const PathD& path_norms, size_t curr_idx, size_t prev_idx)
+  co.SetDeltaCallback([delta](const PathI& path,
+    const PathS& path_norms, size_t curr_idx, size_t prev_idx)
     {
       // gradually scale down the offset to a minimum of 25% of delta
-      double high = static_cast<double>(path.size() - 1) * 1.25;
+      Scalar high = static_cast<Scalar>(path.size() - 1) * 1.25;
       return (high - curr_idx) / high * delta;
     });
 
-  Paths64 subject{ Ellipse(Rect64(0, 0, 200 * scale, 180 * scale)) };
+  PathsI subject{ Ellipse(RectI(0, 0, 200 * scale, 180 * scale)) };
   subject[0].resize(subject[0].size() * 0.9);
 
   co.AddPaths(subject, JoinType::Miter, EndType::Round);
-  Paths64 solution;
+  PathsI solution;
   co.Execute(1.0, solution);
 
   std::string filename = "test1.svg";
@@ -47,22 +47,22 @@ void test1() {
 
 void test2() {
 
-  int64_t const scale = 10;
-  double delta = 10 * scale;
+  Integer const scale = 10;
+  Scalar delta = 10 * scale;
 
   ClipperOffset co;
-  co.SetDeltaCallback([delta](const Path64& path,
-    const PathD& path_norms, size_t curr_idx, size_t prev_idx) {
+  co.SetDeltaCallback([delta](const PathI& path,
+    const PathS& path_norms, size_t curr_idx, size_t prev_idx) {
       // calculate offset based on distance from the middle of the path
-      double mid_idx = static_cast<double>(path.size()) / 2.0;
-      return delta * (1.0 - 0.70 * (std::fabs(curr_idx - mid_idx) / mid_idx));
+      Scalar mid_idx = static_cast<Scalar>(path.size()) / 2.0;
+      return delta * ((Scalar)1.0 - (Scalar)0.70 * (std::fabs(curr_idx - mid_idx) / mid_idx));
     });
 
-  Paths64 subject{ Ellipse(Rect64(0, 0, 200 * scale, 180 * scale)) };
+  PathsI subject{ Ellipse(RectI(0, 0, 200 * scale, 180 * scale)) };
   subject[0].resize(subject[0].size() * 0.9);
 
   co.AddPaths(subject, JoinType::Miter, EndType::Round);
-  Paths64 solution;
+  PathsI solution;
   co.Execute(1.0, solution);
 
   std::string filename = "test2.svg";
@@ -75,22 +75,22 @@ void test2() {
 
 void test3() {
 
-  double radius = 5000.0;
-  Paths64 subject = { Ellipse(Rect64(-radius, -radius, radius, radius), 200) };
+  Scalar radius = (Scalar)5000.0;
+  PathsI subject = { Ellipse(RectI(-radius, -radius, radius, radius), 200) };
 
   ClipperOffset co;
   co.AddPaths(subject, JoinType::Miter, EndType::Polygon);
 
-  co.SetDeltaCallback([radius](const Path64& path,
-    const PathD& path_norms, size_t curr_idx, size_t prev_idx) {
+  co.SetDeltaCallback([radius](const PathI& path,
+    const PathS& path_norms, size_t curr_idx, size_t prev_idx) {
       // when multiplying the x & y of edge unit normal vectors, the value will be 
       // largest (0.5) when edges are at 45 deg. and least (-0.5) at negative 45 deg.
-      double delta = path_norms[curr_idx].y * path_norms[curr_idx].x;
-      return radius * 0.5 + radius * delta;
+      Scalar delta = path_norms[curr_idx].y * path_norms[curr_idx].x;
+      return radius * ((Scalar)0.5) + radius * delta;
     });
 
   //  solution
-  Paths64 solution;
+  PathsI solution;
   co.Execute(1.0, solution);
 
   std::string filename = "test3.svg";
@@ -103,20 +103,20 @@ void test3() {
 
 void test4() {
 
-  int64_t const scale = 100;
-  Paths64 solution;
-  Paths64 subject = { Ellipse(ScaleRect<int64_t,int64_t>(Rect64(10, 10, 50, 50), scale)) };
+  Integer const scale = 100;
+  PathsI solution;
+  PathsI subject = { Ellipse(ScaleRect<Integer,Integer>(RectI(10, 10, 50, 50), scale)) };
 
   ClipperOffset co;
   co.AddPaths(subject, JoinType::Round, EndType::Round);
   co.Execute(
-    [scale](const Path64& path,
-      const PathD& path_norms, size_t curr_idx, size_t prev_idx) {
-        //double vertex_sin_a = CrossProduct(path_norms[curr_idx], path_norms[prev_idx]);
-        //double vertex_cos_a = DotProduct(path_norms[curr_idx], path_norms[prev_idx]);
-        //double vertex_angle = std::atan2(vertex_sin_a, vertex_cos_a);
-        //double edge_angle = std::atan2(path_norms[curr_idx].y, path_norms[curr_idx].x);
-        double sin_edge = path_norms[curr_idx].y;
+    [scale](const PathI& path,
+      const PathS& path_norms, size_t curr_idx, size_t prev_idx) {
+        //Scalar vertex_sin_a = CrossProduct(path_norms[curr_idx], path_norms[prev_idx]);
+        //Scalar vertex_cos_a = DotProduct(path_norms[curr_idx], path_norms[prev_idx]);
+        //Scalar vertex_angle = std::atan2(vertex_sin_a, vertex_cos_a);
+        //Scalar edge_angle = std::atan2(path_norms[curr_idx].y, path_norms[curr_idx].x);
+        Scalar sin_edge = path_norms[curr_idx].y;
         return Sqr(sin_edge) * 3 * scale; }
   , solution);
 
@@ -130,15 +130,15 @@ void test4() {
 
 void test5() {
 
-  Paths64 solution;
-  Paths64 subject = { MakePath({0,0, 20,0, 40,0, 60,0, 80,0, 100,0}) };
+  PathsI solution;
+  PathsI subject = { MakePath({0,0, 20,0, 40,0, 60,0, 80,0, 100,0}) };
 
   ClipperOffset co;
   co.AddPaths(subject, JoinType::Round, EndType::Butt);
   co.Execute(
-    [](const Path64& path,
-      const PathD& path_norms, size_t curr_idx, size_t prev_idx) {
-        return double(curr_idx * curr_idx + 10); }
+    [](const PathI& path,
+      const PathS& path_norms, size_t curr_idx, size_t prev_idx) {
+        return Scalar(curr_idx * curr_idx + 10); }
   , solution);
 
   SvgWriter svg;

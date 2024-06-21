@@ -14,6 +14,8 @@
 #include <unistd.h>
 #endif
 
+using Clipper2Lib::Integer;
+
 inline bool FileExists(const std::string& name)
 {
   struct stat buffer;
@@ -21,12 +23,12 @@ inline bool FileExists(const std::string& name)
 }
 
 bool LoadTestNum(std::ifstream& source, int test_num,
-  Clipper2Lib::Paths64& subj, Clipper2Lib::Paths64& subj_open, Clipper2Lib::Paths64& clip,
-  int64_t& area, int64_t& count, Clipper2Lib::ClipType& ct, Clipper2Lib::FillRule& fr);
+  Clipper2Lib::PathsI& subj, Clipper2Lib::PathsI& subj_open, Clipper2Lib::PathsI& clip,
+  Integer& area, Integer& count, Clipper2Lib::ClipType& ct, Clipper2Lib::FillRule& fr);
 
 static bool LoadTest(std::ifstream& source,
-  Clipper2Lib::Paths64& subj, Clipper2Lib::Paths64& subj_open, Clipper2Lib::Paths64& clip,
-  int64_t& area, int64_t& count, Clipper2Lib::ClipType& ct, Clipper2Lib::FillRule& fr)
+  Clipper2Lib::PathsI& subj, Clipper2Lib::PathsI& subj_open, Clipper2Lib::PathsI& clip,
+  Integer& area, Integer& count, Clipper2Lib::ClipType& ct, Clipper2Lib::FillRule& fr)
 {
   return LoadTestNum(source, 1, subj, subj_open, clip, area, count, ct, fr);
 }

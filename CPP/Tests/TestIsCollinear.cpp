@@ -24,29 +24,31 @@ TEST(Clipper2Tests, TestCarryCalculation) {
   EXPECT_EQ(Clipper2Lib::Multiply(0xbb0f73d0f82e2236, 0xbbecf7dbc6147480).carry, 0x895170f4e9a216a7);
 }
 
-TEST(Clipper2Tests, TestIsCollinear) {
-  // a large integer not representable by double
-  const int64_t i = 9007199254740993;
+using Clipper2Lib::Integer;
 
-  const Clipper2Lib::Point64 pt1(0, 0);
-  const Clipper2Lib::Point64 sharedPt(i, i * 10);
-  const Clipper2Lib::Point64 pt2(i * 10, i * 100);
+TEST(Clipper2Tests, TestIsCollinear) {
+  // a large integer not representable by Scalar
+  const Integer i = 9007199254740993;
+
+  const Clipper2Lib::PointI pt1(0, 0);
+  const Clipper2Lib::PointI sharedPt((Integer)i, (Integer)((Integer)i * (Integer)10));
+  const Clipper2Lib::PointI pt2(i * (Integer)10, i * (Integer)100);
 
   EXPECT_TRUE(IsCollinear(pt1, sharedPt, pt2));
 }
 
 TEST(Clipper2Tests, TestIsCollinear2) {
   // see https://github.com/AngusJohnson/Clipper2/issues/831
-  const int64_t i = 0x4000000000000;
-  const Clipper2Lib::Path64 subject = {
-    Clipper2Lib::Point64(-i, -i),
-    Clipper2Lib::Point64( i, -i),
-    Clipper2Lib::Point64(-i,  i),
-    Clipper2Lib::Point64( i,  i)
+  const Integer i = 0x4000000000000;
+  const Clipper2Lib::PathI subject = {
+    Clipper2Lib::PointI((Integer)-i, (Integer)-i),
+    Clipper2Lib::PointI((Integer) i, (Integer)-i),
+    Clipper2Lib::PointI((Integer)-i, (Integer) i),
+    Clipper2Lib::PointI((Integer) i, (Integer) i)
   };
-  Clipper2Lib::Clipper64 clipper;
+  Clipper2Lib::ClipperI clipper;
   clipper.AddSubject({ subject });
-  Clipper2Lib::Paths64 solution;
+  Clipper2Lib::PathsI solution;
   clipper.Execute(Clipper2Lib::ClipType::Union, Clipper2Lib::FillRule::EvenOdd, solution);
   EXPECT_EQ(solution.size(), 2);
 }

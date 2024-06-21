@@ -3,15 +3,15 @@
 using namespace Clipper2Lib;
 TEST(Clipper2Tests, TestPolyTreeIntersection)
 {
-    Clipper64 clipper;
-    Paths64 subject;
+    ClipperI clipper;
+    PathsI subject;
     subject.push_back(MakePath({ 0,0, 0,5, 5,5, 5,0 }));
     clipper.AddSubject(subject);
-    Paths64 clip;
+    PathsI clip;
     clip.push_back(MakePath({ 1,1,  1,6,  6,6,  6,1 }));
     clipper.AddClip (clip);
-    PolyTree64 solution;
-    Paths64 open_paths;
+    PolyTreeI solution;
+    PathsI open_paths;
     if (IsPositive(subject[0]))
       clipper.Execute(ClipType::Intersection,
         FillRule::Positive, solution, open_paths);

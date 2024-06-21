@@ -9,7 +9,7 @@ using namespace Clipper2Lib;
 const int display_width = 800, display_height = 600;
 
 void DoMemoryLeakTest();
-Path64 MakeRandomPoly(int width, int height, unsigned vertCnt);
+PathI MakeRandomPoly(int width, int height, unsigned vertCnt);
 void System(const std::string &filename);
 
 int main()
@@ -28,12 +28,12 @@ int main()
 }
 
 
-inline Path64 MakeRandomPoly(int width, int height, unsigned vertCnt)
+inline PathI MakeRandomPoly(int width, int height, unsigned vertCnt)
 {
-  Path64 result;
+  PathI result;
   result.reserve(vertCnt);
   for (unsigned i = 0; i < vertCnt; ++i)
-    result.push_back(Point64(rand() % width, rand() % height));
+    result.push_back(PointI(rand() % width, rand() % height));
   return result;
 }
 
@@ -42,14 +42,14 @@ void DoMemoryLeakTest()
 #ifdef _WIN32
   int edge_cnt = 1000;
 
-  Paths64 subject, clip;
+  PathsI subject, clip;
   subject.push_back(MakeRandomPoly(800, 600, edge_cnt));
   clip.push_back(MakeRandomPoly(800, 600, edge_cnt));
 
   _CrtMemState sOld {}, sNew {}, sDiff {};
   _CrtMemCheckpoint(&sOld); //take a snapshot
   {
-    Paths64 solution = Intersect(subject, clip, FillRule::NonZero);
+    PathsI solution = Intersect(subject, clip, FillRule::NonZero);
   }
   _CrtMemCheckpoint(&sNew); //take another snapshot (outside code block)
   if (_CrtMemDifference(&sDiff, &sOld, &sNew)) // check for a difference

@@ -29,8 +29,8 @@ int main()
 
 void DoLoopThruPolygons(int start, int end)
 {
-  Paths64 subject, subject_open, clip, solution, solution_open;
-  int64_t stored_area, stored_count;
+  PathsI subject, subject_open, clip, solution, solution_open;
+  Integer stored_area, stored_count;
   ClipType ct;
   FillRule fr;
   bool first_fail = true;
@@ -43,7 +43,7 @@ void DoLoopThruPolygons(int start, int end)
   {
     if (!LoadTestNum(ifs, test_number,
       subject, subject_open, clip, stored_area, stored_count, ct, fr)) break;
-    Clipper64 c64;
+    ClipperI c64;
     c64.AddSubject(subject);
     c64.AddOpenSubject(subject_open);
     c64.AddClip(clip);
@@ -51,14 +51,14 @@ void DoLoopThruPolygons(int start, int end)
 
     if (do_all)
     {
-      double area = (double)Area(solution);
-      double area_diff = (double)stored_area <= 0 ?
+      Scalar area = (Scalar)Area(solution);
+      Scalar area_diff = (Scalar)stored_area <= 0 ?
         0 :
-        std::fabs((area / (double)stored_area) - 1.0);
+        std::fabs((area / (Scalar)stored_area) - 1.0);
       int count = (int)(solution.size());
-      double count_diff = stored_count <= 0 ? 
+      Scalar count_diff = stored_count <= 0 ? 
         0 : 
-        std::abs(count - stored_count)/(double)stored_count;
+        std::abs(count - stored_count)/(Scalar)stored_count;
       if (count_diff > 0.02 || (area_diff > 0.1))
       {
         if (first_fail)

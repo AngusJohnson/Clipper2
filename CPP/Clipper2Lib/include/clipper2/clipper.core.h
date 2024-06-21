@@ -54,8 +54,39 @@ namespace Clipper2Lib
   const int undefined_error_i   = 32; // fatal
   const int range_error_i       = 64;
 
+  template <typename T>
+  struct HalfPrecisionTrait
+  {
+    typedef std::false_type Type;
+  };
+  template <>
+  struct HalfPrecisionTrait<uint16_t>
+  {
+    typedef uint8_t Type;
+  };
+  template <>
+  struct HalfPrecisionTrait<uint32_t>
+  {
+    typedef uint16_t Type;
+  };
+  template <>
+  struct HalfPrecisionTrait<uint64_t>
+  {
+    typedef uint32_t Type;
+  };
+
+#ifndef Scalar
+  // Use double as default
+  typedef double Scalar;
+#endif
+#ifndef Integer
+  // Use 64 bits as default
+  typedef int64_t Integer;
+#endif
+  typedef std::make_unsigned_t<Integer> UInteger;
+
 #ifndef PI
-  static const double PI = 3.141592653589793238;
+  static const Scalar PI = (Scalar)3.141592653589793238;
 #endif
 
 #ifdef CLIPPER2_MAX_DECIMAL_PRECISION
@@ -64,13 +95,13 @@ namespace Clipper2Lib
   const int CLIPPER2_MAX_DEC_PRECISION = 8; // see Discussions #564
 #endif
 
-  static const int64_t MAX_COORD = INT64_MAX >> 2;
-  static const int64_t MIN_COORD = -MAX_COORD;
-  static const int64_t INVALID = INT64_MAX;
-  const double max_coord = static_cast<double>(MAX_COORD);
-  const double min_coord = static_cast<double>(MIN_COORD);
+  static const Integer MAX_COORD = (std::numeric_limits<Integer>::max)() >> 2;
+  static const Integer MIN_COORD = -MAX_COORD;
+  static const Integer INVALID = (std::numeric_limits<Integer>::max)();
+  const Scalar max_coord = static_cast<Scalar>(MAX_COORD);
+  const Scalar min_coord = static_cast<Scalar>(MIN_COORD);
 
-  static const double MAX_DBL = (std::numeric_limits<double>::max)();
+  static const Scalar MAX_SCALAR = (std::numeric_limits<Scalar>::max)();
 
   static void DoError([[maybe_unused]] int error_code)
   {
@@ -113,10 +144,10 @@ namespace Clipper2Lib
     T x;
     T y;
 #ifdef USINGZ
-    int64_t z;
+    Integer z;
 
     template <typename T2>
-    inline void Init(const T2 x_ = 0, const T2 y_ = 0, const int64_t z_ = 0)
+    inline void Init(const T2 x_ = 0, const T2 y_ = 0, const Integer z_ = 0)
     {
       if constexpr (std::is_integral_v<T> &&
         is_round_invocable<T2>::value && !std::is_integral_v<T2>)
@@ -136,7 +167,7 @@ namespace Clipper2Lib
     explicit Point() : x(0), y(0), z(0) {};
 
     template <typename T2>
-    Point(const T2 x_, const T2 y_, const int64_t z_ = 0)
+    Point(const T2 x_, const T2 y_, const Integer z_ = 0)
     {
       Init(x_, y_);
       z = z_;
@@ -149,17 +180,17 @@ namespace Clipper2Lib
     }
 
     template <typename T2>
-    explicit Point(const Point<T2>& p, int64_t z_)
+    explicit Point(const Point<T2>& p, Integer z_)
     {
       Init(p.x, p.y, z_);
     }
 
-    Point operator * (const double scale) const
+    Point operator * (const Scalar scale) const
     {
       return Point(x * scale, y * scale, z);
     }
 
-    void SetZ(const int64_t z_value) { z = z_value; }
+    void SetZ(const Integer z_value) { z = z_value; }
 
     friend std::ostream& operator<<(std::ostream& os, const Point& point)
     {
@@ -193,7 +224,7 @@ namespace Clipper2Lib
     template <typename T2>
     explicit Point(const Point<T2>& p) { Init(p.x, p.y); }
 
-    Point operator * (const double scale) const
+    Point operator * (const Scalar scale) const
     {
       return Point(x * scale, y * scale);
     }
@@ -235,25 +266,25 @@ namespace Clipper2Lib
   };
 
   //nb: using 'using' here (instead of typedef) as they can be used in templates
-  using Point64 = Point<int64_t>;
-  using PointD = Point<double>;
+  using PointI = Point<Integer>;
+  using PointS = Point<Scalar>;
 
   template <typename T>
   using Path = std::vector<Point<T>>;
   template <typename T>
   using Paths = std::vector<Path<T>>;
 
-  using Path64 = Path<int64_t>;
-  using PathD = Path<double>;
-  using Paths64 = std::vector< Path64>;
-  using PathsD = std::vector< PathD>;
+  using PathI = Path<Integer>;
+  using PathS = Path<Scalar>;
+  using PathsI = std::vector<PathI>;
+  using PathsS = std::vector<PathS>;
 
-  static const Point64 InvalidPoint64 = Point64(
-    (std::numeric_limits<int64_t>::max)(),
-    (std::numeric_limits<int64_t>::max)());
-  static const PointD InvalidPointD = PointD(
-    (std::numeric_limits<double>::max)(),
-    (std::numeric_limits<double>::max)());
+  static const PointI InvalidPoint64 = PointI(
+    (std::numeric_limits<Integer>::max)(),
+    (std::numeric_limits<Integer>::max)());
+  static const PointS InvalidPointD = PointS(
+    (std::numeric_limits<Scalar>::max)(),
+    (std::numeric_limits<Scalar>::max)());
 
   template<typename T>
   static inline Point<T> MidPoint(const Point<T>& p1, const Point<T>& p2)
@@ -269,8 +300,8 @@ namespace Clipper2Lib
   template <typename T>
   struct Rect;
 
-  using Rect64 = Rect<int64_t>;
-  using RectD = Rect<double>;
+  using RectI = Rect<Integer>;
+  using RectS = Rect<Scalar>;
 
   template <typename T>
   struct Rect {
@@ -341,7 +372,7 @@ namespace Clipper2Lib
         rec.top >= top && rec.bottom <= bottom;
     }
 
-    void Scale(double scale) {
+    void Scale(Scalar scale) {
       left *= scale;
       top *= scale;
       right *= scale;
@@ -368,7 +399,7 @@ namespace Clipper2Lib
   };
 
   template <typename T1, typename T2>
-  inline Rect<T1> ScaleRect(const Rect<T2>& rect, double scale)
+  inline Rect<T1> ScaleRect(const Rect<T2>& rect, Scalar scale)
   {
     Rect<T1> result;
 
@@ -390,8 +421,8 @@ namespace Clipper2Lib
     return result;
   }
 
-  static const Rect64 InvalidRect64 = Rect64::InvalidRect();
-  static const RectD InvalidRectD = RectD::InvalidRect();
+  static const RectI InvalidRect64 = RectI::InvalidRect();
+  static const RectS InvalidRectD = RectS::InvalidRect();
 
   template <typename T>
   Rect<T> GetBounds(const Path<T>& path)
@@ -487,7 +518,7 @@ namespace Clipper2Lib
 
   template <typename T1, typename T2>
   inline Path<T1> ScalePath(const Path<T2>& path,
-    double scale_x, double scale_y, int& error_code)
+    Scalar scale_x, Scalar scale_y, int& error_code)
   {
     Path<T1> result;
     if (scale_x == 0 || scale_y == 0)
@@ -514,20 +545,20 @@ namespace Clipper2Lib
 
   template <typename T1, typename T2>
   inline Path<T1> ScalePath(const Path<T2>& path,
-    double scale, int& error_code)
+    Scalar scale, int& error_code)
   {
     return ScalePath<T1, T2>(path, scale, scale, error_code);
   }
 
   template <typename T1, typename T2>
   inline Paths<T1> ScalePaths(const Paths<T2>& paths,
-    double scale_x, double scale_y, int& error_code)
+    Scalar scale_x, Scalar scale_y, int& error_code)
   {
     Paths<T1> result;
 
     if constexpr (std::is_integral_v<T1>)
     {
-      RectD r = GetBounds<double, T2>(paths);
+      RectS r = GetBounds<Scalar, T2>(paths);
       if ((r.left * scale_x) < min_coord ||
         (r.right * scale_x) > max_coord ||
         (r.top * scale_y) < min_coord ||
@@ -548,7 +579,7 @@ namespace Clipper2Lib
 
   template <typename T1, typename T2>
   inline Paths<T1> ScalePaths(const Paths<T2>& paths,
-    double scale, int& error_code)
+    Scalar scale, int& error_code)
   {
     return ScalePaths<T1, T2>(paths, scale, scale, error_code);
   }
@@ -573,21 +604,21 @@ namespace Clipper2Lib
   }
 
   template<typename T>
-  inline double Sqr(T val)
+  inline Scalar Sqr(T val)
   {
-    return static_cast<double>(val) * static_cast<double>(val);
+    return static_cast<Scalar>(val) * static_cast<Scalar>(val);
   }
 
   template<typename T>
   inline bool NearEqual(const Point<T>& p1,
-    const Point<T>& p2, double max_dist_sqrd)
+    const Point<T>& p2, Scalar max_dist_sqrd)
   {
     return Sqr(p1.x - p2.x) + Sqr(p1.y - p2.y) < max_dist_sqrd;
   }
 
   template<typename T>
   inline Path<T> StripNearEqual(const Path<T>& path,
-    double max_dist_sqrd, bool is_closed_path)
+    Scalar max_dist_sqrd, bool is_closed_path)
   {
     if (path.size() == 0) return Path<T>();
     Path<T> result;
@@ -611,7 +642,7 @@ namespace Clipper2Lib
 
   template<typename T>
   inline Paths<T> StripNearEqual(const Paths<T>& paths,
-    double max_dist_sqrd, bool is_closed_path)
+    Scalar max_dist_sqrd, bool is_closed_path)
   {
     Paths<T> result;
     result.reserve(paths.size());
@@ -659,38 +690,38 @@ namespace Clipper2Lib
     CheckPrecisionRange(precision, error_code);
   }
 
-  inline int TriSign(int64_t x) // returns 0, 1 or -1
+  inline int TriSign(Integer x) // returns 0, 1 or -1
   {
     return (x > 0) - (x < 0); 
   }
 
-  struct MultiplyUInt64Result
+  struct MultiplyUIntResult
   {
-    const uint64_t result = 0;
-    const uint64_t carry = 0;
+    const UInteger result = 0;
+    const UInteger carry = 0;
 
-    bool operator==(const MultiplyUInt64Result& other) const
+    bool operator==(const MultiplyUIntResult& other) const
     {
       return result == other.result && carry == other.carry;
     };
   };
 
-  inline MultiplyUInt64Result Multiply(uint64_t a, uint64_t b) // #834, #835
+  inline MultiplyUIntResult Multiply(UInteger a, UInteger b) // #834, #835
   {
-    const auto lo = [](uint64_t x) { return x & 0xFFFFFFFF; };
-    const auto hi = [](uint64_t x) { return x >> 32; };
+    const auto lo = [](UInteger x) { return (UInteger)(x & static_cast<HalfPrecisionTrait<UInteger>::Type>(-1)); };
+    const auto hi = [](UInteger x) { return (UInteger)(x >> (sizeof(UInteger)*8/2)); };
 
-    const uint64_t x1 = lo(a) * lo(b);
-    const uint64_t x2 = hi(a) * lo(b) + hi(x1);
-    const uint64_t x3 = lo(a) * hi(b) + lo(x2);
-    const uint64_t result = lo(x3) << 32 | lo(x1);
-    const uint64_t carry = hi(a) * hi(b) + hi(x2) + hi(x3);
+    const UInteger x1 = lo(a) * lo(b);
+    const UInteger x2 = hi(a) * lo(b) + hi(x1);
+    const UInteger x3 = lo(a) * hi(b) + lo(x2);
+    const UInteger result = lo(x3) << (sizeof(UInteger)*8/2) | lo(x1);
+    const UInteger carry = hi(a) * hi(b) + hi(x2) + hi(x3);
 
     return { result, carry };
   }
 
   // returns true if (and only if) a * b == c * d
-  inline bool ProductsAreEqual(int64_t a, int64_t b, int64_t c, int64_t d)
+  inline bool ProductsAreEqual(Integer a, Integer b, Integer c, Integer d)
   {
 #if (defined(__clang__) || defined(__GNUC__)) && UINTPTR_MAX >= UINT64_MAX
     const auto ab = static_cast<__int128_t>(a) * static_cast<__int128_t>(b);
@@ -698,10 +729,10 @@ namespace Clipper2Lib
     return ab == cd;
 #else
     // nb: unsigned values needed for calculating overflow carry
-    const auto abs_a = static_cast<uint64_t>(std::abs(a));
-    const auto abs_b = static_cast<uint64_t>(std::abs(b));
-    const auto abs_c = static_cast<uint64_t>(std::abs(c));
-    const auto abs_d = static_cast<uint64_t>(std::abs(d));
+    const auto abs_a = static_cast<UInteger>(std::abs(a));
+    const auto abs_b = static_cast<UInteger>(std::abs(b));
+    const auto abs_c = static_cast<UInteger>(std::abs(c));
+    const auto abs_d = static_cast<UInteger>(std::abs(d));
 
     const auto abs_ab = Multiply(abs_a, abs_b);
     const auto abs_cd = Multiply(abs_c, abs_d);
@@ -718,10 +749,10 @@ namespace Clipper2Lib
   inline bool IsCollinear(const Point<T>& pt1,
     const Point<T>& sharedPt, const Point<T>& pt2) // #777
   {
-    const auto a = sharedPt.x - pt1.x;
-    const auto b = pt2.y - sharedPt.y;
-    const auto c = sharedPt.y - pt1.y;
-    const auto d = pt2.x - sharedPt.x;
+    const T a = sharedPt.x - pt1.x;
+    const T b = pt2.y - sharedPt.y;
+    const T c = sharedPt.y - pt1.y;
+    const T d = pt2.x - sharedPt.x;
     // When checking for collinearity with very large coordinate values
     // then ProductsAreEqual is more accurate than using CrossProduct.
     return ProductsAreEqual(a, b, c, d);
@@ -729,73 +760,73 @@ namespace Clipper2Lib
 
 
   template <typename T>
-  inline double CrossProduct(const Point<T>& pt1, const Point<T>& pt2, const Point<T>& pt3) {
-    return (static_cast<double>(pt2.x - pt1.x) * static_cast<double>(pt3.y -
-      pt2.y) - static_cast<double>(pt2.y - pt1.y) * static_cast<double>(pt3.x - pt2.x));
+  inline Scalar CrossProduct(const Point<T>& pt1, const Point<T>& pt2, const Point<T>& pt3) {
+    return (static_cast<Scalar>(pt2.x - pt1.x) * static_cast<Scalar>(pt3.y -
+      pt2.y) - static_cast<Scalar>(pt2.y - pt1.y) * static_cast<Scalar>(pt3.x - pt2.x));
   }
 
   template <typename T>
-  inline double CrossProduct(const Point<T>& vec1, const Point<T>& vec2)
+  inline Scalar CrossProduct(const Point<T>& vec1, const Point<T>& vec2)
   {
-    return static_cast<double>(vec1.y * vec2.x) - static_cast<double>(vec2.y * vec1.x);
+    return static_cast<Scalar>(vec1.y * vec2.x) - static_cast<Scalar>(vec2.y * vec1.x);
   }
 
   template <typename T>
-  inline double DotProduct(const Point<T>& pt1, const Point<T>& pt2, const Point<T>& pt3) {
-    return (static_cast<double>(pt2.x - pt1.x) * static_cast<double>(pt3.x - pt2.x) +
-      static_cast<double>(pt2.y - pt1.y) * static_cast<double>(pt3.y - pt2.y));
+  inline Scalar DotProduct(const Point<T>& pt1, const Point<T>& pt2, const Point<T>& pt3) {
+    return (static_cast<Scalar>(pt2.x - pt1.x) * static_cast<Scalar>(pt3.x - pt2.x) +
+      static_cast<Scalar>(pt2.y - pt1.y) * static_cast<Scalar>(pt3.y - pt2.y));
   }
 
   template <typename T>
-  inline double DotProduct(const Point<T>& vec1, const Point<T>& vec2)
+  inline Scalar DotProduct(const Point<T>& vec1, const Point<T>& vec2)
   {
-    return static_cast<double>(vec1.x * vec2.x) + static_cast<double>(vec1.y * vec2.y);
+    return static_cast<Scalar>(vec1.x * vec2.x) + static_cast<Scalar>(vec1.y * vec2.y);
   }
 
   template <typename T>
-  inline double DistanceSqr(const Point<T> pt1, const Point<T> pt2)
+  inline Scalar DistanceSqr(const Point<T> pt1, const Point<T> pt2)
   {
     return Sqr(pt1.x - pt2.x) + Sqr(pt1.y - pt2.y);
   }
 
   template <typename T>
-  inline double PerpendicDistFromLineSqrd(const Point<T>& pt,
+  inline Scalar PerpendicDistFromLineSqrd(const Point<T>& pt,
     const Point<T>& line1, const Point<T>& line2)
   {
     //perpendicular distance of point (x³,y³) = (Ax³ + By³ + C)/Sqrt(A² + B²)
     //see http://en.wikipedia.org/wiki/Perpendicular_distance
-    double a = static_cast<double>(pt.x - line1.x);
-    double b = static_cast<double>(pt.y - line1.y);
-    double c = static_cast<double>(line2.x - line1.x);
-    double d = static_cast<double>(line2.y - line1.y);
+    Scalar a = static_cast<Scalar>(pt.x - line1.x);
+    Scalar b = static_cast<Scalar>(pt.y - line1.y);
+    Scalar c = static_cast<Scalar>(line2.x - line1.x);
+    Scalar d = static_cast<Scalar>(line2.y - line1.y);
     if (c == 0 && d == 0) return 0;
     return Sqr(a * d - c * b) / (c * c + d * d);
   }
 
   template <typename T>
-  inline double Area(const Path<T>& path)
+  inline Scalar Area(const Path<T>& path)
   {
     size_t cnt = path.size();
     if (cnt < 3) return 0.0;
-    double a = 0.0;
+    Scalar a = 0.0;
     typename Path<T>::const_iterator it1, it2 = path.cend() - 1, stop = it2;
     if (!(cnt & 1)) ++stop;
     for (it1 = path.cbegin(); it1 != stop;)
     {
-      a += static_cast<double>(it2->y + it1->y) * (it2->x - it1->x);
+      a += static_cast<Scalar>(it2->y + it1->y) * (it2->x - it1->x);
       it2 = it1 + 1;
-      a += static_cast<double>(it1->y + it2->y) * (it1->x - it2->x);
+      a += static_cast<Scalar>(it1->y + it2->y) * (it1->x - it2->x);
       it1 += 2;
     }
     if (cnt & 1)
-      a += static_cast<double>(it2->y + it1->y) * (it2->x - it1->x);
-    return (a * 0.5);
+      a += static_cast<Scalar>(it2->y + it1->y) * (it2->x - it1->x);
+    return (a * (Scalar)0.5);
   }
 
   template <typename T>
-  inline double Area(const Paths<T>& paths)
+  inline Scalar Area(const Paths<T>& paths)
   {
-    double a = 0.0;
+    Scalar a = 0.0;
     for (typename Paths<T>::const_iterator paths_iter = paths.cbegin();
       paths_iter != paths.cend(); ++paths_iter)
     {
@@ -824,11 +855,11 @@ namespace Clipper2Lib
   inline bool GetSegmentIntersectPt(const Point<T>& ln1a, const Point<T>& ln1b,
     const Point<T>& ln2a, const Point<T>& ln2b, Point<T>& ip)
   {
-    double ln1dy = static_cast<double>(ln1b.y - ln1a.y);
-    double ln1dx = static_cast<double>(ln1a.x - ln1b.x);
-    double ln2dy = static_cast<double>(ln2b.y - ln2a.y);
-    double ln2dx = static_cast<double>(ln2a.x - ln2b.x);
-    double det = (ln2dy * ln1dx) - (ln1dy * ln2dx);
+    Scalar ln1dy = static_cast<Scalar>(ln1b.y - ln1a.y);
+    Scalar ln1dx = static_cast<Scalar>(ln1a.x - ln1b.x);
+    Scalar ln2dy = static_cast<Scalar>(ln2b.y - ln2a.y);
+    Scalar ln2dx = static_cast<Scalar>(ln2a.x - ln2b.x);
+    Scalar det = (ln2dy * ln1dx) - (ln1dy * ln2dx);
     if (det == 0.0) return false;
     T bb0minx = CC_MIN(ln1a.x, ln1b.x);
     T bb0miny = CC_MIN(ln1a.y, ln1b.y);
@@ -841,28 +872,28 @@ namespace Clipper2Lib
 
     if constexpr (std::is_integral_v<T>)
     {
-      int64_t originx = (CC_MIN(bb0maxx, bb1maxx) + CC_MAX(bb0minx, bb1minx)) >> 1;
-      int64_t originy = (CC_MIN(bb0maxy, bb1maxy) + CC_MAX(bb0miny, bb1miny)) >> 1;
-      double ln0c = (ln1dy * static_cast<double>(ln1a.x - originx)) +
-        (ln1dx * static_cast<double>(ln1a.y - originy));
-      double ln1c = (ln2dy * static_cast<double>(ln2a.x - originx)) +
-        (ln2dx * static_cast<double>(ln2a.y - originy));
-      double hitx = ((ln1dx * ln1c) - (ln2dx * ln0c)) / det;
-      double hity = ((ln2dy * ln0c) - (ln1dy * ln1c)) / det;
+      Integer originx = (CC_MIN(bb0maxx, bb1maxx) + CC_MAX(bb0minx, bb1minx)) >> 1;
+      Integer originy = (CC_MIN(bb0maxy, bb1maxy) + CC_MAX(bb0miny, bb1miny)) >> 1;
+      Scalar ln0c = (ln1dy * static_cast<Scalar>(ln1a.x - originx)) +
+        (ln1dx * static_cast<Scalar>(ln1a.y - originy));
+      Scalar ln1c = (ln2dy * static_cast<Scalar>(ln2a.x - originx)) +
+        (ln2dx * static_cast<Scalar>(ln2a.y - originy));
+      Scalar hitx = ((ln1dx * ln1c) - (ln2dx * ln0c)) / det;
+      Scalar hity = ((ln2dy * ln0c) - (ln1dy * ln1c)) / det;
 
       ip.x = originx + (T)nearbyint(hitx);
       ip.y = originy + (T)nearbyint(hity);
     }
     else
     {
-      double originx = (CC_MIN(bb0maxx, bb1maxx) + CC_MAX(bb0minx, bb1minx)) / 2.0;
-      double originy = (CC_MIN(bb0maxy, bb1maxy) + CC_MAX(bb0miny, bb1miny)) / 2.0;
-      double ln0c = (ln1dy * static_cast<double>(ln1a.x - originx)) +
-        (ln1dx * static_cast<double>(ln1a.y - originy));
-      double ln1c = (ln2dy * static_cast<double>(ln2a.x - originx)) +
-        (ln2dx * static_cast<double>(ln2a.y - originy));
-      double hitx = ((ln1dx * ln1c) - (ln2dx * ln0c)) / det;
-      double hity = ((ln2dy * ln0c) - (ln1dy * ln1c)) / det;
+      Scalar originx = (CC_MIN(bb0maxx, bb1maxx) + CC_MAX(bb0minx, bb1minx)) / 2.0;
+      Scalar originy = (CC_MIN(bb0maxy, bb1maxy) + CC_MAX(bb0miny, bb1miny)) / 2.0;
+      Scalar ln0c = (ln1dy * static_cast<Scalar>(ln1a.x - originx)) +
+        (ln1dx * static_cast<Scalar>(ln1a.y - originy));
+      Scalar ln1c = (ln2dy * static_cast<Scalar>(ln2a.x - originx)) +
+        (ln2dx * static_cast<Scalar>(ln2a.y - originy));
+      Scalar hitx = ((ln1dx * ln1c) - (ln2dx * ln0c)) / det;
+      Scalar hity = ((ln2dy * ln0c) - (ln1dy * ln1c)) / det;
 
       ip.x = originx + static_cast<T>(hitx);
       ip.y = originy + static_cast<T>(hity);
@@ -875,14 +906,14 @@ namespace Clipper2Lib
     const Point<T>& ln2a, const Point<T>& ln2b, Point<T>& ip)
   {
     // https://en.wikipedia.org/wiki/Line%E2%80%93line_intersection
-    double dx1 = static_cast<double>(ln1b.x - ln1a.x);
-    double dy1 = static_cast<double>(ln1b.y - ln1a.y);
-    double dx2 = static_cast<double>(ln2b.x - ln2a.x);
-    double dy2 = static_cast<double>(ln2b.y - ln2a.y);
+    Scalar dx1 = static_cast<Scalar>(ln1b.x - ln1a.x);
+    Scalar dy1 = static_cast<Scalar>(ln1b.y - ln1a.y);
+    Scalar dx2 = static_cast<Scalar>(ln2b.x - ln2a.x);
+    Scalar dy2 = static_cast<Scalar>(ln2b.y - ln2a.y);
 
-    double det = dy1 * dx2 - dy2 * dx1;
+    Scalar det = dy1 * dx2 - dy2 * dx1;
     if (det == 0.0) return false;
-    double t = ((ln1a.x - ln2a.x) * dy2 - (ln1a.y - ln2a.y) * dx2) / det;
+    Scalar t = ((ln1a.x - ln2a.x) * dy2 - (ln1a.y - ln2a.y) * dx2) / det;
     if (t <= 0.0) ip = ln1a;
     else if (t >= 1.0) ip = ln1b;
     else
@@ -895,7 +926,7 @@ namespace Clipper2Lib
 #endif
 
   template<typename T>
-  inline Point<T> TranslatePoint(const Point<T>& pt, double dx, double dy)
+  inline Point<T> TranslatePoint(const Point<T>& pt, Scalar dx, Scalar dy)
   {
 #ifdef USINGZ
     return Point<T>(pt.x + dx, pt.y + dy, pt.z);
@@ -922,16 +953,16 @@ namespace Clipper2Lib
     return (val > 0) ? 1 : -1;
   }
 
-  inline bool SegmentsIntersect(const Point64& seg1a, const Point64& seg1b,
-    const Point64& seg2a, const Point64& seg2b, bool inclusive = false)
+  inline bool SegmentsIntersect(const PointI& seg1a, const PointI& seg1b,
+    const PointI& seg2a, const PointI& seg2b, bool inclusive = false)
   {
     if (inclusive)
     {
-      double res1 = CrossProduct(seg1a, seg2a, seg2b);
-      double res2 = CrossProduct(seg1b, seg2a, seg2b);
+      Scalar res1 = CrossProduct(seg1a, seg2a, seg2b);
+      Scalar res2 = CrossProduct(seg1b, seg2a, seg2b);
       if (res1 * res2 > 0) return false;
-      double res3 = CrossProduct(seg2a, seg1a, seg1b);
-      double res4 = CrossProduct(seg2b, seg1a, seg1b);
+      Scalar res3 = CrossProduct(seg2a, seg1a, seg1b);
+      Scalar res4 = CrossProduct(seg2b, seg1a, seg1b);
       if (res3 * res4 > 0) return false;
       return (res1 || res2 || res3 || res4); // ensures not collinear
     }
@@ -948,11 +979,11 @@ namespace Clipper2Lib
     const Point<T>& seg1, const Point<T>& seg2)
   {
     if (seg1.x == seg2.x && seg1.y == seg2.y) return seg1;
-    double dx = static_cast<double>(seg2.x - seg1.x);
-    double dy = static_cast<double>(seg2.y - seg1.y);
-    double q =
-      (static_cast<double>(offPt.x - seg1.x) * dx +
-        static_cast<double>(offPt.y - seg1.y) * dy) /
+    Scalar dx = static_cast<Scalar>(seg2.x - seg1.x);
+    Scalar dy = static_cast<Scalar>(seg2.y - seg1.y);
+    Scalar q =
+      (static_cast<Scalar>(offPt.x - seg1.x) * dx +
+        static_cast<Scalar>(offPt.y - seg1.y) * dy) /
       (Sqr(dx) + Sqr(dy));
     if (q < 0) q = 0; else if (q > 1) q = 1;
     if constexpr (std::is_integral_v<T>)
@@ -1027,7 +1058,7 @@ namespace Clipper2Lib
         val = 1 - val; // toggle val
       else
       {
-        double d = CrossProduct(*prev, *curr, pt);
+        Scalar d = CrossProduct(*prev, *curr, pt);
         if (d == 0) return PointInPolygonResult::IsOn;
         if ((d < 0) == is_above) val = 1 - val;
       }
@@ -1041,7 +1072,7 @@ namespace Clipper2Lib
       if (curr == cend) curr = cbegin;
       if (curr == cbegin) prev = cend - 1;
       else prev = curr - 1;
-      double d = CrossProduct(*prev, *curr, pt);
+      Scalar d = CrossProduct(*prev, *curr, pt);
       if (d == 0) return PointInPolygonResult::IsOn;
       if ((d < 0) == is_above) val = 1 - val;
     }

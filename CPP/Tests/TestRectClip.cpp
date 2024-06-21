@@ -3,8 +3,8 @@
 using namespace Clipper2Lib;
 TEST(Clipper2Tests, TestRectClip)
 {
-  Paths64 sub, clp, sol;
-  Rect64 rect = Rect64(100, 100, 700, 500);
+  PathsI sub, clp, sol;
+  RectI rect = RectI(100, 100, 700, 500);
   clp.push_back(rect.AsPath());
   sub.push_back(MakePath({ 100,100, 700,100, 700,500, 100,500 }));
   sol = RectClip(rect, sub);
@@ -23,7 +23,7 @@ TEST(Clipper2Tests, TestRectClip)
   EXPECT_TRUE(Area(sol) == Area(sub));
   sub.clear();
   clp.clear();
-  rect = Rect64(390, 290, 410, 310);
+  rect = RectI(390, 290, 410, 310);
   clp.push_back(rect.AsPath());
   sub.push_back(MakePath({ 410,290, 500,290, 500,310, 410,310 }));
   sol = RectClip(rect, sub);
@@ -39,7 +39,7 @@ TEST(Clipper2Tests, TestRectClip)
   sub.clear();
   sub.push_back(MakePath({ 208,66, 366,112, 402,303,
     234,332, 233,262, 243,140, 215,126, 40,172 }));
-  rect = Rect64(237, 164, 322, 248);
+  rect = RectI(237, 164, 322, 248);
   sol = RectClip(rect, sub);
   const auto solBounds = GetBounds(sol);
   EXPECT_EQ(solBounds.Width(), rect.Width());
@@ -47,16 +47,16 @@ TEST(Clipper2Tests, TestRectClip)
 }
 TEST(Clipper2Tests, TestRectClip2) //#597
 {
-  Clipper2Lib::Rect64 rect(54690, 0, 65628, 6000);
-  Clipper2Lib::Paths64 subject {{{700000, 6000}, { 0, 6000 }, { 0, 5925 }, { 700000, 5925 }}};
-  Clipper2Lib::Paths64 solution = Clipper2Lib::RectClip(rect, subject);
+  Clipper2Lib::RectI rect(54690, 0, 65628, 6000);
+  Clipper2Lib::PathsI subject {{{700000, 6000}, { 0, 6000 }, { 0, 5925 }, { 700000, 5925 }}};
+  Clipper2Lib::PathsI solution = Clipper2Lib::RectClip(rect, subject);
   //std::cout << solution << std::endl;
   EXPECT_TRUE(solution.size() == 1 && solution[0].size() == 4);
 }
 TEST(Clipper2Tests, TestRectClip3) //#637
 {
-  Rect64 r(-1800000000LL, -137573171LL, -1741475021LL, 3355443LL);
-  Paths64 subject, clip, solution;
+  RectI r(-1800000000LL, -137573171LL, -1741475021LL, 3355443LL);
+  PathsI subject, clip, solution;
   subject.push_back(MakePath({ -1800000000LL, 10005000LL,
     -1800000000LL, -5000LL, -1789994999LL, -5000LL, -1789994999LL, 10005000LL }));
   clip.push_back(r.AsPath());

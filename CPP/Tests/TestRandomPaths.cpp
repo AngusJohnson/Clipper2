@@ -2,6 +2,10 @@
 #include "clipper2/clipper.h"
 #include <fstream>
 #include <random>
+
+using Clipper2Lib::Scalar;
+using Clipper2Lib::Integer;
+
 int GenerateRandomInt(std::default_random_engine& rng, int min_value, int max_value)
 {
   if (min_value == max_value)
@@ -9,12 +13,12 @@ int GenerateRandomInt(std::default_random_engine& rng, int min_value, int max_va
   std::uniform_int_distribution<int> distribution(min_value, max_value);
   return distribution(rng);
 }
-Clipper2Lib::Paths64 GenerateRandomPaths(std::default_random_engine& rng, int min_path_count, int max_complexity)
+Clipper2Lib::PathsI GenerateRandomPaths(std::default_random_engine& rng, int min_path_count, int max_complexity)
 {
   std::uniform_int_distribution<int> first_point_coordinate_distribution(-max_complexity, max_complexity * 2);
   std::uniform_int_distribution<int> difference_to_previous_point_distribution(-5, 5);
   const int path_count = GenerateRandomInt(rng, min_path_count, max_complexity);
-  Clipper2Lib::Paths64 result(path_count);
+  Clipper2Lib::PathsI result(path_count);
   for (int path = 0; path < path_count; ++path)
   {
     const int min_point_count = 0;
@@ -55,24 +59,24 @@ TEST(Clipper2Tests, TestRandomPaths)
     const Clipper2Lib::ClipType ct = static_cast<Clipper2Lib::ClipType>(GenerateRandomInt(rng, 0, 4));
     const Clipper2Lib::FillRule fr = static_cast<Clipper2Lib::FillRule>(GenerateRandomInt(rng, 0, 3));
     //SaveInputToFile(subject, subject_open, clip, ct, fr);
-    Clipper2Lib::Paths64 solution, solution_open;
-    Clipper2Lib::Clipper64 c;
+    Clipper2Lib::PathsI solution, solution_open;
+    Clipper2Lib::ClipperI c;
     c.AddSubject(subject);
     c.AddOpenSubject(subject_open);
     c.AddClip(clip);
     c.Execute(ct, fr, solution, solution_open);
-    const int64_t area_paths = static_cast<int64_t>(Area(solution));
-    const int64_t count_paths = solution.size() + solution_open.size();
-    Clipper2Lib::PolyTree64 solution_polytree;
-    Clipper2Lib::Paths64 solution_polytree_open;
-    Clipper2Lib::Clipper64 clipper_polytree;
+    const Integer area_paths = static_cast<Integer>(Area(solution));
+    const Integer count_paths = solution.size() + solution_open.size();
+    Clipper2Lib::PolyTreeI solution_polytree;
+    Clipper2Lib::PathsI solution_polytree_open;
+    Clipper2Lib::ClipperI clipper_polytree;
     clipper_polytree.AddSubject(subject);
     clipper_polytree.AddOpenSubject(subject_open);
     clipper_polytree.AddClip(clip);
     clipper_polytree.Execute(ct, fr, solution_polytree, solution_polytree_open);
-    const auto solution_polytree_paths = PolyTreeToPaths64(solution_polytree);
-    const int64_t area_polytree = static_cast<int64_t>(Area(solution_polytree_paths));
-    const int64_t count_polytree = solution_polytree_paths.size() + solution_polytree_open.size();
+    const auto solution_polytree_paths = PolyTreeToPathsI(solution_polytree);
+    const Integer area_polytree = static_cast<Integer>(Area(solution_polytree_paths));
+    const Integer count_polytree = solution_polytree_paths.size() + solution_polytree_open.size();
     EXPECT_EQ(area_paths, area_polytree);
     // polytree does an additional bounds check on each path
     // and discards paths with empty bounds, so count_polytree

@@ -46,13 +46,13 @@ void DoDiamonds()
 {
   static const int size = 10, size2 = size * 2;;
   static const int w = 800, h = 600;
-  Path64 shape;
-  shape.push_back(Point64(size, 0));
-  shape.push_back(Point64(size2, size));
-  shape.push_back(Point64(size, size2));
-  shape.push_back(Point64(0, size));
+  PathI shape;
+  shape.push_back(PointI(size, 0));
+  shape.push_back(PointI(size2, size));
+  shape.push_back(PointI(size, size2));
+  shape.push_back(PointI(0, size));
 
-  Paths64 subjects, solution;
+  PathsI subjects, solution;
   
   for (int i = 0; i < h / size; i += 2)
   {
@@ -61,7 +61,7 @@ void DoDiamonds()
       shape = TranslatePath(shape, size, (j & 1) == 0 ? size : -size);
       if (rand() % 7) subjects.push_back(shape);
     }
-    shape = TranslatePath(shape, static_cast<int64_t>(-w / size) * size, size*2);
+    shape = TranslatePath(shape, static_cast<Integer>(-w / size) * size, size*2);
   }
 
   solution = Union(subjects, FillRule::NonZero);
@@ -77,12 +77,12 @@ void DoSquares()
 {
   static const int w = 800, h = 600;
   static const int size = 10;
-  Path64 shape;
-  shape.push_back(Point64(0, 0));
-  shape.push_back(Point64(size, 0));
-  shape.push_back(Point64(size, size));
-  shape.push_back(Point64(0, size));
-  Paths64 subjects, solution;
+  PathI shape;
+  shape.push_back(PointI(0, 0));
+  shape.push_back(PointI(size, 0));
+  shape.push_back(PointI(size, size));
+  shape.push_back(PointI(0, size));
+  PathsI subjects, solution;
   ClipType cliptype = ClipType::Union;
   FillRule fillrule = FillRule::NonZero;
 
@@ -93,7 +93,7 @@ void DoSquares()
       if (rand() % 4 != 1) subjects.push_back(shape);
       shape = TranslatePath(shape, size, 0);
     }
-    shape = TranslatePath(shape, static_cast<int64_t>(-w / size) * size, size);
+    shape = TranslatePath(shape, static_cast<Integer>(-w / size) * size, size);
   }
   //SaveTest("squares.txt", false, &subjects, nullptr, nullptr, 0, 0, ClipType::Union, FillRule::NonZero);
 
@@ -109,9 +109,9 @@ void DoSquares()
 void DoCircles()
 {
   // create a small circle with 31 vertices
-  PathD shape = Ellipse(RectD(0, 0, 35, 35), 31);
+  PathS shape = Ellipse(RectS(0, 0, 35, 35), 31);
 
-  PathsD subjects, solution;
+  PathsS subjects, solution;
   int w = 800, h = 600;
 
   for (int j = 0; j < 550; ++j)
@@ -132,16 +132,16 @@ void DoTriangles()
 {
   static const int w = 800, h = 600;
   static const int size = 10;
-  Path64 tri1;
-  tri1.push_back(Point64(0, 0));
-  tri1.push_back(Point64(size * 2, 0));
-  tri1.push_back(Point64(size, size * 2));
-  Path64 tri2;
-  tri2.push_back(Point64(size * 2, 0));
-  tri2.push_back(Point64(size, size * 2));
-  tri2.push_back(Point64(size * 3, size * 2));
+  PathI tri1;
+  tri1.push_back(PointI(0, 0));
+  tri1.push_back(PointI(size * 2, 0));
+  tri1.push_back(PointI(size, size * 2));
+  PathI tri2;
+  tri2.push_back(PointI(size * 2, 0));
+  tri2.push_back(PointI(size, size * 2));
+  tri2.push_back(PointI(size * 3, size * 2));
 
-  Paths64 subjects, solution;
+  PathsI subjects, solution;
   ClipType cliptype = ClipType::Union;
   FillRule fillrule = FillRule::NonZero;
 
@@ -154,8 +154,8 @@ void DoTriangles()
       tri1 = TranslatePath(tri1, size * 2, 0);
       tri2 = TranslatePath(tri2, size * 2, 0);
     }
-    tri1 = TranslatePath(tri1, static_cast<int64_t>(-w / size) * size, size * 2);
-    tri2 = TranslatePath(tri2, static_cast<int64_t>(-w / size) * size, size * 2);
+    tri1 = TranslatePath(tri1, static_cast<Integer>(-w / size) * size, size * 2);
+    tri2 = TranslatePath(tri2, static_cast<Integer>(-w / size) * size, size * 2);
   }
 
   solution = Union(subjects, fillrule);

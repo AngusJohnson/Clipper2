@@ -20,7 +20,7 @@ option(USE_EXTERNAL_GBENCHMARK "Use the googlebenchmark" OFF)
 option(BUILD_SHARED_LIBS "Build shared libs" OFF)
 set(CLIPPER2_USINGZ "ON" CACHE STRING "Build Clipper2Z, either \"ON\" or \"OFF\" or \"ONLY\"")
 
-# CLIPPER2_MAX_DECIMAL_PRECISION: maximum decimal precision when scaling PathsD to Paths64.
+# CLIPPER2_MAX_DECIMAL_PRECISION: maximum decimal precision when scaling PathsS to PathsI.
 # Caution: excessive scaling will increase the likelihood of integer overflow errors.
 set(CLIPPER2_MAX_DECIMAL_PRECISION 8 CACHE STRING "Maximum decimal precision range")
 

@@ -210,14 +210,14 @@ public:
 }; //BMH_Search class
 
 
-void PathsToStream(const Paths64& paths, std::ostream& stream)
+void PathsToStream(const PathsI& paths, std::ostream& stream)
 {
-  for (Paths64::const_iterator paths_it = paths.cbegin(); 
+  for (PathsI::const_iterator paths_it = paths.cbegin(); 
     paths_it != paths.cend(); ++paths_it)
   {
     //watch out for empty paths
     if (paths_it->cbegin() == paths_it->cend()) continue;
-    Path64::const_iterator path_it, path_it_last;
+    PathI::const_iterator path_it, path_it_last;
     for (path_it = paths_it->cbegin(), path_it_last = --paths_it->cend();
       path_it != path_it_last; ++path_it)
       stream << *path_it << ", ";
@@ -226,7 +226,7 @@ void PathsToStream(const Paths64& paths, std::ostream& stream)
 }
 
 static bool GetInt(string::const_iterator& s_it,
-  const string::const_iterator& it_end, int64_t& value)
+  const string::const_iterator& it_end, Integer& value)
 {
   value = 0;
   while (s_it != it_end && *s_it == ' ') ++s_it;
@@ -236,7 +236,7 @@ static bool GetInt(string::const_iterator& s_it,
   string::const_iterator s_it2 = s_it;
   while (s_it != it_end && *s_it >= '0' && *s_it <= '9')
   {
-    value = value * 10 + static_cast<int64_t>(*s_it++) - 48;
+    value = value * 10 + static_cast<Integer>(*s_it++) - 48;
   }
   if (s_it == s_it2) return false; //no value
   //trim trailing space and a comma if present
@@ -247,13 +247,13 @@ static bool GetInt(string::const_iterator& s_it,
 }
 
 bool SaveTest(const std::string& filename, bool append,
-  const Paths64* subj, const Paths64* subj_open, const Paths64* clip, 
-  int64_t area, int64_t count, ClipType ct, FillRule fr)
+  const PathsI* subj, const PathsI* subj_open, const PathsI* clip, 
+  Integer area, Integer count, ClipType ct, FillRule fr)
 {
   string line;
   bool found = false;
   int last_cap_pos = 0, curr_cap_pos = 0;
-  int64_t last_test_no = 0;
+  Integer last_test_no = 0;
   if (append && FileExists(filename)) //get the number of the preceeding test
   {
     ifstream file;

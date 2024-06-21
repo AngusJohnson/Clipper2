@@ -7,7 +7,7 @@
 using namespace Clipper2Lib;
 
 void DoSimpleTest(bool show_solution_coords = false);
-Path64 MakeRandomPoly(int width, int height, unsigned vertCnt);
+PathI MakeRandomPoly(int width, int height, unsigned vertCnt);
 void System(const std::string &filename);
 
 int main()
@@ -15,12 +15,12 @@ int main()
   DoSimpleTest();    
 }
 
-inline Path64 MakeStar(const Point64& center, int radius, int points)
+inline PathI MakeStar(const PointI& center, int radius, int points)
 {
   if (!(points % 2)) --points;
   if (points < 5) points = 5;
-  Path64 tmp = Ellipse<int64_t>(center, radius, radius, points);
-  Path64 result;
+  PathI tmp = Ellipse<Integer>(center, radius, radius, points);
+  PathI result;
   result.reserve(points);
   result.push_back(tmp[0]);
   for (int i = points - 1, j = i / 2; j;)
@@ -34,12 +34,12 @@ inline Path64 MakeStar(const Point64& center, int radius, int points)
 
 void DoSimpleTest(bool show_solution_coords)
 {
-  Paths64 tmp, solution;
+  PathsI tmp, solution;
   FillRule fr = FillRule::NonZero;
 
-  Paths64 subject, clip;
-  subject.push_back(MakeStar(Point64(225, 225), 220, 9));
-  clip.push_back(Ellipse<int64_t>(Point64(225,225), 150, 150));  
+  PathsI subject, clip;
+  subject.push_back(MakeStar(PointI(225, 225), 220, 9));
+  clip.push_back(Ellipse<Integer>(PointI(225,225), 150, 150));  
   
   //Intersect both shapes and then 'inflate' result -10 (ie deflate)
   solution = Intersect(subject, clip, fr);

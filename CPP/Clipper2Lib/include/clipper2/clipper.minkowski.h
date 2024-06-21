@@ -20,43 +20,43 @@ namespace Clipper2Lib
 
   namespace detail
   {
-    inline Paths64 Minkowski(const Path64& pattern, const Path64& path, bool isSum, bool isClosed)
+    inline PathsI Minkowski(const PathI& pattern, const PathI& path, bool isSum, bool isClosed)
     {
       size_t delta = isClosed ? 0 : 1;
       size_t patLen = pattern.size(), pathLen = path.size();
-      if (patLen == 0 || pathLen == 0) return Paths64();
-      Paths64 tmp;
+      if (patLen == 0 || pathLen == 0) return PathsI();
+      PathsI tmp;
       tmp.reserve(pathLen);
 
       if (isSum)
       {
-        for (const Point64& p : path)
+        for (const PointI& p : path)
         {
-          Path64 path2(pattern.size());
+          PathI path2(pattern.size());
           std::transform(pattern.cbegin(), pattern.cend(),
-            path2.begin(), [p](const Point64& pt2) {return p + pt2; });
+            path2.begin(), [p](const PointI& pt2) {return p + pt2; });
           tmp.push_back(path2);
         }
       }
       else
       {
-        for (const Point64& p : path)
+        for (const PointI& p : path)
         {
-          Path64 path2(pattern.size());
+          PathI path2(pattern.size());
           std::transform(pattern.cbegin(), pattern.cend(),
-            path2.begin(), [p](const Point64& pt2) {return p - pt2; });
+            path2.begin(), [p](const PointI& pt2) {return p - pt2; });
           tmp.push_back(path2);
         }
       }
 
-      Paths64 result;
+      PathsI result;
       result.reserve((pathLen - delta) * patLen);
       size_t g = isClosed ? pathLen - 1 : 0;
       for (size_t h = patLen - 1, i = delta; i < pathLen; ++i)
       {
         for (size_t j = 0; j < patLen; j++)
         {
-          Path64 quad;
+          PathI quad;
           quad.reserve(4);
           {
             quad.push_back(tmp[g][h]);
@@ -74,10 +74,10 @@ namespace Clipper2Lib
       return result;
     }
 
-    inline Paths64 Union(const Paths64& subjects, FillRule fillrule)
+    inline PathsI Union(const PathsI& subjects, FillRule fillrule)
     {
-      Paths64 result;
-      Clipper64 clipper;
+      PathsI result;
+      ClipperI clipper;
       clipper.AddSubject(subjects);
       clipper.Execute(ClipType::Union, fillrule, result);
       return result;
@@ -85,34 +85,34 @@ namespace Clipper2Lib
 
   } // namespace internal
 
-  inline Paths64 MinkowskiSum(const Path64& pattern, const Path64& path, bool isClosed)
+  inline PathsI MinkowskiSum(const PathI& pattern, const PathI& path, bool isClosed)
   {
     return detail::Union(detail::Minkowski(pattern, path, true, isClosed), FillRule::NonZero);
   }
 
-  inline PathsD MinkowskiSum(const PathD& pattern, const PathD& path, bool isClosed, int decimalPlaces = 2)
+  inline PathsS MinkowskiSum(const PathS& pattern, const PathS& path, bool isClosed, int decimalPlaces = 2)
   {
     int error_code = 0;
-    double scale = pow(10, decimalPlaces);
-    Path64 pat64 = ScalePath<int64_t, double>(pattern, scale, error_code);
-    Path64 path64 = ScalePath<int64_t, double>(path, scale, error_code);
-    Paths64 tmp = detail::Union(detail::Minkowski(pat64, path64, true, isClosed), FillRule::NonZero);
-    return ScalePaths<double, int64_t>(tmp, 1 / scale, error_code);
+    Scalar scale = (Scalar)pow(10, decimalPlaces);
+    PathI pat64 = ScalePath<Integer, Scalar>(pattern, scale, error_code);
+    PathI path64 = ScalePath<Integer, Scalar>(path, scale, error_code);
+    PathsI tmp = detail::Union(detail::Minkowski(pat64, path64, true, isClosed), FillRule::NonZero);
+    return ScalePaths<Scalar, Integer>(tmp, 1 / scale, error_code);
   }
 
-  inline Paths64 MinkowskiDiff(const Path64& pattern, const Path64& path, bool isClosed)
+  inline PathsI MinkowskiDiff(const PathI& pattern, const PathI& path, bool isClosed)
   {
     return detail::Union(detail::Minkowski(pattern, path, false, isClosed), FillRule::NonZero);
   }
 
-  inline PathsD MinkowskiDiff(const PathD& pattern, const PathD& path, bool isClosed, int decimalPlaces = 2)
+  inline PathsS MinkowskiDiff(const PathS& pattern, const PathS& path, bool isClosed, int decimalPlaces = 2)
   {
     int error_code = 0;
-    double scale = pow(10, decimalPlaces);
-    Path64 pat64 = ScalePath<int64_t, double>(pattern, scale, error_code);
-    Path64 path64 = ScalePath<int64_t, double>(path, scale, error_code);
-    Paths64 tmp = detail::Union(detail::Minkowski(pat64, path64, false, isClosed), FillRule::NonZero);
-    return ScalePaths<double, int64_t>(tmp, 1 / scale, error_code);
+    Scalar scale = (Scalar)pow(10, decimalPlaces);
+    PathI pat64 = ScalePath<Integer, Scalar>(pattern, scale, error_code);
+    PathI path64 = ScalePath<Integer, Scalar>(path, scale, error_code);
+    PathsI tmp = detail::Union(detail::Minkowski(pat64, path64, false, isClosed), FillRule::NonZero);
+    return ScalePaths<Scalar, Integer>(tmp, 1 / scale, error_code);
   }
 
 } // Clipper2Lib namespace

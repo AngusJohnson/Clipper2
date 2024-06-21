@@ -15,7 +15,7 @@ const int display_width = 800, display_height = 600;
 void RecheckLastBenchmark(bool use_polytree);
 void DoBenchmark(int edge_cnt_start, int edge_cnt_end, 
   int increment, bool test_polytree = false);
-Path64 MakeRandomPoly(int width, int height, unsigned vertCnt);
+PathI MakeRandomPoly(int width, int height, unsigned vertCnt);
 void System(const std::string &filename);
 
 int main()
@@ -39,9 +39,9 @@ void RecheckLastBenchmark(bool use_polytree)
   ClipType ct;
   FillRule fr;
 
-  Paths64 subject, subj_open, clip, solution;
-  int64_t area, count;
-  PolyTree64 polytree;
+  PathsI subject, subj_open, clip, solution;
+  Integer area, count;
+  PolyTreeI polytree;
 
   std::ifstream test("benchmark_test.txt");
   if (!test.good())
@@ -69,12 +69,12 @@ void RecheckLastBenchmark(bool use_polytree)
     std::cout << "It failed (again)." << std::endl;
 }
 
-inline Path64 MakeRandomPoly(int width, int height, unsigned vertCnt)
+inline PathI MakeRandomPoly(int width, int height, unsigned vertCnt)
 {
-  Path64 result;
+  PathI result;
   result.reserve(vertCnt);
   for (unsigned i = 0; i < vertCnt; ++i)
-    result.push_back(Point64(rand() % width, rand() % height));
+    result.push_back(PointI(rand() % width, rand() % height));
   return result;
 }
 
@@ -84,8 +84,9 @@ void DoBenchmark(int edge_cnt_start, int edge_cnt_end,
   ClipType ct = ClipType::Intersection;
   FillRule fr = FillRule::NonZero;//EvenOdd;//Positive;//
 
-  Paths64 subject, clip, solution;
-  PolyTree64 polytree;
+  Timer tAll;
+  PathsI subject, clip, solution;
+  PolyTreeI polytree;
   std::cout << std::endl << "Complex Polygons Benchmark:  " << std::endl;
   for (int i = edge_cnt_start; i <= edge_cnt_end; i += increment)
   {
@@ -102,18 +103,21 @@ void DoBenchmark(int edge_cnt_start, int edge_cnt_end,
         polytree.Clear();
         Timer t;
         BooleanOp(ct, fr, subject, clip, polytree);
+        std::cout << t.elapsed_str() << std::endl;
         if (!polytree.Count()) break;
       }
       else
       {
         Timer t;
         solution = BooleanOp(ct, fr, subject, clip);
+        std::cout << t.elapsed_str() << std::endl;
         if (solution.empty()) break;
       }
     }
   }
 
-  if (test_polytree) solution = PolyTreeToPaths64(polytree);
+  if (test_polytree) solution = PolyTreeToPathsI(polytree);
+  std::cout << tAll.elapsed_str() << std::endl;
     
   SvgWriter svg;
   SvgAddSubject(svg, subject, fr);

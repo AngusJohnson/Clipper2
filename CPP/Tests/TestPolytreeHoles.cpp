@@ -6,22 +6,22 @@ TEST(Clipper2Tests, TestPolytreeHoles1)
 {
   std::ifstream ifs("PolytreeHoleOwner.txt");
   ASSERT_TRUE(ifs.good());
-  Paths64 subject, subject_open, clip;
-  PolyTree64 solution;
-  Paths64 solution_open;
+  PathsI subject, subject_open, clip;
+  PolyTreeI solution;
+  PathsI solution_open;
   ClipType ct = ClipType::None;
   FillRule fr = FillRule::EvenOdd;
-  int64_t area = 0, count = 0;
+  Integer area = 0, count = 0;
   bool success = false;
   ASSERT_TRUE(LoadTestNum(ifs, 1, subject, subject_open, clip, area, count, ct, fr));
-  Clipper64 c;
+  ClipperI c;
   c.AddSubject(subject);
   c.AddOpenSubject(subject_open);
   c.AddClip(clip);
   c.Execute(ct, fr, solution, solution_open);
   EXPECT_TRUE(CheckPolytreeFullyContainsChildren(solution));
 }
-void PolyPathContainsPoint(const PolyPath64& pp, const Point64 pt, int& counter)
+void PolyPathContainsPoint(const PolyPathI& pp, const PointI pt, int& counter)
 {
   if (pp.Polygon().size() > 0)
   {
@@ -34,7 +34,7 @@ void PolyPathContainsPoint(const PolyPath64& pp, const Point64 pt, int& counter)
   for (const auto& child : pp)
     PolyPathContainsPoint(*child, pt, counter);
 }
-bool PolytreeContainsPoint(const PolyPath64& pp, const Point64 pt)
+bool PolytreeContainsPoint(const PolyPathI& pp, const PointI pt)
 {
   int counter = 0;
   for (const auto& child : pp)
@@ -42,15 +42,15 @@ bool PolytreeContainsPoint(const PolyPath64& pp, const Point64 pt)
   EXPECT_GE(counter, 0); //ie 'pt' can't be inside more holes than outers
   return counter != 0;
 }
-void GetPolyPathArea(const PolyPath64& pp, double& area)
+void GetPolyPathArea(const PolyPathI& pp, Scalar& area)
 {
   area += Area(pp.Polygon());
   for (const auto& child : pp)
     GetPolyPathArea(*child, area);
 }
-double GetPolytreeArea(const PolyPath64& pp)
+Scalar GetPolytreeArea(const PolyPathI& pp)
 {
-  double result = 0;
+  Scalar result = 0;
   for (const auto& child : pp)
     GetPolyPathArea(*child, result);
   return result;
@@ -60,16 +60,16 @@ TEST(Clipper2Tests, TestPolytreeHoles2)
   std::ifstream ifs("PolytreeHoleOwner2.txt");
   ASSERT_TRUE(ifs);
   ASSERT_TRUE(ifs.good());
-  Paths64 subject, subject_open, clip;
+  PathsI subject, subject_open, clip;
   ClipType ct = ClipType::None;
   FillRule fr = FillRule::EvenOdd;
-  int64_t area = 0, count = 0;
+  Integer area = 0, count = 0;
   ASSERT_TRUE(LoadTestNum(ifs, 1, subject, subject_open, clip, area, count, ct, fr));
-  const std::vector<Point64> points_of_interest_outside = {
-     Point64(21887, 10420),
-     Point64(21726, 10825),
-     Point64(21662, 10845),
-     Point64(21617, 10890)
+  const std::vector<PointI> points_of_interest_outside = {
+     PointI(21887, 10420),
+     PointI(21726, 10825),
+     PointI(21662, 10845),
+     PointI(21617, 10890)
   };
   // confirm that each 'points_of_interest_outside' is outside every subject,
   for (const auto& poi_outside : points_of_interest_outside)
@@ -80,11 +80,11 @@ TEST(Clipper2Tests, TestPolytreeHoles2)
         ++outside_subject_count;
     EXPECT_EQ(outside_subject_count, 0);
   }
-  const std::vector<Point64> points_of_interest_inside = {
-     Point64(21887, 10430),
-     Point64(21843, 10520),
-     Point64(21810, 10686),
-     Point64(21900, 10461)
+  const std::vector<PointI> points_of_interest_inside = {
+     PointI(21887, 10430),
+     PointI(21843, 10520),
+     PointI(21810, 10686),
+     PointI(21900, 10461)
   };
   // confirm that each 'points_of_interest_inside' is inside a subject,
   // and inside only one subject (to exclude possible subject holes)
@@ -98,18 +98,18 @@ TEST(Clipper2Tests, TestPolytreeHoles2)
     }
     EXPECT_EQ(inside_subject_count, 1);
   }
-  PolyTree64 solution_tree;
-  Paths64 solution_open;
-  Clipper64 c;
+  PolyTreeI solution_tree;
+  PathsI solution_open;
+  ClipperI c;
   c.AddSubject(subject);
   c.AddOpenSubject(subject_open);
   c.AddClip(clip);
   c.Execute(ct, FillRule::Negative, solution_tree, solution_open);
-  const auto solution_paths = PolyTreeToPaths64(solution_tree);
+  const auto solution_paths = PolyTreeToPathsI(solution_tree);
   ASSERT_FALSE(solution_paths.empty());
-  const double subject_area = -Area(subject); //negate (see fillrule)
-  const double solution_tree_area = GetPolytreeArea(solution_tree);
-  const double solution_paths_area = Area(solution_paths);
+  const Scalar subject_area = -Area(subject); //negate (see fillrule)
+  const Scalar solution_tree_area = GetPolytreeArea(solution_tree);
+  const Scalar solution_paths_area = Area(solution_paths);
   // 1a. check solution_paths_area  is smaller than subject_area
   EXPECT_LT(solution_paths_area, subject_area);
   // 1b. but not too much smaller
@@ -127,9 +127,9 @@ TEST(Clipper2Tests, TestPolytreeHoles2)
 }
 TEST(Clipper2Tests, TestPolytreeHoles3)
 {
-  Paths64 subject, clip, sol;
-  PolyTree64 solution;
-  Clipper64 c;
+  PathsI subject, clip, sol;
+  PolyTreeI solution;
+  ClipperI c;
   subject.push_back(MakePath({ 1072,501, 1072,501, 1072,539, 1072,539, 1072,539, 870,539,
     870,539, 870,539, 870,520, 894,520, 898,524, 911,524, 915,520, 915,520, 936,520,
     940,524, 953,524, 957,520, 957,520, 978,520, 983,524, 995,524, 1000,520, 1021,520,
@@ -144,9 +144,9 @@ TEST(Clipper2Tests, TestPolytreeHoles3)
 }
 TEST(Clipper2Tests, TestPolytreeHoles4) //#618
 {
-  Paths64 subject;
-  PolyTree64 solution;
-  Clipper64 c;
+  PathsI subject;
+  PolyTreeI solution;
+  ClipperI c;
   subject.push_back(MakePath({ 50,500, 50,300, 100,300, 100,350, 150,350,
     150,250, 200,250, 200,450, 350,450, 350,200, 400,200, 400,225, 450,225,
     450,175, 400,175, 400,200, 350,200, 350,175, 200,175, 200,250, 150,250,
@@ -164,15 +164,15 @@ TEST(Clipper2Tests, TestPolytreeHoles4) //#618
 }
 TEST(Clipper2Tests, TestPolytreeHoles5)
 {
-  Paths64 subject, clip;
+  PathsI subject, clip;
   subject.push_back(MakePath({ 0,30, 400,30, 400,100, 0,100 }));
   clip.push_back(MakePath({ 20,30, 30,30, 30,150, 20,150 }));
   clip.push_back(MakePath({ 200,0, 300,0, 300,30, 280,30, 280,20, 220,20, 220,30, 200,30 }));
   clip.push_back(MakePath({ 200,50, 300,50, 300,80, 200,80 }));
-  Clipper64 c;
+  ClipperI c;
   c.AddSubject(subject);
   c.AddClip(clip);
-  PolyTree64 tree;
+  PolyTreeI tree;
   c.Execute(ClipType::Xor, FillRule::NonZero, tree);
   ////std::cout << tree << std::endl;
   //Polytree with 3 polygons.
@@ -181,7 +181,7 @@ TEST(Clipper2Tests, TestPolytreeHoles5)
 }
 TEST(Clipper2Tests, TestPolytreeHoles6) //#618
 {
-  Paths64 subject, clip;
+  PathsI subject, clip;
   subject.push_back(MakePath({ 150,50, 200,50, 200,100, 150,100 }));
   subject.push_back(MakePath({ 125,100, 150,100, 150,150, 125,150 }));
   subject.push_back(MakePath({ 225,50, 300,50, 300,80, 225,80 }));
@@ -191,10 +191,10 @@ TEST(Clipper2Tests, TestPolytreeHoles6) //#618
   clip.push_back(MakePath({ 0,0, 400,0, 400,50, 0,50 }));
   clip.push_back(MakePath({ 0,100, 400,100, 400,150, 0,150 }));
   clip.push_back(MakePath({ 260,175, 325,175, 325,275, 260,275 }));
-  Clipper64 c;
+  ClipperI c;
   c.AddSubject(subject);
   c.AddClip(clip);
-  PolyTree64 tree;
+  PolyTreeI tree;
   c.Execute(ClipType::Xor, FillRule::NonZero, tree);
   ////std::cout << tree << std::endl;
   //Polytree with 3 polygons.
@@ -203,12 +203,12 @@ TEST(Clipper2Tests, TestPolytreeHoles6) //#618
 }
 TEST(Clipper2Tests, TestPolytreeHoles7) //#618
 {
-  Paths64 subject;
+  PathsI subject;
   subject.push_back(MakePath({ 0, 0, 100000, 0, 100000, 100000, 200000, 100000,
     200000, 0, 300000, 0, 300000, 200000, 0, 200000 }));
   subject.push_back(MakePath({ 0, 0, 0, -100000, 250000, -100000, 250000, 0 }));
-  PolyTree64 polytree;
-  Clipper64 c;
+  PolyTreeI polytree;
+  ClipperI c;
   c.AddSubject(subject);
   c.Execute(ClipType::Union, FillRule::NonZero, polytree);
   //std::cout << polytree << std::endl;

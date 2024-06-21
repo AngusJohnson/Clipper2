@@ -25,7 +25,7 @@ namespace Clipper2Lib
 
   class OutPt2 {
   public:
-    Point64 pt;
+    PointI pt;
     size_t owner_idx;
     OutPt2List* edge;
     OutPt2* next;
@@ -33,48 +33,48 @@ namespace Clipper2Lib
   };
 
   //------------------------------------------------------------------------------
-  // RectClip64
+  // RectClipI
   //------------------------------------------------------------------------------
 
-  class RectClip64 {
+  class RectClipI {
   private:
-    void ExecuteInternal(const Path64& path);
-    Path64 GetPath(OutPt2*& op);
+    void ExecuteInternal(const PathI& path);
+    PathI GetPath(OutPt2*& op);
   protected:
-    const Rect64 rect_;
-    const Path64 rect_as_path_;
-    const Point64 rect_mp_;
-    Rect64 path_bounds_;
+    const RectI rect_;
+    const PathI rect_as_path_;
+    const PointI rect_mp_;
+    RectI path_bounds_;
     std::deque<OutPt2> op_container_;
     OutPt2List results_;  // each path can be broken into multiples
     OutPt2List edges_[8]; // clockwise and counter-clockwise
     std::vector<Location> start_locs_;
     void CheckEdges();
     void TidyEdges(int idx, OutPt2List& cw, OutPt2List& ccw);
-    void GetNextLocation(const Path64& path,
+    void GetNextLocation(const PathI& path,
       Location& loc, int& i, int highI);
-    OutPt2* Add(Point64 pt, bool start_new = false);
+    OutPt2* Add(PointI pt, bool start_new = false);
     void AddCorner(Location prev, Location curr);
     void AddCorner(Location& loc, bool isClockwise);
   public:
-    explicit RectClip64(const Rect64& rect) :
+    explicit RectClipI(const RectI& rect) :
       rect_(rect),
       rect_as_path_(rect.AsPath()),
       rect_mp_(rect.MidPoint()) {}
-    Paths64 Execute(const Paths64& paths);
+    PathsI Execute(const PathsI& paths);
   };
 
   //------------------------------------------------------------------------------
-  // RectClipLines64
+  // RectClipLinesI
   //------------------------------------------------------------------------------
 
-  class RectClipLines64 : public RectClip64 {
+  class RectClipLinesI : public RectClipI {
   private:
-    void ExecuteInternal(const Path64& path);
-    Path64 GetPath(OutPt2*& op);
+    void ExecuteInternal(const PathI& path);
+    PathI GetPath(OutPt2*& op);
   public:
-    explicit RectClipLines64(const Rect64& rect) : RectClip64(rect) {};
-    Paths64 Execute(const Paths64& paths);
+    explicit RectClipLinesI(const RectI& rect) : RectClipI(rect) {};
+    PathsI Execute(const PathsI& paths);
   };
 
 } // Clipper2Lib namespace

@@ -3,6 +3,8 @@
 
 #include <cstdlib>
 
+using Clipper2Lib::Scalar;
+
 struct Hsl {
   uint8_t alpha = 0;
   uint8_t hue = 0;
@@ -44,10 +46,10 @@ Color32 HslToRgb(Hsl hsl)
   return result;
 }
 
-uint32_t RainbowColor(double frac, 
+uint32_t RainbowColor(Scalar frac, 
   uint8_t luminance = 128, uint8_t alpha = 255)
 {
-  frac = static_cast<double>(frac - static_cast<int>(frac));
+  frac = static_cast<Scalar>(frac - static_cast<int>(frac));
   Hsl hsl(alpha, static_cast<uint8_t>(frac * 255), 255, luminance);
   Color32 result = HslToRgb(hsl);
   return result.color;

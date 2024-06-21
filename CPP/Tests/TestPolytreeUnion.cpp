@@ -2,13 +2,13 @@
 #include "clipper2/clipper.h"
 using namespace Clipper2Lib;
 TEST(Clipper2Tests, TestPolytreeUnion) {
-    Paths64 subject;
+    PathsI subject;
     subject.push_back(MakePath({ 0,0, 0,5, 5,5, 5,0 }));
     subject.push_back(MakePath({ 1,1, 1,6, 6,6, 6,1 }));
-    Clipper64 clipper;
+    ClipperI clipper;
     clipper.AddSubject(subject);
-    PolyTree64 solution;
-    Paths64 open_paths;
+    PolyTreeI solution;
+    PathsI open_paths;
     if (IsPositive(subject[0]))
       clipper.Execute(ClipType::Union,
         FillRule::Positive, solution, open_paths);

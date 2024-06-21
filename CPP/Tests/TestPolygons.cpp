@@ -1,12 +1,15 @@
 #include <gtest/gtest.h>
 #include "clipper2/clipper.h"
 #include "ClipFileLoad.h"
-inline Clipper2Lib::PathD MakeRandomPath(int width, int height, unsigned vertCnt)
+
+using Clipper2Lib::Scalar;
+
+inline Clipper2Lib::PathS MakeRandomPath(int width, int height, unsigned vertCnt)
 {
-  Clipper2Lib::PathD result;
+  Clipper2Lib::PathS result;
   result.reserve(vertCnt);
   for (unsigned i = 0; i < vertCnt; ++i)
-    result.push_back(Clipper2Lib::PointD(double(rand()) / RAND_MAX * width, double(rand()) / RAND_MAX * height));
+    result.push_back(Clipper2Lib::PointS(Scalar(rand()) / RAND_MAX * width, Scalar(rand()) / RAND_MAX * height));
   return result;
 }
 template <size_t N>
@@ -26,34 +29,34 @@ TEST(Clipper2Tests, TestMultiplePolygons)
   int test_number = start_num;
   while (test_number <= end_num)
   {
-    Clipper2Lib::Paths64 subject, subject_open, clip;
-    Clipper2Lib::Paths64 solution, solution_open;
+    Clipper2Lib::PathsI subject, subject_open, clip;
+    Clipper2Lib::PathsI solution, solution_open;
     Clipper2Lib::ClipType ct;
     Clipper2Lib::FillRule fr;
-    int64_t stored_area, stored_count;
+    Integer stored_area, stored_count;
     if (!LoadTestNum(ifs, test_number,
       subject, subject_open, clip, stored_area, stored_count, ct, fr)) break;
-    // check Paths64 solutions
-    Clipper2Lib::Clipper64 c;
+    // check PathsI solutions
+    Clipper2Lib::ClipperI c;
     c.AddSubject(subject);
     c.AddOpenSubject(subject_open);
     c.AddClip(clip);
     c.Execute(ct, fr, solution, solution_open);
-    const int64_t measured_area = static_cast<int64_t>(Area(solution));
-    const int64_t measured_count = static_cast<int64_t>(solution.size() + solution_open.size());
+    const Integer measured_area = static_cast<Integer>(Area(solution));
+    const Integer measured_count = static_cast<Integer>(solution.size() + solution_open.size());
     // check the polytree variant too
-    Clipper2Lib::PolyTree64 solution_polytree;
-    Clipper2Lib::Paths64 solution_polytree_open;
-    Clipper2Lib::Clipper64 clipper_polytree;
+    Clipper2Lib::PolyTreeI solution_polytree;
+    Clipper2Lib::PathsI solution_polytree_open;
+    Clipper2Lib::ClipperI clipper_polytree;
     clipper_polytree.AddSubject(subject);
     clipper_polytree.AddOpenSubject(subject_open);
     clipper_polytree.AddClip(clip);
     clipper_polytree.Execute(ct, fr, solution_polytree, solution_polytree_open);
-    const int64_t measured_area_polytree =
-      static_cast<int64_t>(solution_polytree.Area());
-    const auto solution_polytree_paths = PolyTreeToPaths64(solution_polytree);
-    const int64_t measured_count_polytree =
-      static_cast<int64_t>(solution_polytree_paths.size());
+    const Integer measured_area_polytree =
+      static_cast<Integer>(solution_polytree.Area());
+    const auto solution_polytree_paths = PolyTreeToPathsI(solution_polytree);
+    const Integer measured_count_polytree =
+      static_cast<Integer>(solution_polytree_paths.size());
     // check polygon counts
     if (stored_count <= 0)
       ; // skip count
@@ -92,16 +95,16 @@ TEST(Clipper2Tests, TestMultiplePolygons)
     ++test_number;
   }
   //EXPECT_GE(test_number, 188);
-  Clipper2Lib::PathsD subjd, clipd, solutiond;
+  Clipper2Lib::PathsS subjd, clipd, solutiond;
   Clipper2Lib::FillRule frd = Clipper2Lib::FillRule::NonZero;
 }
 TEST(Clipper2Tests, TestHorzSpikes) //#720
 {
-  Clipper2Lib::Paths64 paths = {
+  Clipper2Lib::PathsI paths = {
     Clipper2Lib::MakePath({1600,0, 1600,100, 2050,100, 2050,300, 450,300, 450, 0}),
     Clipper2Lib::MakePath({1800,200, 1800,100, 1600,100, 2000,100, 2000,200}) };
   std::cout << paths << std::endl;
-  Clipper2Lib::Clipper64 c;
+  Clipper2Lib::ClipperI c;
   c.AddSubject(paths);
   c.Execute(Clipper2Lib::ClipType::Union, Clipper2Lib::FillRule::NonZero, paths);
   EXPECT_GE(paths.size(), 1);
@@ -109,13 +112,13 @@ TEST(Clipper2Tests, TestHorzSpikes) //#720
 
 TEST(Clipper2Tests, TestCollinearOnMacOs) //#777
 {
-  Clipper2Lib::Paths64 subject;
+  Clipper2Lib::PathsI subject;
   subject.push_back(Clipper2Lib::MakePath({ 0, -453054451,0, -433253797,-455550000, 0 }));
   subject.push_back(Clipper2Lib::MakePath({ 0, -433253797,0, 0,-455550000, 0 }));
-  Clipper2Lib::Clipper64 clipper;
+  Clipper2Lib::ClipperI clipper;
   clipper.PreserveCollinear(false);
   clipper.AddSubject(subject);
-  Clipper2Lib::Paths64 solution;
+  Clipper2Lib::PathsI solution;
   clipper.Execute(Clipper2Lib::ClipType::Union, Clipper2Lib::FillRule::NonZero, solution);
   ASSERT_EQ(solution.size(), 1);
   EXPECT_EQ(solution[0].size(), 3);

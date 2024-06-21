@@ -65,19 +65,19 @@ namespace Clipper2Lib {
   //------------------------------------------------------------------------------
 
   void SvgWriter::AddText(const std::string &text,
-    unsigned font_color, unsigned font_size, double x, double y)
+    unsigned font_color, unsigned font_size, Scalar x, Scalar y)
   {
       text_infos.push_back(new TextInfo(text, "", font_color, 600, font_size, x, y));
   }
   //------------------------------------------------------------------------------
 
-  void SvgWriter::AddPath(const Path64& path, bool is_open, FillRule fillrule,
-    unsigned brush_color, unsigned pen_color, double pen_width, bool show_coords)
+  void SvgWriter::AddPath(const PathI& path, bool is_open, FillRule fillrule,
+    unsigned brush_color, unsigned pen_color, Scalar pen_width, bool show_coords)
   {
     int error_code = 0;
     if (path.size() == 0) return;
-    PathsD tmp;
-    tmp.push_back(ScalePath<double, int64_t>(path, scale_, error_code));
+    PathsS tmp;
+    tmp.push_back(ScalePath<Scalar, Integer>(path, scale_, error_code));
     if (error_code) return;
     PathInfo* pi = new PathInfo(tmp, is_open, fillrule,
       brush_color, pen_color, pen_width, show_coords);
@@ -85,23 +85,23 @@ namespace Clipper2Lib {
   }
   //------------------------------------------------------------------------------
 
-  void SvgWriter::AddPath(const PathD &path, bool is_open, FillRule fillrule,
-    unsigned brush_color, unsigned pen_color, double pen_width, bool show_coords)
+  void SvgWriter::AddPath(const PathS &path, bool is_open, FillRule fillrule,
+    unsigned brush_color, unsigned pen_color, Scalar pen_width, bool show_coords)
   {
     if (path.size() == 0) return;
-    PathsD p;
+    PathsS p;
     p.push_back(path);
     path_infos.push_back(new PathInfo(p, is_open, fillrule,
       brush_color, pen_color, pen_width, show_coords));
   }
   //------------------------------------------------------------------------------
 
-  void SvgWriter::AddPaths(const Paths64& paths, bool is_open, FillRule fillrule,
-    unsigned brush_color, unsigned pen_color, double pen_width, bool show_coords)
+  void SvgWriter::AddPaths(const PathsI& paths, bool is_open, FillRule fillrule,
+    unsigned brush_color, unsigned pen_color, Scalar pen_width, bool show_coords)
   {
     int error_code = 0;
     if (paths.size() == 0) return;
-    PathsD tmp = ScalePaths<double, int64_t>(paths, scale_, error_code);
+    PathsS tmp = ScalePaths<Scalar, Integer>(paths, scale_, error_code);
     if (error_code) return;
     PathInfo* pi = new PathInfo(tmp, is_open, fillrule,
       brush_color, pen_color, pen_width, show_coords);
@@ -109,8 +109,8 @@ namespace Clipper2Lib {
   }
   //------------------------------------------------------------------------------
 
-  void SvgWriter::AddPaths(const PathsD &paths, bool is_open, FillRule fillrule,
-    unsigned brush_color, unsigned pen_color, double pen_width, bool show_coords)
+  void SvgWriter::AddPaths(const PathsS &paths, bool is_open, FillRule fillrule,
+    unsigned brush_color, unsigned pen_color, Scalar pen_width, bool show_coords)
   {
     if (paths.size() == 0) return;
     path_infos.push_back(new PathInfo(paths, is_open, fillrule,
@@ -118,20 +118,20 @@ namespace Clipper2Lib {
   }
   //------------------------------------------------------------------------------
 
-  void SvgWriter::DrawCircle(std::ofstream& file, double x, double y, double radius)
+  void SvgWriter::DrawCircle(std::ofstream& file, Scalar x, Scalar y, Scalar radius)
   {
     file << "  <circle cx = \"" << x << "\" cy = \"" << y << "\" r = \"" << radius
       << "\" stroke = \"none\" fill = \"red\" />\n";
   }
   //------------------------------------------------------------------------------
 
-  PathsD SimulateNegativeFill(const PathsD paths)
+  PathsS SimulateNegativeFill(const PathsS paths)
   {
     return Union(paths, FillRule::Negative);
   }
   //------------------------------------------------------------------------------
 
-  PathsD SimulatePositiveFill(const PathsD paths)
+  PathsS SimulatePositiveFill(const PathsS paths)
   {
     return Union(paths, FillRule::Positive);
   }
@@ -140,10 +140,10 @@ namespace Clipper2Lib {
   bool SvgWriter::SaveToFile(const std::string &filename,
     int max_width, int max_height, int margin)
   {
-    RectD rec = InvalidRectD;
+    RectS rec = InvalidRectD;
     for (const PathInfo* pi : path_infos)
-      for (const PathD& path : pi->paths_)
-        for (const PointD& pt : path){
+      for (const PathS& path : pi->paths_)
+        for (const PointS& pt : path){
           if (pt.x < rec.left) rec.left = pt.x;
           if (pt.x > rec.right) rec.right = pt.x;
           if (pt.y < rec.top) rec.top = pt.y;
@@ -154,13 +154,13 @@ namespace Clipper2Lib {
     if (margin < 20) margin = 20;
     if (max_width < 100) max_width = 100;
     if (max_height < 100) max_height = 100;
-    double  scale = std::min(
-      static_cast<double>(max_width - margin * 2) / rec.Width(),
-      static_cast<double>(max_height - margin * 2) / rec.Height());
+    Scalar  scale = std::min(
+      static_cast<Scalar>(max_width - margin * 2) / rec.Width(),
+      static_cast<Scalar>(max_height - margin * 2) / rec.Height());
 
     rec.Scale(scale);
-    double offsetX = margin -rec.left;
-    double offsetY = margin -rec.top;
+    Scalar offsetX = margin -rec.left;
+    Scalar offsetY = margin -rec.top;
 
     std::ofstream file;
     file.open(filename);
@@ -181,17 +181,17 @@ namespace Clipper2Lib {
         (pi->fillrule_ != FillRule::Positive && pi->fillrule_ != FillRule::Negative))
           continue;
 
-      PathsD ppp = pi->fillrule_ == FillRule::Positive ?
+      PathsS ppp = pi->fillrule_ == FillRule::Positive ?
         SimulatePositiveFill(pi->paths_) :
         SimulateNegativeFill(pi->paths_);
 
       file << "  <path d=\"";
-      for (PathD& path : ppp)
+      for (PathS& path : ppp)
       {
         if (path.size() < 2 || (path.size() == 2 && !pi->is_open_path)) continue;
-        file << " M " << (static_cast<double>(path[0].x) * scale + offsetX) <<
-          " " << (static_cast<double>(path[0].y) * scale + offsetY);
-        for (PointD& pt : path)
+        file << " M " << (static_cast<Scalar>(path[0].x) * scale + offsetX) <<
+          " " << (static_cast<Scalar>(path[0].y) * scale + offsetY);
+        for (PointS& pt : path)
           file << " L " << (pt.x * scale + offsetX) << " "
           << (pt.y * scale + offsetY);
         if (!pi->is_open_path)  file << " z";
@@ -212,12 +212,12 @@ namespace Clipper2Lib {
         0 : pi->brush_color_;
 
       file << "  <path d=\"";
-      for (PathD& path : pi->paths_)
+      for (PathS& path : pi->paths_)
       {
         if (path.size() < 2 || (path.size() == 2 && !pi->is_open_path)) continue;
-        file << " M " << (static_cast<double>(path[0].x) * scale + offsetX) <<
-          " " << (static_cast<double>(path[0].y) * scale + offsetY);
-        for (PointD& pt : path)
+        file << " M " << (static_cast<Scalar>(path[0].x) * scale + offsetX) <<
+          " " << (static_cast<Scalar>(path[0].y) * scale + offsetY);
+        for (PointS& pt : path)
           file << " L " << (pt.x * scale + offsetX) << " "
             << (pt.y * scale + offsetY);
         if(!pi->is_open_path)  file << " z";
@@ -235,11 +235,11 @@ namespace Clipper2Lib {
           "  <g font-family=\"" << coords_style.font_name << "\" font-size=\"" <<
           coords_style.font_size  << "\" fill=\""<< ColorToHtml(coords_style.font_color) <<
           "\" fill-opacity=\"" << GetAlphaAsFrac(coords_style.font_color) << "\">\n";
-        for (const PathD& path : pi->paths_)
+        for (const PathS& path : pi->paths_)
         {
           size_t path_len = path.size();
           if (path_len < 2 || (path_len == 2 && !pi->is_open_path)) continue;
-          for (const PointD& pt : path)
+          for (const PointS& pt : path)
             file << "    <text x=\"" << static_cast<int>(pt.x * scale + offsetX) <<
               "\" y=\"" << static_cast<int>(pt.y * scale + offsetY) << "\">" <<
               pt.x << "," << pt.y << "</text>\n";
@@ -251,8 +251,8 @@ namespace Clipper2Lib {
     ////draw red dots at all solution vertices - useful for debugging
     //for (PathInfo* pi : path_infos)
     //  if (!(pi->pen_color_ & 0x00FF00FF)) // ie any shade of green only
-    //    for (PathD& path : pi->paths_)
-    //      for (PointD& pt : path)
+    //    for (PathS& path : pi->paths_)
+    //      for (PointS& pt : path)
     //        DrawCircle(file, pt.x * scale + offsetX, pt.y * scale + offsetY, 1.6);
 
     for (TextInfo* ti : text_infos)
@@ -283,7 +283,7 @@ namespace Clipper2Lib {
   //------------------------------------------------------------------------------
 
   bool GetNum(std::string::const_iterator& si,
-    const std::string::const_iterator se, double& value)
+    const std::string::const_iterator se, Scalar& value)
   {
     while (si != se && *si <= ' ') ++si;
     if (si != se &&  *si == ',') ++si;
@@ -354,13 +354,13 @@ namespace Clipper2Lib {
     int vals_needed = 2;
     //nb: M == absolute move, m == relative move
     if (!GetCommand(p, command, is_relative) || command != 'M') return false;
-    double vals[2] { 0, 0 };
-    double x = 0, y = 0;
+    Scalar vals[2] { 0, 0 };
+    Scalar x = 0, y = 0;
     ++p;
     if (!GetNum(p, pe, x) || !GetNum(p, pe, y)) return false;
-    PathsD ppp;
-    PathD pp;
-    pp.push_back(PointD(x, y));
+    PathsS ppp;
+    PathS pp;
+    pp.push_back(PointS(x, y));
     while (SkipBlanks(p, pe))
     {
       if (GetCommand(p, command, is_relative))
@@ -400,7 +400,7 @@ namespace Clipper2Lib {
           }
           default: break;
         }
-        pp.push_back(PointD(x, y));
+        pp.push_back(PointS(x, y));
       }
     }
     if (pp.size() > 3) ppp.push_back(pp);
@@ -432,9 +432,9 @@ namespace Clipper2Lib {
       return path_infos.size() > 0;
   }
 
-  PathsD SvgReader::GetPaths()
+  PathsS SvgReader::GetPaths()
   {
-    PathsD result;
+    PathsS result;
       for (size_t i = 0; i < path_infos.size(); ++i)
           for (size_t j = 0; j < path_infos[i]->paths_.size(); ++j)
               result.push_back(path_infos[i]->paths_[j]);

@@ -10,23 +10,23 @@ using namespace Clipper2Lib;
 
 void System(const std::string &filename);
 void TestingZ_Int64();
-void TestingZ_Double();
+void TestingZ_Scalar();
 
 // use the Z callback to flag intersections by setting z = 1;
 
 class MyClass {
 public:
   
-  // Point64 callback - see TestingZ_Int64()
-  void myZCB(const Point64& e1bot, const Point64& e1top,
-    const Point64& e2bot, const Point64& e2top, Point64& pt)
+  // PointI callback - see TestingZ_Int64()
+  void myZCB(const PointI& e1bot, const PointI& e1top,
+    const PointI& e2bot, const PointI& e2top, PointI& pt)
   {
     pt.z = 1;
   }
 
-  // PointD callback - see TestingZ_Double()
-  void myZCBD(const PointD& e1bot, const PointD& e1top,
-    const PointD& e2bot, const PointD& e2top, PointD& pt)
+  // PointS callback - see TestingZ_Scalar()
+  void myZCBD(const PointS& e1bot, const PointS& e1top,
+    const PointS& e2bot, const PointS& e2top, PointS& pt)
   {
     pt.z = 1;
   }
@@ -35,15 +35,15 @@ public:
 int main(int argc, char* argv[])
 {
   //TestingZ_Int64();
-  TestingZ_Double();
+  TestingZ_Scalar();
 }
 
 void TestingZ_Int64()
 {
 
-  Paths64 subject, solution;
+  PathsI subject, solution;
   MyClass mc;
-  Clipper64 c64;
+  ClipperI c64;
 
   subject.push_back(MakePath({ 100, 50, 10, 79, 65, 2, 65, 98, 10, 21 }));
   c64.AddSubject(subject);
@@ -57,12 +57,12 @@ void TestingZ_Int64()
   SvgAddSolution(svg, solution, FillRule::NonZero, false);
   if (solution.size() > 0) {
     // draw circles around intersection points - flagged by z == 1
-    PathsD ellipses;
-    double r = 3.0;
-    for (const Point64& pt : solution[0])
+    PathsS ellipses;
+    Scalar r = 3.0;
+    for (const PointI& pt : solution[0])
       if (pt.z == 1)
       {
-        ellipses.push_back(Ellipse(RectD(pt.x - r, pt.y - r, pt.x + r, pt.y + r), 11));
+        ellipses.push_back(Ellipse(RectS(pt.x - r, pt.y - r, pt.x + r, pt.y + r), 11));
       }
     SvgAddClip(svg, ellipses, FillRule::NonZero);
   }
@@ -70,13 +70,13 @@ void TestingZ_Int64()
   System("usingz_int64.svg");
 }
 
-void TestingZ_Double()
+void TestingZ_Scalar()
 {
-  PathsD subject, solution;
+  PathsS subject, solution;
   MyClass mc;
-  ClipperD c;
+  ClipperS c;
 
-  subject.push_back(MakePathD({ 100, 50, 10, 79, 65, 2, 65, 98, 10, 21 }));
+  subject.push_back(MakePathS({ 100, 50, 10, 79, 65, 2, 65, 98, 10, 21 }));
   c.AddSubject(subject);
   c.SetZCallback(
     std::bind(&MyClass::myZCBD, mc, std::placeholders::_1,
@@ -89,17 +89,17 @@ void TestingZ_Double()
   if (solution.size() > 0) 
   {
     // draw circles around intersection points
-    PathsD ellipses;
-    double r = 3.0;
-    for (const PointD& pt : solution[0])
+    PathsS ellipses;
+    Scalar r = 3.0;
+    for (const PointS& pt : solution[0])
       if (pt.z == 1)
-        ellipses.push_back(Ellipse(RectD(pt.x - r, pt.y - r, 
+        ellipses.push_back(Ellipse(RectS(pt.x - r, pt.y - r, 
           pt.x + r, pt.y + r), 11));
 
     SvgAddSolution(svg, ellipses, FillRule::NonZero, false);
   }
-  SvgSaveToFile(svg, "usingz_double.svg", 320, 320, 0);
-  System("usingz_double.svg");
+  SvgSaveToFile(svg, "usingz_Scalar.svg", 320, 320, 0);
+  System("usingz_Scalar.svg");
 }
 
 void System(const std::string &filename)

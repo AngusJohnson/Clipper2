@@ -33,7 +33,8 @@ private:
   std::streamsize old_precision = std::cout.precision(0);
   std::ios_base::fmtflags old_flags = std::cout.flags();
   std::chrono::high_resolution_clock::time_point time_started_;
-  std::chrono::high_resolution_clock::duration duration_ = {};
+  typedef std::chrono::duration<uint64_t, std::nano> nanosec;
+  nanosec duration_ = {};
   bool paused_ = false;
 
 public:
@@ -67,7 +68,7 @@ public:
     paused_ = true;
   }
 
-  int64_t elapsed_nano() // result in nano-seconds
+  uint64_t elapsed_nano() // result in nano-seconds
   {
     if (!paused_)
     {
@@ -75,13 +76,13 @@ public:
         std::chrono::high_resolution_clock::now();
       duration_ += (now - time_started_);
     }
-    return std::chrono::duration_cast<std::chrono::nanoseconds>(duration_).count();
+    return std::chrono::duration_cast<nanosec>(duration_).count();
   }
 
   std::string elapsed_str() // result as string
   {
-    int64_t nano_secs = elapsed_nano();
-    int nsecs_log10 = static_cast<int>(std::log10(nano_secs));
+    uint64_t nano_secs = elapsed_nano();
+    uint64_t nsecs_log10 = static_cast<uint64_t>(std::log10(nano_secs));
     std::ostringstream os{};
     os.precision(static_cast<uint8_t>(2.0 - (nsecs_log10 % 3)));
     os << std::fixed;

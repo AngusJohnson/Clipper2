@@ -9,7 +9,7 @@ using namespace std;
 using namespace Clipper2Lib;
 
 bool GetInt(string::const_iterator& s_it,
-  const string::const_iterator& it_end, int64_t& value)
+  const string::const_iterator& it_end, Integer& value)
 {
   value = 0;
   while (s_it != it_end && *s_it == ' ') ++s_it;
@@ -19,7 +19,7 @@ bool GetInt(string::const_iterator& s_it,
   string::const_iterator s_it2 = s_it;
   while (s_it != it_end && *s_it >= '0' && *s_it <= '9')
   {
-    value = value * 10 + static_cast<int64_t>(*s_it++) - 48;
+    value = value * 10 + static_cast<Integer>(*s_it++) - 48;
   }
 
   if (s_it == s_it2) return false; //no value
@@ -30,19 +30,19 @@ bool GetInt(string::const_iterator& s_it,
   return true;
 }
 
-bool GetPath(const string& line, Paths64& paths)
+bool GetPath(const string& line, PathsI& paths)
 {
-  Path64 p;
-  int64_t x = 0, y = 0;
+  PathI p;
+  Integer x = 0, y = 0;
   string::const_iterator s_it = line.cbegin(), s_end = line.cend();
   while (GetInt(s_it, s_end, x) && GetInt(s_it, s_end, y))
-    p.push_back(Point64(x, y));
+    p.push_back(PointI(x, y));
   if (p.empty()) return false;
   paths.push_back(p);
   return true;
 }
 
-void GetPaths(ifstream& source, Paths64& paths)
+void GetPaths(ifstream& source, PathsI& paths)
 {
   while (true)
   {
@@ -57,8 +57,8 @@ void GetPaths(ifstream& source, Paths64& paths)
 }
 
 bool LoadTestNum(ifstream &source, int test_num,
-  Paths64 &subj, Paths64 &subj_open, Paths64 &clip,
-  int64_t& area, int64_t& count, ClipType &ct, FillRule &fr)
+  PathsI &subj, PathsI &subj_open, PathsI &clip,
+  Integer& area, Integer& count, ClipType &ct, FillRule &fr)
 {
   string line;
   area = 0; count = 0;

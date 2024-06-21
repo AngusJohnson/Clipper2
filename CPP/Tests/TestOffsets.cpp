@@ -10,19 +10,19 @@ TEST(Clipper2Tests, TestOffsets) {
   for (int test_number = 1; test_number <= 2; ++test_number)
   {
     ClipperOffset co;
-    Paths64 subject, subject_open, clip;
-    Paths64 solution, solution_open;
+    PathsI subject, subject_open, clip;
+    PathsI solution, solution_open;
     ClipType ct = ClipType::None;
     FillRule fr = FillRule::NonZero;
-    int64_t stored_area = 0, stored_count = 0;
+    Integer stored_area = 0, stored_count = 0;
     ASSERT_TRUE(LoadTestNum(ifs, test_number, subject, subject_open, clip, stored_area, stored_count, ct, fr));
     co.AddPaths(subject, JoinType::Round, EndType::Polygon);
-    Paths64 outputs;
+    PathsI outputs;
     co.Execute(1, outputs);
     // is the sum total area of the solution is positive
     const auto outer_is_positive = Area(outputs) > 0;
     // there should be exactly one exterior path
-    const auto is_positive_func = IsPositive<int64_t>;
+    const auto is_positive_func = IsPositive<Integer>;
     const auto is_positive_count = std::count_if(
       outputs.begin(), outputs.end(), is_positive_func);
     const auto is_negative_count =
@@ -34,31 +34,31 @@ TEST(Clipper2Tests, TestOffsets) {
   }
   ifs.close();
 }
-static Point64 MidPoint(const Point64& p1, const Point64& p2)
+static PointI MidPoint(const PointI& p1, const PointI& p2)
 {
-  Point64 result;
+  PointI result;
   result.x = (p1.x + p2.x) / 2;
   result.y = (p1.y + p2.y) / 2;
   return result;
 }
 TEST(Clipper2Tests, TestOffsets2) { // see #448 & #456
-  double scale = 10, delta = 10 * scale, arc_tol = 0.25 * scale;
-  Paths64 subject, solution;
+  Scalar scale = 10, delta = 10 * scale, arc_tol = 0.25 * scale;
+  PathsI subject, solution;
   ClipperOffset c;
   subject.push_back(MakePath({ 50,50, 100,50, 100,150, 50,150, 0,100 }));
   int err;
-  subject = ScalePaths<int64_t, int64_t>(subject, scale, err);
+  subject = ScalePaths<Integer, Integer>(subject, scale, err);
   c.AddPaths(subject, JoinType::Round, EndType::Polygon);
   c.ArcTolerance(arc_tol);
   c.Execute(delta, solution);
-  double min_dist = delta * 2, max_dist = 0;
-  for (const Point64& subjPt : subject[0])
+  Scalar min_dist = delta * 2, max_dist = 0;
+  for (const PointI& subjPt : subject[0])
   {
-    Point64 prevPt = solution[0][solution[0].size() - 1];
-    for (const Point64& pt : solution[0])
+    PointI prevPt = solution[0][solution[0].size() - 1];
+    for (const PointI& pt : solution[0])
     {
-      Point64 mp = MidPoint(prevPt, pt);
-      double d = Distance(mp, subjPt);
+      PointI mp = MidPoint(prevPt, pt);
+      Scalar d = Distance(mp, subjPt);
       if (d < delta * 2)
       {
         if (d < min_dist) min_dist = d;
@@ -73,7 +73,7 @@ TEST(Clipper2Tests, TestOffsets2) { // see #448 & #456
 
 TEST(Clipper2Tests, TestOffsets3) // see #424
 {
-  Paths64 subjects = {{
+  PathsI subjects = {{
    {1525311078, 1352369439}, {1526632284, 1366692987}, {1519397110, 1367437476},
    {1520246456, 1380177674}, {1520613458, 1385913385}, {1517383844, 1386238444},
    {1517771817, 1392099983}, {1518233190, 1398758441}, {1518421934, 1401883197},
@@ -93,15 +93,15 @@ TEST(Clipper2Tests, TestOffsets3) // see #424
    {1602758902, 1378489467}, {1618990858, 1376350372}, {1615058698, 1344085688},
    {1603230761, 1345700495}, {1598648484, 1346329641}, {1598931599, 1348667965},
    {1596698132, 1348993024}, {1595775386, 1342722540} }};
-  Paths64 solution = InflatePaths(subjects, -209715, JoinType::Miter, EndType::Polygon);
+  PathsI solution = InflatePaths(subjects, -209715, JoinType::Miter, EndType::Polygon);
   EXPECT_LE(solution[0].size() - subjects[0].size(), 1);
 }
 
 TEST(Clipper2Tests, TestOffsets4) // see #482
 {
-  Paths64 paths = { { {0, 0}, {20000, 200},
+  PathsI paths = { { {0, 0}, {20000, 200},
     {40000, 0}, {40000, 50000}, {0, 50000}, {0, 0}} };
-  Paths64 solution = InflatePaths(paths, -5000,
+  PathsI solution = InflatePaths(paths, -5000,
     JoinType::Square, EndType::Polygon);
   //std::cout << solution[0].size() << std::endl;
   EXPECT_EQ(solution[0].size(), 5);
@@ -127,7 +127,7 @@ TEST(Clipper2Tests, TestOffsets4) // see #482
 
 TEST(Clipper2Tests, TestOffsets5) // modified from #593 (tests offset clean up)
 {
-  Paths64 subject = {
+  PathsI subject = {
     MakePath({
       524,1483, 524,2711, 610,2744, 693,2782, 773,2825, 852,2872,
       927,2924, 999,2980, 1068,3040, 1133,3103, 1195,3171, 1252,3242,
@@ -349,13 +349,13 @@ TEST(Clipper2Tests, TestOffsets5) // modified from #593 (tests offset clean up)
       }),
     MakePath({ -47877,-47877, 84788,-47877, 84788,81432, -47877,81432 })
   };
-  Paths64 solution = InflatePaths(subject, -10000, JoinType::Round, EndType::Polygon);
+  PathsI solution = InflatePaths(subject, -10000, JoinType::Round, EndType::Polygon);
   EXPECT_EQ(solution.size(), 2);
 }
 
 TEST(Clipper2Tests, TestOffsets6) // also modified from #593 (tests rounded ends)
 {
-  Paths64 subjects = {
+  PathsI subjects = {
     {{620,620}, {-620,620}, {-620,-620}, {620,-620}},
     {{20,-277}, {42,-275}, {59,-272}, {80,-266}, {97,-261}, {114,-254},
     {135,-243}, {149,-235}, {167,-222}, {182,-211}, {197,-197},
@@ -365,21 +365,21 @@ TEST(Clipper2Tests, TestOffsets6) // also modified from #593 (tests rounded ends
     {223,-167}, {212,-181}, {197,-197}, {182,-211}, {168,-222}, {152,-233},
     {135,-243}, {114,-254}, {97,-261}, {80,-267}, {59,-272}, {42,-275}, {20,-278}}
   };
-  const double offset = -50;
+  const Scalar offset = -50;
   Clipper2Lib::ClipperOffset offseter;
-  Clipper2Lib::Paths64 tmpSubject;
+  Clipper2Lib::PathsI tmpSubject;
   offseter.AddPaths(subjects, Clipper2Lib::JoinType::Round, Clipper2Lib::EndType::Polygon);
-  Clipper2Lib::Paths64 solution;
+  Clipper2Lib::PathsI solution;
   offseter.Execute(offset, solution);
   EXPECT_EQ(solution.size(), 2);
-  double area = Area<int64_t>(solution[1]);
+  Scalar area = Area<Integer>(solution[1]);
   EXPECT_LT(area, -47500);
 }
 
 TEST(Clipper2Tests, TestOffsets7) // (#593 & #715)
 {
-  Paths64 solution;
-  Paths64 subject = { MakePath({0,0, 100,0, 100,100, 0,100}) };
+  PathsI solution;
+  PathsI subject = { MakePath({0,0, 100,0, 100,100, 0,100}) };
   solution = InflatePaths(subject, -50, JoinType::Miter, EndType::Polygon);
   EXPECT_EQ(solution.size(), 0);
   subject.push_back(MakePath({ 40,60, 60,60, 60,40, 40,40 }));
@@ -396,57 +396,57 @@ TEST(Clipper2Tests, TestOffsets7) // (#593 & #715)
 
 struct OffsetQual
 {
-  PointD smallestInSub;   // smallestInSub & smallestInSol are the points in subject and solution
-  PointD smallestInSol;   // that define the place that most falls short of the expected offset
-  PointD largestInSub;    // largestInSub & largestInSol are the points in subject and solution
-  PointD largestInSol;    // that define the place that most exceeds the expected offset
+  PointS smallestInSub;   // smallestInSub & smallestInSol are the points in subject and solution
+  PointS smallestInSol;   // that define the place that most falls short of the expected offset
+  PointS largestInSub;    // largestInSub & largestInSol are the points in subject and solution
+  PointS largestInSol;    // that define the place that most exceeds the expected offset
 };
 
 template<typename T>
-inline PointD GetClosestPointOnSegment(const PointD& offPt,
+inline PointS GetClosestPointOnSegment(const PointS& offPt,
   const Point<T>& seg1, const Point<T>& seg2)
 {
-  if (seg1.x == seg2.x && seg1.y == seg2.y) return PointD(seg1);
-  double dx = static_cast<double>(seg2.x - seg1.x);
-  double dy = static_cast<double>(seg2.y - seg1.y);
-  double q = (
-    (offPt.x - static_cast<double>(seg1.x)) * dx +
-    (offPt.y - static_cast<double>(seg1.y)) * dy) /
+  if (seg1.x == seg2.x && seg1.y == seg2.y) return PointS(seg1);
+  Scalar dx = static_cast<Scalar>(seg2.x - seg1.x);
+  Scalar dy = static_cast<Scalar>(seg2.y - seg1.y);
+  Scalar q = (
+    (offPt.x - static_cast<Scalar>(seg1.x)) * dx +
+    (offPt.y - static_cast<Scalar>(seg1.y)) * dy) /
     (Sqr(dx) + Sqr(dy));
   q = (q < 0) ? 0 : (q > 1) ? 1 : q;
-  return PointD(
-    static_cast<double>(seg1.x) + (q * dx),
-    static_cast<double>(seg1.y) + (q * dy));
+  return PointS(
+    static_cast<Scalar>(seg1.x) + (q * dx),
+    static_cast<Scalar>(seg1.y) + (q * dy));
 }
 
 template<typename T>
-static OffsetQual GetOffsetQuality(const Path<T>& subject, const Path<T>& solution, const double delta)
+static OffsetQual GetOffsetQuality(const Path<T>& subject, const Path<T>& solution, const Scalar delta)
 {
   if (!subject.size() || !solution.size()) return OffsetQual();
-  double desiredDistSqr = delta * delta;
-  double smallestSqr = desiredDistSqr, largestSqr = desiredDistSqr;
-  double deviationsSqr = 0;
+  Scalar desiredDistSqr = delta * delta;
+  Scalar smallestSqr = desiredDistSqr, largestSqr = desiredDistSqr;
+  Scalar deviationsSqr = 0;
   OffsetQual oq;
   const size_t subVertexCount = 4; // 1 .. 100 :)
-  const double subVertexFrac = 1.0 / subVertexCount;
+  const Scalar subVertexFrac = 1.0 / subVertexCount;
   Point<T> solPrev = solution[solution.size() - 1];
   for (const Point<T>& solPt0 : solution)
   {
     for (size_t i = 0; i < subVertexCount; ++i)
     {
       // divide each edge in solution into series of sub-vertices (solPt),
-      PointD solPt = PointD(
-        static_cast<double>(solPrev.x) + static_cast<double>(solPt0.x - solPrev.x) * subVertexFrac * i,
-        static_cast<double>(solPrev.y) + static_cast<double>(solPt0.y - solPrev.y) * subVertexFrac * i);
+      PointS solPt = PointS(
+        static_cast<Scalar>(solPrev.x) + static_cast<Scalar>(solPt0.x - solPrev.x) * subVertexFrac * i,
+        static_cast<Scalar>(solPrev.y) + static_cast<Scalar>(solPt0.y - solPrev.y) * subVertexFrac * i);
       // now find the closest point in subject to each of these solPt.
-      PointD closestToSolPt;
-      double closestDistSqr = std::numeric_limits<double>::infinity();
+      PointS closestToSolPt;
+      Scalar closestDistSqr = std::numeric_limits<Scalar>::infinity();
       Point<T> subPrev = subject[subject.size() - 1];
       for (size_t i = 0; i < subject.size(); ++i)
       {
-        PointD closestPt = ::GetClosestPointOnSegment(solPt, subject[i], subPrev);
+        PointS closestPt = ::GetClosestPointOnSegment(solPt, subject[i], subPrev);
         subPrev = subject[i];
-        const double sqrDist = DistanceSqr(closestPt, solPt);
+        const Scalar sqrDist = DistanceSqr(closestPt, solPt);
         if (sqrDist < closestDistSqr) {
           closestDistSqr = sqrDist;
           closestToSolPt = closestPt;
@@ -474,7 +474,7 @@ static OffsetQual GetOffsetQuality(const Path<T>& subject, const Path<T>& soluti
 
 TEST(Clipper2Tests, TestOffsets8) // (#724)
 {
-  Paths64 subject = { MakePath({
+  PathsI subject = { MakePath({
        91759700, -49711991,    83886095, -50331657,
        -872415388, -50331657,  -880288993, -49711991,  -887968725, -47868251,
        -895265482, -44845834,  -901999593, -40719165,  -908005244, -35589856,
@@ -555,12 +555,12 @@ TEST(Clipper2Tests, TestOffsets8) // (#724)
        124605260, -29584205,   119475951, -35589856,   113470300, -40719165,
        106736189, -44845834,   99439432, -47868251,    91759700, -49711991
     }) };
-  double offset = -50329979.277800001, arc_tol = 5000;
-  Paths64 solution = InflatePaths(subject, offset, JoinType::Round, EndType::Polygon, 2, arc_tol);
+  Scalar offset = -50329979.277800001, arc_tol = 5000;
+  PathsI solution = InflatePaths(subject, offset, JoinType::Round, EndType::Polygon, 2, arc_tol);
   OffsetQual oq = GetOffsetQuality(subject[0], solution[0], offset);
-  double smallestDist = Distance(oq.smallestInSub, oq.smallestInSol);
-  double largestDist = Distance(oq.largestInSub, oq.largestInSol);
-  const double rounding_tolerance = 1.0;
+  Scalar smallestDist = Distance(oq.smallestInSub, oq.smallestInSol);
+  Scalar largestDist = Distance(oq.largestInSub, oq.largestInSol);
+  const Scalar rounding_tolerance = 1.0;
   offset = std::abs(offset);
   //std::cout << std::setprecision(0) << std::fixed;
   //std::cout << "Expected delta           : " << offset << std::endl;
@@ -583,8 +583,8 @@ TEST(Clipper2Tests, TestOffsets9) // (#733)
   // solution orientations should match subject orientations UNLESS
   // reverse_solution is set true in ClipperOffset's constructor
   // start subject's orientation positive ...
-  Paths64 subject{ MakePath({100,100, 200,100, 200, 400, 100, 400}) };
-  Paths64 solution = InflatePaths(subject, 50, JoinType::Miter, EndType::Polygon);
+  PathsI subject{ MakePath({100,100, 200,100, 200, 400, 100, 400}) };
+  PathsI solution = InflatePaths(subject, 50, JoinType::Miter, EndType::Polygon);
   EXPECT_EQ(solution.size(), 1);
   EXPECT_TRUE(IsPositive(solution[0]));
   // reversing subject's orientation should not affect delta direction
@@ -617,7 +617,7 @@ TEST(Clipper2Tests, TestOffsets9) // (#733)
 
 TEST(Clipper2Tests, TestOffsets10) // see #715
 {
-  Paths64 subjects = {
+  PathsI subjects = {
          {{508685336, -435806096},
           {509492982, -434729201},
           {509615525, -434003092},
@@ -652,7 +652,7 @@ TEST(Clipper2Tests, TestOffsets10) // see #715
           {106795129, -62112022}} };
 
   Clipper2Lib::ClipperOffset offseter(2, 104857.61318750000);
-  Paths64 solution;
+  PathsI solution;
   offseter.AddPaths(subjects, Clipper2Lib::JoinType::Round, Clipper2Lib::EndType::Polygon);
   offseter.Execute(-2212495.6382562499, solution);
   EXPECT_EQ(solution.size(), 2);
