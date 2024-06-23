@@ -582,7 +582,7 @@ namespace Clipper2Lib {
   }
 
   template <typename T>
-  inline Path<T> Ellipse(const Rect<T>& rect, int steps = 0)
+  inline Path<T> Ellipse(const Rect<T>& rect, size_t steps = 0)
   {
     return Ellipse(rect.MidPoint(),
       static_cast<double>(rect.Width()) *0.5,
@@ -591,12 +591,12 @@ namespace Clipper2Lib {
 
   template <typename T>
   inline Path<T> Ellipse(const Point<T>& center,
-    double radiusX, double radiusY = 0, int steps = 0)
+    double radiusX, double radiusY = 0, size_t steps = 0)
   {
     if (radiusX <= 0) return Path<T>();
     if (radiusY <= 0) radiusY = radiusX;
     if (steps <= 2)
-      steps = static_cast<int>(PI * sqrt((radiusX + radiusY) / 2));
+      steps = static_cast<size_t>(PI * sqrt((radiusX + radiusY) / 2));
 
     double si = std::sin(2 * PI / steps);
     double co = std::cos(2 * PI / steps);
@@ -604,7 +604,7 @@ namespace Clipper2Lib {
     Path<T> result;
     result.reserve(steps);
     result.push_back(Point<T>(center.x + radiusX, static_cast<double>(center.y)));
-    for (int i = 1; i < steps; ++i)
+    for (size_t i = 1; i < steps; ++i)
     {
       result.push_back(Point<T>(center.x + radiusX * dx, center.y + radiusY * dy));
       double x = dx * co - dy * si;

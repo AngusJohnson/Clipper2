@@ -618,9 +618,9 @@ namespace Clipper2Lib {
     std::vector<Vertex*>& vertexLists, LocalMinimaList& locMinList)
   {
     const auto total_vertex_count =
-      std::accumulate(paths.begin(), paths.end(), 0,
+      std::accumulate(paths.begin(), paths.end(), size_t(0),
         [](const auto& a, const Path64& path)
-        {return a + static_cast<unsigned>(path.size()); });
+        {return a + path.size(); });
     if (total_vertex_count == 0) return;
 
     Vertex* vertices = new Vertex[total_vertex_count], * v = vertices;

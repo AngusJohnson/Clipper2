@@ -50,9 +50,9 @@ namespace Clipper2Lib
     OutPt2List edges_[8]; // clockwise and counter-clockwise
     std::vector<Location> start_locs_;
     void CheckEdges();
-    void TidyEdges(int idx, OutPt2List& cw, OutPt2List& ccw);
+    void TidyEdges(size_t idx, OutPt2List& cw, OutPt2List& ccw);
     void GetNextLocation(const Path64& path,
-      Location& loc, int& i, int highI);
+      Location& loc, size_t& i, size_t highI);
     OutPt2* Add(Point64 pt, bool start_new = false);
     void AddCorner(Location prev, Location curr);
     void AddCorner(Location& loc, bool isClockwise);

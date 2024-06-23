@@ -29,7 +29,7 @@ private:
 public:
   SetConsoleTextColor(TextColor color) : _color(color) {};
 
-  static friend std::ostream& operator<< (std::ostream& out, SetConsoleTextColor const& scc)
+  friend std::ostream& operator<< (std::ostream& out, SetConsoleTextColor const& scc)
   {
     return out << "\x1B[" << scc._color << "m";
   }

@@ -20,9 +20,9 @@ const double floating_point_tolerance = 1e-12;
 // Miscellaneous methods
 //------------------------------------------------------------------------------
 
-int GetLowestClosedPathIdx(const Paths64& paths)
+std::optional<size_t> GetLowestClosedPathIdx(const Paths64& paths)
 {
-	int result = -1;
+    std::optional<size_t> result;
 	Point64 botPt = Point64(INT64_MAX, INT64_MIN);
 	for (size_t i = 0; i < paths.size(); ++i)
 	{
@@ -30,7 +30,7 @@ int GetLowestClosedPathIdx(const Paths64& paths)
 		{
 			if ((pt.y < botPt.y) || 
 				((pt.y == botPt.y) && (pt.x >= botPt.x))) continue;
-		  result = static_cast<int>(i);
+            result = i;
 			botPt.x = pt.x;
 			botPt.y = pt.y;
 		}
@@ -129,11 +129,11 @@ ClipperOffset::Group::Group(const Paths64& _paths, JoinType _join_type, EndType 
 		// the lowermost path must be an outer path, so if its orientation is negative,
 		// then flag the whole group is 'reversed' (will negate delta etc.)
 		// as this is much more efficient than reversing every path.
-		is_reversed = (lowest_path_idx >= 0) && Area(paths_in[lowest_path_idx]) < 0;
+        is_reversed = (lowest_path_idx.has_value()) && Area(paths_in[lowest_path_idx.value()]) < 0;
 	}
 	else
 	{
-		lowest_path_idx = -1;
+        lowest_path_idx = std::nullopt;
 		is_reversed = false;
 	}
 }
@@ -441,7 +441,7 @@ void ClipperOffset::DoGroupOffset(Group& group)
 	{
 		// a straight path (2 points) can now also be 'polygon' offset
 		// where the ends will be treated as (180 deg.) joins
-		if (group.lowest_path_idx < 0) delta_ = std::abs(delta_);
+        if (!group.lowest_path_idx.has_value()) delta_ = std::abs(delta_);
 		group_delta_ = (group.is_reversed) ? -delta_ : delta_;
 	}
 	else
@@ -491,7 +491,7 @@ void ClipperOffset::DoGroupOffset(Group& group)
 			if (group.join_type == JoinType::Round)
 			{
 				double radius = abs_delta;
-				int steps = static_cast<int>(std::ceil(steps_per_rad_ * 2 * PI)); //#617
+                size_t steps = steps_per_rad_ > 0 ? static_cast<size_t>(std::ceil(steps_per_rad_ * 2 * PI)) : 0; //#617
 				path_out = Ellipse(pt, radius, radius, steps);
 #ifdef USINGZ
 				for (auto& p : path_out) p.z = pt.z;

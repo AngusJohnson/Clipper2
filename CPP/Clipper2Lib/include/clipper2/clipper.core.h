@@ -19,6 +19,7 @@
 #include <algorithm>
 #include <climits>
 #include <numeric>
+#include <optional>
 #include "clipper2/clipper.version.h"
 
 namespace Clipper2Lib
