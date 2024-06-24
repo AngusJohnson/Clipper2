@@ -698,20 +698,13 @@ end;
 
 procedure TPathsDHelper.ExpandBounds(var Bounds: TRectD);
 var
-  i: integer;
-  It: TClipperDataD.PPath;
-  ItVert: TClipperDataD.PVertex;
+  Path: TClipperDataD.PPath;
 begin
-
-  It := @PathData;
-  It.ExpandBounds(Bounds);
-
-  for i := 1 to count-1 do
+  Path := FirstPath();
+  while Path <> nil do
   begin
-    ItVert := @It.VertexData[0];
-    Inc(ItVert, It.VertexCount);
-    It := TClipperDataD.PPath(ItVert);
-    It.ExpandBounds(Bounds);
+    Path.ExpandBounds(Bounds);
+    Path := NextPath(Path);
   end;
 end;
 
@@ -738,28 +731,13 @@ end;
 { TPolyTreeDHelper }
 
 procedure TPolyTreeDHelper.ExpandBounds(var Bounds: TRectD);
-var
-  Path: TClipperDataD.PPath;
 begin
-  Path := FirstPath();
-  while Path <> nil do
-  begin
-    Path.ExpandBounds(Bounds);
-    Path := NextPath(Path);
-  end;
+  _Data.ExpandBounds(Bounds);
 end;
 
 function TPolyTreeDHelper.GetBounds: TRectD;
-var
-  ItVert: TClipperDataD.PVertex;
 begin
-  if ChildCount = 0 then
-    exit;
-
-  itVert := @Children[0].VertexData[0];
-  result := TRectD.Create(ItVert.X, ItVert.Y, ItVert.X, itVert.Y);
-
-  ExpandBounds(result);
+  result := _Data.GetBounds;
 end;
 
 {$ENDIF}
