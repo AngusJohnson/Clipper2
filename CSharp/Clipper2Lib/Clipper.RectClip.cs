@@ -1,6 +1,6 @@
 ﻿/*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  7 May 2024                                                      *
+* Date      :  5 July 2024                                                     *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2024                                         *
 * Purpose   :  FAST rectangular clipping                                       *
@@ -498,6 +498,23 @@ namespace Clipper2Lib
       } // switch
     }
 
+    private bool StartLocsAreClockwise(List<Location> startLocs)
+    {
+      int result = 0;
+      for (int i = 1; i < startLocs.Count; i++)
+      {
+        int d = (int)startLocs[i] - (int)startLocs[i - 1];
+        switch (d)
+        {
+          case -1: result -= 1; break;
+          case 1: result += 1; break;
+          case -3: result += 1; break;
+          case 3: result -= 1; break;
+        }
+      }
+      return result > 0;
+    }
+
     private void ExecuteInternal(Path64 path)
     {
       if (path.Count < 3 || rect_.IsEmpty()) return;      
@@ -624,10 +641,12 @@ namespace Clipper2Lib
           if (pathBounds_.Contains(rect_) &&
             Path1ContainsPath2(path, rectPath_))
           {
+            bool startLocsClockwise = StartLocsAreClockwise(startLocs);
             for (int j = 0; j < 4; j++)
             {
-              Add(rectPath_[j]);
-              AddToEdge(edges_[j * 2], results_[0]!);
+              int k = startLocsClockwise ? j : 3 - j; // ie reverse result path
+              Add(rectPath_[k]);
+              AddToEdge(edges_[k * 2], results_[0]!);
             }
           }
         }

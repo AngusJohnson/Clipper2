@@ -1,6 +1,6 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  17 April 2024                                                   *
+* Date      :  5 July 2024                                                     *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2024                                         *
 * Purpose   :  This is the main polygon clipping module                        *
@@ -343,6 +343,7 @@ namespace Clipper2Lib {
 		Path64 polygon_;
 	public:
 		explicit PolyPath64(PolyPath64* parent = nullptr) : PolyPath(parent) {}
+		explicit PolyPath64(PolyPath64* parent, const Path64& path) : PolyPath(parent) { polygon_ = path; }
 
 		~PolyPath64() {
 			childs_.resize(0);
@@ -363,10 +364,7 @@ namespace Clipper2Lib {
 
 		PolyPath64* AddChild(const Path64& path) override
 		{
-			auto p = std::make_unique<PolyPath64>(this);
-			auto* result = childs_.emplace_back(std::move(p)).get();
-			result->polygon_ = path;
-			return result;
+			return childs_.emplace_back(std::make_unique<PolyPath64>(this, path)).get();
 		}
 
 		void Clear() override
@@ -401,6 +399,19 @@ namespace Clipper2Lib {
 			scale_ = parent ? parent->scale_ : 1.0;
 		}
 
+		explicit PolyPathD(PolyPathD* parent, const Path64& path) : PolyPath(parent)
+		{
+			scale_ = parent ? parent->scale_ : 1.0;
+			int error_code = 0;
+			polygon_ = ScalePath<double, int64_t>(path, scale_, error_code);
+		}
+
+		explicit PolyPathD(PolyPathD* parent, const PathD& path) : PolyPath(parent)
+		{
+			scale_ = parent ? parent->scale_ : 1.0;
+			polygon_ = path;
+		}
+
 		~PolyPathD() {
 			childs_.resize(0);
 		}
@@ -423,19 +434,12 @@ namespace Clipper2Lib {
 
 		PolyPathD* AddChild(const Path64& path) override
 		{
-			int error_code = 0;
-			auto p = std::make_unique<PolyPathD>(this);
-			PolyPathD* result = childs_.emplace_back(std::move(p)).get();
-			result->polygon_ = ScalePath<double, int64_t>(path, scale_, error_code);
-			return result;
+			return childs_.emplace_back(std::make_unique<PolyPathD>(this, path)).get();
 		}
 
 		PolyPathD* AddChild(const PathD& path)
 		{
-			auto p = std::make_unique<PolyPathD>(this);
-			PolyPathD* result = childs_.emplace_back(std::move(p)).get();
-			result->polygon_ = path;
-			return result;
+			return childs_.emplace_back(std::make_unique<PolyPathD>(this, path)).get();
 		}
 
 		void Clear() override

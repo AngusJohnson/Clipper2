@@ -1,6 +1,6 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  27 April 2024                                                   *
+* Date      :  5 July 2024                                                     *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2024                                         *
 * Purpose   :  FAST rectangular clipping                                       *
@@ -424,6 +424,23 @@ namespace Clipper2Lib {
     } //switch
   }
 
+  bool StartLocsAreClockwise(const std::vector<Location>& startlocs)
+  {
+    int result = 0;
+    for (size_t i = 1; i < startlocs.size(); ++i)
+    {
+      int d = static_cast<int>(startlocs[i]) - static_cast<int>(startlocs[i - 1]);
+      switch (d)
+      {
+        case -1: result -= 1; break;
+        case 1: result += 1; break;
+        case -3: result += 1; break;
+        case 3: result -= 1; break;
+      }
+    }
+    return result > 0;
+  }
+
   void RectClip64::ExecuteInternal(const Path64& path)
   {
     if (path.size() < 1)
@@ -446,7 +463,7 @@ namespace Clipper2Lib {
       }
       if (prev == Location::Inside) loc = Location::Inside;
     }
-    Location startingLoc = loc;
+    Location starting_loc = loc;
 
     ///////////////////////////////////////////////////
     size_t i = 0;
@@ -548,7 +565,7 @@ namespace Clipper2Lib {
     if (first_cross_ == Location::Inside)
     {
       // path never intersects
-      if (startingLoc != Location::Inside)
+      if (starting_loc != Location::Inside)
       {
         // path is outside rect
         // but being outside, it still may not contain rect
@@ -557,11 +574,13 @@ namespace Clipper2Lib {
         {
           // yep, the path does fully contain rect
           // so add rect to the solution
+          bool is_clockwise_path = StartLocsAreClockwise(start_locs_);
           for (size_t j = 0; j < 4; ++j)
           {
-            Add(rect_as_path_[j]);
+            size_t k = is_clockwise_path ? j : 3 - j; // reverses result path
+            Add(rect_as_path_[k]);
             // we may well need to do some splitting later, so
-            AddToEdge(edges_[j * 2], results_[0]);
+            AddToEdge(edges_[k * 2], results_[0]);
           }
         }
       }

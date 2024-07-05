@@ -2,7 +2,7 @@ unit Clipper.RectClip;
 
 (*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  27 April 2024                                                   *
+* Date      :  5 July 2024                                                     *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2024                                         *
 * Purpose   :  FAST rectangular clipping                                       *
@@ -650,9 +650,28 @@ begin
 end;
 //------------------------------------------------------------------------------
 
+function StartLocsAreClockwise(const startLocs: TList): Boolean;
+var
+  i,j, res: integer;
+begin
+  res := 0;
+  for i := 1 to startLocs.Count -1 do
+  begin
+    j := Ord(TLocation(startLocs[i])) - Ord(TLocation(startLocs[i - 1]));
+    case j of
+      -1: dec(res);
+      1: inc(res);
+      -3: inc(res);
+      3: dec(res);
+    end;
+  end;
+  result := res > 0;
+end;
+//------------------------------------------------------------------------------
+
 procedure TRectClip64.ExecuteInternal(const path: TPath64);
 var
-  i,highI     : integer;
+  i,j, highI    : integer;
   prevPt,ip,ip2 : TPoint64;
   loc, prevLoc  : TLocation;
   loc2          : TLocation;
@@ -661,6 +680,7 @@ var
   crossingLoc   : TLocation;
   prevCrossLoc  : TLocation;
   isCw          : Boolean;
+  startLocsCW   : Boolean;
 begin
   if (Length(path) < 3) then Exit;
   fStartLocs.Clear;
@@ -797,10 +817,12 @@ begin
       begin
         // yep, the path does fully contain rect
         // so add rect to the solution
+        startLocsCW := StartLocsAreClockwise(fStartLocs);
         for i := 0 to 3 do
         begin
-          Add(fRectPath[i]);
-          AddToEdge(fEdges[i*2], fResults[0]);
+          if startLocsCW then j := i else j := 3 - i;
+          Add(fRectPath[j]);
+          AddToEdge(fEdges[j*2], fResults[0]);
         end;
       end;
     end;
