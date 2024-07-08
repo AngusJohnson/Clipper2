@@ -23,30 +23,33 @@ languages, these paths are converted into very simple array data structures
 (of either int64_t for CPath64 or double for CPathD) that can be parsed by 
 just about any programming language.
 
-The letters in the diagrams below can be interpreted as follows
+When referring to either the int64_t or double data structures we may drop the 
+suffix. For instance, we may use CPath to refer to either CPath64 or CPathD.
+
+For conciseness, we use these letters in diagrams below:
 N: Number of vertices
 A: Array size
 C: Child count
 
 CPath64 and CPathD:
-These are arrays of consecutive x, y and optional z path coordinates 
-preceeded by a pair of values containing the path's length (N) and a 0 value.
+These are arrays of consecutive x and y coordinate (with an optional z-value) 
+preceded by a pair of values containing the path's length (N) and a 0 value.
+
+Z-values are received as inputs and returned in output only if the USINGZ
+pre-processor identifier exists, more details on Z-values later.
 ____________________________________________________
 |counter|   coord1   |   coord2   |...|   coordN   |
 |N, 0   |x1, y1, (z1)|x2, y2, (z2)|...|xN, yN, (zN)|
 ____________________________________________________
 
-z-coordinates are output only if both the USINGZ pre-processor
-identifier exists
-
-Below we will see that CPath is a special case of the more general CPolyPath
+Below we will see that CPath is a special case of the more general CPolyPath.
 
 CPaths64 and CPathsD:
-These are also arrays containing any number of consecutive CPath64 or
-CPathD  structures. But preceeding these consecutive paths, there is pair of
+These are also arrays containing any number of consecutive CPath64 or 
+CPathD structures. But preceding these consecutive paths, there is pair of 
 values that contain the total length of the array structure (A) and the 
-number of CPath64 or CPathD it contains (C). The space these structures will
-occupy in memory = A * sizeof(int64_t) or A * sizeof(double) respectively. 
+number of CPath64 or CPathD it contains (C). The space these structures will 
+occupy in memory = A *sizeof(int64_t) or A * sizeof(double) respectively. 
 _______________________________
 |counter|path1|path2|...|pathC|
 |A  , C |     |     |   |     |
@@ -55,9 +58,10 @@ _______________________________
 Below we will see that CPaths is a special case of the more general CPolyTree
 
 CPolyPath64 and CPolyPathD:
-These are simple arrays consisting of a series of path coordinates followed
-by any number of child (ie nested) CPolyPath. Preceeding these are two values
+These are simple arrays consisting of a series of path coordinates followed by 
+any number of child (i.e., nested) CPolyPath. Preceding these are two values 
 indicating the length of the path (N) and the number of child CPolyPath (C).
+CPolyPath (C).
 _____________________________________________________________________________
 |counter|    coord1  |   coord2   |...|   coordN   |child1|child2|...|childC|
 |N  , C |x1, y1, (z1)|x2, y2, (z2)|...|xN, yN, (zN)|      |      |   |      |
@@ -69,7 +73,7 @@ coordinates.
 CPolyTree64 and CPolyTreeD:
 CPolyTree has an identical structure to CPaths, but the children are the more 
 generalized CPolyPath. We can think of CPaths as a special case of CPolyTree 
-with only one level of children
+with only one level of children.
 ___________________________________________
 |counter|polypath1|polypath2|...|polypathC|
 |A  , C |         |         |   |         |
@@ -83,15 +87,29 @@ and the size in bytes is A * sizeof(int64_t) or A * sizeof(double).
 The value C represents the number of direct children meaning the number of 
 top-level CPolyPaths only.
 
-Again, all theses exported structures (CPaths64, CPathsD, CPolyTree64 & 
+Again, all these exported structures (CPaths64, CPathsD, CPolyTree64 & 
 CPolyTreeD) are arrays of either type int64_t or double, and the first 
 value in these arrays will always be the length of that array.
 
-These array structures are allocated in heap memory which will eventually
+These array structures are allocated in heap memory which will eventually 
 need to be released. However, since applications dynamically linking to 
 these functions may use different memory managers, the only safe way to 
 free up this memory is to use the exported DisposeArray64 and 
 DisposeArrayD functions (see below).
+
+Z-Values:
+Structures contain the z-values only if the USINGZ pre-processor identifier 
+exists. This library does not use or modify z-values; each vertex only carries 
+the z-value as data. Typically, the z-values are z-coordinates, but it can be 
+any data that fits in 64-bits, including pointers. 
+
+Consumers can set the z-values of newly generated vertices by implementing a 
+callback function with the signature defined by DLLZCallback. The client 
+application passes this function to this DLL via SetZCallback.
+
+The library makes the callback to the external system providing it with the two
+intersecting edges (e1bot, e1top) and (e2bot, e2top) and their intersection 
+point (pt). The external system sets the z-value of pt. 
 */
 
 
@@ -101,7 +119,7 @@ DisposeArrayD functions (see below).
 #include <cstdlib>
 #include <vector>
 #if __cplusplus >= 202002L // Check for C++20 or later
-    #include <bit> //we have a polyfill for earlier C++ below
+  #include <bit> //we have a polyfill for earlier C++ below
 #endif
 
 #include "clipper2/clipper.core.h"
@@ -752,7 +770,7 @@ EXTERN_DLL_EXPORT CPaths64 MinkowskiDiff64(const CPath64& cpattern, const CPath6
 #ifdef USINGZ
 typedef void (*DLLZCallback)(const Point64& e1bot, const Point64& e1top, const Point64& e2bot, const Point64& e2top, Point64& pt);
 
-EXTERN_DLL_EXPORT void SetDefaultZCallback(DLLZCallback callback)
+EXTERN_DLL_EXPORT void SetZCallback(DLLZCallback callback)
 {
     if (callback)
         ClipperBase::DefaultZCallback = [callback](const Point64& e1bot, const Point64& e1top, const Point64 e2bot, const Point64& e2top, Point64& pt)

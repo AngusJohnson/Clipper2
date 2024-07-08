@@ -203,7 +203,7 @@ function MinkowskiDiff64(const [ref] cpattern: CPath64; const [ref] cpath: CPath
 type
   TZCallback64 = procedure(const [ref] e1bot, e1top, e2bot, e2top: TVertex64; var pt: TVertex64); cdecl;
 
-procedure SetDefaultZCallback(callback: TZCallback64); cdecl; external ClipperCpp_DLL;
+procedure SetZCallback(callback: TZCallback64); cdecl; external ClipperCpp_DLL;
 {$ENDIF}
 
  {$IFDEF CLIPPER_DOUBLE_COORDINATES}
