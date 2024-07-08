@@ -6,7 +6,7 @@ unit Clipper.DLL.Enums;
  * License   :  http://www.boost.org/LICENSE_1_0.txt                           *
  **************************************************************************** *)
 
-{$I Clipper.DLL.inc}   // CLIPPER_USINGZ
+{$I Clipper.DLL.inc}  
 
 interface
 type

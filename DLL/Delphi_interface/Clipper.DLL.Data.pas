@@ -224,10 +224,6 @@ type
 
 implementation
 
-//uses
-//  System.Math;
-
-
 
 { TClipperData<T>.TPath }
 procedure TClipperData<T>.TPath.Free;
