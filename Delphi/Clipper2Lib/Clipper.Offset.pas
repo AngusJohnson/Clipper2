@@ -2,7 +2,7 @@ unit Clipper.Offset;
 
 (*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  17 April 2024                                                   *
+* Date      :  6 July 2024                                                     *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2024                                         *
 * Purpose   :  Path Offset (Inflate/Shrink)                                    *
@@ -236,9 +236,7 @@ end;
 constructor TGroup.Create(const pathsIn: TPaths64; jt: TJoinType; et: TEndType);
 var
   i, len: integer;
-  a: double;
   isJoined: boolean;
-  pb: PBoolean;
 begin
   Self.joinType := jt;
   Self.endType := et;
@@ -345,7 +343,6 @@ var
   i,j, len, steps: Integer;
   r, stepsPer360, arcTol: Double;
   absDelta: double;
-  isShrinking: Boolean;
   rec: TRect64;
   pt0: TPoint64;
 begin
@@ -450,6 +447,7 @@ var
 begin
   len := Length(fInPath);
   SetLength(fNorms, len);
+  if len = 0 then Exit;
   for i := 0 to len-2 do
     fNorms[i] := GetUnitNormal(fInPath[i], fInPath[i+1]);
   fNorms[len -1] := GetUnitNormal(fInPath[len -1], fInPath[0]);
