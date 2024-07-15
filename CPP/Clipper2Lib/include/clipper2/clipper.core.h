@@ -31,7 +31,7 @@ namespace Clipper2Lib
   public:
     explicit Clipper2Exception(const char* description) :
       m_descr(description) {}
-    virtual const char* what() const throw() override { return m_descr.c_str(); }
+    virtual const char* what() const noexcept override { return m_descr.c_str(); }
   private:
     std::string m_descr;
   };
