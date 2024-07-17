@@ -7,8 +7,8 @@
 * License   :  http://www.boost.org/LICENSE_1_0.txt                            *
 *******************************************************************************/
 
-#include <cmath>
 #include "clipper2/clipper.h"
+#include "clipper2/clipper.math.h"
 #include "clipper2/clipper.offset.h"
 
 namespace Clipper2Lib {
@@ -44,7 +44,7 @@ PointD GetUnitNormal(const Point64& pt1, const Point64& pt2)
 	if (pt1 == pt2) return PointD(0.0, 0.0);
 	dx = static_cast<double>(pt2.x - pt1.x);
 	dy = static_cast<double>(pt2.y - pt1.y);
-	inverse_hypot = 1.0 / hypot(dx, dy);
+	inverse_hypot = 1.0 / HypotSafe(dx, dy);
 	dx *= inverse_hypot;
 	dy *= inverse_hypot;
 	return PointD(dy, -dx);
@@ -55,15 +55,9 @@ inline bool AlmostZero(double value, double epsilon = 0.001)
 	return std::fabs(value) < epsilon;
 }
 
-inline double Hypot(double x, double y)
-{
-	//see https://stackoverflow.com/a/32436148/359538
-	return std::sqrt(x * x + y * y);
-}
-
 inline PointD NormalizeVector(const PointD& vec)
 {
-	double h = Hypot(vec.x, vec.y);
+	double h = HypotUnsafe(vec.x, vec.y);
 	if (AlmostZero(h)) return PointD(0,0);
 	double inverseHypot = 1 / h;
 	return PointD(vec.x * inverseHypot, vec.y * inverseHypot);
@@ -257,10 +251,10 @@ void ClipperOffset::DoRound(const Path64& path, size_t j, size_t k, double angle
 		double abs_delta = std::fabs(group_delta_);
 		double arcTol = (arc_tolerance_ > floating_point_tolerance ?
 			std::min(abs_delta, arc_tolerance_) :
-			std::log10(2 + abs_delta) * default_arc_tolerance);
-		double steps_per_360 = std::min(PI / std::acos(1 - arcTol / abs_delta), abs_delta * PI);
-		step_sin_ = std::sin(2 * PI / steps_per_360);
-		step_cos_ = std::cos(2 * PI / steps_per_360);
+			Log10(2 + abs_delta) * default_arc_tolerance);
+		double steps_per_360 = std::min(PI / ACos(1 - arcTol / abs_delta), abs_delta * PI);
+		step_sin_ = Sin(2 * PI / steps_per_360);
+		step_cos_ = Cos(2 * PI / steps_per_360);
 		if (group_delta_ < 0.0) step_sin_ = -step_sin_;
 		steps_per_rad_ = steps_per_360 / (2 * PI);
 	}
@@ -345,7 +339,7 @@ void ClipperOffset::OffsetPoint(Group& group, const Path64& path, size_t j, size
 		else DoSquare(path, j, k);
 	}
 	else if (join_type_ == JoinType::Round)
-		DoRound(path, j, k, std::atan2(sin_a, cos_a));
+		DoRound(path, j, k, ATan2(sin_a, cos_a));
 	else if ( join_type_ == JoinType::Bevel)
 		DoBevel(path, j, k);
 	else
@@ -460,11 +454,11 @@ void ClipperOffset::DoGroupOffset(Group& group)
 		//large offsets will almost always require much less precision.
 		double arcTol = (arc_tolerance_ > floating_point_tolerance ?
 			std::min(abs_delta, arc_tolerance_) :
-			std::log10(2 + abs_delta) * default_arc_tolerance);
+			Log10(2 + abs_delta) * default_arc_tolerance);
 
-		double steps_per_360 = std::min(PI / std::acos(1 - arcTol / abs_delta), abs_delta * PI);
-		step_sin_ = std::sin(2 * PI / steps_per_360);
-		step_cos_ = std::cos(2 * PI / steps_per_360);
+		double steps_per_360 = std::min(PI / ACos(1 - arcTol / abs_delta), abs_delta * PI);
+		step_sin_ = Sin(2 * PI / steps_per_360);
+		step_cos_ = Cos(2 * PI / steps_per_360);
 		if (group_delta_ < 0.0) step_sin_ = -step_sin_;
 		steps_per_rad_ = steps_per_360 / (2 * PI);
 	}
