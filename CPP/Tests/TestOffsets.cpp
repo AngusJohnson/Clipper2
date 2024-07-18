@@ -658,3 +658,26 @@ TEST(Clipper2Tests, TestOffsets10) // see #715
   EXPECT_EQ(solution.size(), 2);
 }
 
+TEST(Clipper2Tests, TestOffsets11) // see #405
+{
+  PathsD polyline = {{{-1, -1}, {-1, 11}, {11, 11}, {11, -1}}};
+  PathsD solution = InflatePaths(polyline, -50, JoinType::Miter, EndType::Polygon);
+
+  EXPECT_TRUE(solution.empty());
+}
+
+TEST(Clipper2Tests, TestOffsets12) // see #873
+{
+  Clipper2Lib::ClipperOffset offset;
+  Clipper2Lib::Paths64 closedPaths = {{
+    {667680768, -36382704},
+    {737202688, -87034880},
+    {742581888, -86055680},
+    {747603968, -84684800}}};
+
+  Clipper2Lib::Paths64 solution;
+  offset.AddPaths(closedPaths, Clipper2Lib::JoinType::Miter, Clipper2Lib::EndType::Polygon);
+  offset.Execute(-249561088, solution);
+
+  EXPECT_TRUE(solution.empty());
+}
