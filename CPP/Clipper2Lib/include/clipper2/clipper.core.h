@@ -362,6 +362,22 @@ namespace Clipper2Lib
         top == other.top && bottom == other.bottom;
     }
 
+    Rect<T>& operator+=(const Rect<T>& other)
+    {
+      left = (std::min)(left, other.left);
+      top = (std::min)(top, other.top);
+      right = (std::max)(right, other.right);
+      bottom = (std::max)(bottom, other.bottom);
+      return *this;
+    }
+
+    Rect<T> operator+(const Rect<T>& other) const
+    {
+      Rect<T> result = *this;
+      result += other;
+      return result;
+    }
+
     friend std::ostream& operator<<(std::ostream& os, const Rect<T>& rect) {
       os << "(" << rect.left << "," << rect.top << "," << rect.right << "," << rect.bottom << ") ";
       return os;
