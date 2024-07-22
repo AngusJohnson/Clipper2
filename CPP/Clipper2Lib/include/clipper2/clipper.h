@@ -17,6 +17,7 @@
 #include "clipper2/clipper.core.h"
 #include "clipper2/clipper.engine.h"
 #include "clipper2/clipper.offset.h"
+#include "clipper2/clipper.math.h"
 #include "clipper2/clipper.minkowski.h"
 #include "clipper2/clipper.rectclip.h"
 
@@ -598,8 +599,8 @@ namespace Clipper2Lib {
     if (steps <= 2)
       steps = static_cast<size_t>(PI * sqrt((radiusX + radiusY) / 2));
 
-    double si = std::sin(2 * PI / steps);
-    double co = std::cos(2 * PI / steps);
+    double si = Sin(2 * PI / steps);
+    double co = Cos(2 * PI / steps);
     double dx = co, dy = si;
     Path<T> result;
     result.reserve(steps);
