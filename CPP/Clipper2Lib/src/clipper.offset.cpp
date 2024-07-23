@@ -321,11 +321,11 @@ void ClipperOffset::OffsetPoint(Group& group, const Path64& path, size_t j, size
 #else
 		path_out.push_back(GetPerpendic(path[j], norms[k], group_delta_));
 #endif
-		
+
 		// this extra point is the only simple way to ensure that path reversals
 		// (ie over-shrunk paths) are fully cleaned out with the trailing union op.
 		// However it's probably safe to skip this whenever an angle is almost flat.
-		if (cos_a < 0.99) path_out.push_back(path[j]); // (#405)
+		if (cos_a < 0.999) path_out.push_back(path[j]); // (#405) (#873)
 
 #ifdef USINGZ
 		path_out.push_back(Point64(GetPerpendic(path[j], norms[j], group_delta_), path[j].z));
