@@ -38,7 +38,7 @@ std::optional<size_t> GetLowestClosedPathIdx(const Paths64& paths)
 	return result;
 }
 
-static inline double Hypot(double x, double y)
+inline double Hypot(double x, double y)
 {
 	// given that this is an internal function, and given the x and y parameters
 	// will always be coordinate values (or the difference between coordinate values),
@@ -60,12 +60,12 @@ static PointD GetUnitNormal(const Point64& pt1, const Point64& pt2)
 	return PointD(dy, -dx);
 }
 
-static inline bool AlmostZero(double value, double epsilon = 0.001)
+inline bool AlmostZero(double value, double epsilon = 0.001)
 {
 	return std::fabs(value) < epsilon;
 }
 
-static inline PointD NormalizeVector(const PointD& vec)
+inline PointD NormalizeVector(const PointD& vec)
 {
 	double h = Hypot(vec.x, vec.y);
 	if (AlmostZero(h)) return PointD(0,0);
@@ -73,12 +73,12 @@ static inline PointD NormalizeVector(const PointD& vec)
 	return PointD(vec.x * inverseHypot, vec.y * inverseHypot);
 }
 
-static inline PointD GetAvgUnitVector(const PointD& vec1, const PointD& vec2)
+inline PointD GetAvgUnitVector(const PointD& vec1, const PointD& vec2)
 {
 	return NormalizeVector(PointD(vec1.x + vec2.x, vec1.y + vec2.y));
 }
 
-static inline bool IsClosedPath(EndType et)
+inline bool IsClosedPath(EndType et)
 {
 	return et == EndType::Polygon || et == EndType::Joined;
 }
@@ -92,7 +92,7 @@ static inline Point64 GetPerpendic(const Point64& pt, const PointD& norm, double
 #endif
 }
 
-static inline PointD GetPerpendicD(const Point64& pt, const PointD& norm, double delta)
+inline PointD GetPerpendicD(const Point64& pt, const PointD& norm, double delta)
 {
 #ifdef USINGZ
 	return PointD(pt.x + norm.x * delta, pt.y + norm.y * delta, pt.z);
@@ -101,7 +101,7 @@ static inline PointD GetPerpendicD(const Point64& pt, const PointD& norm, double
 #endif
 }
 
-static inline void NegatePath(PathD& path)
+inline void NegatePath(PathD& path)
 {
 	for (PointD& pt : path)
 	{
