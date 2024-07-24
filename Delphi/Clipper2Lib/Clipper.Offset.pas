@@ -2,7 +2,7 @@ unit Clipper.Offset;
 
 (*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  6 July 2024                                                     *
+* Date      :  24 July 2024                                                    *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2024                                         *
 * Purpose   :  Path Offset (Inflate/Shrink)                                    *
@@ -989,16 +989,19 @@ begin
   if (cosA > -0.999) and (sinA * fGroupDelta < 0) then
   begin
     // is concave
+    // by far the simplest way to construct concave joins, especially those
+    // joining very short segments, is to insert 3 points that produce negative
+    // regions. These regions will be removed later by the finishing union
+    // operation. This is also the best way to ensure that path reversals
+    // (ie over-shrunk paths) are removed.
 {$IFDEF USINGZ}
     AddPoint(GetPerpendic(fInPath[j], fNorms[k], fGroupDelta), fInPath[j].Z);
 {$ELSE}
     AddPoint(GetPerpendic(fInPath[j], fNorms[k], fGroupDelta));
 {$ENDIF}
-		// this extra point is the only simple way to ensure that path reversals
-		// (ie over-shrunk paths) are fully cleaned out with the trailing union op.
-		// However it's probably safe to skip this whenever an angle is almost flat.
-		if (cosA < 0.99) then
-      AddPoint(fInPath[j]); // (#405)
+    // when the angle is almost flat (cos_a ~= 1),
+    // it's safe to skip inserting this middle point
+		if (cosA < 0.999) then AddPoint(fInPath[j]); // (#405, #873)
 {$IFDEF USINGZ}
     AddPoint(GetPerpendic(fInPath[j], fNorms[j], fGroupDelta), fInPath[j].Z);
 {$ELSE}

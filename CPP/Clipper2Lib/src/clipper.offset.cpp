@@ -1,6 +1,6 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  17 April 2024                                                   *
+* Date      :  24 July 2024                                                    *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2024                                         *
 * Purpose   :  Path Offset (Inflate/Shrink)                                    *
@@ -38,30 +38,34 @@ std::optional<size_t> GetLowestClosedPathIdx(const Paths64& paths)
 	return result;
 }
 
-PointD GetUnitNormal(const Point64& pt1, const Point64& pt2)
+static inline double Hypot(double x, double y)
+{
+	// given that this is an internal function, and given the x and y parameters
+	// will always be coordinate values (or the difference between coordinate values),
+	// x and y should always be within INT64_MIN to INT64_MAX. Consequently, 
+	// there should be no risk that the following computation will overflow
+	// see https://stackoverflow.com/a/32436148/359538
+	return std::sqrt(x * x + y * y);
+}
+
+static PointD GetUnitNormal(const Point64& pt1, const Point64& pt2)
 {
 	double dx, dy, inverse_hypot;
 	if (pt1 == pt2) return PointD(0.0, 0.0);
 	dx = static_cast<double>(pt2.x - pt1.x);
 	dy = static_cast<double>(pt2.y - pt1.y);
-	inverse_hypot = 1.0 / hypot(dx, dy);
+	inverse_hypot = 1.0 / Hypot(dx, dy);
 	dx *= inverse_hypot;
 	dy *= inverse_hypot;
 	return PointD(dy, -dx);
 }
 
-inline bool AlmostZero(double value, double epsilon = 0.001)
+static inline bool AlmostZero(double value, double epsilon = 0.001)
 {
 	return std::fabs(value) < epsilon;
 }
 
-inline double Hypot(double x, double y)
-{
-	//see https://stackoverflow.com/a/32436148/359538
-	return std::sqrt(x * x + y * y);
-}
-
-inline PointD NormalizeVector(const PointD& vec)
+static inline PointD NormalizeVector(const PointD& vec)
 {
 	double h = Hypot(vec.x, vec.y);
 	if (AlmostZero(h)) return PointD(0,0);
@@ -69,17 +73,17 @@ inline PointD NormalizeVector(const PointD& vec)
 	return PointD(vec.x * inverseHypot, vec.y * inverseHypot);
 }
 
-inline PointD GetAvgUnitVector(const PointD& vec1, const PointD& vec2)
+static inline PointD GetAvgUnitVector(const PointD& vec1, const PointD& vec2)
 {
 	return NormalizeVector(PointD(vec1.x + vec2.x, vec1.y + vec2.y));
 }
 
-inline bool IsClosedPath(EndType et)
+static inline bool IsClosedPath(EndType et)
 {
 	return et == EndType::Polygon || et == EndType::Joined;
 }
 
-inline Point64 GetPerpendic(const Point64& pt, const PointD& norm, double delta)
+static inline Point64 GetPerpendic(const Point64& pt, const PointD& norm, double delta)
 {
 #ifdef USINGZ
 	return Point64(pt.x + norm.x * delta, pt.y + norm.y * delta, pt.z);
@@ -88,7 +92,7 @@ inline Point64 GetPerpendic(const Point64& pt, const PointD& norm, double delta)
 #endif
 }
 
-inline PointD GetPerpendicD(const Point64& pt, const PointD& norm, double delta)
+static inline PointD GetPerpendicD(const Point64& pt, const PointD& norm, double delta)
 {
 #ifdef USINGZ
 	return PointD(pt.x + norm.x * delta, pt.y + norm.y * delta, pt.z);
@@ -97,7 +101,7 @@ inline PointD GetPerpendicD(const Point64& pt, const PointD& norm, double delta)
 #endif
 }
 
-inline void NegatePath(PathD& path)
+static inline void NegatePath(PathD& path)
 {
 	for (PointD& pt : path)
 	{
@@ -129,11 +133,11 @@ ClipperOffset::Group::Group(const Paths64& _paths, JoinType _join_type, EndType 
 		// the lowermost path must be an outer path, so if its orientation is negative,
 		// then flag the whole group is 'reversed' (will negate delta etc.)
 		// as this is much more efficient than reversing every path.
-        is_reversed = (lowest_path_idx.has_value()) && Area(paths_in[lowest_path_idx.value()]) < 0;
+    is_reversed = (lowest_path_idx.has_value()) && Area(paths_in[lowest_path_idx.value()]) < 0;
 	}
 	else
 	{
-        lowest_path_idx = std::nullopt;
+    lowest_path_idx = std::nullopt;
 		is_reversed = false;
 	}
 }
@@ -315,17 +319,19 @@ void ClipperOffset::OffsetPoint(Group& group, const Path64& path, size_t j, size
 
 	if (cos_a > -0.999 && (sin_a * group_delta_ < 0)) // test for concavity first (#593)
 	{
-		// is concave (so insert 3 points that will create a negative region)
+		// is concave
+		// by far the simplest way to construct concave joins, especially those joining very 
+		// short segments, is to insert 3 points that produce negative regions. These regions 
+		// will be removed later by the finishing union operation. This is also the best way 
+		// to ensure that path reversals (ie over-shrunk paths) are removed.
 #ifdef USINGZ
 		path_out.push_back(Point64(GetPerpendic(path[j], norms[k], group_delta_), path[j].z));
 #else
 		path_out.push_back(GetPerpendic(path[j], norms[k], group_delta_));
 #endif
 		
-		// this extra point is the only simple way to ensure that path reversals
-		// (ie over-shrunk paths) are fully cleaned out with the trailing union op.
-		// However it's probably safe to skip this whenever an angle is almost flat.
-		if (cos_a < 0.99) path_out.push_back(path[j]); // (#405)
+		// when the angle is almost flat (cos_a ~= 1), it's safe to skip this middle point
+		if (cos_a < 0.999) path_out.push_back(path[j]); // (#405, #873)
 
 #ifdef USINGZ
 		path_out.push_back(Point64(GetPerpendic(path[j], norms[j], group_delta_), path[j].z));
