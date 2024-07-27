@@ -17,101 +17,91 @@
  jointype: Square=0, Bevel=1, Round=2, Miter=3
  endtype: Polygon=0, Joined=1, Butt=2, Square=3, Round=4
 
-The path structures used extensively in other parts of this library are all
-based on std::vector classes. Since C++ classes can't be accessed by other
-languages, these paths are converted into very simple array data structures 
-(of either int64_t for CPath64 or double for CPathD) that can be parsed by 
-just about any programming language.
+The two dimensional path structures used extensively in other parts of this 
+library are all based on std::vector classes. Since C++ classes can't be 
+accessed by other languages, these paths are converted here into very simple 
+array data structures that can be parsed by just about any programming language.
 
-When referring to either the int64_t or double data structures we may drop the 
-suffix. For instance, we may use CPath to refer to either CPath64 or CPathD.
+These paths are defined by series of x and y coordinates together with 
+optional user-defined 'z' values (see Z-values below). A vertex refers to a 
+single x and y coordinate (+/- a user-defined value). These values will be 
+either type int64_t or type double, and data structure naming will indicate 
+the type by including either a '64' or a 'D' suffix. For example, the
+data structure CPath64 contains an array of int64_t values, whereas the data
+structure CPathD contains an array of double. Where documentation omits the 
+type suffix (eg CPath), it is simply agnostic to the array's data type.
 
-For conciseness, we use these letters in diagrams below:
-N: Number of vertices
-A: Array size
-C: Child count
+For conciseness, the following letters are used in the diagrams below:
+N: Number of vertices in a given path
+C: Count of contained paths
+A: Array size (as distinct from the size in memory)
+
 
 CPath64 and CPathD:
-These are arrays of consecutive x and y coordinate (with an optional z-value) 
-preceded by a pair of values containing the path's length (N) and a 0 value.
+These are arrays of consecutive vertices preceeded by a pair of values 
+containing the number (N) of vertices in the path, and a 0 value.
+_______________________________________________________________
+| counters | vertex1      | vertex2      | ... | vertexN      |
+| N, 0     | x1, y1, (z1) | x2, y2, (z2) | ... | xN, yN, (zN) |
+---------------------------------------------------------------
 
-Z-values are received as inputs and returned in output only if the USINGZ
-pre-processor identifier exists, more details on Z-values later.
-____________________________________________________
-|counter|   coord1   |   coord2   |...|   coordN   |
-|N, 0   |x1, y1, (z1)|x2, y2, (z2)|...|xN, yN, (zN)|
-____________________________________________________
-
-Below we will see that CPath is a special case of the more general CPolyPath.
 
 CPaths64 and CPathsD:
-These are also arrays containing any number of consecutive CPath64 or 
-CPathD structures. But preceding these consecutive paths, there is pair of 
-values that contain the total length of the array structure (A) and the 
-number of CPath64 or CPathD it contains (C). The space these structures will 
-occupy in memory = A *sizeof(int64_t) or A * sizeof(double) respectively. 
-_______________________________
-|counter|path1|path2|...|pathC|
-|A  , C |     |     |   |     |
-_______________________________
+These are also arrays containing any number of consecutive CPath
+structures. Preceeding these consecutive paths, there is a pair of 
+values that contain the length of the array structure (A) and 
+the count (C) of following CPath structures. 
+  Memory allocation for CPaths64 = A * sizeof(int64_t)
+  Memory allocation for CPathsD  = A * sizeof(double)
+__________________________________________
+| counters | path1 | path2 | ... | pathC |
+| A, C     |       |       | ... |       |
+------------------------------------------
 
-Below we will see that CPaths is a special case of the more general CPolyTree
+
+CPolytree64 and CPolytreeD:
+These structures consist of two values followed by a series of CPolyPath 
+structures. The first value indicates the total length of the array (A). 
+The second value indicates the number of following CPolyPath structures 
+that are the top level CPolyPath of the CPolytree. These CPolyPath may, 
+in turn, contain their own nested CPolyPath children that collectively
+make a tree structure.
+_________________________________________________________
+| counters | CPolyPath1 | CPolyPath2 | ... | CPolyPathC |
+| A, C     |            |            | ... |            |
+---------------------------------------------------------
+
 
 CPolyPath64 and CPolyPathD:
-These are simple arrays consisting of a series of path coordinates followed by 
-any number of child (i.e., nested) CPolyPath. Preceding these are two values 
-indicating the length of the path (N) and the number of child CPolyPath (C).
-CPolyPath (C).
-_____________________________________________________________________________
-|counter|    coord1  |   coord2   |...|   coordN   |child1|child2|...|childC|
-|N  , C |x1, y1, (z1)|x2, y2, (z2)|...|xN, yN, (zN)|      |      |   |      |
-_____________________________________________________________________________
+These array structures consist of two counter values, a series of polygon 
+vertices, and a series of nested CPolyPath children. The first counter
+values indicates the number (N) of vertices in the polygon, and the second 
+counter indicates the CPolyPath child count (C).
+______________________________________________________________________________
+|counts |vertex1     |vertex2      |...|vertexN     |child1|child2|...|childC|
+|N, C   |x1, y1, (z1)| x2, y2, (z2)|...|xN, yN, (zN)|      |      |...|      |
+------------------------------------------------------------------------------
 
-CPath is a special case of CPolyPath with C = 0 and no children after the 
-coordinates.
 
-CPolyTree64 and CPolyTreeD:
-CPolyTree has an identical structure to CPaths, but the children are the more 
-generalized CPolyPath. We can think of CPaths as a special case of CPolyTree 
-with only one level of children.
-___________________________________________
-|counter|polypath1|polypath2|...|polypathC|
-|A  , C |         |         |   |         |
-___________________________________________
-
-CPolyTree and CPaths own the memory of the paths they contain. In the case
-of CPolyTree it is the memory of every CPolyPath in the tree. Just like for 
-CPaths the first value (A) represents the number of elements in the array, 
-and the size in bytes is A * sizeof(int64_t) or A * sizeof(double). 
-
-The value C represents the number of direct children meaning the number of 
-top-level CPolyPaths only.
-
-Again, all these exported structures (CPaths64, CPathsD, CPolyTree64 & 
-CPolyTreeD) are arrays of either type int64_t or double, and the first 
-value in these arrays will always be the length of that array.
-
-These array structures are allocated in heap memory which will eventually 
+DisposeArray64 & DisposeArrayD:
+All array structures are allocated in heap memory which will eventually
 need to be released. However, since applications dynamically linking to 
-these functions may use different memory managers, the only safe way to 
-free up this memory is to use the exported DisposeArray64 and 
-DisposeArrayD functions (see below).
+these DLL functions may use different memory managers, the only safe way to 
+release this memory is to use the exported DisposeArray functions.
 
-Z-Values:
-Structures contain the z-values only if the USINGZ pre-processor identifier 
-exists. This library does not use or modify z-values; each vertex only carries 
-the z-value as data. Typically, the z-values are z-coordinates, but it can be 
-any data that fits in 64-bits, including pointers. 
 
-Consumers can set the z-values of newly generated vertices by implementing a 
-callback function with the signature defined by DLLZCallback. The client 
-application passes this function to this DLL via SetZCallback.
-
-The library makes the callback to the external system providing it with the two
-intersecting edges (e1bot, e1top) and (e2bot, e2top) and their intersection 
-point (pt). The external system sets the z-value of pt. 
+(Optional) Z-Values:
+Structures will only contain user-defined z-values when the USINGZ 
+pre-processor identifier is used. The library does not assign z-values 
+because this field's purpose is to allow users to assign custom values to 
+vertices. Z-values in input paths (subject and clip) will be copied to 
+solution paths. New vertices at path intersections will generate a callback 
+event that allows the user to assign a z-value at that new vertex. The
+user's callback function must conform with the DLLZCallback definition and 
+be registered with this DLL via SetZCallback. To assist the user in assigning 
+z-values, the library passes in the callback function, not only the new 
+intersection point, but the vertices that define the intersecting segments.
 */
-
 
 #ifndef CLIPPER2_EXPORT_H
 #define CLIPPER2_EXPORT_H
