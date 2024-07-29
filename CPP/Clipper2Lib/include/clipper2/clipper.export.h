@@ -17,70 +17,101 @@
  jointype: Square=0, Bevel=1, Round=2, Miter=3
  endtype: Polygon=0, Joined=1, Butt=2, Square=3, Round=4
 
-The path structures used extensively in other parts of this library are all
-based on std::vector classes. Since C++ classes can't be accessed by other
-languages, these paths are converted into very simple array data structures 
-(of either int64_t for CPath64 or double for CPathD) that can be parsed by 
-just about any programming language.
+The path structures used extensively in other parts of this library are all 
+based on std::vector classes. Since C++ classes can't be accessed by other 
+languages, these paths are converted here into very simple array data 
+structures that can be parsed by just about any programming language.
+
+These 2D paths are defined by series of x and y coordinates together with an
+optional user-defined 'z' value (see Z-values below). Hence, a vertex refers 
+to a single x and y coordinate (+/- a user-defined value). These values will 
+be either type int64_t or type double. Data structures have names that
+indicate the array type by a suffixed '64' or a 'D'. For example, the data 
+structure CPath64 contains an array of int64_t values, whereas the data 
+structure CPathD contains an array of double. Where documentation omits 
+the type suffix (eg CPath), it is simply agnostic to the array's data type.
+
+For conciseness, the following letters are used in the diagrams below:
+N: Number of vertices in a given path
+C: Count of structure's paths
+A: Array size (as distinct from the size in memory)
+
 
 CPath64 and CPathD:
-These are arrays of consecutive x and y path coordinates preceeded by
-a pair of values containing the path's length (N) and a 0 value.
-__________________________________
-|counter|coord1|coord2|...|coordN|
-|N, 0   |x1, y1|x2, y2|...|xN, yN|
-__________________________________
+These are arrays of consecutive vertices preceeded by a pair of values 
+containing the number of vertices (N) in the path, and a 0 value.
+_______________________________________________________________
+| counters | vertex1      | vertex2      | ... | vertexN      |
+| N, 0     | x1, y1, (z1) | x2, y2, (z2) | ... | xN, yN, (zN) |
+---------------------------------------------------------------
+
 
 CPaths64 and CPathsD:
-These are also arrays containing any number of consecutive CPath64 or
-CPathD  structures. But preceeding these consecutive paths, there is pair of
-values that contain the total length of the array structure (A) and the 
-number of CPath64 or CPathD it contains (C). The space these structures will
-occupy in memory = A * sizeof(int64_t) or  A * sizeof(double) respectively. 
-_______________________________
-|counter|path1|path2|...|pathC|
-|A  , C |                     |
-_______________________________
+These are also arrays containing any number of consecutive CPath
+structures. Preceeding these consecutive paths, there is a pair of 
+values that contain the length of the array structure (A) and 
+the count of following CPath structures (C). 
+  Memory allocation for CPaths64 = A * sizeof(int64_t)
+  Memory allocation for CPathsD  = A * sizeof(double)
+__________________________________________
+| counters | path1 | path2 | ... | pathC |
+| A, C     |       |       | ... |       |
+------------------------------------------
+
 
 CPolytree64 and CPolytreeD:
-These are also arrays consisting of CPolyPath structures that represent
-individual paths in a tree structure. However, the very first (ie top)
-CPolyPath is just the tree container that doesn't have a path. And because
-of that, its structure will be very slightly different from the remaining
-CPolyPath. This difference will be discussed below.
+These structures consist of two values followed by a series of CPolyPath 
+structures. The first value indicates the total length of the array (A). 
+The second value indicates the number of following CPolyPath structures 
+that are the top level CPolyPath in the CPolytree (C). These CPolyPath 
+may, in turn, contain their own nested CPolyPath children that 
+collectively make a tree structure.
+_________________________________________________________
+| counters | CPolyPath1 | CPolyPath2 | ... | CPolyPathC |
+| A, C     |            |            | ... |            |
+---------------------------------------------------------
+
 
 CPolyPath64 and CPolyPathD:
-These are simple arrays consisting of a series of path coordinates followed
-by any number of child (ie nested) CPolyPath. Preceeding these are two values
-indicating the length of the path (N) and the number of child CPolyPath (C).
-____________________________________________________________
-|counter|coord1|coord2|...|coordN| child1|child2|...|childC|
-|N  , C |x1, y1|x2, y2|...|xN, yN|                         |
-____________________________________________________________
+These array structures consist of a pair of counter values followed by a 
+series of polygon vertices and a series of nested CPolyPath children. 
+The first counter values indicates the number of vertices in the 
+polygon (N), and the second counter indicates the CPolyPath child count (C).
+______________________________________________________________________________
+|counts |vertex1     |vertex2      |...|vertexN     |child1|child2|...|childC|
+|N, C   |x1, y1, (z1)| x2, y2, (z2)|...|xN, yN, (zN)|      |      |...|      |
+------------------------------------------------------------------------------
 
-As mentioned above, the very first CPolyPath structure is just a container
-that owns (both directly and indirectly) every other CPolyPath in the tree.
-Since this first CPolyPath has no path, instead of a path length, its very
-first value will contain the total length of the CPolytree array (not its
-total bytes length).
 
-Again, all theses exported structures (CPaths64, CPathsD, CPolyTree64 & 
-CPolyTreeD) are arrays of either type int64_t or double, and the first 
-value in these arrays will always be the length of that array.
+DisposeArray64 & DisposeArrayD:
+All array structures are allocated in heap memory which will eventually
+need to be released. However, since applications linking to these DLL 
+functions may use different memory managers, the only safe way to release 
+this memory is to use the exported DisposeArray functions.
 
-These array structures are allocated in heap memory which will eventually
-need to be released. However, since applications dynamically linking to 
-these functions may use different memory managers, the only safe way to 
-free up this memory is to use the exported DisposeArray64 and 
-DisposeArrayD functions (see below).
+
+(Optional) Z-Values:
+Structures will only contain user-defined z-values when the USINGZ 
+pre-processor identifier is used. The library does not assign z-values 
+because this field is intended for users to assign custom values to vertices.
+Z-values in input paths (subject and clip) will be copied to solution paths. 
+New vertices at path intersections will generate a callback event that allows 
+users to assign z-values at these new vertices. The user's callback function 
+must conform with the DLLZCallback definition and be registered with the 
+DLL via SetZCallback. To assist the user in assigning z-values, the library 
+passes in the callback function the new intersection point together with
+the four vertices that define the two segments that are intersecting.
+
 */
-
 
 #ifndef CLIPPER2_EXPORT_H
 #define CLIPPER2_EXPORT_H
 
 #include <cstdlib>
 #include <vector>
+#if __cplusplus >= 202002L // Check for C++20 or later
+  #include <bit> //we have a polyfill for earlier C++ below
+#endif
 
 #include "clipper2/clipper.core.h"
 #include "clipper2/clipper.engine.h"
@@ -178,10 +209,21 @@ EXTERN_DLL_EXPORT CPaths64 InflatePaths64(const CPaths64 paths,
   double delta, uint8_t jointype, uint8_t endtype,
   double miter_limit = 2.0, double arc_tolerance = 0.0,
   bool reverse_solution = false);
+
 EXTERN_DLL_EXPORT CPathsD InflatePathsD(const CPathsD paths,
   double delta, uint8_t jointype, uint8_t endtype,
   int precision = 2, double miter_limit = 2.0,
   double arc_tolerance = 0.0, bool reverse_solution = false);
+
+EXTERN_DLL_EXPORT CPaths64 InflatePath64(const CPath64 path,
+    double delta, uint8_t jointype, uint8_t endtype,
+    double miter_limit = 2.0, double arc_tolerance = 0.0,
+    bool reverse_solution = false);
+
+EXTERN_DLL_EXPORT CPathsD InflatePathD(const CPathD path,
+    double delta, uint8_t jointype, uint8_t endtype,
+    int precision = 2, double miter_limit = 2.0,
+    double arc_tolerance = 0.0, bool reverse_solution = false);
 
 // RectClip & RectClipLines:
 EXTERN_DLL_EXPORT CPaths64 RectClip64(const CRect64& rect,
@@ -193,9 +235,41 @@ EXTERN_DLL_EXPORT CPaths64 RectClipLines64(const CRect64& rect,
 EXTERN_DLL_EXPORT CPathsD RectClipLinesD(const CRectD& rect,
   const CPathsD paths, int precision = 2);
 
+///////////////// C++ 20 Polyfill ////////////////////
+#if __cplusplus >= 202002L // Check for C++20 or later
+// C++20 or later: Use std::bit_cast
+template<class To, class From>
+constexpr bit_cast(const From& src) noexcept {
+    return std::bit_cast<To>(src);
+}
+#else
+// from https://en.cppreference.com/w/cpp/numeric/bit_cast (see possible implementation)
+template<class To, class From>
+std::enable_if_t<
+    sizeof(To) == sizeof(From) &&
+    std::is_trivially_copyable_v<From> &&
+    std::is_trivially_copyable_v<To>,
+    To>
+
+bit_cast(const From& src) noexcept
+{
+    To dst;
+    std::memcpy(&dst, &src, sizeof(To));
+    return dst;
+}
+
+#endif
+
+
 //////////////////////////////////////////////////////
 // INTERNAL FUNCTIONS
 //////////////////////////////////////////////////////
+
+#ifdef USINGZ
+constexpr int EXPORT_VERTEX_DIMENSIONALITY = 3;
+#else    
+constexpr int EXPORT_VERTEX_DIMENSIONALITY  = 2;
+#endif 
 
 template <typename T>
 static void GetPathCountAndCPathsArrayLen(const Paths<T>& paths,
@@ -206,7 +280,7 @@ static void GetPathCountAndCPathsArrayLen(const Paths<T>& paths,
   for (const Path<T>& path : paths)
     if (path.size())
     {
-      array_len += path.size() * 2 + 2;
+      array_len += path.size() * EXPORT_VERTEX_DIMENSIONALITY + 2;
       ++cnt;
     }
 }
@@ -214,7 +288,7 @@ static void GetPathCountAndCPathsArrayLen(const Paths<T>& paths,
 static size_t GetPolyPath64ArrayLen(const PolyPath64& pp)
 {
   size_t result = 2; // poly_length + child_count
-  result += pp.Polygon().size() * 2;
+  result += pp.Polygon().size() * EXPORT_VERTEX_DIMENSIONALITY;
   //plus nested children :)
   for (size_t i = 0; i < pp.Count(); ++i)
     result += GetPolyPath64ArrayLen(*pp[i]);
@@ -245,11 +319,15 @@ static T* CreateCPaths(const Paths<T>& paths)
     {
       *v++ = pt.x;
       *v++ = pt.y;
+
+#ifdef USINGZ
+      *v++ = bit_cast<T>(pt.z);
+#endif
+
     }
   }
   return result;
 }
-
 
 CPathsD CreateCPathsDFromPaths64(const Paths64& paths, double scale)
 {
@@ -268,6 +346,11 @@ CPathsD CreateCPathsDFromPaths64(const Paths64& paths, double scale)
     {
       *v++ = pt.x * scale;
       *v++ = pt.y * scale;
+
+#ifdef USINGZ
+      *v++ = bit_cast<double>(pt.z); //needs a polyfill for 17
+#endif
+
     }
   }
   return result;
@@ -284,8 +367,14 @@ static Path<T> ConvertCPath(T* path)
   result.reserve(cnt);
   for (size_t j = 0; j < cnt; ++j)
   {
-    T x = *v++, y = *v++;
-    result.push_back(Point<T>(x, y));
+      T x = *v++, y = *v++;
+
+#ifdef USINGZ
+      auto z = bit_cast<z_type>(*v++);
+      result.push_back(Point<T>(x, y, z));
+#else  
+      result.push_back(Point<T>(x, y));
+#endif
   }
   return result;
 }
@@ -301,17 +390,47 @@ static Paths<T> ConvertCPaths(T* paths)
   for (size_t i = 0; i < cnt; ++i)
   {
     size_t cnt2 = static_cast<size_t>(*v);
-    v += 2;
+    v += 2; 
     Path<T> path;
     path.reserve(cnt2);
     for (size_t j = 0; j < cnt2; ++j)
     {
       T x = *v++, y = *v++;
+ 
+#ifdef USINGZ
+      auto z = bit_cast<z_type>(*v++);
+      path.push_back(Point<T>(x, y, z));
+#else
       path.push_back(Point<T>(x, y));
+#endif
+
     }
     result.push_back(path);
   }
   return result;
+}
+
+static Path64 ConvertCPathsDToPath64(const CPathD path, double scale)
+{
+    Path64 result;
+    if (!path) return result;
+    double* v = path;
+    size_t cnt = static_cast<size_t>(*v);
+    v += 2; // skip 0 value
+    result.reserve(cnt);
+    for (size_t j = 0; j < cnt; ++j)
+    {
+        double x = *v++ * scale;
+        double y = *v++ * scale;
+
+#ifdef USINGZ
+        auto z = bit_cast<z_type>(*v++);
+        result.push_back(Point64(x, y, z));
+#else  
+        result.push_back(Point64(x, y));
+#endif
+    }
+    return result;
 }
 
 
@@ -333,8 +452,15 @@ static Paths64 ConvertCPathsDToPaths64(const CPathsD paths, double scale)
     {
       double x = *v++ * scale;
       double y = *v++ * scale;
+
+#ifdef USINGZ
+      auto z = bit_cast<z_type>(*v++);
+      path.push_back(Point64(x, y, z));
+#else
       path.push_back(Point64(x, y));
+#endif
     }
+
     result.push_back(path);
   }
   return result;
@@ -349,6 +475,11 @@ static void CreateCPolyPath(const PolyPath64* pp, T*& v, T scale)
   {
     *v++ = static_cast<T>(pt.x * scale);
     *v++ = static_cast<T>(pt.y * scale);
+
+#ifdef USINGZ   
+    *v++ = bit_cast<T>(pt.z); // raw memory copy
+#endif
+
   }
   for (size_t i = 0; i < pp->Count(); ++i)
     CreateCPolyPath(pp->Child(i), v, scale);
@@ -529,6 +660,38 @@ EXTERN_DLL_EXPORT CPathsD InflatePathsD(const CPathsD paths,
   return CreateCPathsDFromPaths64(result, 1 / scale);
 }
 
+
+EXTERN_DLL_EXPORT CPaths64 InflatePath64(const CPath64 path,
+    double delta, uint8_t jointype, uint8_t endtype, double miter_limit,
+    double arc_tolerance, bool reverse_solution)
+{
+    Path64 pp;
+    pp = ConvertCPath(path);
+    ClipperOffset clip_offset(miter_limit,
+        arc_tolerance, reverse_solution);
+    clip_offset.AddPath(pp, JoinType(jointype), EndType(endtype));
+    Paths64 result;
+    clip_offset.Execute(delta, result);
+    return CreateCPaths(result);
+}
+
+EXTERN_DLL_EXPORT CPathsD InflatePathD(const CPathD path,
+    double delta, uint8_t jointype, uint8_t endtype,
+    int precision, double miter_limit,
+    double arc_tolerance, bool reverse_solution)
+{
+    if (precision < -8 || precision > 8 || !path) return nullptr;
+
+    const double scale = std::pow(10, precision);
+    ClipperOffset clip_offset(miter_limit, arc_tolerance, reverse_solution);
+    Path64 pp = ConvertCPathsDToPath64(path, scale);
+    clip_offset.AddPath(pp, JoinType(jointype), EndType(endtype));
+    Paths64 result;
+    clip_offset.Execute(delta * scale, result);
+
+    return CreateCPathsDFromPaths64(result, 1 / scale);
+}
+
 EXTERN_DLL_EXPORT CPaths64 RectClip64(const CRect64& rect, const CPaths64 paths)
 {
   if (CRectIsEmpty(rect) || !paths) return nullptr;
@@ -595,6 +758,18 @@ EXTERN_DLL_EXPORT CPaths64 MinkowskiDiff64(const CPath64& cpattern, const CPath6
   return CreateCPaths(solution);
 }
 
-}  // end Clipper2Lib namespace
+#ifdef USINGZ
+typedef void (*DLLZCallback)(const Point64& e1bot, const Point64& e1top, const Point64& e2bot, const Point64& e2top, Point64& pt);
 
+EXTERN_DLL_EXPORT void SetZCallback(DLLZCallback callback)
+{
+    if (callback)
+        ClipperBase::DefaultZCallback = [callback](const Point64& e1bot, const Point64& e1top, const Point64 e2bot, const Point64& e2top, Point64& pt)
+        { callback(e1bot, e1top, e2bot, e2top, pt);  };
+    else
+        ClipperBase::DefaultZCallback = nullptr;
+}  
+#endif
+
+}
 #endif  // CLIPPER2_EXPORT_H

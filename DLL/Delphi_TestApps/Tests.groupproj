@@ -1,0 +1,84 @@
+﻿<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+    <PropertyGroup>
+        <ProjectGuid>{F7320A3F-E362-4BE3-842D-9D8DE5D4CDA1}</ProjectGuid>
+    </PropertyGroup>
+    <ItemGroup>
+        <Projects Include="Test_DLL\Test_DLL.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="Example1\Example1.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="Example2\Example2.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="RectClip\RectClip_Demo.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="Delphi_BenchMark\DelphiBenchmark.dproj">
+            <Dependencies/>
+        </Projects>
+    </ItemGroup>
+    <ProjectExtensions>
+        <Borland.Personality>Default.Personality.12</Borland.Personality>
+        <Borland.ProjectType/>
+        <BorlandProject>
+            <Default.Personality/>
+        </BorlandProject>
+    </ProjectExtensions>
+    <Target Name="Test_DLL">
+        <MSBuild Projects="Test_DLL\Test_DLL.dproj"/>
+    </Target>
+    <Target Name="Test_DLL:Clean">
+        <MSBuild Projects="Test_DLL\Test_DLL.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="Test_DLL:Make">
+        <MSBuild Projects="Test_DLL\Test_DLL.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="Example1">
+        <MSBuild Projects="Example1\Example1.dproj"/>
+    </Target>
+    <Target Name="Example1:Clean">
+        <MSBuild Projects="Example1\Example1.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="Example1:Make">
+        <MSBuild Projects="Example1\Example1.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="Example2">
+        <MSBuild Projects="Example2\Example2.dproj"/>
+    </Target>
+    <Target Name="Example2:Clean">
+        <MSBuild Projects="Example2\Example2.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="Example2:Make">
+        <MSBuild Projects="Example2\Example2.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="RectClip_Demo">
+        <MSBuild Projects="RectClip\RectClip_Demo.dproj"/>
+    </Target>
+    <Target Name="RectClip_Demo:Clean">
+        <MSBuild Projects="RectClip\RectClip_Demo.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="RectClip_Demo:Make">
+        <MSBuild Projects="RectClip\RectClip_Demo.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="DelphiBenchmark">
+        <MSBuild Projects="Delphi_BenchMark\DelphiBenchmark.dproj"/>
+    </Target>
+    <Target Name="DelphiBenchmark:Clean">
+        <MSBuild Projects="Delphi_BenchMark\DelphiBenchmark.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="DelphiBenchmark:Make">
+        <MSBuild Projects="Delphi_BenchMark\DelphiBenchmark.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="Build">
+        <CallTarget Targets="Test_DLL;Example1;Example2;RectClip_Demo;DelphiBenchmark"/>
+    </Target>
+    <Target Name="Clean">
+        <CallTarget Targets="Test_DLL:Clean;Example1:Clean;Example2:Clean;RectClip_Demo:Clean;DelphiBenchmark:Clean"/>
+    </Target>
+    <Target Name="Make">
+        <CallTarget Targets="Test_DLL:Make;Example1:Make;Example2:Make;RectClip_Demo:Make;DelphiBenchmark:Make"/>
+    </Target>
+    <Import Project="$(BDS)\Bin\CodeGear.Group.Targets" Condition="Exists('$(BDS)\Bin\CodeGear.Group.Targets')"/>
+</Project>

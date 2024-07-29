@@ -107,6 +107,10 @@ namespace Clipper2Lib
   //https://en.wikipedia.org/wiki/Nonzero-rule
   enum class FillRule { EvenOdd, NonZero, Positive, Negative };
 
+#ifdef USINGZ
+  using z_type = int64_t;
+#endif
+
   // Point ------------------------------------------------------------------------
 
   template <typename T>
@@ -114,10 +118,10 @@ namespace Clipper2Lib
     T x;
     T y;
 #ifdef USINGZ
-    int64_t z;
+     z_type z;
 
     template <typename T2>
-    inline void Init(const T2 x_ = 0, const T2 y_ = 0, const int64_t z_ = 0)
+    inline void Init(const T2 x_ = 0, const T2 y_ = 0, const z_type z_ = 0)
     {
       if constexpr (std::is_integral_v<T> &&
         is_round_invocable<T2>::value && !std::is_integral_v<T2>)
@@ -137,7 +141,7 @@ namespace Clipper2Lib
     explicit Point() : x(0), y(0), z(0) {};
 
     template <typename T2>
-    Point(const T2 x_, const T2 y_, const int64_t z_ = 0)
+    Point(const T2 x_, const T2 y_, const z_type z_ = 0)
     {
       Init(x_, y_);
       z = z_;
@@ -150,7 +154,7 @@ namespace Clipper2Lib
     }
 
     template <typename T2>
-    explicit Point(const Point<T2>& p, int64_t z_)
+    explicit Point(const Point<T2>& p, z_type z_)
     {
       Init(p.x, p.y, z_);
     }
@@ -160,7 +164,7 @@ namespace Clipper2Lib
       return Point(x * scale, y * scale, z);
     }
 
-    void SetZ(const int64_t z_value) { z = z_value; }
+    void SetZ(const z_type z_value) { z = z_value; }
 
     friend std::ostream& operator<<(std::ostream& os, const Point& point)
     {

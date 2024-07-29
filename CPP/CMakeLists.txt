@@ -34,6 +34,8 @@ set(CLIPPER2_INC_FOLDER ${PROJECT_SOURCE_DIR}/Clipper2Lib/include/clipper2)
 configure_file(clipper.version.in 
   ${CLIPPER2_INC_FOLDER}/clipper.version.h NEWLINE_STYLE UNIX)
 
+add_compile_definitions(USINGZ)
+
 set(CLIPPER2_INC
   ${CLIPPER2_INC_FOLDER}/clipper.h
   ${CLIPPER2_INC_FOLDER}/clipper.version.h
