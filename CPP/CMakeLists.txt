@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.15)
-project(Clipper2 VERSION 1.3.0 LANGUAGES C CXX)
+project(Clipper2 VERSION 1.4.0 LANGUAGES C CXX)
 
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 if(NOT DEFINED CMAKE_CXX_STANDARD OR CMAKE_CXX_STANDARD LESS 17)
@@ -33,6 +33,8 @@ include(GNUInstallDirs)
 set(CLIPPER2_INC_FOLDER ${PROJECT_SOURCE_DIR}/Clipper2Lib/include/clipper2)
 configure_file(clipper.version.in 
   ${CLIPPER2_INC_FOLDER}/clipper.version.h NEWLINE_STYLE UNIX)
+
+add_compile_definitions(USINGZ)
 
 set(CLIPPER2_INC
   ${CLIPPER2_INC_FOLDER}/clipper.h
@@ -98,7 +100,7 @@ if (NOT (CLIPPER2_USINGZ STREQUAL "OFF"))
   if (MSVC)
     target_compile_options(Clipper2Z PRIVATE /W4 /WX)
   else()
-    target_compile_options(Clipper2Z PRIVATE -Wall -Wextra -Wpedantic -Werror -Wno-c++20-compat)
+    target_compile_options(Clipper2Z PRIVATE -Wall -Wextra -Wpedantic -Werror -Wno-c++20-compat -Wsign-conversion)
     target_link_libraries(Clipper2Z PUBLIC -lm)
   endif()
 endif()
