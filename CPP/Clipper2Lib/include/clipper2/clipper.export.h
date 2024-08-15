@@ -1,6 +1,6 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  14 May 2024                                                     *
+* Date      :  16 August 2024                                                  *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2024                                         *
 * Purpose   :  This module exports the Clipper2 Library (ie DLL/so)            *
@@ -108,10 +108,6 @@ the four vertices that define the two segments that are intersecting.
 
 #include <cstdlib>
 #include <vector>
-#if __cplusplus >= 202002L // Check for C++20 or later
-  #include <bit> //we have a polyfill for earlier C++ below
-#endif
-
 #include "clipper2/clipper.core.h"
 #include "clipper2/clipper.engine.h"
 #include "clipper2/clipper.offset.h"
@@ -156,6 +152,14 @@ inline Rect<T> CRectToRect(const CRect<T>& rect)
   result.bottom = rect.bottom;
   return result;
 }
+
+template <typename T1, typename T2>
+inline T1 Reinterpret(T2 value) {
+  T1 result;
+  std::memcpy(&result, &value, sizeof(value));
+  return result;
+}
+
 
 #ifdef _WIN32
   #define EXTERN_DLL_EXPORT extern "C" __declspec(dllexport)
@@ -233,32 +237,6 @@ EXTERN_DLL_EXPORT CPaths64 RectClipLines64(const CRect64& rect,
   const CPaths64 paths);
 EXTERN_DLL_EXPORT CPathsD RectClipLinesD(const CRectD& rect,
   const CPathsD paths, int precision = 2);
-
-///////////////// C++ 20 Polyfill ////////////////////
-#if __cplusplus >= 202002L // Check for C++20 or later
-// C++20 or later: Use std::bit_cast
-template<class To, class From>
-constexpr bit_cast(const From& src) noexcept {
-    return std::bit_cast<To>(src);
-}
-#else
-// from https://en.cppreference.com/w/cpp/numeric/bit_cast (see possible implementation)
-template<class To, class From>
-std::enable_if_t<
-    sizeof(To) == sizeof(From) &&
-    std::is_trivially_copyable_v<From> &&
-    std::is_trivially_copyable_v<To>,
-    To>
-
-bit_cast(const From& src) noexcept
-{
-    To dst;
-    std::memcpy(&dst, &src, sizeof(To));
-    return dst;
-}
-
-#endif
-
 
 //////////////////////////////////////////////////////
 // INTERNAL FUNCTIONS
@@ -339,7 +317,7 @@ static T* CreateCPathsFromPathsT(const Paths<T>& paths)
       *v++ = pt.x;
       *v++ = pt.y;
 #ifdef USINGZ
-      *v++ = bit_cast<T>(pt.z);
+      *v++ = Reinterpret<T, z_type>(pt.z);
 #endif
     }
   }
@@ -364,7 +342,7 @@ CPathsD CreateCPathsDFromPathsD(const PathsD& paths)
       *v++ = pt.x;
       *v++ = pt.y;
 #ifdef USINGZ
-      * v++ = bit_cast<double>(pt.z); //needs a polyfill for 17
+      * v++ = Reinterpret<double, z_type>(pt.z);
 #endif
     }
   }
@@ -389,7 +367,7 @@ CPathsD CreateCPathsDFromPaths64(const Paths64& paths, double scale)
       *v++ = pt.x * scale;
       *v++ = pt.y * scale;
 #ifdef USINGZ
-      *v++ = bit_cast<double>(pt.z); //needs a polyfill for 17
+      *v++ = Reinterpret<double, z_type>(pt.z);
 #endif
     }
   }
@@ -409,7 +387,7 @@ static Path<T> ConvertCPathToPathT(T* path)
   {
       T x = *v++, y = *v++;
 #ifdef USINGZ
-      auto z = bit_cast<z_type>(*v++);
+      z_type z = Reinterpret<z_type, T>(*v++);
       result.push_back(Point<T>(x, y, z));
 #else  
       result.push_back(Point<T>(x, y));
@@ -436,7 +414,7 @@ static Paths<T> ConvertCPathsToPathsT(T* paths)
     {
       T x = *v++, y = *v++;
 #ifdef USINGZ
-      auto z = bit_cast<z_type>(*v++);
+      z_type z = Reinterpret<z_type, T>(*v++);
       path.push_back(Point<T>(x, y, z));
 #else
       path.push_back(Point<T>(x, y));
@@ -460,7 +438,7 @@ static Path64 ConvertCPathDToPath64WithScale(const CPathD path, double scale)
         double x = *v++ * scale;
         double y = *v++ * scale;
 #ifdef USINGZ
-        auto z = bit_cast<z_type>(*v++);
+        z_type z = Reinterpret<z_type, double>(*v++);
         result.push_back(Point64(x, y, z));
 #else  
         result.push_back(Point64(x, y));
@@ -488,7 +466,7 @@ static Paths64 ConvertCPathsDToPaths64(const CPathsD paths, double scale)
       double x = *v++ * scale;
       double y = *v++ * scale;
 #ifdef USINGZ
-      auto z = bit_cast<z_type>(*v++);
+      z_type z = Reinterpret<z_type, double>(*v++);
       path.push_back(Point64(x, y, z));
 #else
       path.push_back(Point64(x, y));
@@ -508,7 +486,7 @@ static void CreateCPolyPath64(const PolyPath64* pp, int64_t*& v)
     *v++ = pt.x;
     *v++ = pt.y;
 #ifdef USINGZ   
-    * v++ = bit_cast<int64_t>(pt.z); // raw memory copy
+    * v++ = Reinterpret<int64_t, z_type>(pt.z); // raw memory copy
 #endif
   }
   for (size_t i = 0; i < pp->Count(); ++i)
@@ -524,7 +502,7 @@ static void CreateCPolyPathD(const PolyPathD* pp, double*& v)
     *v++ = pt.x;
     *v++ = pt.y;
 #ifdef USINGZ   
-    * v++ = bit_cast<double>(pt.z); // raw memory copy
+    * v++ = Reinterpret<double, z_type>(pt.z); // raw memory copy
 #endif
   }
   for (size_t i = 0; i < pp->Count(); ++i)

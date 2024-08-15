@@ -46,6 +46,26 @@ namespace Clipper2Dll
       }
     }
 
+    private readonly struct CircleInfo
+    {
+      public readonly double  centerX;
+      public readonly double  centerY;
+      public readonly double  radius;
+      public readonly uint    brushClr;
+      public readonly uint    penClr;
+      public readonly uint    penWidth;
+      public CircleInfo(double centerX, double centerY,
+        double radius, uint brushClr, uint penClr, uint penWidth)
+      {
+        this.centerX = centerX;
+        this.centerY = centerY;
+        this.radius = radius;
+        this.brushClr = brushClr;
+        this.penClr = penClr;
+        this.penWidth = penWidth;
+      }
+    }
+
     private readonly struct PolyInfo
     {
       public readonly double[] paths;
@@ -70,6 +90,7 @@ namespace Clipper2Dll
     public FillRule FillRule { get; set; }
     private readonly List<PolyInfo> PolyInfoList = new List<PolyInfo>();
     private readonly List<TextInfo> textInfos = new List<TextInfo>();
+    private readonly List<CircleInfo> circleInfos = new List<CircleInfo>();
     private readonly CoordStyle coordStyle;
 
     private const string svg_header = "<?xml version=\"1.0\" standalone=\"no\"?>\n" +
@@ -98,10 +119,16 @@ namespace Clipper2Dll
       textInfos.Clear();
     }
 
+    public void ClearCircles()
+    {
+      circleInfos.Clear();
+    }
+
     public void ClearAll()
     {
       PolyInfoList.Clear();
       textInfos.Clear();
+      circleInfos.Clear();
     }
     public void AddClosedPath(long[] path, uint brushColor,
       uint penColor, double penWidth, bool showCoords = false)
@@ -180,6 +207,12 @@ namespace Clipper2Dll
     public void AddText(string cap, double posX, double posY, int fontSize, uint fontClr = 0xFF000000)
     {
       textInfos.Add(new TextInfo(cap, posX, posY, fontSize, fontClr));
+    }
+
+    public void AddCircle(double centerX, double centerY,
+        double radius, uint brushClr, uint penClr, uint penWidth)
+    {
+      circleInfos.Add(new CircleInfo(centerX, centerY, radius, brushClr, penClr, penWidth));
     }
 
     private RectD GetBounds()
@@ -322,6 +355,16 @@ namespace Clipper2Dll
           writer.Write("</g>\n\n");
         }
       }
+
+      foreach (CircleInfo circInfo in circleInfos)
+      {
+        writer.Write("<g>\n  <circle cx=\"{0:f2}\" cy=\"{1:f2}\"  r=\"{2:f2}\"" +
+          " stroke=\"{3}\" stroke-width=\"{4}\" fill=\"{5}\" opacity=\"{6:f2}\" />\n</g>\n",
+                     circInfo.centerX * scale + offsetX, circInfo.centerY * scale + offsetY, 
+                     circInfo.radius * scale, ColorToHtml(circInfo.penClr), circInfo.penWidth,
+                     ColorToHtml(circInfo.brushClr), GetAlpha(circInfo.brushClr));
+      }
+
 
       foreach (TextInfo captionInfo in textInfos)
       {

@@ -57,7 +57,9 @@ namespace ClipperDllDemo
             long x = cSolution[idx++];
             long y = cSolution[idx++];
             long z = cSolution[idx++];
-            svg.AddText(string.Format(NumberFormatInfo.InvariantInfo, "{0}", z), x, y - 2, 9);
+            if (z <= 10) continue;
+            svg.AddText(string.Format(NumberFormatInfo.InvariantInfo, "{0}", z), x +1, y - 3, 9);
+            svg.AddCircle(x, y, 3, 0x40FFFF00, 0xFF000000, 2);
           }
         }
 #endif
@@ -86,7 +88,9 @@ namespace ClipperDllDemo
             double x = cSolution[idx++];
             double y = cSolution[idx++];
             double z = cSolution[idx++];
-            svg.AddText(string.Format(NumberFormatInfo.InvariantInfo, "{0}", z), x, y - 2, 9);
+            if (z <= 10) continue;
+            svg.AddText(string.Format(NumberFormatInfo.InvariantInfo, "{0}", z), x + 1, y - 3, 9);
+            svg.AddCircle(x, y, 3, 0x40FFFF00, 0xFF000000, 2);
           }
         }
 #endif

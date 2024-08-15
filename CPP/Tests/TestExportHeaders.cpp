@@ -15,7 +15,7 @@ static bool CreatePolyPath64FromCPolyPath(CPolyPath64& v, PolyPath64& owner)
   {
     int64_t x = *v++, y = *v++;
 #ifdef USINGZ
-    auto z = bit_cast<z_type>(*v++);
+    auto z = Reinterpret<z_type, int64_t>(*v++);
     path.push_back(Point64(x, y, z));
 #else
     path.push_back(Point64(x, y));
@@ -48,7 +48,7 @@ static bool CreatePolyPathDFromCPolyPath(CPolyPathD& v, PolyPathD& owner)
   {
     double x = *v++, y = *v++;
 #ifdef USINGZ
-    auto z = bit_cast<z_type>(*v++);
+    auto z = Reinterpret<z_type, double>(*v++);
     path.push_back(PointD(x, y, z));
 #else
     path.push_back(PointD(x, y));
