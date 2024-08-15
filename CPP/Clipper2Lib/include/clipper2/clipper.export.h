@@ -155,9 +155,7 @@ inline Rect<T> CRectToRect(const CRect<T>& rect)
 
 template <typename T1, typename T2>
 inline T1 Reinterpret(T2 value) {
-  T1 result;
-  memcpy(&result, &value, sizeof(value));
-  return result;
+  return *reinterpret_cast<T1*>(&value);
 }
 
 
@@ -317,7 +315,7 @@ static T* CreateCPathsFromPathsT(const Paths<T>& paths)
       *v++ = pt.x;
       *v++ = pt.y;
 #ifdef USINGZ
-      *v++ = Reinterpret<T, z_type>(pt.z);
+      *v++ = Reinterpret<T>(pt.z);
 #endif
     }
   }
@@ -342,7 +340,7 @@ CPathsD CreateCPathsDFromPathsD(const PathsD& paths)
       *v++ = pt.x;
       *v++ = pt.y;
 #ifdef USINGZ
-      * v++ = Reinterpret<double, z_type>(pt.z);
+      * v++ = Reinterpret<double>(pt.z);
 #endif
     }
   }
@@ -367,7 +365,7 @@ CPathsD CreateCPathsDFromPaths64(const Paths64& paths, double scale)
       *v++ = pt.x * scale;
       *v++ = pt.y * scale;
 #ifdef USINGZ
-      *v++ = Reinterpret<double, z_type>(pt.z);
+      *v++ = Reinterpret<double>(pt.z);
 #endif
     }
   }
@@ -387,7 +385,7 @@ static Path<T> ConvertCPathToPathT(T* path)
   {
       T x = *v++, y = *v++;
 #ifdef USINGZ
-      z_type z = Reinterpret<z_type, T>(*v++);
+      z_type z = Reinterpret<z_type>(*v++);
       result.push_back(Point<T>(x, y, z));
 #else  
       result.push_back(Point<T>(x, y));
@@ -414,7 +412,7 @@ static Paths<T> ConvertCPathsToPathsT(T* paths)
     {
       T x = *v++, y = *v++;
 #ifdef USINGZ
-      z_type z = Reinterpret<z_type, T>(*v++);
+      z_type z = Reinterpret<z_type>(*v++);
       path.push_back(Point<T>(x, y, z));
 #else
       path.push_back(Point<T>(x, y));
@@ -438,7 +436,7 @@ static Path64 ConvertCPathDToPath64WithScale(const CPathD path, double scale)
         double x = *v++ * scale;
         double y = *v++ * scale;
 #ifdef USINGZ
-        z_type z = Reinterpret<z_type, double>(*v++);
+        z_type z = Reinterpret<z_type>(*v++);
         result.push_back(Point64(x, y, z));
 #else  
         result.push_back(Point64(x, y));
@@ -466,7 +464,7 @@ static Paths64 ConvertCPathsDToPaths64(const CPathsD paths, double scale)
       double x = *v++ * scale;
       double y = *v++ * scale;
 #ifdef USINGZ
-      z_type z = Reinterpret<z_type, double>(*v++);
+      z_type z = Reinterpret<z_type>(*v++);
       path.push_back(Point64(x, y, z));
 #else
       path.push_back(Point64(x, y));
@@ -486,7 +484,7 @@ static void CreateCPolyPath64(const PolyPath64* pp, int64_t*& v)
     *v++ = pt.x;
     *v++ = pt.y;
 #ifdef USINGZ   
-    * v++ = Reinterpret<int64_t, z_type>(pt.z); // raw memory copy
+    * v++ = Reinterpret<int64_t>(pt.z); // raw memory copy
 #endif
   }
   for (size_t i = 0; i < pp->Count(); ++i)
@@ -502,7 +500,7 @@ static void CreateCPolyPathD(const PolyPathD* pp, double*& v)
     *v++ = pt.x;
     *v++ = pt.y;
 #ifdef USINGZ   
-    * v++ = Reinterpret<double, z_type>(pt.z); // raw memory copy
+    * v++ = Reinterpret<double>(pt.z); // raw memory copy
 #endif
   }
   for (size_t i = 0; i < pp->Count(); ++i)
