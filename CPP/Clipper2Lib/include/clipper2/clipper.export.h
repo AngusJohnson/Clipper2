@@ -156,7 +156,7 @@ inline Rect<T> CRectToRect(const CRect<T>& rect)
 template <typename T1, typename T2>
 inline T1 Reinterpret(T2 value) {
   T1 result;
-  std::memcpy(&result, &value, sizeof(value));
+  memcpy(&result, &value, sizeof(value));
   return result;
 }
 
