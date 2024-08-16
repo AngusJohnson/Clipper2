@@ -2,7 +2,9 @@
 #include "clipper2/clipper.h"
 #include "clipper2/clipper.core.h"
 #include "clipper2/clipper.export.h"
+
 using namespace Clipper2Lib;
+
 static bool CreatePolyPath64FromCPolyPath(CPolyPath64& v, PolyPath64& owner)
 {
   int64_t poly_len = *v++, child_count = *v++;
@@ -12,13 +14,19 @@ static bool CreatePolyPath64FromCPolyPath(CPolyPath64& v, PolyPath64& owner)
   for (size_t i = 0; i < poly_len; ++i)
   {
     int64_t x = *v++, y = *v++;
-    path.push_back(Point64(x,y));
+#ifdef USINGZ
+    auto z = Reinterpret<z_type, int64_t>(*v++);
+    path.push_back(Point64(x, y, z));
+#else
+    path.push_back(Point64(x, y));
+#endif
   }
   PolyPath64* new_owner = owner.AddChild(path);
   for (size_t i = 0; i < child_count; ++i)
     CreatePolyPath64FromCPolyPath(v, *new_owner);
   return true;
 }
+
 static bool BuildPolyTree64FromCPolyTree(CPolyTree64 tree, PolyTree64& result)
 {
   result.Clear();
@@ -28,31 +36,41 @@ static bool BuildPolyTree64FromCPolyTree(CPolyTree64 tree, PolyTree64& result)
     if (!CreatePolyPath64FromCPolyPath(v, result)) return false;
   return true;
 }
+
 static bool CreatePolyPathDFromCPolyPath(CPolyPathD& v, PolyPathD& owner)
 {
-  int64_t poly_len = *v++, child_count = *v++;
+  size_t poly_len     = static_cast<size_t>(*v++);
+  size_t child_count  = static_cast<size_t>(*v++);
   if (!poly_len) return false;
   PathD path;
   path.reserve(poly_len);
   for (size_t i = 0; i < poly_len; ++i)
   {
-    int64_t x = *v++, y = *v++;
+    double x = *v++, y = *v++;
+#ifdef USINGZ
+    auto z = Reinterpret<z_type, double>(*v++);
+    path.push_back(PointD(x, y, z));
+#else
     path.push_back(PointD(x, y));
+#endif
   }
   PolyPathD* new_owner = owner.AddChild(path);
   for (size_t i = 0; i < child_count; ++i)
     CreatePolyPathDFromCPolyPath(v, *new_owner);
   return true;
 }
+
 static bool BuildPolyTreeDFromCPolyTree(CPolyTreeD tree, PolyTreeD& result)
 {
   result.Clear();
   double* v = tree;
-  int64_t array_len = *v++, child_count = *v++;
+  int64_t array_len   = static_cast<int64_t>(*v++);
+  int64_t child_count = static_cast<int64_t>(*v++);
   for (size_t i = 0; i < child_count; ++i)
     if (!CreatePolyPathDFromCPolyPath(v, result)) return false;
   return true;
 }
+
 TEST(Clipper2Tests, ExportHeader64)
 {
   uint8_t None = 0, Intersection = 1, Union = 2, Difference = 3, Xor = 4;
@@ -69,10 +87,10 @@ TEST(Clipper2Tests, ExportHeader64)
   // Normally clipper.export.h will be compiled into a DLL/so so it can be called
   // by non C++ applications. If CreateCPaths64 was an exported function and it
   // was called by a non C++ application, it would crash that application.
-  CPaths64 c_subj = CreateCPaths(subj);
-  CPaths64 c_clip = CreateCPaths(clip);
+  CPaths64 c_subj = CreateCPathsFromPathsT(subj);
+  CPaths64 c_clip = CreateCPathsFromPathsT(clip);
   BooleanOp64(Intersection, EvenOdd, c_subj, c_subj_open, c_clip, c_sol, c_sol_open);
-  solution = ConvertCPaths(c_sol);
+  solution = ConvertCPathsToPathsT(c_sol);
   //clean up !!!
   delete[] c_subj;
   delete[] c_clip;
@@ -80,6 +98,7 @@ TEST(Clipper2Tests, ExportHeader64)
   DisposeArray64(c_sol_open);
   EXPECT_EQ(solution.size(), 5);
 }
+
 TEST(Clipper2Tests, ExportHeaderD)
 {
   uint8_t None = 0, Intersection = 1, Union = 2, Difference = 3, Xor = 4;
@@ -96,10 +115,10 @@ TEST(Clipper2Tests, ExportHeaderD)
   // Normally clipper.export.h will be compiled into a DLL/so so it can be called
   // by non C++ applications. If CreateCPathsD was an exported function and it
   // was called by a non C++ application, it would crash that application.
-  CPathsD c_subj = CreateCPaths(subj);
-  CPathsD c_clip = CreateCPaths(clip);
+  CPathsD c_subj = CreateCPathsFromPathsT(subj);
+  CPathsD c_clip = CreateCPathsFromPathsT(clip);
   BooleanOpD(Intersection, EvenOdd, c_subj, c_subj_open, c_clip, c_sol, c_sol_open);
-  solution = ConvertCPaths(c_sol);
+  solution = ConvertCPathsToPathsT(c_sol);
   //clean up !!!
   delete[] c_subj;
   delete[] c_clip;
@@ -107,6 +126,7 @@ TEST(Clipper2Tests, ExportHeaderD)
   DisposeArrayD(c_sol_open);
   EXPECT_EQ(solution.size(), 5);
 }
+
 TEST(Clipper2Tests, ExportHeaderTree64)
 {
   uint8_t None = 0, Intersection = 1, Union = 2, Difference = 3, Xor = 4;
@@ -121,8 +141,8 @@ TEST(Clipper2Tests, ExportHeaderTree64)
   // More likely, clipper.export.h will be compiled into a DLL/so so it can be
   // called by non C++ applications. If CreateCPaths64 was an exported function
   // and it was called by a non C++ application, it would crash that application.
-  CPaths64 c_subj = CreateCPaths(subj);
-  CPaths64 c_clip = CreateCPaths(clip);
+  CPaths64 c_subj = CreateCPathsFromPathsT(subj);
+  CPaths64 c_clip = CreateCPathsFromPathsT(clip);
   int64_t* c_sol_tree = nullptr;
   BooleanOp_PolyTree64(Intersection, EvenOdd, c_subj, c_subj_open, c_clip, c_sol_tree, c_sol_open);
   PolyTree64 sol_tree;
@@ -135,12 +155,15 @@ TEST(Clipper2Tests, ExportHeaderTree64)
   delete[] c_clip;
   DisposeArray64(c_sol_tree);
   DisposeArray64(c_sol_open);
+
   PolyPath64* pp = &sol_tree;
-  for (int i = 0; i < 4; ++i)
+  for (int i = 0; i < 5; ++i)
   {
-    EXPECT_TRUE(pp->Count() == 1); pp = pp->Child(0);
+    EXPECT_TRUE(pp->Count() == 1); 
+    pp = pp->Child(0);
   }
 }
+
 TEST(Clipper2Tests, ExportHeaderTreeD)
 {
   uint8_t None = 0, Intersection = 1, Union = 2, Difference = 3, Xor = 4;
@@ -155,11 +178,12 @@ TEST(Clipper2Tests, ExportHeaderTreeD)
   // More likely, clipper.export.h will be compiled into a DLL/so so it can be
   // called by non C++ applications. If CreateCPathsD was an exported function
   // and it was called by a non C++ application, it would crash that application.
-  CPathsD c_subj = CreateCPaths(subj);
-  CPathsD c_clip = CreateCPaths(clip);
+  CPathsD c_subj = CreateCPathsFromPathsT(subj);
+  CPathsD c_clip = CreateCPathsFromPathsT(clip);
   static const int precision = 4;
   CPolyPathD c_sol_tree = nullptr;
-  BooleanOp_PolyTreeD(Intersection, EvenOdd, c_subj, c_subj_open, c_clip, c_sol_tree, c_sol_open, precision);
+  BooleanOp_PolyTreeD(Intersection, EvenOdd, c_subj, c_subj_open, c_clip, 
+    c_sol_tree, c_sol_open, precision);
   PolyTreeD sol_tree;
   // convert CPolyTreeD to PolyTreeD
   BuildPolyTreeDFromCPolyTree(c_sol_tree, sol_tree);
@@ -171,8 +195,9 @@ TEST(Clipper2Tests, ExportHeaderTreeD)
   DisposeArrayD(c_sol_tree);
   DisposeArrayD(c_sol_open);
   PolyPathD* pp = &sol_tree;
-  for (int i = 0; i < 4; ++i)
+  for (int i = 0; i < 5; ++i)
   {
-    EXPECT_TRUE(pp->Count() == 1); pp = pp->Child(0);
+    EXPECT_TRUE(pp->Count() == 1); 
+    pp = pp->Child(0);
   }
 }
