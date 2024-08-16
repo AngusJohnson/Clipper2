@@ -11,7 +11,7 @@ jobs:
       with:
         node-version: '16'
     - name: Add MSBuild to PATH
-      uses: microsoft/setup-msbuild@v1.0.2      
+      uses: microsoft/setup-msbuild@v2
     - name: Build
       run: |
         mkdir CPP/build
