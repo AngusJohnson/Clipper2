@@ -340,7 +340,7 @@ namespace Clipper2Lib {
 
     template<typename T, typename U>
     inline constexpr void MakePathGeneric(const T an_array,
-      size_t array_size, std::vector<U>& result)
+      size_t array_size, std::vector<U, Allocator<U>>& result)
     {
       result.reserve(array_size / 2);
       for (size_t i = 0; i < array_size; i +=2)
@@ -406,7 +406,7 @@ namespace Clipper2Lib {
       std::is_integral<T>::value &&
       !std::is_same<char, T>::value, bool
     >::type = true>
-  inline Path64 MakePath(const std::vector<T>& list)
+  inline Path64 MakePath(const std::vector<T, Allocator<T>>& list)
   {
     const auto size = list.size() - list.size() % 2;
     if (list.size() != size)
@@ -435,7 +435,7 @@ namespace Clipper2Lib {
       std::is_arithmetic<T>::value &&
       !std::is_same<char, T>::value, bool
     >::type = true>
-  inline PathD MakePathD(const std::vector<T>& list)
+  inline PathD MakePathD(const std::vector<T, Allocator<T>>& list)
   {
     const auto size = list.size() - list.size() % 2;
     if (list.size() != size)
@@ -612,7 +612,7 @@ namespace Clipper2Lib {
   }
 
   inline size_t GetNext(size_t current, size_t high,
-    const std::vector<bool>& flags)
+    const std::vector<bool, Allocator<bool>>& flags)
   {
     ++current;
     while (current <= high && flags[current]) ++current;
@@ -623,7 +623,7 @@ namespace Clipper2Lib {
   }
 
   inline size_t GetPrior(size_t current, size_t high,
-    const std::vector<bool>& flags)
+    const std::vector<bool, Allocator<bool>>& flags)
   {
     if (current == 0) current = high;
     else --current;
@@ -642,8 +642,8 @@ namespace Clipper2Lib {
     const double epsSqr = Sqr(epsilon);
     if (len < 4) return Path<T>(path);
 
-    std::vector<bool> flags(len);
-    std::vector<double> distSqr(len);
+    std::vector<bool, Allocator<bool>> flags(len);
+    std::vector<double, Allocator<double>> distSqr(len);
     size_t prior = high, curr = 0, start, next, prior2;
     if (isClosedPath)
     {
@@ -714,7 +714,7 @@ namespace Clipper2Lib {
 
   template <typename T>
   inline void RDP(const Path<T> path, std::size_t begin,
-    std::size_t end, double epsSqrd, std::vector<bool>& flags)
+    std::size_t end, double epsSqrd, std::vector<bool, Allocator<bool>>& flags)
   {
     typename Path<T>::size_type idx = 0;
     double max_d = 0;
@@ -738,7 +738,7 @@ namespace Clipper2Lib {
   {
     const typename Path<T>::size_type len = path.size();
     if (len < 5) return Path<T>(path);
-    std::vector<bool> flags(len);
+    std::vector<bool, Allocator<bool>> flags(len);
     flags[0] = true;
     flags[len - 1] = true;
     RDP(path, 0, len - 1, Sqr(epsilon), flags);

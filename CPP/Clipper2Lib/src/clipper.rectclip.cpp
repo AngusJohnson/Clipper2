@@ -423,7 +423,7 @@ namespace Clipper2Lib {
     } //switch
   }
 
-  bool StartLocsAreClockwise(const std::vector<Location>& startlocs)
+  bool StartLocsAreClockwise(const std::vector<Location, Allocator<Location>>& startlocs)
   {
     int result = 0;
     for (size_t i = 1; i < startlocs.size(); ++i)
@@ -901,7 +901,7 @@ namespace Clipper2Lib {
       }
 
       //clean up after every loop
-      op_container_ = std::deque<OutPt2>();
+      op_container_.clear();
       results_.clear();
       for (OutPt2List &edge : edges_) edge.clear();
       start_locs_.clear();
@@ -933,7 +933,7 @@ namespace Clipper2Lib {
       }
       results_.clear();
 
-      op_container_ = std::deque<OutPt2>();
+      op_container_.clear();
       start_locs_.clear();
     }
     return result;
@@ -944,7 +944,7 @@ namespace Clipper2Lib {
     if (rect_.IsEmpty() || path.size() < 2) return;
 
     results_.clear();
-    op_container_ = std::deque<OutPt2>();
+    op_container_.clear();
     start_locs_.clear();
 
     size_t i = 1, highI = path.size() - 1;

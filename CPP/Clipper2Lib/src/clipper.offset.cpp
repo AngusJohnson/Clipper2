@@ -586,10 +586,9 @@ void ClipperOffset::ExecuteInternal(double delta)
 			2.0 / (miter_limit_ * miter_limit_);
 
 		delta_ = delta;
-		std::vector<Group>::iterator git;
-		for (git = groups_.begin(); git != groups_.end(); ++git)
+		for (Group& group : groups_)
 		{
-			DoGroupOffset(*git);
+			DoGroupOffset(group);
 			if (!error_code_) continue; // all OK
 			solution->clear();
 		}
@@ -639,9 +638,9 @@ void ClipperOffset::Execute(double delta, PolyTree64& polytree)
 {
 	polytree.Clear();
 	solution_tree = &polytree;
-	solution = new Paths64();
+	solution = New<Paths64>();
 	ExecuteInternal(delta);
-	delete solution;
+	Delete(solution);
 	solution = nullptr;
 }
 
