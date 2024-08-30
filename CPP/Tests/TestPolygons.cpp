@@ -20,7 +20,6 @@ inline bool IsInList(int num, const int (&intArray)[N])
 TEST(Clipper2Tests, TestMultiplePolygons)
 {
   std::ifstream ifs("Polygons.txt");
-  ASSERT_TRUE(ifs);
   ASSERT_TRUE(ifs.good());
   const int start_num = 1;
   const int end_num = 1000;
@@ -59,7 +58,7 @@ TEST(Clipper2Tests, TestMultiplePolygons)
     if (stored_count <= 0)
       ; // skip count
     else if (IsInList(test_number, { 120, 121, 130, 138,
-      140, 148, 163, 165, 166, 167, 168, 172, 175, 178, 180 }))
+      140, 148, 163, 165, 166, 167, 168, 172, 173, 175, 178, 180 }))
       EXPECT_NEAR(measured_count, stored_count, 5) << " in test " << test_number;
     else if (IsInList(test_number, { 27, 181 }))
       EXPECT_NEAR(measured_count, stored_count, 2) << " in test " << test_number;
@@ -106,4 +105,19 @@ TEST(Clipper2Tests, TestHorzSpikes) //#720
   c.AddSubject(paths);
   c.Execute(Clipper2Lib::ClipType::Union, Clipper2Lib::FillRule::NonZero, paths);
   EXPECT_GE(paths.size(), 1);
+}
+
+TEST(Clipper2Tests, TestCollinearOnMacOs) //#777
+{
+  Clipper2Lib::Paths64 subject;
+  subject.push_back(Clipper2Lib::MakePath({ 0, -453054451,0, -433253797,-455550000, 0 }));
+  subject.push_back(Clipper2Lib::MakePath({ 0, -433253797,0, 0,-455550000, 0 }));
+  Clipper2Lib::Clipper64 clipper;
+  clipper.PreserveCollinear(false);
+  clipper.AddSubject(subject);
+  Clipper2Lib::Paths64 solution;
+  clipper.Execute(Clipper2Lib::ClipType::Union, Clipper2Lib::FillRule::NonZero, solution);
+  ASSERT_EQ(solution.size(), 1);
+  EXPECT_EQ(solution[0].size(), 3);
+  EXPECT_EQ(IsPositive(subject[0]), IsPositive(solution[0]));
 }

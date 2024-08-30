@@ -42,7 +42,7 @@ bool GetPath(const string& line, Paths64& paths)
   return true;
 }
 
-void GetPaths(ifstream& source, Paths64& paths) 
+void GetPaths(ifstream& source, Paths64& paths)
 {
   while (true)
   {
@@ -50,13 +50,14 @@ void GetPaths(ifstream& source, Paths64& paths)
     stringstream::pos_type last_read_line_pos = source.tellg();
     if (getline(source, line) && GetPath(line, paths))
       continue;
+    last_read_line_pos -= 1; // workaround for LF vs LFCR (#764)
     source.seekg(last_read_line_pos, ios_base::beg);
     break;
   }
 }
 
 bool LoadTestNum(ifstream &source, int test_num,
-  Paths64 &subj, Paths64 &subj_open, Paths64 &clip, 
+  Paths64 &subj, Paths64 &subj_open, Paths64 &clip,
   int64_t& area, int64_t& count, ClipType &ct, FillRule &fr)
 {
   string line;
@@ -65,37 +66,37 @@ bool LoadTestNum(ifstream &source, int test_num,
   source.seekg(0, ios_base::beg);
   subj.clear(); subj_open.clear(); clip.clear();
 
-  while (std::getline(source, line))
-  {    
+  while (getline(source, line))
+  {
     if (test_num)
     {
       if (line.find("CAPTION:") != string::npos) --test_num;
       continue;
     }
 
-    if (line.find("CAPTION:") != string::npos) break;
+    if (line.find("CAPTION:") != string::npos) break; // ie don't go beyond current test
 
-    else if (line.find("INTERSECTION") != string::npos) 
-      ct = ClipType::Intersection; 
-    else if (line.find("UNION") != string::npos) 
-      ct = ClipType::Union; 
-    else if (line.find("DIFFERENCE") != string::npos) 
-      ct = ClipType::Difference; 
-    else if (line.find("XOR") != string::npos) 
-      ct = ClipType::Xor; 
-    else if (line.find("EVENODD") != string::npos) 
-      fr = FillRule::EvenOdd; 
-    else if (line.find("NONZERO") != string::npos) 
-      fr = FillRule::NonZero ; 
-    else if (line.find("POSITIVE") != string::npos) 
-      fr = FillRule::Positive; 
+    else if (line.find("INTERSECTION") != string::npos)
+      ct = ClipType::Intersection;
+    else if (line.find("UNION") != string::npos)
+      ct = ClipType::Union;
+    else if (line.find("DIFFERENCE") != string::npos)
+      ct = ClipType::Difference;
+    else if (line.find("XOR") != string::npos)
+      ct = ClipType::Xor;
+    else if (line.find("EVENODD") != string::npos)
+      fr = FillRule::EvenOdd;
+    else if (line.find("NONZERO") != string::npos)
+      fr = FillRule::NonZero ;
+    else if (line.find("POSITIVE") != string::npos)
+      fr = FillRule::Positive;
     else if (line.find("NEGATIVE") != string::npos)
-      fr = FillRule::Negative; 
+      fr = FillRule::Negative;
     else if (line.find("SOL_AREA") != string::npos)
     {
       string::const_iterator s_it, s_end = line.cend();
       s_it = (line.cbegin() + 10);
-      GetInt(s_it, s_end, area); 
+      GetInt(s_it, s_end, area);
     }
     else if (line.find("SOL_COUNT") != string::npos)
     {

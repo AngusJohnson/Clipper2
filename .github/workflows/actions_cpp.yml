@@ -6,16 +6,12 @@ jobs:
   windows-latest:
     runs-on: 'windows-latest'
     steps:
-    - uses: actions/checkout@v2
-    - uses: actions/setup-node@v2
+    - uses: actions/checkout@v4
+    - uses: actions/setup-node@v4
       with:
         node-version: '16'
-    - name: Get GoogleTest
-      run: |
-        cd CPP/Tests
-        git clone https://github.com/google/googletest
     - name: Add MSBuild to PATH
-      uses: microsoft/setup-msbuild@v1.0.2      
+      uses: microsoft/setup-msbuild@v2
     - name: Build
       run: |
         mkdir CPP/build
@@ -29,14 +25,10 @@ jobs:
   ubuntu-latest-gcc-default:
     runs-on: 'ubuntu-latest'
     steps:
-    - uses: actions/checkout@v2
-    - uses: actions/setup-node@v2
+    - uses: actions/checkout@v4
+    - uses: actions/setup-node@v4
       with:
         node-version: '16'
-    - name: Get GoogleTest
-      run: |
-        cd CPP/Tests
-        git clone https://github.com/google/googletest
     - name: Build
       run: |
         mkdir CPP/build
@@ -50,14 +42,10 @@ jobs:
   ubuntu-latest-gcc-11:
     runs-on: 'ubuntu-latest'
     steps:
-    - uses: actions/checkout@v2
-    - uses: actions/setup-node@v2
+    - uses: actions/checkout@v4
+    - uses: actions/setup-node@v4
       with:
         node-version: '16'
-    - name: Get GoogleTest
-      run: |
-        cd CPP/Tests
-        git clone https://github.com/google/googletest
     - name: Install gcc 11
       run: |
         sudo apt update
@@ -76,14 +64,10 @@ jobs:
   ubuntu-latest-clang-default:
     runs-on: 'ubuntu-latest'
     steps:
-    - uses: actions/checkout@v2
-    - uses: actions/setup-node@v2
+    - uses: actions/checkout@v4
+    - uses: actions/setup-node@v4
       with:
         node-version: '16'
-    - name: Get GoogleTest
-      run: |
-        cd CPP/Tests
-        git clone https://github.com/google/googletest
     - name: Build
       run: |
         export CC=/usr/bin/clang
@@ -99,14 +83,10 @@ jobs:
   ubuntu-latest-clang-13:
     runs-on: 'ubuntu-latest'
     steps:
-    - uses: actions/checkout@v2
-    - uses: actions/setup-node@v2
+    - uses: actions/checkout@v4
+    - uses: actions/setup-node@v4
       with:
         node-version: '16'
-    - name: Get GoogleTest
-      run: |
-        cd CPP/Tests
-        git clone https://github.com/google/googletest
     - name: Install clang 13
       run: |
         wget https://apt.llvm.org/llvm.sh
@@ -127,14 +107,10 @@ jobs:
   macos-latest:
     runs-on: 'macos-latest'
     steps:
-    - uses: actions/checkout@v2
-    - uses: actions/setup-node@v2
+    - uses: actions/checkout@v4
+    - uses: actions/setup-node@v4
       with:
         node-version: '16'
-    - name: Get GoogleTest
-      run: |
-        cd CPP/Tests
-        git clone https://github.com/google/googletest
     - name: Build
       run: |
         mkdir CPP/build

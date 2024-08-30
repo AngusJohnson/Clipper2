@@ -1,8 +1,8 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  21 December 2023                                                *
+* Date      :  24 July 2024                                                    *
 * Website   :  http://www.angusj.com                                           *
-* Copyright :  Angus Johnson 2010-2023                                         *
+* Copyright :  Angus Johnson 2010-2024                                         *
 * Purpose   :  Path Offset (Inflate/Shrink)                                    *
 * License   :  http://www.boost.org/LICENSE_1_0.txt                            *
 *******************************************************************************/
@@ -20,72 +20,41 @@ const double floating_point_tolerance = 1e-12;
 // Miscellaneous methods
 //------------------------------------------------------------------------------
 
-inline bool ToggleBoolIf(bool val, bool condition)
+std::optional<size_t> GetLowestClosedPathIdx(const Paths64& paths)
 {
-	return condition ? !val : val;
-}
-
-void GetMultiBounds(const Paths64& paths, std::vector<Rect64>& recList)
-{
-	recList.reserve(paths.size());
-	for (const Path64& path : paths)
-	{
-		if (path.size() < 1)
-		{
-			recList.push_back(InvalidRect64);
-			continue;
-		}
-		int64_t x = path[0].x, y = path[0].y;
-		Rect64 r = Rect64(x, y, x, y);
-		for (const Point64& pt : path)
-		{
-			if (pt.y > r.bottom) r.bottom = pt.y;
-			else if (pt.y < r.top) r.top = pt.y;
-			if (pt.x > r.right) r.right = pt.x;
-			else if (pt.x < r.left) r.left = pt.x;
-		}
-		recList.push_back(r);
-	}
-}
-
-bool ValidateBounds(std::vector<Rect64>& recList, double delta)
-{
-	int64_t int_delta = static_cast<int64_t>(delta);
-	int64_t big = MAX_COORD - int_delta;
-	int64_t small = MIN_COORD + int_delta;
-	for (const Rect64& r : recList)
-	{
-		if (!r.IsValid()) continue; // ignore invalid paths
-		else if (r.left < small || r.right > big ||
-			r.top < small || r.bottom > big) return false;
-	}
-	return true;
-}
-
-int GetLowestClosedPathIdx(std::vector<Rect64>& boundsList)
-{
-	int i = -1, result = -1;
+    std::optional<size_t> result;
 	Point64 botPt = Point64(INT64_MAX, INT64_MIN);
-	for (const Rect64& r : boundsList)
+	for (size_t i = 0; i < paths.size(); ++i)
 	{
-		++i;
-		if (!r.IsValid()) continue; // ignore invalid paths
-		else if (r.bottom > botPt.y || (r.bottom == botPt.y && r.left < botPt.x))
+		for (const Point64& pt : paths[i])
 		{
-			botPt = Point64(r.left, r.bottom);
-			result = static_cast<int>(i);
+			if ((pt.y < botPt.y) || 
+				((pt.y == botPt.y) && (pt.x >= botPt.x))) continue;
+            result = i;
+			botPt.x = pt.x;
+			botPt.y = pt.y;
 		}
 	}
 	return result;
 }
 
-PointD GetUnitNormal(const Point64& pt1, const Point64& pt2)
+inline double Hypot(double x, double y)
+{
+	// given that this is an internal function, and given the x and y parameters
+	// will always be coordinate values (or the difference between coordinate values),
+	// x and y should always be within INT64_MIN to INT64_MAX. Consequently, 
+	// there should be no risk that the following computation will overflow
+	// see https://stackoverflow.com/a/32436148/359538
+	return std::sqrt(x * x + y * y);
+}
+
+static PointD GetUnitNormal(const Point64& pt1, const Point64& pt2)
 {
 	double dx, dy, inverse_hypot;
 	if (pt1 == pt2) return PointD(0.0, 0.0);
 	dx = static_cast<double>(pt2.x - pt1.x);
 	dy = static_cast<double>(pt2.y - pt1.y);
-	inverse_hypot = 1.0 / hypot(dx, dy);
+	inverse_hypot = 1.0 / Hypot(dx, dy);
 	dx *= inverse_hypot;
 	dy *= inverse_hypot;
 	return PointD(dy, -dx);
@@ -94,12 +63,6 @@ PointD GetUnitNormal(const Point64& pt1, const Point64& pt2)
 inline bool AlmostZero(double value, double epsilon = 0.001)
 {
 	return std::fabs(value) < epsilon;
-}
-
-inline double Hypot(double x, double y)
-{
-	//see https://stackoverflow.com/a/32436148/359538
-	return std::sqrt(x * x + y * y);
 }
 
 inline PointD NormalizeVector(const PointD& vec)
@@ -120,7 +83,7 @@ inline bool IsClosedPath(EndType et)
 	return et == EndType::Polygon || et == EndType::Joined;
 }
 
-inline Point64 GetPerpendic(const Point64& pt, const PointD& norm, double delta)
+static inline Point64 GetPerpendic(const Point64& pt, const PointD& norm, double delta)
 {
 #ifdef USINGZ
 	return Point64(pt.x + norm.x * delta, pt.y + norm.y * delta, pt.z);
@@ -164,29 +127,20 @@ ClipperOffset::Group::Group(const Paths64& _paths, JoinType _join_type, EndType 
 	for (Path64& p: paths_in)
 	  StripDuplicates(p, is_joined);
 
-	// get bounds of each path --> bounds_list
-	GetMultiBounds(paths_in, bounds_list);
-
 	if (end_type == EndType::Polygon)
 	{
-		is_hole_list.reserve(paths_in.size());
-		for (const Path64& path : paths_in)
-			is_hole_list.push_back(Area(path) < 0);
-		lowest_path_idx = GetLowestClosedPathIdx(bounds_list);
+		lowest_path_idx = GetLowestClosedPathIdx(paths_in);
 		// the lowermost path must be an outer path, so if its orientation is negative,
 		// then flag the whole group is 'reversed' (will negate delta etc.)
 		// as this is much more efficient than reversing every path.
-		is_reversed = (lowest_path_idx >= 0) && is_hole_list[lowest_path_idx];
-		if (is_reversed) is_hole_list.flip();
+    is_reversed = (lowest_path_idx.has_value()) && Area(paths_in[lowest_path_idx.value()]) < 0;
 	}
 	else
 	{
-		lowest_path_idx = -1;
+    lowest_path_idx = std::nullopt;
 		is_reversed = false;
-		is_hole_list.resize(paths_in.size());
 	}
 }
-
 
 //------------------------------------------------------------------------------
 // ClipperOffset methods
@@ -222,13 +176,23 @@ void ClipperOffset::DoBevel(const Path64& path, size_t j, size_t k)
 	if (j == k)
 	{
 		double abs_delta = std::abs(group_delta_);
+#ifdef USINGZ
+		pt1 = PointD(path[j].x - abs_delta * norms[j].x, path[j].y - abs_delta * norms[j].y, path[j].z);
+		pt2 = PointD(path[j].x + abs_delta * norms[j].x, path[j].y + abs_delta * norms[j].y, path[j].z);
+#else
 		pt1 = PointD(path[j].x - abs_delta * norms[j].x, path[j].y - abs_delta * norms[j].y);
 		pt2 = PointD(path[j].x + abs_delta * norms[j].x, path[j].y + abs_delta * norms[j].y);
+#endif
 	}
 	else
 	{
+#ifdef USINGZ
+		pt1 = PointD(path[j].x + group_delta_ * norms[k].x, path[j].y + group_delta_ * norms[k].y, path[j].z);
+		pt2 = PointD(path[j].x + group_delta_ * norms[j].x, path[j].y + group_delta_ * norms[j].y, path[j].z);
+#else
 		pt1 = PointD(path[j].x + group_delta_ * norms[k].x, path[j].y + group_delta_ * norms[k].y);
 		pt2 = PointD(path[j].x + group_delta_ * norms[j].x, path[j].y + group_delta_ * norms[j].y);
+#endif
 	}
 	path_out.push_back(Point64(pt1));
 	path_out.push_back(Point64(pt2));
@@ -258,7 +222,7 @@ void ClipperOffset::DoSquare(const Path64& path, size_t j, size_t k)
 	{
 		PointD pt4 = PointD(pt3.x + vec.x * group_delta_, pt3.y + vec.y * group_delta_);
 		PointD pt = ptQ;
-		GetIntersectPoint(pt1, pt2, pt3, pt4, pt);
+		GetSegmentIntersectPt(pt1, pt2, pt3, pt4, pt);
 		//get the second intersect point through reflecion
 		path_out.push_back(Point64(ReflectPoint(pt, ptQ)));
 		path_out.push_back(Point64(pt));
@@ -267,7 +231,7 @@ void ClipperOffset::DoSquare(const Path64& path, size_t j, size_t k)
 	{
 		PointD pt4 = GetPerpendicD(path[j], norms[k], group_delta_);
 		PointD pt = ptQ;
-		GetIntersectPoint(pt1, pt2, pt3, pt4, pt);
+		GetSegmentIntersectPt(pt1, pt2, pt3, pt4, pt);
 		path_out.push_back(Point64(pt));
 		//get the second intersect point through reflecion
 		path_out.push_back(Point64(ReflectPoint(pt, ptQ)));
@@ -336,7 +300,7 @@ void ClipperOffset::OffsetPoint(Group& group, const Path64& path, size_t j, size
 	// sin(A) < 0: right turning
 	// cos(A) < 0: change in angle is more than 90 degree
 
-	if (path[j] == path[k]) { k = j; return; }
+	if (path[j] == path[k]) return;
 
 	double sin_a = CrossProduct(norms[j], norms[k]);
 	double cos_a = DotProduct(norms[j], norms[k]);
@@ -353,14 +317,27 @@ void ClipperOffset::OffsetPoint(Group& group, const Path64& path, size_t j, size
 		return;
 	}
 
-	if (cos_a > -0.99 && (sin_a * group_delta_ < 0)) // test for concavity first (#593)
+	if (cos_a > -0.999 && (sin_a * group_delta_ < 0)) // test for concavity first (#593)
 	{
 		// is concave
+		// by far the simplest way to construct concave joins, especially those joining very 
+		// short segments, is to insert 3 points that produce negative regions. These regions 
+		// will be removed later by the finishing union operation. This is also the best way 
+		// to ensure that path reversals (ie over-shrunk paths) are removed.
+#ifdef USINGZ
+		path_out.push_back(Point64(GetPerpendic(path[j], norms[k], group_delta_), path[j].z));
+#else
 		path_out.push_back(GetPerpendic(path[j], norms[k], group_delta_));
-		// this extra point is the only (simple) way to ensure that
-	  // path reversals are fully cleaned with the trailing clipper
-		path_out.push_back(path[j]); // (#405)
+#endif
+		
+		// when the angle is almost flat (cos_a ~= 1), it's safe to skip this middle point
+		if (cos_a < 0.999) path_out.push_back(path[j]); // (#405, #873)
+
+#ifdef USINGZ
+		path_out.push_back(Point64(GetPerpendic(path[j], norms[j], group_delta_), path[j].z));
+#else
 		path_out.push_back(GetPerpendic(path[j], norms[j], group_delta_));
+#endif
 	}
 	else if (cos_a > 0.999 && join_type_ != JoinType::Round)
 	{
@@ -384,9 +361,9 @@ void ClipperOffset::OffsetPoint(Group& group, const Path64& path, size_t j, size
 void ClipperOffset::OffsetPolygon(Group& group, const Path64& path)
 {
 	path_out.clear();
-	for (Path64::size_type j = 0, k = path.size() -1; j < path.size(); k = j, ++j)
-		OffsetPoint(group, path, j, k);
-	solution.push_back(path_out);
+	for (Path64::size_type j = 0, k = path.size() - 1; j < path.size(); k = j, ++j)
+		OffsetPoint(group, path, j, k);	
+	solution->push_back(path_out);
 }
 
 void ClipperOffset::OffsetOpenJoined(Group& group, const Path64& path)
@@ -395,7 +372,7 @@ void ClipperOffset::OffsetOpenJoined(Group& group, const Path64& path)
 	Path64 reverse_path(path);
 	std::reverse(reverse_path.begin(), reverse_path.end());
 
-	//rebuild normals // BuildNormals(path);
+	//rebuild normals 
 	std::reverse(norms.begin(), norms.end());
 	norms.push_back(norms[0]);
 	norms.erase(norms.begin());
@@ -459,9 +436,9 @@ void ClipperOffset::OffsetOpenPath(Group& group, const Path64& path)
 		}
 	}
 
-	for (size_t j = highI, k = 0; j > 0; k = j, --j)
+	for (size_t j = highI -1, k = highI; j > 0; k = j, --j)
 		OffsetPoint(group, path, j, k);
-	solution.push_back(path_out);
+	solution->push_back(path_out);
 }
 
 void ClipperOffset::DoGroupOffset(Group& group)
@@ -470,30 +447,23 @@ void ClipperOffset::DoGroupOffset(Group& group)
 	{
 		// a straight path (2 points) can now also be 'polygon' offset
 		// where the ends will be treated as (180 deg.) joins
-		if (group.lowest_path_idx < 0) delta_ = std::abs(delta_);
+        if (!group.lowest_path_idx.has_value()) delta_ = std::abs(delta_);
 		group_delta_ = (group.is_reversed) ? -delta_ : delta_;
 	}
 	else
 		group_delta_ = std::abs(delta_);// *0.5;
 
 	double abs_delta = std::fabs(group_delta_);
-	if (!ValidateBounds(group.bounds_list, abs_delta))
-	{
-		DoError(range_error_i);
-		error_code_ |= range_error_i;
-		return;
-	}
-
 	join_type_	= group.join_type;
 	end_type_ = group.end_type;
 
 	if (group.join_type == JoinType::Round || group.end_type == EndType::Round)
 	{
-		// calculate a sensible number of steps (for 360 deg for the given offset)
-		// arcTol - when arc_tolerance_ is undefined (0), the amount of
-		// curve imprecision that's allowed is based on the size of the
-		// offset (delta). Obviously very large offsets will almost always
-		// require much less precision. See also offset_triginometry2.svg
+		// calculate the number of steps required to approximate a circle
+		// (see http://www.angusj.com/clipper2/Docs/Trigonometry.htm)
+		// arcTol - when arc_tolerance_ is undefined (0) then curve imprecision
+		// will be relative to the size of the offset (delta). Obviously very
+		//large offsets will almost always require much less precision.
 		double arcTol = (arc_tolerance_ > floating_point_tolerance ?
 			std::min(abs_delta, arc_tolerance_) :
 			std::log10(2 + abs_delta) * default_arc_tolerance);
@@ -505,12 +475,10 @@ void ClipperOffset::DoGroupOffset(Group& group)
 		steps_per_rad_ = steps_per_360 / (2 * PI);
 	}
 
-	std::vector<Rect64>::const_iterator path_rect_it = group.bounds_list.cbegin();
-	std::vector<bool>::const_iterator is_hole_it = group.is_hole_list.cbegin();
+	//double min_area = PI * Sqr(group_delta_);
 	Paths64::const_iterator path_in_it = group.paths_in.cbegin();
-	for ( ; path_in_it != group.paths_in.cend(); ++path_in_it, ++path_rect_it, ++is_hole_it)
+	for ( ; path_in_it != group.paths_in.cend(); ++path_in_it)
 	{
-		if (!path_rect_it->IsValid()) continue;
 		Path64::size_type pathLen = path_in_it->size();
 		path_out.clear();
 
@@ -529,7 +497,7 @@ void ClipperOffset::DoGroupOffset(Group& group)
 			if (group.join_type == JoinType::Round)
 			{
 				double radius = abs_delta;
-				int steps = static_cast<int>(std::ceil(steps_per_rad_ * 2 * PI)); //#617
+                size_t steps = steps_per_rad_ > 0 ? static_cast<size_t>(std::ceil(steps_per_rad_ * 2 * PI)) : 0; //#617
 				path_out = Ellipse(pt, radius, radius, steps);
 #ifdef USINGZ
 				for (auto& p : path_out) p.z = pt.z;
@@ -544,15 +512,10 @@ void ClipperOffset::DoGroupOffset(Group& group)
 				for (auto& p : path_out) p.z = pt.z;
 #endif
 			}
-			solution.push_back(path_out);
+
+			solution->push_back(path_out);
 			continue;
 		} // end of offsetting a single point
-
-		// when shrinking outer paths, make sure they can shrink this far (#593)
-		// also when shrinking holes, make sure they too can shrink this far (#715)
-		if ((group_delta_ > 0) == ToggleBoolIf(*is_hole_it, group.is_reversed) &&
-			(std::min(path_rect_it->Width(), path_rect_it->Height()) <= -group_delta_ * 2) )
-				  continue;
 
 		if ((pathLen == 2) && (group.end_type == EndType::Joined))
 			end_type_ = (group.join_type == JoinType::Round) ?
@@ -566,6 +529,16 @@ void ClipperOffset::DoGroupOffset(Group& group)
 	}
 }
 
+#ifdef USINGZ
+void ClipperOffset::ZCB(const Point64& bot1, const Point64& top1,
+	const Point64& bot2, const Point64& top2, Point64& ip)
+{
+	if (bot1.z && ((bot1.z == bot2.z) || (bot1.z == top2.z))) ip.z = bot1.z;
+	else if (bot2.z && (bot2.z == top1.z)) ip.z = bot2.z;
+	else if (top1.z && (top1.z == top2.z)) ip.z = top1.z;
+	else if (zCallback64_) zCallback64_(bot1, top1, bot2, top2, ip);
+}
+#endif
 
 size_t ClipperOffset::CalcSolutionCapacity()
 {
@@ -591,40 +564,35 @@ bool ClipperOffset::CheckReverseOrientation()
 void ClipperOffset::ExecuteInternal(double delta)
 {
 	error_code_ = 0;
-	solution.clear();
 	if (groups_.size() == 0) return;
-	solution.reserve(CalcSolutionCapacity());
+	solution->reserve(CalcSolutionCapacity());
 
 	if (std::abs(delta) < 0.5) // ie: offset is insignificant
 	{
 		Paths64::size_type sol_size = 0;
 		for (const Group& group : groups_) sol_size += group.paths_in.size();
-		solution.reserve(sol_size);
+		solution->reserve(sol_size);
 		for (const Group& group : groups_)
-			copy(group.paths_in.begin(), group.paths_in.end(), back_inserter(solution));
-		return;
+			copy(group.paths_in.begin(), group.paths_in.end(), back_inserter(*solution));
 	}
-
-	temp_lim_ = (miter_limit_ <= 1) ?
-		2.0 :
-		2.0 / (miter_limit_ * miter_limit_);
-
-	delta_ = delta;
-	std::vector<Group>::iterator git;
-	for (git = groups_.begin(); git != groups_.end(); ++git)
+	else
 	{
-		DoGroupOffset(*git);
-		if (!error_code_) continue; // all OK
-		solution.clear();
+
+		temp_lim_ = (miter_limit_ <= 1) ?
+			2.0 :
+			2.0 / (miter_limit_ * miter_limit_);
+
+		delta_ = delta;
+		std::vector<Group>::iterator git;
+		for (git = groups_.begin(); git != groups_.end(); ++git)
+		{
+			DoGroupOffset(*git);
+			if (!error_code_) continue; // all OK
+			solution->clear();
+		}
 	}
-}
 
-void ClipperOffset::Execute(double delta, Paths64& paths)
-{
-	paths.clear();
-
-	ExecuteInternal(delta);
-	if (!solution.size()) return;
+	if (!solution->size()) return;
 
 	bool paths_reversed = CheckReverseOrientation();
 	//clean up self-intersections ...
@@ -633,41 +601,45 @@ void ClipperOffset::Execute(double delta, Paths64& paths)
 	//the solution should retain the orientation of the input
 	c.ReverseSolution(reverse_solution_ != paths_reversed);
 #ifdef USINGZ
-	if (zCallback64_) { c.SetZCallback(zCallback64_); }
+	auto fp = std::bind(&ClipperOffset::ZCB, this, std::placeholders::_1,
+		std::placeholders::_2, std::placeholders::_3,
+		std::placeholders::_4, std::placeholders::_5);
+	c.SetZCallback(fp);
 #endif
-	c.AddSubject(solution);
-	if (paths_reversed)
-		c.Execute(ClipType::Union, FillRule::Negative, paths);
+	c.AddSubject(*solution);
+	if (solution_tree)
+	{
+		if (paths_reversed)
+			c.Execute(ClipType::Union, FillRule::Negative, *solution_tree);
+		else
+			c.Execute(ClipType::Union, FillRule::Positive, *solution_tree);
+	}
 	else
-		c.Execute(ClipType::Union, FillRule::Positive, paths);
+	{
+		if (paths_reversed)
+			c.Execute(ClipType::Union, FillRule::Negative, *solution);
+		else
+			c.Execute(ClipType::Union, FillRule::Positive, *solution);
+	}
+}
+
+void ClipperOffset::Execute(double delta, Paths64& paths)
+{
+	paths.clear();
+	solution = &paths;
+	solution_tree = nullptr;
+	ExecuteInternal(delta);
 }
 
 
 void ClipperOffset::Execute(double delta, PolyTree64& polytree)
 {
 	polytree.Clear();
-
+	solution_tree = &polytree;
+	solution = new Paths64();
 	ExecuteInternal(delta);
-	if (!solution.size()) return;
-
-	bool paths_reversed = CheckReverseOrientation();
-	//clean up self-intersections ...
-	Clipper64 c;
-	c.PreserveCollinear(false);
-	//the solution should retain the orientation of the input
-	c.ReverseSolution (reverse_solution_ != paths_reversed);
-#ifdef USINGZ
-	if (zCallback64_) {
-		c.SetZCallback(zCallback64_);
-	}
-#endif
-	c.AddSubject(solution);
-
-
-	if (paths_reversed)
-		c.Execute(ClipType::Union, FillRule::Negative, polytree);
-	else
-		c.Execute(ClipType::Union, FillRule::Positive, polytree);
+	delete solution;
+	solution = nullptr;
 }
 
 void ClipperOffset::Execute(DeltaCallback64 delta_cb, Paths64& paths)

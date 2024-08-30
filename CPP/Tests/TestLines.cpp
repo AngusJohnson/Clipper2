@@ -3,8 +3,6 @@
 #include "ClipFileLoad.h"
 TEST(Clipper2Tests, TestMultipleLines) {
   std::ifstream ifs("Lines.txt");
-  //if (!ifs.good()) return;
-  ASSERT_TRUE(ifs);
   ASSERT_TRUE(ifs.good());
   int test_number = 1;
   while (true)

@@ -2,9 +2,9 @@ unit Clipper;
 
 (*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  21 December 2023                                                *
+* Date      :  7 May 2024                                                      *
 * Website   :  http://www.angusj.com                                           *
-* Copyright :  Angus Johnson 2010-2023                                         *
+* Copyright :  Angus Johnson 2010-2024                                         *
 * Purpose   :  This module provides a simple interface to the Clipper Library  *
 * License   :  http://www.boost.org/LICENSE_1_0.txt                            *
 *******************************************************************************)
@@ -42,6 +42,7 @@ const
   frNonZero   = Clipper.Core.frNonZero;
   frPositive  = Clipper.Core.frPositive;
   frNegative  = Clipper.Core.frNegative;
+  jtBevel     = Clipper.Offset.jtBevel;
   jtSquare    = Clipper.Offset.jtSquare;
   jtRound     = Clipper.Offset.jtRound;
   jtMiter     = Clipper.Offset.jtMiter;
@@ -753,9 +754,9 @@ begin
   if not isOpenPath then
   begin
     while (i < len -1) and
-      (CrossProduct(p[len -1], p[i], p[i+1]) = 0) do inc(i);
+      IsCollinear(p[len -1], p[i], p[i+1]) do inc(i);
     while (i < len -1) and
-      (CrossProduct(p[len -2], p[len -1], p[i]) = 0) do dec(len);
+      IsCollinear(p[len -2], p[len -1], p[i]) do dec(len);
   end;
   if (len - i < 3) then
   begin
@@ -770,7 +771,7 @@ begin
   Result[0] := p[i];
   j := 0;
   for i := i+1 to len -2 do
-    if CrossProduct(result[j], p[i], p[i+1]) <> 0 then
+    if not IsCollinear(result[j], p[i], p[i+1]) then
     begin
       inc(j);
       result[j] := p[i];
@@ -781,14 +782,14 @@ begin
     inc(j);
     result[j] := p[len-1];
   end
-  else if CrossProduct(result[j], p[len-1], result[0]) <> 0 then
+  else if not IsCollinear(result[j], p[len-1], result[0]) then
   begin
     inc(j);
     result[j] := p[len-1];
   end else
   begin
     while (j > 1) and
-      (CrossProduct(result[j-1], result[j], result[0]) = 0) do dec(j);
+      IsCollinear(result[j-1], result[j], result[0]) do dec(j);
     if j < 2 then j := -1;
   end;
   SetLength(Result, j +1);

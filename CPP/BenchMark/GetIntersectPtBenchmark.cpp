@@ -3,14 +3,13 @@
 #include "clipper2/clipper.core.h"
 #include "CommonUtils.h"
 #include "ClipFileLoad.h"
-#include <iostream>
 #include <iomanip> 
 #include <cstdlib>
 #include <random>
 
 using namespace Clipper2Lib;
 
-enum ConsoleTextColor {
+enum TextColor {
   reset = 0,
   //normal text colors ...
   red = 31, green = 32, yellow = 33, blue = 34, magenta = 35, cyan = 36, white = 37,
@@ -26,45 +25,259 @@ enum ConsoleTextColor {
 struct SetConsoleTextColor
 {
 private:
-  ConsoleTextColor _color;
+  TextColor _color;
 public:
-  SetConsoleTextColor(ConsoleTextColor color) : _color(color) {};
+  SetConsoleTextColor(TextColor color) : _color(color) {};
 
-  static friend std::ostream& operator<< (std::ostream& out, SetConsoleTextColor const& scc)
+  friend std::ostream& operator<< (std::ostream& out, SetConsoleTextColor const& scc)
   {
     return out << "\x1B[" << scc._color << "m";
   }
 };
+
+//////////////////////////////////////////////////////////////////////////////////////
+// Int128 - class that very minimally supports 128bit integer math
 //////////////////////////////////////////////////////////////////////////////////////
 
-
-/////////////////////////////////////////////////////////
-// Miscellaneous functions
-/////////////////////////////////////////////////////////
-
-double GetSineAbc(const Point64& a, const Point64& b, const Point64& c)
+class Int128
 {
-  double dpB = DotProduct(a, b, c);
-  double SqrCosB = dpB * dpB / (DistanceSqr(a, b) * DistanceSqr(b, c));
-  double cos2B = SqrCosB * 2 - 1; // trig. itentity
-  return std::sqrt(1 - cos2B);    // sin(B) = Sqrt(1-cos(2B))
+public:
+  uint64_t lo;
+  int64_t hi;
+
+  Int128(int64_t _lo = 0)
+  {
+    lo = (uint64_t)_lo;
+    if (_lo < 0)  hi = -1; else hi = 0;
+  }
+
+  Int128(const Int128& val) : lo(val.lo), hi(val.hi) {}
+
+  Int128(const int64_t& _hi, const uint64_t& _lo) : lo(_lo), hi(_hi) {}
+
+  Int128& operator = (const int64_t& val)
+  {
+    lo = (uint64_t)val;
+    if (val < 0) hi = -1; else hi = 0;
+    return *this;
+  }
+
+  bool operator == (const Int128& val) const
+  {
+    return (hi == val.hi && lo == val.lo);
+  }
+
+  bool operator != (const Int128& val) const
+  {
+    return !(*this == val);
+  }
+
+  bool operator > (const Int128& val) const
+  {
+    return (hi != val.hi) ? hi > val.hi: lo > val.lo;
+  }
+
+  bool operator < (const Int128& val) const
+  {
+    return (hi != val.hi) ? hi < val.hi : lo < val.lo;
+  }
+
+  bool operator >= (const Int128& val) const
+  {
+    return !(*this < val);
+  }
+
+  bool operator <= (const Int128& val) const
+  {
+    return !(*this > val);
+  }
+
+  bool is_zero() const
+  {
+    return (hi == 0 && lo == 0);
+  }
+
+  bool is_negative() const
+  {
+    return (hi < 0);
+  }
+
+  Int128& operator += (const Int128& rhs)
+  {
+    hi += rhs.hi;
+    lo += rhs.lo;
+    if (lo < rhs.lo) hi++;
+    return *this;
+  }
+
+  Int128 operator + (const Int128& rhs) const
+  {
+    Int128 result(*this);
+    result += rhs;
+    return result;
+  }
+
+  Int128& operator -= (const Int128& rhs)
+  {
+    *this += -rhs;
+    return *this;
+  }
+
+  Int128 operator - (const Int128& rhs) const
+  {
+    Int128 result(*this);
+    result -= rhs;
+    return result;
+  }
+
+  Int128 operator-() const //unary negation
+  {
+    return  (lo == 0) ? Int128(-hi, 0) : Int128(~hi, ~lo + 1);
+  }
+
+  void negate()
+  {
+    if (lo == 0) hi = -hi;
+    else { hi = ~hi; lo = ~lo + 1; }
+  }
+
+  operator double() const
+  {
+    const double shift64 = 18446744073709551616.0; //2^64
+    if (hi < 0)
+    {
+      if (lo == 0) return (double)hi * shift64;
+      else return -(double)(~lo + ~hi * shift64);
+    }
+    else
+      return (double)(lo + hi * shift64);
+  }
+};
+
+static inline Int128 multiply(int64_t lhs, int64_t rhs)
+{
+  bool negate = (lhs < 0) != (rhs < 0);
+
+  if (lhs < 0) lhs = -lhs;
+  uint64_t int1Hi = uint64_t(lhs) >> 32;
+  uint64_t int1Lo = uint64_t(lhs & 0xFFFFFFFF);
+
+  if (rhs < 0) rhs = -rhs;
+  uint64_t int2Hi = uint64_t(rhs) >> 32;
+  uint64_t int2Lo = uint64_t(rhs & 0xFFFFFFFF);
+
+  uint64_t a = int1Hi * int2Hi;
+  uint64_t b = int1Lo * int2Lo;
+  uint64_t c = int1Hi * int2Lo + int1Lo * int2Hi;
+
+  Int128 result;
+  result.hi = a + (c >> 32);
+  result.lo = c << 32;
+  result.lo += b;
+  if (result.lo < b) result.hi++;
+  return negate ? -result : result;
+};
+
+static int64_t divide(Int128 dividend, Int128 divisor)
+{
+  // this function assumes that the parameter values will 
+  // generate a result that fits into a 64bit integer.
+  bool negate = (divisor.hi < 0) != (dividend.hi < 0);
+  if (dividend.hi < 0) dividend = -dividend;
+  if (divisor.hi < 0) divisor = -divisor;
+  if (divisor.lo == 0 && divisor.hi == 0)
+    throw "Int128: divide by zero error";
+
+  if (dividend == divisor) return negate ? -1 : 1;
+  if (divisor > dividend) return 0;
+
+  Int128 cntr = Int128(1);
+  while (divisor.hi >= 0 && divisor <= dividend)
+  {
+    divisor.hi <<= 1;
+    if ((int64_t)divisor.lo < 0) divisor.hi++;
+    divisor.lo <<= 1;
+
+    cntr.hi <<= 1;
+    if ((int64_t)cntr.lo < 0) cntr.hi++;
+    cntr.lo <<= 1;
+  }
+  divisor.lo >>= 1;
+  if (divisor.hi & 1)
+    divisor.lo |= 0x8000000000000000LL;
+  divisor.hi >>= 1;
+
+  cntr.lo >>= 1;
+  if (cntr.hi & 1)
+    cntr.lo |= 0x8000000000000000LL;
+  cntr.hi >>= 1;
+
+  Int128 result = Int128(0);
+  while (cntr.hi != 0 || cntr.lo != 0)
+  {
+    if (dividend >= divisor)
+    {
+      dividend -= divisor;
+      result.hi |= cntr.hi;
+      result.lo |= cntr.lo;
+    }
+    divisor.lo >>= 1;
+    if (divisor.hi & 1)
+      divisor.lo |= 0x8000000000000000LL;
+    divisor.hi >>= 1;
+
+    cntr.lo >>= 1;
+    if (cntr.hi & 1)
+      cntr.lo |= 0x8000000000000000LL;
+    cntr.hi >>= 1;
+  }
+  if (result.hi || (int64_t)result.lo < 0) 
+    return negate ? INT64_MIN : INT64_MAX;
+  else
+    return negate ? -(int64_t)result.lo : result.lo;
 }
 
-static inline Point64 MakeRandomPoint(int64_t min_val, int64_t max_val)
+static inline int64_t muldiv(Int128 lhs, int64_t rhs, Int128 divisor)
 {
-  std::random_device rd;
-  std::mt19937 gen(rd());
-  std::uniform_int_distribution<int64_t> x(min_val, max_val);
-  std::uniform_int_distribution<int64_t> y(min_val, max_val);
-  return Point64(x(gen), y(gen));
-}
+  // this function assumes that the parameter values will 
+  // generate a result that fits into a 64bit integer.
+  int64_t sign = (lhs.is_negative() != divisor.is_negative()) != (rhs < 0) ? -2 : 2;
+  if (lhs.is_negative()) lhs.negate();
+  if (divisor.is_negative()) divisor.negate();
+  if (rhs < 0) rhs = -rhs;
+
+  // if 'lhs' is very large, then 'divisor' will be very large too
+  while (lhs.hi && divisor.hi)
+  {
+    // divide dividend and divisor by 2 ...
+    lhs.lo >>= 1;
+    if (lhs.hi & 1)
+      lhs.lo |= 0x8000000000000000LL;
+    lhs.hi >>= 1;
+    divisor.lo >>= 1;
+    if (divisor.hi & 1)
+      divisor.lo |= 0x8000000000000000LL;
+    divisor.hi >>= 1;
+  }
+
+  lhs.lo >>= 1; // divide by 2 to avoid casting a 'sign' bit
+  Int128 result = multiply((int64_t)lhs.lo, rhs);
+  result.hi += lhs.hi * rhs;
+  return divide(result, divisor) * sign; // and multiplies by 2
+};
+
+/////////////////////////////////////////////////////////
+// Several GetIntersectPoint functions for testing
+/////////////////////////////////////////////////////////
+
+const int number_of_test_functions = 4;
 
 typedef std::function<bool(const Point64&, const Point64&,
   const Point64&, const Point64&, Point64&)> GipFunction;
 
-/////////////////////////////////////////////////////////
-// GIP_Current: This is the current Clipper2 GetIntersectPoint code
-/////////////////////////////////////////////////////////
+// GIP_Current: This is Clipper2's current GetIntersectPoint.
+// It's definitely the fastest function, but its accuracy declines 
+// a little when using very large 64bit integers (eg +/-10e17).
 static bool GIP_Current(const Point64& ln1a, const Point64& ln1b,
   const Point64& ln2a, const Point64& ln2b, Point64& ip)
 {
@@ -86,12 +299,11 @@ static bool GIP_Current(const Point64& ln1a, const Point64& ln1b,
   return true;
 }
 
-/////////////////////////////////////////////////////////
 // GIP_Func_F: This is mathVertexLineLineIntersection_F
 // https://github.com/AngusJohnson/Clipper2/issues/317#issuecomment-1314023253
-/////////////////////////////////////////////////////////
 #define CC_MIN(x,y) ((x)>(y)?(y):(x))
 #define CC_MAX(x,y) ((x)<(y)?(y):(x))
+
 static bool GIP_Func_F(const Point64& ln1a, const Point64& ln1b,
   const Point64& ln2a, const Point64& ln2b, Point64& ip)
 {
@@ -120,15 +332,10 @@ static bool GIP_Func_F(const Point64& ln1a, const Point64& ln1b,
   return true;
 }
 
-/////////////////////////////////////////////////////////
-// GIP_F_Mod: Modified GIP_Func_F (see above).
-// Replaces nearbyint with static_cast. Surprisingly, while
-// this function is a little faster here than GIP_Func_F, 
-// it's much slower than GIP_Func_F when using it as a
-// GetIntersectPoint() replacement in clipper.core.h.
-/////////////////////////////////////////////////////////
-#define CC_MIN(x,y) ((x)>(y)?(y):(x))
-#define CC_MAX(x,y) ((x)<(y)?(y):(x))
+// GIP_F_Mod: GIP_Func_F except replaces nearbyint with static casts.
+// Surprisingly, while this function is faster that GIP_Func_F here, 
+// it's much slower than both GIP_Func_F and GIP_Current when using it 
+// as a replacement for GetIntersectPoint() in clipper.core.h.
 static bool GIP_F_Mod(const Point64& ln1a, const Point64& ln1b,
   const Point64& ln2a, const Point64& ln2b, Point64& ip)
 {
@@ -157,92 +364,120 @@ static bool GIP_F_Mod(const Point64& ln1a, const Point64& ln1b,
   return true;
 }
 
+// GIP_128: GetIntersectPoint using 128bit integer precision 
+// This function is the most precise, but it's also very slow.
+static bool GIP_128(const Point64& ln1a, const Point64& ln1b,
+  const Point64& ln2a, const Point64& ln2b, Point64& ip)
+{
+  int64_t dx1 = ln1b.x - ln1a.x;
+  int64_t dy1 = ln1b.y - ln1a.y;
+  int64_t dx2 = ln2b.x - ln2a.x;
+  int64_t dy2 = ln2b.y - ln2a.y;
+  Int128 det = multiply(dy1, dx2) - multiply(dy2, dx1);
+  if (det.is_zero()) return false;
+
+  Int128 t_num = multiply(ln1a.x - ln2a.x, dy2) - multiply(ln1a.y - ln2a.y, dx2);
+  bool is_negative = t_num.is_negative() != det.is_negative();
+  if (t_num.is_zero() || is_negative)
+    ip = ln1a;
+  else if (t_num.is_negative() == -t_num > -det)
+    ip = ln1b;
+  else
+  {
+    ip.x = ln1a.x + muldiv(t_num, dx1, det);
+    ip.y = ln1a.y + muldiv(t_num, dy1, det);
+  }
+  return true;
+}
+
+static inline GipFunction GetGipFunc(int64_t index)
+{
+  switch (index)
+  {
+  case 0: return GIP_Current; 
+  case 1: return GIP_Func_F;
+  case 2: return GIP_F_Mod;
+  case 3: return GIP_128; 
+  default: throw "Invalid function!";
+  }
+}
+
+static inline std::string GetGipFuncName(int64_t index)
+{
+  switch (index)
+  {
+  case 0: return "GIP_Current";
+  case 1: return "GIP_Func_F "; 
+  case 2: return "GIP_F_Mod  "; 
+  case 3: return "GIP_128    "; 
+  default: throw "Invalid function!";
+  }
+}
+
+/////////////////////////////////////////////////////////
+// Other miscellaneous functions
+/////////////////////////////////////////////////////////
+
+double GetSineFrom3Points(const Point64& a, const Point64& b, const Point64& c)
+{
+  double dpB = DotProduct(a, b, c);
+  double SqrCosB = dpB * dpB / (DistanceSqr(a, b) * DistanceSqr(b, c));
+  double cos2B = SqrCosB * 2 - 1; // trig. itentity
+  return std::sqrt(1 - cos2B);    // sin(B) = Sqrt(1-cos(2B))
+}
+
+static inline Point64 MakeRandomPoint(int64_t min_val, int64_t max_val)
+{
+  std::random_device rd;
+  std::mt19937 gen(rd());
+  std::uniform_int_distribution<int64_t> x(min_val, max_val);
+  std::uniform_int_distribution<int64_t> y(min_val, max_val);
+  return Point64(x(gen), y(gen));
+}
+
+/////////////////////////////////////////////////////////
+// global data storage
+/////////////////////////////////////////////////////////
 
 struct TestRecord
 {
 public:
   Point64 actual, pt1, pt2, pt3, pt4;
   std::vector<Point64> results;
-  TestRecord(int participants, const Point64& intersect_pt,
+  TestRecord(const Point64& intersect_pt,
     const Point64& p1, const Point64& p2, const Point64& p3, const Point64& p4) :
     actual(intersect_pt), pt1(p1), pt2(p2), pt3(p3), pt4(p4) {
-    results.resize(participants);
+    results.resize(number_of_test_functions);
   };
 };
 
-typedef std::vector<TestRecord>::iterator test_iter;
-
-// global data 
 std::vector<TestRecord> tests;
-
-
-static inline GipFunction GetGipFunc(int index)
-{
-  GipFunction result;
-  switch (index)
-  {
-  case 0: result = GIP_Current; break;
-  case 1: result = GIP_Func_F; break;
-  case 2: result = GIP_F_Mod; break;
-  default: throw "oops! - wrong function!";
-  }
-  return result;
-}
-
-static inline std::string GetGipFuncName(int index)
-{
-  std::string result;
-  switch (index)
-  {
-  case 0: result = "GIP_Current"; break;
-  case 1: result = "GIP_Func_F "; break;
-  case 2: result = "GIP_F_Mod  "; break;
-  default: throw "oops!";
-  }
-  return result;
-}
+typedef std::vector<TestRecord>::iterator test_iter;
 
 /////////////////////////////////////////////////////////
 // Benchmark callback functions
 /////////////////////////////////////////////////////////
 
-static void BM_GIP_Current(benchmark::State& state)
+static void BM_GIP(benchmark::State& state)
 {
-  Point64 ip;
+  int64_t idx = state.range(0);
+  state.SetLabel(GetGipFuncName(idx));
+  GipFunction func = GetGipFunc(idx);
   for (auto _ : state)
   {
-    for (test_iter cit = tests.begin(); cit != tests.end(); ++cit)
+    for (test_iter test = tests.begin(); test != tests.end(); ++test)
     {
-      GIP_Current((*cit).pt1, (*cit).pt2, (*cit).pt3, (*cit).pt4, ip);
-      (*cit).results[0] = ip;
+      Point64 ip;
+      func(test->pt1, test->pt2, test->pt3, test->pt4, ip);
+      test->results[idx] = ip;
     }
   }
 }
 
-static void BM_GIP_Func_F(benchmark::State& state)
+static void CustomArguments(benchmark::internal::Benchmark* b)
 {
-  Point64 ip;
-  for (auto _ : state)
-  {
-    for (test_iter cit = tests.begin(); cit != tests.end(); ++cit)
-    {
-      GIP_Func_F((*cit).pt1, (*cit).pt2, (*cit).pt3, (*cit).pt4, ip);
-      (*cit).results[1] = ip;
-    }
-  }
-}
-
-static void BM_GIP_F_Mod(benchmark::State& state)
-{
-  Point64 ip;
-  for (auto _ : state)
-  {
-    for (test_iter cit = tests.begin(); cit != tests.end(); ++cit)
-    {
-      GIP_F_Mod((*cit).pt1, (*cit).pt2, (*cit).pt3, (*cit).pt4, ip);
-      (*cit).results[2] = ip;
-    }
-  }
+  for (int i = 0; i < number_of_test_functions; ++i) 
+    b->Args({ i });
 }
 
 /////////////////////////////////////////////////////////
@@ -251,21 +486,21 @@ static void BM_GIP_F_Mod(benchmark::State& state)
 
 int main(int argc, char** argv)
 {
-
-  const int participants = 3;
-
   //setup benchmarking ...
   benchmark::Initialize(0, nullptr);
-  BENCHMARK(BM_GIP_Current);
-  BENCHMARK(BM_GIP_Func_F);
-  BENCHMARK(BM_GIP_F_Mod);
+  BENCHMARK(BM_GIP)->Apply(CustomArguments);
+
+  // the closer test segments are to collinear, the less accurate 
+  // calculations will be in determining their intersection points.
+  const double min_angle_degrees = 0.5;
+  const double sine_min_angle = std::sin(min_angle_degrees *PI / 180.0);
 
   bool first_pass = true;
   for (int current_pow10 = 12; current_pow10 <= 18; ++current_pow10)
   {
-    // create multiple TestRecords containing segment pairs that intersect 
-    // at their midpoints, while using random coordinates that are 
-    // restricted to the specified power of 10 range
+    // using random coordinates that are restricted to the specified 
+    // power of 10 range, create multiple TestRecords containing 
+    // segment pairs that intersect at their midpoints
     int64_t max_coord = static_cast<int64_t>(pow(10, current_pow10));
     for (int64_t i = 0; i < 100000; ++i)
     {
@@ -274,15 +509,13 @@ int main(int argc, char** argv)
       Point64 actual = MidPoint(ip1, ip2);
       Point64 ip3 = MakeRandomPoint(-max_coord, max_coord);
       Point64 ip4 = ReflectPoint(ip3, actual);
-      Point64 _;
 
-      // the closer segments are to collinear, the less accurate are
-      // calculations that determine intersection points.
-      // So exclude segments that are **almost** collinear. eg. sin(1deg) ~= 0.017
-      if (std::abs(GetSineAbc(ip1, actual, ip3)) < 0.017) continue;
-      // alternatively, only exclude segments that are collinear
+      // Exclude segments that are **almost** collinear.
+      if (std::abs(GetSineFrom3Points(ip1, actual, ip3)) < sine_min_angle) continue;      
+      // Alternatively, just exclude segments that are collinear
       //if (!CrossProduct(ip1, actual, ip3)) continue;
-      tests.push_back(TestRecord(participants, actual, ip1, ip2, ip3, ip4));
+
+      tests.push_back(TestRecord(actual, ip1, ip2, ip3, ip4));
     }
 
     if (first_pass)
@@ -293,39 +526,38 @@ int main(int argc, char** argv)
       std::cout << std::endl << SetConsoleTextColor(green_bold) <<
         "Benchmark GetIntersectPoint performance ... " << SetConsoleTextColor(reset) <<
         std::endl << std::endl;
-      // using each test function in the callback functions above, benchmarking 
-      // will calculate and store intersect points for each TestRecord 
-      benchmark::RunSpecifiedBenchmarks(benchmark::CreateDefaultDisplayReporter());
+      benchmark::RunSpecifiedBenchmarks();
 
       std::cout << std::endl << std::endl << SetConsoleTextColor(green_bold) <<
         "Compare function accuracy ..." << SetConsoleTextColor(reset) << std::endl <<
         "and show how it deteriorates when using very large coordinate ranges." << std::endl <<
         "Distance error is the distance between the calculated and actual intersection points." << std::endl <<
-        "The largest errors will occur whenever intersecting segments are almost collinear." << std::endl;
+        "(The largest errors will occur whenever the segments are close to collinear.)" << std::endl;
     }
     else
     {
-      for (int i = 0; i < participants; ++i)
+      for (int i = 0; i < number_of_test_functions; ++i)
       {
         // although we're not benchmarking, we still need to collect the calculated
         // intersect points of each TestRecord for each participating function.
+        // (In first_pass above, benchmark::RunSpecifiedBenchmarks() does this internally.)
         Point64 ip;
         GipFunction gip_func = GetGipFunc(i);
-        for (test_iter cit = tests.begin(); cit != tests.end(); ++cit)
+        for (test_iter test = tests.begin(); test != tests.end(); ++test)
         {
-          gip_func((*cit).pt1, (*cit).pt2, (*cit).pt3, (*cit).pt4, ip);
-          (*cit).results[i] = ip;
+          gip_func(test->pt1, test->pt2, test->pt3, test->pt4, ip);
+          test->results[i] = ip;
         }
       }
     }
 
-    double avg_dists[participants] = { 0 };
-    double worst_dists[participants] = { 0 };
+    double avg_dists[number_of_test_functions] = { 0 };
+    double worst_dists[number_of_test_functions] = { 0 };
 
-    for (test_iter cit = tests.begin(); cit != tests.end(); ++cit)
-      for (int i = 0; i < participants; ++i)
+    for (test_iter test = tests.begin(); test != tests.end(); ++test)
+      for (int i = 0; i < number_of_test_functions; ++i)
       {
-        double dist = Distance((*cit).actual, (*cit).results[i]);
+        double dist = Distance(test->actual, test->results[i]);
         avg_dists[i] += dist;
         if (dist > worst_dists[i])  worst_dists[i] = dist;
       }
@@ -334,7 +566,7 @@ int main(int argc, char** argv)
       "Coordinate ranges between  +/-10^" << current_pow10 <<
       SetConsoleTextColor(reset) << std::endl;
 
-    for (int i = 0; i < participants; ++i)
+    for (int i = 0; i < number_of_test_functions; ++i)
     {
       avg_dists[i] /= tests.size();
       std::cout << std::fixed << GetGipFuncName(i) <<

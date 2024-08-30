@@ -1,8 +1,8 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  13 December 2023                                                *
+* Date      :  27 April 2024                                                   *
 * Website   :  http://www.angusj.com                                           *
-* Copyright :  Angus Johnson 2010-2023                                         *
+* Copyright :  Angus Johnson 2010-2024                                         *
 * Purpose   :  This module provides a simple interface to the Clipper Library  *
 * License   :  http://www.boost.org/LICENSE_1_0.txt                            *
 *******************************************************************************/
@@ -510,9 +510,9 @@ namespace Clipper2Lib {
 
     if (!is_open_path)
     {
-      while (srcIt != stop && !CrossProduct(*stop, *srcIt, *(srcIt + 1)))
+      while (srcIt != stop && IsCollinear(*stop, *srcIt, *(srcIt + 1)))
         ++srcIt;
-      while (srcIt != stop && !CrossProduct(*(stop - 1), *stop, *srcIt))
+      while (srcIt != stop && IsCollinear(*(stop - 1), *stop, *srcIt))
         --stop;
       if (srcIt == stop) return Path64();
     }
@@ -521,7 +521,7 @@ namespace Clipper2Lib {
     dst.push_back(*prevIt);
     for (; srcIt != stop; ++srcIt)
     {
-      if (CrossProduct(*prevIt, *srcIt, *(srcIt + 1)))
+      if (!IsCollinear(*prevIt, *srcIt, *(srcIt + 1)))
       {
         prevIt = srcIt;
         dst.push_back(*prevIt);
@@ -530,12 +530,12 @@ namespace Clipper2Lib {
 
     if (is_open_path)
       dst.push_back(*srcIt);
-    else if (CrossProduct(*prevIt, *stop, dst[0]))
+    else if (!IsCollinear(*prevIt, *stop, dst[0]))
       dst.push_back(*stop);
     else
     {
       while (dst.size() > 2 &&
-        !CrossProduct(dst[dst.size() - 1], dst[dst.size() - 2], dst[0]))
+        IsCollinear(dst[dst.size() - 1], dst[dst.size() - 2], dst[0]))
           dst.pop_back();
       if (dst.size() < 3) return Path64();
     }
@@ -582,7 +582,7 @@ namespace Clipper2Lib {
   }
 
   template <typename T>
-  inline Path<T> Ellipse(const Rect<T>& rect, int steps = 0)
+  inline Path<T> Ellipse(const Rect<T>& rect, size_t steps = 0)
   {
     return Ellipse(rect.MidPoint(),
       static_cast<double>(rect.Width()) *0.5,
@@ -591,12 +591,12 @@ namespace Clipper2Lib {
 
   template <typename T>
   inline Path<T> Ellipse(const Point<T>& center,
-    double radiusX, double radiusY = 0, int steps = 0)
+    double radiusX, double radiusY = 0, size_t steps = 0)
   {
     if (radiusX <= 0) return Path<T>();
     if (radiusY <= 0) radiusY = radiusX;
     if (steps <= 2)
-      steps = static_cast<int>(PI * sqrt((radiusX + radiusY) / 2));
+      steps = static_cast<size_t>(PI * sqrt((radiusX + radiusY) / 2));
 
     double si = std::sin(2 * PI / steps);
     double co = std::cos(2 * PI / steps);
@@ -604,7 +604,7 @@ namespace Clipper2Lib {
     Path<T> result;
     result.reserve(steps);
     result.push_back(Point<T>(center.x + radiusX, static_cast<double>(center.y)));
-    for (int i = 1; i < steps; ++i)
+    for (size_t i = 1; i < steps; ++i)
     {
       result.push_back(Point<T>(center.x + radiusX * dx, center.y + radiusY * dy));
       double x = dx * co - dy * si;
@@ -612,18 +612,6 @@ namespace Clipper2Lib {
       dx = x;
     }
     return result;
-  }
-
-  template <typename T>
-  inline double PerpendicDistFromLineSqrd(const Point<T>& pt,
-    const Point<T>& line1, const Point<T>& line2)
-  {
-    double a = static_cast<double>(pt.x - line1.x);
-    double b = static_cast<double>(pt.y - line1.y);
-    double c = static_cast<double>(line2.x - line1.x);
-    double d = static_cast<double>(line2.y - line1.y);
-    if (c == 0 && d == 0) return 0;
-    return Sqr(a * d - c * b) / (c * c + d * d);
   }
 
   inline size_t GetNext(size_t current, size_t high,

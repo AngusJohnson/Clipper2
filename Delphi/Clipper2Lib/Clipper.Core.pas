@@ -2,9 +2,9 @@ unit Clipper.Core;
 
 (*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  21 December 2023                                                *
+* Date      :  13 May 2024                                                     *
 * Website   :  http://www.angusj.com                                           *
-* Copyright :  Angus Johnson 2010-2023                                         *
+* Copyright :  Angus Johnson 2010-2024                                         *
 * Purpose   :  Core Clipper Library module                                     *
 *              Contains structures and functions used throughout the library   *
 * License   :  http://www.boost.org/LICENSE_1_0.txt                            *
@@ -154,7 +154,7 @@ function IsPositive(const path: TPath64): Boolean; overload;
 function IsPositive(const path: TPathD): Boolean; overload;
   {$IFDEF INLINING} inline; {$ENDIF}
 
-function __Trunc(val: double): Int64; {$IFDEF INLINE} inline; {$ENDIF}
+function IsCollinear(const pt1, sharedPt, pt2: TPoint64): Boolean;
 
 function CrossProduct(const pt1, pt2, pt3: TPoint64): double; overload;
   {$IFDEF INLINING} inline; {$ENDIF}
@@ -172,8 +172,8 @@ function DistanceSqr(const pt1, pt2: TPoint64): double; overload;
   {$IFDEF INLINING} inline; {$ENDIF}
 function DistanceSqr(const pt1, pt2: TPointD): double; overload;
   {$IFDEF INLINING} inline; {$ENDIF}
-function DistanceFromLineSqrd(const pt, linePt1, linePt2: TPoint64): double; overload;
-function DistanceFromLineSqrd(const pt, linePt1, linePt2: TPointD): double; overload;
+function PerpendicDistFromLineSqrd(const pt, linePt1, linePt2: TPoint64): double; overload;
+function PerpendicDistFromLineSqrd(const pt, linePt1, linePt2: TPointD): double; overload;
 
 function SegmentsIntersect(const s1a, s1b, s2a, s2b: TPoint64;
   inclusive: Boolean = false): boolean; {$IFDEF INLINING} inline; {$ENDIF}
@@ -315,7 +315,7 @@ procedure AppendPaths(var paths: TPathsD; const extra: TPathsD); overload;
 
 function ArrayOfPathsToPaths(const ap: TArrayOfPaths): TPaths64;
 
-function GetIntersectPoint(const ln1a, ln1b, ln2a, ln2b: TPoint64;
+function GetSegmentIntersectPt(const ln1a, ln1b, ln2a, ln2b: TPoint64;
   out ip: TPoint64): Boolean;
 
 function PointInPolygon(const pt: TPoint64; const polygon: TPath64): TPointInPolygonResult;
@@ -829,6 +829,9 @@ begin
   begin
     result[i].X := Round(path[i].X * sx);
     result[i].Y := Round(path[i].Y * sy);
+{$IFDEF USINGZ}
+    result[i].Z := path[i].Z;
+{$ENDIF}
   end;
 end;
 //------------------------------------------------------------------------------
@@ -845,10 +848,16 @@ begin
   j := 1;
   result[0].X := Round(path[0].X * sx);
   result[0].Y := Round(path[0].Y * sy);
+{$IFDEF USINGZ}
+  result[0].Z := path[0].Z;
+{$ENDIF}
   for i := 1 to len -1 do
   begin
     result[j].X := Round(path[i].X * sx);
     result[j].Y := Round(path[i].Y * sy);
+{$IFDEF USINGZ}
+    result[j].Z := path[i].Z;
+{$ENDIF}
     if (result[j].X <> result[j-1].X) or
       (result[j].Y <> result[j-1].Y) then inc(j);
   end;
@@ -866,10 +875,16 @@ begin
   j := 1;
   result[0].X := Round(path[0].X * scale);
   result[0].Y := Round(path[0].Y * scale);
+{$IFDEF USINGZ}
+  result[0].Z := path[0].Z;
+{$ENDIF}
   for i := 1 to len -1 do
   begin
     result[j].X := Round(path[i].X * scale);
     result[j].Y := Round(path[i].Y * scale);
+{$IFDEF USINGZ}
+    result[j].Z := path[i].Z;
+{$ENDIF}
     if (result[j].X <> result[j-1].X) or
       (result[j].Y <> result[j-1].Y) then inc(j);
   end;
@@ -887,6 +902,9 @@ begin
   begin
     result[i].X := Round(path[i].X * scale);
     result[i].Y := Round(path[i].Y * scale);
+{$IFDEF USINGZ}
+    result[i].Z := path[i].Z;
+{$ENDIF}
   end;
 end;
 //------------------------------------------------------------------------------
@@ -926,6 +944,9 @@ begin
   begin
     result[i].X := path[i].X * sx;
     result[i].Y := path[i].Y * sy;
+{$IFDEF USINGZ}
+    result[i].Z := path[i].Z;
+{$ENDIF}
   end;
 end;
 //------------------------------------------------------------------------------
@@ -939,6 +960,9 @@ begin
   begin
     result[i].X := path[i].X * sx;
     result[i].Y := path[i].Y * sy;
+{$IFDEF USINGZ}
+    result[i].Z := path[i].Z;
+{$ENDIF}
   end;
 end;
 //------------------------------------------------------------------------------
@@ -989,6 +1013,9 @@ begin
     begin
       result[i][j].X := (paths[i][j].X * sx);
       result[i][j].Y := (paths[i][j].Y * sy);
+{$IFDEF USINGZ}
+      result[i][j].Z := paths[i][j].Z;
+{$ENDIF}
     end;
   end;
 end;
@@ -1008,6 +1035,9 @@ begin
     begin
       result[i][j].X := paths[i][j].X * sx;
       result[i][j].Y := paths[i][j].Y * sy;
+{$IFDEF USINGZ}
+      result[i][j].Z := paths[i][j].Z;
+{$ENDIF}
     end;
   end;
 end;
@@ -1103,6 +1133,9 @@ begin
   begin
     Result[i].X := Round(pathD[i].X);
     Result[i].Y := Round(pathD[i].Y);
+{$IFDEF USINGZ}
+    Result[i].Z := pathD[i].Z;
+{$ENDIF}
   end;
 end;
 //------------------------------------------------------------------------------
@@ -1117,6 +1150,9 @@ begin
   begin
     Result[i].X := path[i].X;
     Result[i].Y := path[i].Y;
+{$IFDEF USINGZ}
+    Result[i].Z := path[i].Z;
+{$ENDIF}
   end;
 end;
 //------------------------------------------------------------------------------
@@ -1827,6 +1863,72 @@ begin
 end;
 //------------------------------------------------------------------------------
 
+function TriSign(val: Int64): integer; // returns 0, 1 or -1
+{$IFDEF INLINING} inline; {$ENDIF}
+begin
+  if (val < 0) then Result := -1
+  else if (val > 1) then Result := 1
+  else Result := 0;
+end;
+//------------------------------------------------------------------------------
+
+type
+  TMultiplyUInt64Result = record
+    lo64: UInt64;
+    hi64 : UInt64;
+  end;
+
+function MultiplyUInt64(a, b: UInt64): TMultiplyUInt64Result; // #834, #835
+{$IFDEF INLINING} inline; {$ENDIF}
+var
+  x1, x2, x3: UInt64;
+begin
+  x1 := (a and $FFFFFFFF) * (b and $FFFFFFFF);
+  x2 := (a shr 32) * (b and $FFFFFFFF) + (x1 shr 32);
+  x3 := (a and $FFFFFFFF) * (b shr 32) + (x2 and $FFFFFFFF);
+  Result.lo64 := ((x3 and $FFFFFFFF) shl 32) or (x1 and $FFFFFFFF);
+  Result.hi64 := hi(a shr 32) * (b shr 32) + (x2 shr 32) + (x3 shr 32);
+end;
+//------------------------------------------------------------------------------
+
+function ProductsAreEqual(a, b, c, d: Int64): Boolean;
+var
+  absA,absB,absC,absD: UInt64;
+  absAB, absCD       : TMultiplyUInt64Result;
+  signAB, signCD     : integer;
+begin
+  // nb: unsigned values will be needed for CalcOverflowCarry()
+  absA := UInt64(Abs(a));
+  absB := UInt64(Abs(b));
+  absC := UInt64(Abs(c));
+  absD := UInt64(Abs(d));
+
+  absAB := MultiplyUInt64(absA, absB);
+  absCD := MultiplyUInt64(absC, absD);
+
+  // nb: it's important to differentiate 0 values here from other values
+  signAB := TriSign(a) * TriSign(b);
+  signCD := TriSign(c) * TriSign(d);
+
+  Result := (absAB.lo64 = absCD.lo64) and
+    (absAB.hi64 = absCD.hi64) and (signAB = signCD);
+end;
+//------------------------------------------------------------------------------
+
+function IsCollinear(const pt1, sharedPt, pt2: TPoint64): Boolean;
+var
+  a,b,c,d: Int64;
+begin
+  a := sharedPt.X - pt1.X;
+  b := pt2.Y - sharedPt.Y;
+  c := sharedPt.Y - pt1.Y;
+  d := pt2.X - sharedPt.X;
+  // When checking for collinearity with very large coordinate values
+  // then ProductsAreEqual is more accurate than using CrossProduct.
+  Result := ProductsAreEqual(a, b, c, d);
+end;
+//------------------------------------------------------------------------------
+
 function CrossProduct(const pt1, pt2, pt3: TPoint64): double;
 begin
   result := CrossProduct(
@@ -1886,7 +1988,7 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-function DistanceFromLineSqrd(const pt, linePt1, linePt2: TPoint64): double;
+function PerpendicDistFromLineSqrd(const pt, linePt1, linePt2: TPoint64): double;
 var
   a,b,c: double;
 begin
@@ -1897,11 +1999,13 @@ begin
 	b := (linePt2.X - linePt1.X);
 	c := a * linePt1.X + b * linePt1.Y;
 	c := a * pt.x + b * pt.y - c;
-	Result := (c * c) / (a * a + b * b);
+   if (a = 0) and (b = 0) then
+    Result := 0 else
+	  Result := (c * c) / (a * a + b * b);
 end;
 //---------------------------------------------------------------------------
 
-function DistanceFromLineSqrd(const pt, linePt1, linePt2: TPointD): double;
+function PerpendicDistFromLineSqrd(const pt, linePt1, linePt2: TPointD): double;
 var
   a,b,c: double;
 begin
@@ -1909,7 +2013,9 @@ begin
 	b := (linePt2.X - linePt1.X);
 	c := a * linePt1.X + b * linePt1.Y;
 	c := a * pt.x + b * pt.y - c;
-	Result := (c * c) / (a * a + b * b);
+  if (a = 0) and (b = 0) then
+    Result := 0 else
+	  Result := (c * c) / (a * a + b * b);
 end;
 //---------------------------------------------------------------------------
 
@@ -1921,20 +2027,28 @@ begin
   Result := nil;
   len := Length(path);
   while (len > 2) and
-   (CrossProduct(path[len-2], path[len-1], path[0]) = 0) do dec(len);
+   (IsCollinear(path[len-2], path[len-1], path[0])) do dec(len);
   SetLength(Result, len);
   if (len < 2) then Exit;
   prev := path[len -1];
   j := 0;
   for i := 0 to len -2 do
   begin
-    if CrossProduct(prev, path[i], path[i+1]) = 0 then Continue;
+    if IsCollinear(prev, path[i], path[i+1]) then Continue;
     Result[j] := path[i];
     inc(j);
     prev := path[i];
   end;
   Result[j] := path[len -1];
   SetLength(Result, j+1);
+end;
+//------------------------------------------------------------------------------
+
+function GetSign(const val: double): integer; {$IFDEF INLINING} inline; {$ENDIF}
+begin
+  if val = 0 then Result := 0
+  else if val < 0 then Result := -1
+  else Result := 1;
 end;
 //------------------------------------------------------------------------------
 
@@ -1957,39 +2071,15 @@ begin
       (res3 <> 0) or (res4 <> 0); // ensures not collinear
   end else
   begin
-    result := (CrossProduct(s1a, s2a, s2b) * CrossProduct(s1b, s2a, s2b) < 0) and
-      (CrossProduct(s2a, s1a, s1b) * CrossProduct(s2b, s1a, s1b) < 0);
+    result := (GetSign(CrossProduct(s1a, s2a, s2b)) *
+      GetSign(CrossProduct(s1b, s2a, s2b)) < 0) and
+      (GetSign(CrossProduct(s2a, s1a, s1b)) *
+      GetSign(CrossProduct(s2b, s1a, s1b)) < 0);
   end;
 end;
 //------------------------------------------------------------------------------
 
-function __Trunc(val: double): Int64; {$IFDEF INLINE} inline; {$ENDIF}
-var
-  exp: integer;
-  i64: UInt64 absolute val;
-const
-  shl51: UInt64 =  UInt64(1) shl 51;
-begin
-  Result := 0;
-  if i64 = 0 then Exit;
-  exp := Integer(Cardinal(i64 shr 52) and $7FF) - 1023;
-  //nb: when exp == 1024 then val == INF or NAN.
-  if exp < 0 then
-    Exit
-  else if exp > 52 then
-  begin
-    Result := ((i64 and $1FFFFFFFFFFFFF) shl (exp - 52)) or (UInt64(1) shl exp)
-  end else
-  begin
-    Result := ((i64 and $1FFFFFFFFFFFFF) shr (52 - exp)) or (UInt64(1) shl exp);
-    //the following line will round
-    //if (i64 and (shl51 shr (exp)) <> 0) then inc(Result);
-  end;
-  if val < 0 then Result := -Result;
-end;
-//------------------------------------------------------------------------------
-
-function GetIntersectPoint(const ln1a, ln1b, ln2a, ln2b: TPoint64;
+function GetSegmentIntersectPt(const ln1a, ln1b, ln2a, ln2b: TPoint64;
   out ip: TPoint64): Boolean;
 var
   dx1,dy1, dx2,dy2, t, cp: double;
@@ -2007,6 +2097,9 @@ begin
   else if t >= 1.0 then ip := ln1b;
   ip.X :=  Trunc(ln1a.X + t * dx1);
   ip.Y :=  Trunc(ln1a.Y + t * dy1);
+{$IFDEF USINGZ}
+  ip.Z := 0;
+{$ENDIF}
 end;
 //------------------------------------------------------------------------------
 
@@ -2174,20 +2267,6 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-function PerpendicDistFromLineSqrd(const pt, line1, line2: TPoint64): double; overload;
-var
-  a,b,c,d: double;
-begin
-  a := pt.X - line1.X;
-  b := pt.Y - line1.Y;
-  c := line2.X - line1.X;
-  d := line2.Y - line1.Y;
-  if (c = 0) and (d = 0) then
-    result := 0 else
-    result := Sqr(a * d - c * b) / (c * c + d * d);
-end;
-//------------------------------------------------------------------------------
-
 procedure RDP(const path: TPath64; startIdx, endIdx: integer;
   epsilonSqrd: double; var boolArray: TArrayOfBoolean); overload;
 var
@@ -2214,20 +2293,6 @@ begin
   boolArray[idx] := true;
   if idx > startIdx + 1 then RDP(path, startIdx, idx, epsilonSqrd, boolArray);
   if endIdx > idx + 1 then RDP(path, idx, endIdx, epsilonSqrd, boolArray);
-end;
-//------------------------------------------------------------------------------
-
-function PerpendicDistFromLineSqrd(const pt, line1, line2: TPointD): double; overload;
-var
-  a,b,c,d: double;
-begin
-  a := pt.X - line1.X;
-  b := pt.Y - line1.Y;
-  c := line2.X - line1.X;
-  d := line2.Y - line1.Y;
-  if (c = 0) and (d = 0) then
-    result := 0 else
-    result := Sqr(a * d - c * b) / (c * c + d * d);
 end;
 //------------------------------------------------------------------------------
 

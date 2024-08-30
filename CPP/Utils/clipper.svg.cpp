@@ -1,8 +1,8 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  28 January 2023                                                 *
+* Date      :  24 March 2024                                                   *
 * Website   :  http://www.angusj.com                                           *
-* Copyright :  Angus Johnson 2010-2023                                         *
+* Copyright :  Angus Johnson 2010-2024                                         *
 * License   :  http://www.boost.org/LICENSE_1_0.txt                            *
 *******************************************************************************/
 
@@ -47,11 +47,11 @@ namespace Clipper2Lib {
   }
   //------------------------------------------------------------------------------
 
-  void SvgWriter::Clear() 
+  void SvgWriter::Clear()
   {
-    for (PathInfoList::iterator pi_iter = path_infos.begin(); 
+    for (PathInfoList::iterator pi_iter = path_infos.begin();
       pi_iter != path_infos.end(); ++pi_iter) delete (*pi_iter);
-    path_infos.resize(0);    
+    path_infos.resize(0);
   }
   //------------------------------------------------------------------------------
 
@@ -65,7 +65,7 @@ namespace Clipper2Lib {
   //------------------------------------------------------------------------------
 
   void SvgWriter::AddText(const std::string &text,
-    unsigned font_color, unsigned font_size, int x, int y)
+    unsigned font_color, unsigned font_size, double x, double y)
   {
       text_infos.push_back(new TextInfo(text, "", font_color, 600, font_size, x, y));
   }
@@ -113,7 +113,7 @@ namespace Clipper2Lib {
     unsigned brush_color, unsigned pen_color, double pen_width, bool show_coords)
   {
     if (paths.size() == 0) return;
-    path_infos.push_back(new PathInfo(paths, is_open, fillrule, 
+    path_infos.push_back(new PathInfo(paths, is_open, fillrule,
       brush_color, pen_color, pen_width, show_coords));
   }
   //------------------------------------------------------------------------------
@@ -157,7 +157,7 @@ namespace Clipper2Lib {
     double  scale = std::min(
       static_cast<double>(max_width - margin * 2) / rec.Width(),
       static_cast<double>(max_height - margin * 2) / rec.Height());
-    
+
     rec.Scale(scale);
     double offsetX = margin -rec.left;
     double offsetY = margin -rec.top;
@@ -174,15 +174,15 @@ namespace Clipper2Lib {
       max_height << svg_xml_header_3;
     setlocale(LC_NUMERIC, "C");
     file.precision(2);
-    
+
     for (PathInfo* pi : path_infos)
     {
       if (pi->is_open_path || GetAlphaAsFrac(pi->brush_color_) == 0 ||
         (pi->fillrule_ != FillRule::Positive && pi->fillrule_ != FillRule::Negative))
           continue;
 
-      PathsD ppp = pi->fillrule_ == FillRule::Positive ? 
-        SimulatePositiveFill(pi->paths_) : 
+      PathsD ppp = pi->fillrule_ == FillRule::Positive ?
+        SimulatePositiveFill(pi->paths_) :
         SimulateNegativeFill(pi->paths_);
 
       file << "  <path d=\"";
@@ -205,20 +205,20 @@ namespace Clipper2Lib {
         svg_xml_5 << pi->pen_width_ << svg_xml_6;
     }
 
-    for (PathInfo* pi : path_infos) 
+    for (PathInfo* pi : path_infos)
     {
       unsigned brushColor =
         (pi->fillrule_ == FillRule::Positive || pi->fillrule_ == FillRule::Negative) ?
         0 : pi->brush_color_;
 
-      file << "  <path d=\"";      
+      file << "  <path d=\"";
       for (PathD& path : pi->paths_)
       {
         if (path.size() < 2 || (path.size() == 2 && !pi->is_open_path)) continue;
         file << " M " << (static_cast<double>(path[0].x) * scale + offsetX) <<
           " " << (static_cast<double>(path[0].y) * scale + offsetY);
         for (PointD& pt : path)
-          file << " L " << (pt.x * scale + offsetX) << " " 
+          file << " L " << (pt.x * scale + offsetX) << " "
             << (pt.y * scale + offsetY);
         if(!pi->is_open_path)  file << " z";
       }
@@ -231,18 +231,18 @@ namespace Clipper2Lib {
         svg_xml_5 << pi->pen_width_ << svg_xml_6;
 
       if (pi->show_coords_) {
-        file << std::setprecision(0)  << 
+        file << std::setprecision(0)  <<
           "  <g font-family=\"" << coords_style.font_name << "\" font-size=\"" <<
-          coords_style.font_size  << "\" fill=\""<< ColorToHtml(coords_style.font_color) << 
+          coords_style.font_size  << "\" fill=\""<< ColorToHtml(coords_style.font_color) <<
           "\" fill-opacity=\"" << GetAlphaAsFrac(coords_style.font_color) << "\">\n";
-        for (PathD& path : pi->paths_)
+        for (const PathD& path : pi->paths_)
         {
           size_t path_len = path.size();
           if (path_len < 2 || (path_len == 2 && !pi->is_open_path)) continue;
-          for (PointD& pt : path)
+          for (const PointD& pt : path)
             file << "    <text x=\"" << static_cast<int>(pt.x * scale + offsetX) <<
               "\" y=\"" << static_cast<int>(pt.y * scale + offsetY) << "\">" <<
-              pt.x << "," << pt.y << "</text>\n";         
+              pt.x << "," << pt.y << "</text>\n";
         }
         file << "  </g>\n\n";
       }
@@ -255,12 +255,13 @@ namespace Clipper2Lib {
     //      for (PointD& pt : path)
     //        DrawCircle(file, pt.x * scale + offsetX, pt.y * scale + offsetY, 1.6);
 
-    for (TextInfo* ti : text_infos) 
+    for (TextInfo* ti : text_infos)
     {
       file << "  <g font-family=\"" << ti->font_name << "\" font-size=\"" <<
         ti->font_size << "\" fill=\"" << ColorToHtml(ti->font_color) <<
         "\" fill-opacity=\"" << GetAlphaAsFrac(ti->font_color) << "\">\n";
-      file << "    <text x=\"" << (ti->x * scale + offsetX) << "\" y=\"" << (ti->y * scale + offsetY) << "\">" <<
+      file << "    <text x=\"" << static_cast<int>(ti->x * scale + offsetX) << 
+        "\" y=\"" << static_cast<int>(ti->y * scale + offsetY) << "\">" <<
         ti->text << "</text>\n  </g>\n\n";
     }
 
@@ -269,7 +270,7 @@ namespace Clipper2Lib {
     setlocale(LC_NUMERIC, "");
     return true;
   }
-  
+
   //------------------------------------------------------------------------------
   //------------------------------------------------------------------------------
 
@@ -351,7 +352,7 @@ namespace Clipper2Lib {
     char command;
     bool is_relative;
     int vals_needed = 2;
-    //nb: M == absolute move, m == relative move 
+    //nb: M == absolute move, m == relative move
     if (!GetCommand(p, command, is_relative) || command != 'M') return false;
     double vals[2] { 0, 0 };
     double x = 0, y = 0;
@@ -360,19 +361,19 @@ namespace Clipper2Lib {
     PathsD ppp;
     PathD pp;
     pp.push_back(PointD(x, y));
-    while (SkipBlanks(p, pe)) 
+    while (SkipBlanks(p, pe))
     {
-      if (GetCommand(p, command, is_relative)) 
+      if (GetCommand(p, command, is_relative))
       {
         switch (command) {
-        case 'L': 
+        case 'L':
         case 'M': {vals_needed = 2;  break; }
-        case 'H': 
+        case 'H':
         case 'V': {vals_needed = 1;  break; }
         case 'Z': {
             if (pp.size() > 2) ppp.push_back(pp);
             pp.clear();
-            vals_needed = 0;  
+            vals_needed = 0;
             break;
         }
         default: vals_needed = -1;
@@ -385,13 +386,13 @@ namespace Clipper2Lib {
             if (!GetNum(p, pe, vals[i])) vals_needed = -1;
         if (vals_needed <= 0) break; //oops!
         switch (vals_needed) {
-          case 1: 
+          case 1:
           {
               if (command == 'V') y = (is_relative ? y + vals[0] : vals[0]);
               else x = (is_relative ? x + vals[0] : vals[0]);
               break;
           }
-          case 2: 
+          case 2:
           {
               x = (is_relative ? x + vals[0] : vals[0]);
               y = (is_relative ? y + vals[1] : vals[1]);
@@ -421,7 +422,7 @@ namespace Clipper2Lib {
       std::string::const_iterator p = xml.cbegin(), q, xml_end = xml.cend();
 
       while (Find("<path", p, xml_end))
-      {      
+      {
         p += 6;
         q = p;
         if (!Find("/>", p, xml_end)) break;
@@ -431,7 +432,7 @@ namespace Clipper2Lib {
       return path_infos.size() > 0;
   }
 
-  PathsD SvgReader::GetPaths() 
+  PathsD SvgReader::GetPaths()
   {
     PathsD result;
       for (size_t i = 0; i < path_infos.size(); ++i)

@@ -1,8 +1,8 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  23 July 2022                                                    *
+* Date      :  24 March 2024                                                   *
 * Website   :  http://www.angusj.com                                           *
-* Copyright :  Angus Johnson 2010-2022                                         *
+* Copyright :  Angus Johnson 2010-2024                                         *
 * License   :  http://www.boost.org/LICENSE_1_0.txt                            *
 *******************************************************************************/
 
@@ -29,7 +29,7 @@ namespace Clipper2Lib {
         PathInfo(const PathsD& paths, bool is_open, FillRule fillrule,
             unsigned brush_clr, unsigned pen_clr, double pen_width, bool show_coords) :
             paths_(paths), is_open_path(is_open), fillrule_(fillrule),
-            brush_color_(brush_clr), pen_color_(pen_clr), 
+            brush_color_(brush_clr), pen_color_(pen_clr),
             pen_width_(pen_width), show_coords_(show_coords) {};
         friend class SvgWriter;
         friend class SvgReader;
@@ -56,11 +56,11 @@ namespace Clipper2Lib {
         unsigned font_color = 0xFF000000;
         unsigned font_weight = 600;
         unsigned font_size = 11;
-        int x = 0;
-        int y = 0;
+        double x = 0;
+        double y = 0;
 
         TextInfo(const std::string &txt, const std::string &fnt_name, unsigned color,
-            unsigned weight, unsigned size, int coord_x, int coord_y) :
+            unsigned weight, unsigned size, double coord_x, double coord_y) :
             text(txt), font_name(fnt_name), font_color(color), font_weight(weight), font_size(size),
             x(coord_x), y(coord_y) {};
         friend class SvgWriter;
@@ -77,27 +77,27 @@ namespace Clipper2Lib {
       void DrawCircle(std::ofstream& file, double x, double y, double radius);
   public:
     explicit SvgWriter(int precision = 0)
-    { 
+    {
       fill_rule_ = FillRule::NonZero;
       coords_style.font_name = "Verdana";
-      coords_style.font_color = 0xFF000000; 
-      coords_style.font_size = 11; 
+      coords_style.font_color = 0xFF000000;
+      coords_style.font_size = 11;
       scale_ = std::pow(10, precision);
     };
 
     ~SvgWriter() { Clear(); };
-        
+
     void Clear();
     FillRule Fill_Rule() { return fill_rule_; }
     void SetCoordsStyle(const std::string &font_name, unsigned font_color, unsigned font_size);
-    void AddText(const std::string &text, unsigned font_color, unsigned font_size, int x, int y);
+    void AddText(const std::string &text, unsigned font_color, unsigned font_size, double x, double y);
     void AddPath(const Path64& path, bool is_open, FillRule fillrule,
       unsigned brush_color, unsigned pen_color, double pen_width, bool show_coords);
     void AddPath(const PathD& path, bool is_open, FillRule fillrule,
       unsigned brush_color, unsigned pen_color, double pen_width, bool show_coords);
     void AddPaths(const PathsD& paths, bool is_open, FillRule fillrule,
       unsigned brush_color, unsigned pen_color, double pen_width, bool show_coords);
-    void AddPaths(const Paths64& paths, bool is_open, FillRule fillrule, 
+    void AddPaths(const Paths64& paths, bool is_open, FillRule fillrule,
       unsigned brush_color, unsigned pen_color, double pen_width, bool show_coords);
     bool SaveToFile(const std::string &filename, int max_width, int max_height, int margin);
   };

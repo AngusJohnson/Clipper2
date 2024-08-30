@@ -64,3 +64,13 @@ TEST(Clipper2Tests, TestRectClip3) //#637
   //std::cout << solution << std::endl;
   EXPECT_TRUE(solution.size() == 1);
 }
+
+TEST(Clipper2Tests, TestRectClipOrientation) //#864
+{
+  const Rect64 rect(1222, 1323, 3247, 3348);
+  const Path64 subject = MakePath({ 375,1680, 1915,4716, 5943,586, 3987,152 });
+  RectClip64 clip(rect);
+  const auto solution = clip.Execute({ subject });
+  ASSERT_EQ(solution.size(), 1);
+  EXPECT_EQ(IsPositive(subject), IsPositive(solution.front()));
+}

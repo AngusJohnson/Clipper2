@@ -11,6 +11,10 @@
     <DefineConstants>$(DefineConstants);USINGZ</DefineConstants>
   </PropertyGroup>
 
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
+    <DefineConstants>$(DefineConstants);USINGZ</DefineConstants>
+  </PropertyGroup>
+
   <ItemGroup>
     <ProjectReference Include="..\USINGZ\Clipper2LibZ.csproj" />
   </ItemGroup>

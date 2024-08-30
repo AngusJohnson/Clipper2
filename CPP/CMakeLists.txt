@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.15)
-project(Clipper2 VERSION 1.3.0 LANGUAGES C CXX)
+project(Clipper2 VERSION 1.4.0 LANGUAGES C CXX)
 
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 if(NOT DEFINED CMAKE_CXX_STANDARD OR CMAKE_CXX_STANDARD LESS 17)
@@ -60,19 +60,20 @@ if (NOT (CLIPPER2_USINGZ STREQUAL "ONLY"))
 
   target_compile_definitions(
     Clipper2 PUBLIC
-    CLIPPER2_MAX_DECIMAL_PRECISION=${CLIPPER2_MAX_DECIMAL_PRECISION}
-    $<$<BOOL:${CLIPPER2_HI_PRECISION}>:CLIPPER2_HI_PRECISION>
+      CLIPPER2_MAX_DECIMAL_PRECISION=${CLIPPER2_MAX_DECIMAL_PRECISION}
+      $<$<BOOL:${CLIPPER2_HI_PRECISION}>:CLIPPER2_HI_PRECISION>
   )
 
-
-  target_include_directories(Clipper2
-    PUBLIC Clipper2Lib/include
+  target_include_directories(
+    Clipper2 PUBLIC 
+      $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/Clipper2Lib/include>
+      $<INSTALL_INTERFACE:include>
   )
 
   if (MSVC)
     target_compile_options(Clipper2 PRIVATE /W4 /WX)
   else()
-    target_compile_options(Clipper2 PRIVATE -Wall -Wextra -Wpedantic -Werror)
+    target_compile_options(Clipper2 PRIVATE -Wall -Wextra -Wpedantic -Werror -Wno-c++20-compat)
     target_link_libraries(Clipper2 PUBLIC -lm)
   endif()
 endif()
@@ -84,19 +85,20 @@ if (NOT (CLIPPER2_USINGZ STREQUAL "OFF"))
 
   target_compile_definitions(
     Clipper2Z PUBLIC
-    USINGZ
-    CLIPPER2_MAX_DECIMAL_PRECISION=${CLIPPER2_MAX_DECIMAL_PRECISION}
-    $<$<BOOL:${CLIPPER2_HI_PRECISION}>:CLIPPER2_HI_PRECISION>
+      USINGZ
+      CLIPPER2_MAX_DECIMAL_PRECISION=${CLIPPER2_MAX_DECIMAL_PRECISION}
+      $<$<BOOL:${CLIPPER2_HI_PRECISION}>:CLIPPER2_HI_PRECISION>
   )
-
-  target_include_directories(Clipper2Z
-    PUBLIC Clipper2Lib/include
+  target_include_directories(
+    Clipper2Z PUBLIC 
+      $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/Clipper2Lib/include>
+      $<INSTALL_INTERFACE:include>
   )
 
   if (MSVC)
     target_compile_options(Clipper2Z PRIVATE /W4 /WX)
   else()
-    target_compile_options(Clipper2Z PRIVATE -Wall -Wextra -Wpedantic -Werror)
+    target_compile_options(Clipper2Z PRIVATE -Wall -Wextra -Wpedantic -Werror -Wno-c++20-compat -Wsign-conversion)
     target_link_libraries(Clipper2Z PUBLIC -lm)
   endif()
 endif()
@@ -208,7 +210,12 @@ if(USE_EXTERNAL_GTEST)
   find_package(GTest REQUIRED)
 else()
   include(GoogleTest)
-
+  if(NOT EXISTS ${PROJECT_SOURCE_DIR}/Tests/googletest)
+    execute_process(
+      COMMAND "git" "clone" "https://github.com/google/googletest"
+      WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}/Tests
+    )
+  endif()
   add_subdirectory("${PROJECT_SOURCE_DIR}/Tests/googletest/")
   set_target_properties(gtest gtest_main PROPERTIES FOLDER GTest)
 endif()
@@ -221,6 +228,7 @@ endif()
 
   set(ClipperTests_SRC
     Tests/TestExportHeaders.cpp
+    Tests/TestIsCollinear.cpp
     Tests/TestLines.cpp
     Tests/TestOffsets.cpp
     Tests/TestOffsetOrientation.cpp
@@ -275,6 +283,7 @@ endif()
   file(COPY ../Tests/PolytreeHoleOwner2.txt DESTINATION ${CMAKE_BINARY_DIR} FILE_PERMISSIONS OWNER_READ GROUP_READ WORLD_READ )
   file(COPY ../Tests/Lines.txt DESTINATION ${CMAKE_BINARY_DIR} FILE_PERMISSIONS OWNER_READ GROUP_READ WORLD_READ )
   file(COPY ../Tests/Polygons.txt DESTINATION ${CMAKE_BINARY_DIR} FILE_PERMISSIONS OWNER_READ GROUP_READ WORLD_READ )
+  file(COPY ../Tests/Offsets.txt DESTINATION ${CMAKE_BINARY_DIR} FILE_PERMISSIONS OWNER_READ GROUP_READ WORLD_READ )
 endif()
 
 if(USE_EXTERNAL_GBENCHMARK)
@@ -285,13 +294,59 @@ set(CLIPPER2_PCFILES "")
 foreach(lib ${CLIPPER2_LIBS})
   set(pc "${CMAKE_CURRENT_BINARY_DIR}/${lib}.pc")
   list(APPEND CLIPPER2_PCFILES ${pc})
-  CONFIGURE_FILE(Clipper2.pc.cmakein "${pc}" @ONLY)
+  if (lib STREQUAL "Clipper2Z")
+    set(PCFILE_LIB_SUFFIX "Z")
+  else()
+    set(PCFILE_LIB_SUFFIX "")
+  endif()
+  configure_file(Clipper2.pc.cmakein "${pc}" @ONLY)
 endforeach()
 
 install(TARGETS ${CLIPPER2_LIBS}
         PUBLIC_HEADER DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/clipper2
 )
 install(FILES ${CLIPPER2_PCFILES} DESTINATION ${CMAKE_INSTALL_LIBDIR}/pkgconfig)
+
+
+# create package config file
+include(CMakePackageConfigHelpers)
+include(GNUInstallDirs)
+
+write_basic_package_version_file("${PROJECT_BINARY_DIR}/Clipper2ConfigVersion.cmake" COMPATIBILITY SameMajorVersion)
+
+configure_package_config_file(
+    "Clipper2Config.cmake.in" 
+    "${PROJECT_BINARY_DIR}/Clipper2Config.cmake"
+    INSTALL_DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/clipper2
+)
+
+export(TARGETS ${CLIPPER2_LIBS} FILE "${PROJECT_BINARY_DIR}/Clipper2Targets.cmake")
+
+# installation
+install(TARGETS ${CLIPPER2_LIBS} EXPORT Clipper2-targets
+        PUBLIC_HEADER DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/clipper2
+        LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+)
+
+install(
+    FILES 
+        ${PROJECT_BINARY_DIR}/Clipper2Config.cmake 
+        ${PROJECT_BINARY_DIR}/Clipper2ConfigVersion.cmake 
+    DESTINATION 
+        ${CMAKE_INSTALL_LIBDIR}/cmake/clipper2
+)
+
+install(
+    EXPORT 
+        Clipper2-targets
+    NAMESPACE 
+        Clipper2::
+    FILE 
+        Clipper2Targets.cmake 
+    DESTINATION 
+        ${CMAKE_INSTALL_LIBDIR}/cmake/clipper2
+)
+
 
 # disable exceptions
 #string(REGEX REPLACE "/W[3|4]" "/w" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
