@@ -1,6 +1,6 @@
 ﻿/*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  27 April 2024                                                   *
+* Date      :  17 September 2024                                               *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2024                                         *
 * Purpose   :  This is the main polygon clipping module                        *
@@ -1840,7 +1840,7 @@ namespace Clipper2Lib
 
     protected void ExecuteInternal(ClipType ct, FillRule fillRule)
     {
-      if (ct == ClipType.None) return;
+      if (ct == ClipType.NoClip) return;
       _fillrule = fillRule;
       _cliptype = ct;
       Reset();
