@@ -1,6 +1,6 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  27 April 2024                                                   *
+* Date      :  17 September 2024                                               *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2024                                         *
 * Purpose   :  This is the main polygon clipping module                        *
@@ -85,7 +85,7 @@ namespace Clipper2Lib {
   inline bool IsOpenEnd(const Vertex& v)
   {
     return (v.flags & (VertexFlags::OpenStart | VertexFlags::OpenEnd)) !=
-      VertexFlags::None;
+      VertexFlags::Empty;
   }
 
 
@@ -220,7 +220,7 @@ namespace Clipper2Lib {
 
   inline bool IsMaxima(const Vertex& v)
   {
-    return ((v.flags & VertexFlags::LocalMax) != VertexFlags::None);
+    return ((v.flags & VertexFlags::LocalMax) != VertexFlags::Empty);
   }
 
 
@@ -235,12 +235,12 @@ namespace Clipper2Lib {
     if (e.wind_dx > 0)
       while ((result->next->pt.y == result->pt.y) &&
         ((result->flags & (VertexFlags::OpenEnd |
-          VertexFlags::LocalMax)) == VertexFlags::None))
+          VertexFlags::LocalMax)) == VertexFlags::Empty))
             result = result->next;
     else
       while (result->prev->pt.y == result->pt.y &&
         ((result->flags & (VertexFlags::OpenEnd |
-          VertexFlags::LocalMax)) == VertexFlags::None))
+          VertexFlags::LocalMax)) == VertexFlags::Empty))
           result = result->prev;
     if (!IsMaxima(*result)) result = nullptr; // not a maxima
     return result;
@@ -478,7 +478,7 @@ namespace Clipper2Lib {
 
   inline bool IsJoined(const Active& e)
   {
-    return e.join_with != JoinWith::None;
+    return e.join_with != JoinWith::NoJoin;
   }
 
   inline void SetOwner(OutRec* outrec, OutRec* new_owner)
@@ -608,7 +608,7 @@ namespace Clipper2Lib {
     Vertex& vert, PathType polytype, bool is_open)
   {
     //make sure the vertex is added only once ...
-    if ((VertexFlags::LocalMin & vert.flags) != VertexFlags::None) return;
+    if ((VertexFlags::LocalMin & vert.flags) != VertexFlags::Empty) return;
 
     vert.flags = (vert.flags | VertexFlags::LocalMin);
     list.push_back(std::make_unique <LocalMinima>(&vert, polytype, is_open));
@@ -643,7 +643,7 @@ namespace Clipper2Lib {
         }
         curr_v->prev = prev_v;
         curr_v->pt = pt;
-        curr_v->flags = VertexFlags::None;
+        curr_v->flags = VertexFlags::Empty;
         prev_v = curr_v++;
         cnt++;
       }
@@ -725,7 +725,7 @@ namespace Clipper2Lib {
   void ReuseableDataContainer64::AddLocMin(Vertex& vert, PathType polytype, bool is_open)
   {
     //make sure the vertex is added only once ...
-    if ((VertexFlags::LocalMin & vert.flags) != VertexFlags::None) return;
+    if ((VertexFlags::LocalMin & vert.flags) != VertexFlags::Empty) return;
 
     vert.flags = (vert.flags | VertexFlags::LocalMin);
     minima_list_.push_back(std::make_unique <LocalMinima>(&vert, polytype, is_open));
@@ -907,7 +907,7 @@ namespace Clipper2Lib {
   void ClipperBase::AddLocMin(Vertex& vert, PathType polytype, bool is_open)
   {
     //make sure the vertex is added only once ...
-    if ((VertexFlags::LocalMin & vert.flags) != VertexFlags::None) return;
+    if ((VertexFlags::LocalMin & vert.flags) != VertexFlags::Empty) return;
 
     vert.flags = (vert.flags | VertexFlags::LocalMin);
     minima_list_.push_back(std::make_unique <LocalMinima>(&vert, polytype, is_open));
@@ -932,7 +932,7 @@ namespace Clipper2Lib {
 
     switch (cliptype_)
     {
-    case ClipType::None:
+    case ClipType::NoClip:
       return false;
     case ClipType::Intersection:
       switch (fillrule_)
@@ -1208,7 +1208,7 @@ namespace Clipper2Lib {
 
     while (PopLocalMinima(bot_y, local_minima))
     {
-      if ((local_minima->vertex->flags & VertexFlags::OpenStart) != VertexFlags::None)
+      if ((local_minima->vertex->flags & VertexFlags::OpenStart) != VertexFlags::Empty)
       {
         left_bound = nullptr;
       }
@@ -1224,7 +1224,7 @@ namespace Clipper2Lib {
         SetDx(*left_bound);
       }
 
-      if ((local_minima->vertex->flags & VertexFlags::OpenEnd) != VertexFlags::None)
+      if ((local_minima->vertex->flags & VertexFlags::OpenEnd) != VertexFlags::Empty)
       {
         right_bound = nullptr;
       }
@@ -2125,7 +2125,7 @@ namespace Clipper2Lib {
     using_polytree_ = use_polytrees;
     Reset();
     int64_t y;
-    if (ct == ClipType::None || !PopScanline(y)) return true;
+    if (ct == ClipType::NoClip || !PopScanline(y)) return true;
 
     while (succeeded_)
     {
@@ -2789,14 +2789,14 @@ namespace Clipper2Lib {
   {
     if (e.join_with == JoinWith::Right)
     {
-      e.join_with = JoinWith::None;
-      e.next_in_ael->join_with = JoinWith::None;
+      e.join_with = JoinWith::NoJoin;
+      e.next_in_ael->join_with = JoinWith::NoJoin;
       AddLocalMinPoly(e, *e.next_in_ael, pt, true);
     }
     else
     {
-      e.join_with = JoinWith::None;
-      e.prev_in_ael->join_with = JoinWith::None;
+      e.join_with = JoinWith::NoJoin;
+      e.prev_in_ael->join_with = JoinWith::NoJoin;
       AddLocalMinPoly(*e.prev_in_ael, e, pt, true);
     }
   }

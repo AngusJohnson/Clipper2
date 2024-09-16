@@ -1,6 +1,6 @@
 ﻿/*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  13 May 2024                                                     *
+* Date      :  17 September 2024                                               *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2024                                         *
 * Purpose   :  Core structures and functions for the Clipper Library           *
@@ -532,7 +532,7 @@ namespace Clipper2Lib
   // Note: all clipping operations except for Difference are commutative.
   public enum ClipType
   {
-    None,
+    NoClip,
     Intersection,
     Union,
     Difference,
