@@ -9,7 +9,7 @@ TEST(Clipper2Tests, TestPolytreeHoles1)
   Paths64 subject, subject_open, clip;
   PolyTree64 solution;
   Paths64 solution_open;
-  ClipType ct = ClipType::None;
+  ClipType ct = ClipType::NoClip;
   FillRule fr = FillRule::EvenOdd;
   int64_t area = 0, count = 0;
   bool success = false;
@@ -61,7 +61,7 @@ TEST(Clipper2Tests, TestPolytreeHoles2)
   ASSERT_TRUE(ifs);
   ASSERT_TRUE(ifs.good());
   Paths64 subject, subject_open, clip;
-  ClipType ct = ClipType::None;
+  ClipType ct = ClipType::NoClip;
   FillRule fr = FillRule::EvenOdd;
   int64_t area = 0, count = 0;
   ASSERT_TRUE(LoadTestNum(ifs, 1, subject, subject_open, clip, area, count, ct, fr));

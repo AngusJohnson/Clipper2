@@ -14,7 +14,7 @@ namespace Clipper2Lib {
 // Boyer Moore Horspool Search
 //------------------------------------------------------------------------------
 
-class BMH_Search 
+class BMH_Search
 {
 private:
   uint8_t case_table[256];
@@ -51,7 +51,7 @@ private:
   }
 
   void Init()
-  {    
+  {
     case_sensitive_ = false;
     current = nullptr; end = nullptr; last_found = nullptr;
   }
@@ -85,7 +85,7 @@ private:
     while (current < end)
     {
       uint8_t i = shift[case_table[static_cast<unsigned>(*current)]];
-      if (!i)                          
+      if (!i)
       {
         char* j = current - needle_len_less1;
         while (i < needle_len_less1 &&
@@ -107,7 +107,7 @@ private:
 
 public:
 
-  explicit BMH_Search(std::ifstream& stream, 
+  explicit BMH_Search(std::ifstream& stream,
     const std::string& needle = "")
   {
     //case blind table
@@ -121,7 +121,7 @@ public:
     if (needle.size() > 0) SetNeedle(needle);
   }
 
-  BMH_Search(const char* haystack, size_t length, 
+  BMH_Search(const char* haystack, size_t length,
     const std::string& needle = "")
   {
     Init();
@@ -137,7 +137,7 @@ public:
 
   void Reset()
   {
-    current = haystack_; 
+    current = haystack_;
     last_found = nullptr;
   }
 
@@ -152,7 +152,7 @@ public:
     needle_.clear();
     needle_.reserve(needle_len_);
     for (const char& c : needle) needle_.push_back(static_cast<uint8_t>(c));
-    
+
     //case insensitive needle
     needle_ic_ = needle_;
     for (std::vector< uint8_t>::iterator ui = needle_ic_.begin(); ui != needle_ic_.end(); ++ui)
@@ -199,10 +199,10 @@ public:
   inline size_t LastFoundOffset() { return last_found - haystack_; }
 
   inline char* FindNextEndLine()
-  {    
+  {
     current = last_found + needle_len_;
-    while (current < end && 
-      *current != char(13) && *current != char(10)) 
+    while (current < end &&
+      *current != char(13) && *current != char(10))
         ++current;
     return current;
   }
@@ -212,7 +212,7 @@ public:
 
 void PathsToStream(const Paths64& paths, std::ostream& stream)
 {
-  for (Paths64::const_iterator paths_it = paths.cbegin(); 
+  for (Paths64::const_iterator paths_it = paths.cbegin();
     paths_it != paths.cend(); ++paths_it)
   {
     //watch out for empty paths
@@ -247,7 +247,7 @@ static bool GetInt(string::const_iterator& s_it,
 }
 
 bool SaveTest(const std::string& filename, bool append,
-  const Paths64* subj, const Paths64* subj_open, const Paths64* clip, 
+  const Paths64* subj, const Paths64* subj_open, const Paths64* clip,
   int64_t area, int64_t count, ClipType ct, FillRule fr)
 {
   string line;
@@ -267,8 +267,8 @@ bool SaveTest(const std::string& filename, bool append,
       string::const_iterator s_it = line.cbegin(), s_end = line.cend();
       GetInt(s_it, s_end, last_test_no);
     }
-  } 
-  else if (FileExists(filename)) 
+  }
+  else if (FileExists(filename))
     remove(filename.c_str());
 
   ++last_test_no;
@@ -282,7 +282,7 @@ bool SaveTest(const std::string& filename, bool append,
   string cliptype_string;
   switch (ct)
   {
-  case ClipType::None: cliptype_string = "NONE"; break;
+  case ClipType::NoClip: cliptype_string = "NOCLIP"; break;
   case ClipType::Intersection: cliptype_string = "INTERSECTION"; break;
   case ClipType::Union: cliptype_string = "UNION"; break;
   case ClipType::Difference: cliptype_string = "DIFFERENCE"; break;

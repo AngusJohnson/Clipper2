@@ -12,7 +12,7 @@ TEST(Clipper2Tests, TestOffsets) {
     ClipperOffset co;
     Paths64 subject, subject_open, clip;
     Paths64 solution, solution_open;
-    ClipType ct = ClipType::None;
+    ClipType ct = ClipType::NoClip;
     FillRule fr = FillRule::NonZero;
     int64_t stored_area = 0, stored_count = 0;
     ASSERT_TRUE(LoadTestNum(ifs, test_number, subject, subject_open, clip, stored_area, stored_count, ct, fr));
