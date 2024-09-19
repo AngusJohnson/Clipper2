@@ -2,7 +2,7 @@ unit Clipper.Core;
 
 (*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  13 May 2024                                                     *
+* Date      :  17 September 2024                                               *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2024                                         *
 * Purpose   :  Core Clipper Library module                                     *
@@ -137,7 +137,7 @@ type
     property Item[idx: integer]: Pointer read UnsafeGet; default;
   end;
 
-  TClipType = (ctNone, ctIntersection, ctUnion, ctDifference, ctXor);
+  TClipType = (ctNoClip, ctIntersection, ctUnion, ctDifference, ctXor);
 
   TPointInPolygonResult = (pipOn, pipInside, pipOutside);
 

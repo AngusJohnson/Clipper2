@@ -1,6 +1,6 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  16 August 2024                                                  *
+* Date      :  17 September 2024                                               *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2024                                         *
 * Purpose   :  This module exports the Clipper2 Library (ie DLL/so)            *
@@ -10,7 +10,7 @@
 
 /*
  Boolean clipping:
- cliptype: None=0, Intersection=1, Union=2, Difference=3, Xor=4
+ cliptype: NoClip=0, Intersection=1, Union=2, Difference=3, Xor=4
  fillrule: EvenOdd=0, NonZero=1, Positive=2, Negative=3
 
  Polygon offsetting (inflate/deflate):

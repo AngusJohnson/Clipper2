@@ -1,6 +1,6 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  5 July 2024                                                     *
+* Date      :  17 September 2024                                               *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2024                                         *
 * Purpose   :  This is the main polygon clipping module                        *
@@ -32,13 +32,13 @@ namespace Clipper2Lib {
 	struct HorzSegment;
 
 	//Note: all clipping operations except for Difference are commutative.
-	enum class ClipType { None, Intersection, Union, Difference, Xor };
+	enum class ClipType { NoClip, Intersection, Union, Difference, Xor };
 
 	enum class PathType { Subject, Clip };
-	enum class JoinWith { None, Left, Right };
+	enum class JoinWith { NoJoin, Left, Right };
 
 	enum class VertexFlags : uint32_t {
-		None = 0, OpenStart = 1, OpenEnd = 2, LocalMax = 4, LocalMin = 8
+		Empty = 0, OpenStart = 1, OpenEnd = 2, LocalMax = 4, LocalMin = 8
 	};
 
 	constexpr enum VertexFlags operator &(enum VertexFlags a, enum VertexFlags b)
@@ -55,7 +55,7 @@ namespace Clipper2Lib {
 		Point64 pt;
 		Vertex* next = nullptr;
 		Vertex* prev = nullptr;
-		VertexFlags flags = VertexFlags::None;
+		VertexFlags flags = VertexFlags::Empty;
 	};
 
 	struct OutPt {
@@ -131,7 +131,7 @@ namespace Clipper2Lib {
 		Vertex* vertex_top = nullptr;
 		LocalMinima* local_min = nullptr;  // the bottom of an edge 'bound' (also Vatti)
 		bool is_left_bound = false;
-		JoinWith join_with = JoinWith::None;
+		JoinWith join_with = JoinWith::NoJoin;
 	};
 
 	struct LocalMinima {
@@ -197,7 +197,7 @@ namespace Clipper2Lib {
 
 	class ClipperBase {
 	private:
-		ClipType cliptype_ = ClipType::None;
+		ClipType cliptype_ = ClipType::NoClip;
 		FillRule fillrule_ = FillRule::EvenOdd;
 		FillRule fillpos = FillRule::Positive;
 		int64_t bot_y_ = 0;
@@ -210,7 +210,7 @@ namespace Clipper2Lib {
 		std::vector<Vertex*> vertex_lists_;
 		std::priority_queue<int64_t> scanline_list_;
 		IntersectNodeList intersect_nodes_;
-    HorzSegmentList horz_seg_list_;
+        HorzSegmentList horz_seg_list_;
 		std::vector<HorzJoin> horz_join_list_;
 		void Reset();
 		inline void InsertScanline(int64_t y);

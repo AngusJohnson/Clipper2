@@ -52,7 +52,7 @@ const
   etSquare    = Clipper.Offset.etSquare;
   etRound     = Clipper.Offset.etRound;
 
-  ctNone          = Clipper.Core.ctNone;
+  ctNone          = Clipper.Core.ctNoClip;
   ctIntersection  = Clipper.Core.ctIntersection;
   ctUnion         = Clipper.Core.ctUnion;
   ctDifference    = Clipper.Core.ctDifference;
