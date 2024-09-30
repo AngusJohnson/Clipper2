@@ -928,6 +928,9 @@ namespace Clipper2Lib {
     case FillRule::Negative:
       if (e.wind_cnt != -1) return false;
       break;
+    // Should never happen, but adding this to stop a compiler warning
+    default:
+      break;
     }
 
     switch (cliptype_)
@@ -978,6 +981,9 @@ namespace Clipper2Lib {
       break;
 
     case ClipType::Xor: return true;  break;
+    // Should never happen, but adding this to stop a compiler warning
+    default:
+      break;
     }
     return false;  // we should never get here
   }
