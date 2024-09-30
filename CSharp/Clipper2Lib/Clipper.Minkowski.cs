@@ -12,7 +12,7 @@ using System;
 
 namespace Clipper2Lib
 {
-  public class Minkowski
+  public static class Minkowski
   {
     private static Paths64 MinkowskiInternal(Path64 pattern, Path64 path, bool isSum, bool isClosed)
     {
