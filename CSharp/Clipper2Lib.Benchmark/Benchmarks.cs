@@ -36,9 +36,9 @@ namespace Clipper2Lib.Benchmark
         {
             Random rand = new ();
 
-            _subj = new ();
-            _clip = new ();
-            _solution = new ();
+            _subj = new Paths64();
+            _clip = new Paths64();
+            _solution = new Paths64();
 
             _subj.Add(MakeRandomPath(DisplayWidth, DisplayHeight, EdgeCount, rand));
             _clip.Add(MakeRandomPath(DisplayWidth, DisplayHeight, EdgeCount, rand));

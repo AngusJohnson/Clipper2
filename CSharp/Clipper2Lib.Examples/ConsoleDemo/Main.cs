@@ -13,7 +13,7 @@ using System;
 
 namespace ClipperDemo1
 {
-  public class Application
+  public static class Application
   {
     public static void Main()
     {
@@ -32,7 +32,7 @@ namespace ClipperDemo1
     {
       // of course this function is inefficient, 
       // but it's purpose is simply to test polytrees.
-      PolyTree64 polytree = new PolyTree64();
+      PolyTree64 polytree = new();
       Clipper.BooleanOp(ClipType.Union, subjects, null, polytree, fillrule);
       return Clipper.PolyTreeToPaths64(polytree);
     }
@@ -41,7 +41,7 @@ namespace ClipperDemo1
     {
       const int size = 10;
       const int w = 800, h = 600;
-      FillRule fillrule = FillRule.NonZero;
+      const FillRule fillrule = FillRule.NonZero;
 
       Path64 shape = Clipper.MakePath(new int[] { 0, 0, size, 0, size, size, 0, size });
       Paths64 subjects = new(), solution;
@@ -61,10 +61,10 @@ namespace ClipperDemo1
       else
         solution = Clipper.Union(subjects, fillrule);
 
-      SvgWriter svg = new SvgWriter();
+      SvgWriter svg = new();
       SvgUtils.AddSubject(svg, subjects);
       SvgUtils.AddSolution(svg, solution, false);
-      string filename = @"..\..\..\squares.svg";
+      const string filename = @"..\..\..\squares.svg";
       SvgUtils.SaveToFile(svg, filename, fillrule, w, h, 10);
       ClipperFileIO.OpenFileWithDefaultApp(filename);
     }
@@ -73,7 +73,7 @@ namespace ClipperDemo1
     {
       const int size = 10;
       const int w = 800, h = 600;
-      FillRule fillrule = FillRule.NonZero;
+      const FillRule fillrule = FillRule.NonZero;
 
       Path64 tri1 = Clipper.MakePath(new int[] { 0,0, size * 2,0, size,size * 2 });
       Path64 tri2 = Clipper.MakePath(new int[] { size * 2, 0, size, size * 2, size*3, size*2 });
@@ -98,10 +98,10 @@ namespace ClipperDemo1
       else
         solution = Clipper.Union(subjects, fillrule);
 
-      SvgWriter svg = new SvgWriter();
+      SvgWriter svg = new();
       SvgUtils.AddSubject(svg, subjects);
       SvgUtils.AddSolution(svg, solution, false);
-      string filename = @"..\..\..\triangles.svg";
+      const string filename = @"..\..\..\triangles.svg";
       SvgUtils.SaveToFile(svg, filename, fillrule, w, h, 10);
       ClipperFileIO.OpenFileWithDefaultApp(filename);
     }
@@ -110,7 +110,7 @@ namespace ClipperDemo1
     {
       const int size = 10;
       const int w = 800, h = 600;
-      FillRule fillrule = FillRule.NonZero;
+      const FillRule fillrule = FillRule.NonZero;
 
       Path64 shape = Clipper.MakePath(new int[] { size, 0, size * 2, size, size, size * 2, 0, size });
       Paths64 subjects = new(), solution;
@@ -133,36 +133,34 @@ namespace ClipperDemo1
       else
         solution = Clipper.Union(subjects, fillrule);
 
-      SvgWriter svg = new SvgWriter();
+      SvgWriter svg = new();
       SvgUtils.AddSubject(svg, subjects);
       SvgUtils.AddSolution(svg, solution, false);
-      string filename = @"..\..\..\diamonds.svg";
+      const string filename = @"..\..\..\diamonds.svg";
       SvgUtils.SaveToFile(svg, filename, fillrule, w, h, 10);
       ClipperFileIO.OpenFileWithDefaultApp(filename);
     }
 
     public static void LoopThruTestPolygons(int start = 0, int end = 0)
     {
-      Paths64 subject = new Paths64();
-      Paths64 subject_open = new Paths64();
-      Paths64 clip = new Paths64();
-      Paths64 solution = new Paths64();
-      Paths64 solution_open = new Paths64();
-      ClipType ct;
-      FillRule fr;
+      Paths64 subject = new();
+      Paths64 subject_open = new();
+      Paths64 clip = new();
+      Paths64 solution = new();
+      Paths64 solution_open = new();
       bool do_all = (start == 0 && end == 0);
       if (do_all) { start = 1; end = 0xFFFF; }
       else if (end == 0) end = start;
 
       if (do_all)
         Console.WriteLine("\nCount and area differences (expected vs measured):\n");
-        int test_number = start;
+      int test_number = start;
       for (; test_number <= end; ++test_number)
       {
         if (!ClipperFileIO.LoadTestNum(@"..\..\..\..\..\..\Tests\Polygons.txt", 
-          test_number, subject, subject_open, clip, 
-          out ct, out fr, out long area, out int cnt, out _)) break;
-        Clipper64 c64 = new Clipper64();
+              test_number, subject, subject_open, clip, 
+              out ClipType ct, out FillRule fr, out long area, out int cnt, out _)) break;
+        Clipper64 c64 = new();
         c64.AddSubject(subject);
         c64.AddOpenSubject(subject_open);
         c64.AddClip(clip);
@@ -179,15 +177,15 @@ namespace ClipperDemo1
           double area_diff = area <= 0 ? 0 : Math.Abs(measuredArea / area -1.0);
 
           if (count_diff > 0.05)
-            Console.WriteLine(string.Format("{0}: count {1} vs {2}", test_number, cnt, measuredCnt));
+            Console.WriteLine($"{test_number}: count {cnt} vs {measuredCnt}");
           if (area_diff > 0.1)
-            Console.WriteLine(string.Format("{0}: area {1} vs {2}", test_number, area, measuredArea));
+            Console.WriteLine($"{test_number}: area {area} vs {measuredArea}");
 
           // don't display when looping through every test
           continue; 
         }
 
-        SvgWriter svg = new SvgWriter();
+        SvgWriter svg = new();
         SvgUtils.AddSubject(svg, subject);
         SvgUtils.AddClip(svg, clip);
         if (fr == FillRule.Negative)
@@ -199,11 +197,9 @@ namespace ClipperDemo1
         ClipperFileIO.OpenFileWithDefaultApp(filename);
       }
 
-      if (do_all)
-      {
-        Console.WriteLine(string.Format("\ntest ended at polygon {0}.\n", test_number));
-        Console.ReadKey();
-      }
+      if (!do_all) return;
+      Console.WriteLine($"\ntest ended at polygon {test_number}.\n");
+      Console.ReadKey();
     }
 
     public static Paths64 LoadPathsFromResource(string resourceName)
@@ -231,7 +227,7 @@ namespace ClipperDemo1
 
     public static void ClipTestPolys()
     {
-      FillRule fillrule = FillRule.NonZero;
+      const FillRule fillrule = FillRule.NonZero;
       Paths64 subject = LoadPathsFromResource("ConsoleDemo.subj.bin");
       Paths64 clip = LoadPathsFromResource("ConsoleDemo.clip.bin");
       Paths64 solution = Clipper.Intersect(subject, clip, fillrule);
@@ -240,8 +236,8 @@ namespace ClipperDemo1
       SvgUtils.AddSubject(svg, subject);
       SvgUtils.AddClip(svg, clip);
       SvgUtils.AddSolution(svg, solution, false);
-      SvgUtils.SaveToFile(svg, "..\\..\\..\\clipperD.svg", fillrule, 800, 600, 20);
-      ClipperFileIO.OpenFileWithDefaultApp("..\\..\\..\\clipperD.svg");
+      SvgUtils.SaveToFile(svg, @"..\..\..\clipperD.svg", fillrule, 800, 600, 20);
+      ClipperFileIO.OpenFileWithDefaultApp(@"..\..\..\clipperD.svg");
     }
 
 

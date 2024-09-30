@@ -207,9 +207,7 @@ namespace Clipper2Lib
             if (pt.y < bounds.top) bounds.top = pt.y;
             if (pt.y > bounds.bottom) bounds.bottom = pt.y;
           }
-      if (!IsValidRect(bounds))
-        return RectEmpty;
-      return bounds;
+      return !IsValidRect(bounds) ? RectEmpty : bounds;
     }
 
     private static string ColorToHtml(uint clr)
@@ -281,7 +279,7 @@ namespace Clipper2Lib
           writer.Write(string.Format(NumberFormatInfo.InvariantInfo, svg_path_format2,
               ColorToHtml(pi.PenClr), GetAlpha(pi.PenClr), pi.PenWidth));
 
-        if (pi.ShowCoords)
+        if (!pi.ShowCoords) continue;
         {
           writer.Write("<g font-family=\"{0}\" font-size=\"{1}\" fill=\"{2}\">\n", 
             coordStyle.FontName, coordStyle.FontSize, ColorToHtml(coordStyle.FontColor));

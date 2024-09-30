@@ -6,7 +6,6 @@
 * License   :  http://www.boost.org/LICENSE_1_0.txt                            *
 *******************************************************************************/
 
-using System;
 using System.IO;
 using System.Reflection;
 using Clipper2Lib;
@@ -14,7 +13,7 @@ using Clipper2Lib;
 namespace ClipperDemo1
 {
 
-  public class Application
+  public static class Application
   {
 
     public static void Main()
@@ -30,7 +29,7 @@ namespace ClipperDemo1
       ClipperOffset co = new();
 
       //triangle offset - with large miter
-      Paths64 p0 = new() { Clipper.MakePath(new int[] { 30,150, 60,350, 0,350 }) };
+      Paths64 p0 = new() { Clipper.MakePath(new [] { 30,150, 60,350, 0,350 }) };
       Paths64 p = new();
       for (int i = 0; i < 5; ++i)
       {
@@ -44,7 +43,7 @@ namespace ClipperDemo1
       //rectangle offset - both squared and rounded
       //nb: using the ClipperOffest class directly here to control 
       //different join types within the same offset operation
-      p.Add(Clipper.MakePath(new int[] { 100,0, 340,0, 340,200, 100,200, 100, 0 }));
+      p.Add(Clipper.MakePath(new [] { 100,0, 340,0, 340,200, 100,200, 100, 0 }));
       SvgUtils.AddOpenSubject(svg, p);
       co.AddPaths(p, JoinType.Bevel, EndType.Joined);
 
@@ -57,7 +56,7 @@ namespace ClipperDemo1
 
       co.Execute(10, p);
 
-      string filename = "../../../inflate.svg";
+      const string filename = "../../../inflate.svg";
       SvgUtils.AddSolution(svg, p, false);
       SvgUtils.AddCaption(svg, "Beveled join", 100, -27);
       SvgUtils.AddCaption(svg, "Squared join", 160, 23);
@@ -81,7 +80,7 @@ namespace ClipperDemo1
         solution.AddRange(pd);
       }
 
-      string filename = "../../../rabbit.svg";
+      const string filename = "../../../rabbit.svg";
       SvgWriter svg = new ();
       SvgUtils.AddSolution(svg, solution, false);
       SvgUtils.SaveToFile(svg, filename, FillRule.EvenOdd, 450, 720, 10);
@@ -118,10 +117,9 @@ namespace ClipperDemo1
       ClipperOffset co = new();
       co.AddPaths(p, JoinType.Square, EndType.Butt);
       co.Execute(
-        delegate (Path64 path, PathD path_norms, int currPt, int prevPt) 
-        { return currPt* currPt + 10; } , solution);
+        (path, path_norms, currPt, prevPt) => currPt * currPt + 10, solution);
 
-      string filename = "../../../variable_offset.svg";
+      const string filename = "../../../variable_offset.svg";
       SvgWriter svg = new();
       SvgUtils.AddOpenSubject(svg, p);
       SvgUtils.AddSolution(svg, solution, true);
