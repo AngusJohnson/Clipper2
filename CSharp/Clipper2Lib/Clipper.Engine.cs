@@ -13,6 +13,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using System.Runtime.CompilerServices;
 
 namespace Clipper2Lib
@@ -235,8 +236,7 @@ namespace Clipper2Lib
     internal static void AddPathsToVertexList(Paths64 paths, PathType polytype, bool isOpen,
       List<LocalMinima> minimaList, List<Vertex> vertexList)
     {
-      int totalVertCnt = 0;
-      foreach (Path64 path in paths) totalVertCnt += path.Count;
+      int totalVertCnt = paths.Sum(path => path.Count);
       vertexList.EnsureCapacity(vertexList.Count + totalVertCnt);
 
       foreach (Path64 path in paths)
@@ -2100,7 +2100,7 @@ namespace Clipper2Lib
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private OutPt GetLastOp(Active hotEdge)
+    private static OutPt GetLastOp(Active hotEdge)
     { 
       OutRec outrec = hotEdge.outrec!;
       return (hotEdge == outrec.frontEdge) ?
@@ -2514,7 +2514,7 @@ private void DoHorizontal(Active horz)
       return result;
     }
 
-    private int HorzSegSort(HorzSegment? hs1, HorzSegment? hs2)
+    private static int HorzSegSort(HorzSegment? hs1, HorzSegment? hs2)
     {
       if (hs1 == null || hs2 == null) return 0;
       if (hs1.rightOp == null)
@@ -2528,9 +2528,7 @@ private void DoHorizontal(Active horz)
 
     private void ConvertHorzSegsToJoins()
     {
-      int k = 0;
-      foreach (HorzSegment hs in _horzSegList)
-        if (UpdateHorzSegment(hs)) k++;
+      int k = _horzSegList.Count(UpdateHorzSegment);
       if (k < 2) return;
       _horzSegList.Sort(HorzSegSort);
 
@@ -3034,10 +3032,8 @@ private void DoHorizontal(Active horz)
 
     private bool CheckSplitOwner(OutRec outrec, List<int>? splits)
     {
-      foreach (int i in splits!)
+      foreach (OutRec? split in splits!.Select(i => GetRealOutRec(_outrecList[i])).OfType<OutRec>().Where(split => split != outrec && split.recursiveSplit != outrec))
       {
-        OutRec? split = GetRealOutRec(_outrecList[i]);
-        if (split == null || split == outrec || split.recursiveSplit == outrec) continue;
         split.recursiveSplit = outrec; //#599
         if (split.splits != null && CheckSplitOwner(outrec, split.splits)) return true;
         if (!IsValidOwner(outrec, split) ||
@@ -3047,6 +3043,7 @@ private void DoHorizontal(Active horz)
         outrec.owner = split; //found in split
         return true;
       }
+
       return false;
     }
     private void RecursiveCheckOwners(OutRec outrec, PolyPathBase polypath)
@@ -3346,11 +3343,9 @@ private void DoHorizontal(Active horz)
       if (!success) return false;
 
       solutionClosed.EnsureCapacity(solClosed64.Count);
-      foreach (Path64 path in solClosed64)
-        solutionClosed.Add(Clipper.ScalePathD(path, _invScale));
+      solutionClosed.AddRange(solClosed64.Select(path => Clipper.ScalePathD(path, _invScale)));
       solutionOpen.EnsureCapacity(solOpen64.Count);
-      foreach (Path64 path in solOpen64)
-        solutionOpen.Add(Clipper.ScalePathD(path, _invScale));
+      solutionOpen.AddRange(solOpen64.Select(path => Clipper.ScalePathD(path, _invScale)));
 
       return true;
     }
@@ -3385,8 +3380,7 @@ private void DoHorizontal(Active horz)
       if (!success) return false;
       if (oPaths.Count <= 0) return true;
       openPaths.EnsureCapacity(oPaths.Count);
-      foreach (Path64 path in oPaths)
-        openPaths.Add(Clipper.ScalePathD(path, _invScale));
+      openPaths.AddRange(oPaths.Select(path => Clipper.ScalePathD(path, _invScale)));
 
       return true;
     }
@@ -3540,13 +3534,7 @@ public class PolyPath64 : PolyPathBase
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public double Area()
     {
-      double result = Polygon == null ? 0 : Clipper.Area(Polygon);
-      foreach (PolyPathBase polyPathBase in _childs)
-      {
-        PolyPath64 child = (PolyPath64) polyPathBase;
-        result += child.Area();
-      }
-      return result;
+      return (Polygon == null ? 0 : Clipper.Area(Polygon)) + _childs.Cast<PolyPath64>().Sum(child => child.Area());
     }
   }
   public class PolyPathD : PolyPathBase
@@ -3589,13 +3577,7 @@ public class PolyPath64 : PolyPathBase
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public double Area()
     {
-      double result = Polygon == null ? 0 : Clipper.Area(Polygon);
-      foreach (PolyPathBase polyPathBase in _childs)
-      {
-        PolyPathD child = (PolyPathD) polyPathBase;
-        result += child.Area();
-      }
-      return result;
+      return (Polygon == null ? 0 : Clipper.Area(Polygon)) + _childs.Cast<PolyPathD>().Sum(child => child.Area());
     }
   }
 

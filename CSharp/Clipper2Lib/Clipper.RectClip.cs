@@ -10,6 +10,7 @@
 #nullable enable
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Runtime.CompilerServices;
 
 namespace Clipper2Lib
@@ -91,10 +92,8 @@ namespace Clipper2Lib
       // nb: occasionally, due to rounding, path1 may 
       // appear (momentarily) inside or outside path2.
       int ioCount = 0;
-      foreach (Point64 pt in path2)
+      foreach (PointInPolygonResult pip in path2.Select(pt => InternalClipper.PointInPolygon(pt, path1)))
       {
-        PointInPolygonResult pip = 
-          InternalClipper.PointInPolygon(pt, path1);
         switch(pip)
         {
           case PointInPolygonResult.IsInside:
@@ -482,7 +481,7 @@ namespace Clipper2Lib
       } // switch
     }
 
-    private bool StartLocsAreClockwise(List<Location> startLocs)
+    private static bool StartLocsAreClockwise(List<Location> startLocs)
     {
       int result = 0;
       for (int i = 1; i < startLocs.Count; i++)
@@ -637,9 +636,8 @@ namespace Clipper2Lib
         if (startLocs.Count > 0)
         {
           prev = loc;
-          foreach (Location loc2 in startLocs)
+          foreach (Location loc2 in startLocs.Where(loc2 => prev != loc2))
           {
-            if (prev == loc2) continue;
             AddCorner(ref prev, HeadingClockwise(prev, loc2));
             prev = loc2;
           }
@@ -654,9 +652,8 @@ namespace Clipper2Lib
     {
       Paths64 result = new Paths64();
       if (rect_.IsEmpty()) return result;
-      foreach (Path64 path in paths)
+      foreach (Path64 path in paths.Where(path => path.Count >= 3))
       {
-        if (path.Count < 3) continue;
         pathBounds_ = Clipper.GetBounds(path);
         if (!rect_.Intersects(pathBounds_))
           continue; // the path must be completely outside fRect
@@ -671,11 +668,7 @@ namespace Clipper2Lib
         for (int i = 0; i < 4; ++i)
           TidyEdgePair(i, edges_[i * 2], edges_[i * 2 + 1]);
 
-        foreach (OutPt2? op in results_)
-        {
-          Path64 tmp = GetPath(op);
-          if (tmp.Count > 0) result.Add(tmp);
-        }
+        result.AddRange(results_.Select(GetPath).Where(tmp => tmp.Count > 0));
 
         //clean up after every loop
         results_.Clear();
@@ -962,9 +955,8 @@ namespace Clipper2Lib
     {
       Paths64 result = new Paths64();
       if (rect_.IsEmpty()) return result;
-      foreach (Path64 path in paths)
+      foreach (Path64 path in paths.Where(path => path.Count >= 2))
       {
-        if (path.Count < 2) continue;
         pathBounds_ = Clipper.GetBounds(path);
         if (!rect_.Intersects(pathBounds_))
           continue; // the path must be completely outside fRect
@@ -973,11 +965,7 @@ namespace Clipper2Lib
         // fRect, simply by comparing path bounds with fRect.
         ExecuteInternal(path);
 
-        foreach (OutPt2? op in results_)
-        {
-          Path64 tmp = GetPath(op);
-          if (tmp.Count > 0) result.Add(tmp);
-        }
+        result.AddRange(results_.Select(GetPath).Where(tmp => tmp.Count > 0));
 
         //clean up after every loop
         results_.Clear();
