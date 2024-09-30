@@ -88,6 +88,9 @@ namespace Clipper2Lib
       throw Clipper2Exception(undefined_error);
     case range_error_i:
       throw Clipper2Exception(range_error);
+    // Should never happen, but adding this to stop a compiler warning
+    default:
+      throw Clipper2Exception("Unknown error");
     }
 #else
     ++error_code; // only to stop compiler warning
