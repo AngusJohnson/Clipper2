@@ -1,6 +1,6 @@
 ﻿/*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  17 September 2024                                               *
+* Date      :  10 October 2024                                                 *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2024                                         *
 * Purpose   :  Core structures and functions for the Clipper Library           *
@@ -10,7 +10,6 @@
 #nullable enable
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Runtime.CompilerServices;
 
 namespace Clipper2Lib
@@ -479,7 +478,9 @@ namespace Clipper2Lib
     public Path64(IEnumerable<Point64> path) : base(path) { }
     public override string ToString()
     {
-      string s = this.Aggregate("", (current, p) => current + p.ToString() + ", ");
+      string s = "";
+      foreach (Point64 p in this)
+        s = s + p.ToString() + ", ";
       if (s != "") s = s.Remove(s.Length - 2);
       return s;
     }
@@ -492,7 +493,10 @@ namespace Clipper2Lib
     public Paths64(IEnumerable<Path64> paths) : base(paths) { }
     public override string ToString()
     {
-      return this.Aggregate("", (current, p) => current + p + "\n");
+      string s = "";
+      foreach (Path64 p in this)
+        s = s + p + "\n";
+      return s;
     }
   }
 
@@ -503,7 +507,9 @@ namespace Clipper2Lib
     public PathD(IEnumerable<PointD> path) : base(path) { }
     public string ToString(int precision = 2)
     {
-      string s = this.Aggregate("", (current, p) => current + p.ToString(precision) + ", ");
+      string s = "";
+      foreach (PointD p in this)
+        s = s + p.ToString(precision) + ", ";
       if (s != "") s = s.Remove(s.Length - 2);
       return s;
     }
@@ -516,7 +522,10 @@ namespace Clipper2Lib
     public PathsD(IEnumerable<PathD> paths) : base(paths) { }
     public string ToString(int precision = 2)
     {
-      return this.Aggregate("", (current, p) => current + p.ToString(precision) + "\n");
+      string s = "";
+      foreach (PathD p in this)
+        s = s + p.ToString(precision) + "\n";
+      return s;
     }
   }
 
