@@ -1,15 +1,14 @@
 ﻿/*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  15 October 2022                                                 *
+* Date      :  10 October 2024                                                 *
 * Website   :  http://www.angusj.com                                           *
-* Copyright :  Angus Johnson 2010-2022                                         *
+* Copyright :  Angus Johnson 2010-2024                                         *
 * Purpose   :  Minkowski Sum and Difference                                    *
 * License   :  http://www.boost.org/LICENSE_1_0.txt                            *
 *******************************************************************************/
 
 #nullable enable
 using System;
-using System.Linq;
 
 namespace Clipper2Lib
 {
@@ -26,11 +25,13 @@ namespace Clipper2Lib
         Path64 path2 = new Path64(patLen);
         if (isSum)
         {
-          path2.AddRange(pattern.Select(basePt => pathPt + basePt));
+          foreach (Point64 basePt in pattern)
+            path2.Add(pathPt + basePt);
         }
         else
         {
-          path2.AddRange(pattern.Select(basePt => pathPt - basePt));
+          foreach (Point64 basePt in pattern)
+            path2.Add(pathPt - basePt);
         }
         tmp.Add(path2);
       }

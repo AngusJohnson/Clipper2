@@ -10,7 +10,6 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
-using System.Linq;
 
 namespace Clipper2Lib
 {
@@ -199,13 +198,15 @@ namespace Clipper2Lib
     private RectD GetBounds()
     {
       RectD bounds = new RectD(RectMax);
-      foreach (PointD pt in from pi in PolyInfoList from path in pi.paths from pt in path select pt)
-      {
-        if (pt.x < bounds.left) bounds.left = pt.x;
-        if (pt.x > bounds.right) bounds.right = pt.x;
-        if (pt.y < bounds.top) bounds.top = pt.y;
-        if (pt.y > bounds.bottom) bounds.bottom = pt.y;
-      }
+      foreach (PolyInfo pi in PolyInfoList)
+        foreach (PathD path in pi.paths)
+          foreach (PointD pt in path)
+          {
+            if (pt.x < bounds.left) bounds.left = pt.x;
+            if (pt.x > bounds.right) bounds.right = pt.x;
+            if (pt.y < bounds.top) bounds.top = pt.y;
+            if (pt.y > bounds.bottom) bounds.bottom = pt.y;
+          }
       return !IsValidRect(bounds) ? RectEmpty : bounds;
     }
 
@@ -253,16 +254,18 @@ namespace Clipper2Lib
       foreach (PolyInfo pi in PolyInfoList)
       {
         writer.Write(" <path d=\"");
-        foreach (PathD path in pi.paths.Where(path => path.Count >= 2).Where(path => pi.IsOpen || path.Count >= 3))
+        foreach (PathD path in pi.paths)
         {
+          if (path.Count < 2) continue;
+          if (!pi.IsOpen && path.Count < 3) continue;
           writer.Write(string.Format(NumberFormatInfo.InvariantInfo, " M {0:f2} {1:f2}",
-            (path[0].x * scale + offsetX),
-            (path[0].y * scale + offsetY)));
+              (path[0].x * scale + offsetX),
+              (path[0].y * scale + offsetY)));
           for (int j = 1; j < path.Count; j++)
           {
             writer.Write(string.Format(NumberFormatInfo.InvariantInfo, " L {0:f2} {1:f2}",
-              (path[j].x * scale + offsetX),
-              (path[j].y * scale + offsetY)));
+            (path[j].x * scale + offsetX),
+            (path[j].y * scale + offsetY)));
           }
           if (!pi.IsOpen) writer.Write(" z");
         }

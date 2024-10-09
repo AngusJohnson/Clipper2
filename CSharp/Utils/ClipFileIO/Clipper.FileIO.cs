@@ -9,7 +9,6 @@
 using System;
 using System.IO;
 using System.Diagnostics;
-using System.Linq;
 
 namespace Clipper2Lib
 {
@@ -265,7 +264,8 @@ namespace Clipper2Lib
       foreach (Path64 path in paths)
       {
         Path64 p = new Path64(path.Count);
-        p.AddRange(path.Select(pt => new Point64(pt.X + dx, pt.Y + dy)));
+        foreach (Point64 pt in path)
+          p.Add(new Point64(pt.X + dx, pt.Y + dy));
         result.Add(p);
       }
       return result;

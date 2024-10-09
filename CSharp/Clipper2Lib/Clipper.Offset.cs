@@ -9,7 +9,6 @@
 
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Runtime.CompilerServices;
 
 namespace Clipper2Lib
@@ -141,12 +140,22 @@ namespace Clipper2Lib
 
     private int CalcSolutionCapacity()
     {
-      return _groupList.Sum(g => (g.endType == EndType.Joined) ? g.inPaths.Count * 2 : g.inPaths.Count);
+      int result = 0;
+      foreach (Group g in _groupList)
+        result += (g.endType == EndType.Joined) ? g.inPaths.Count * 2 : g.inPaths.Count;
+      return result;
     }
 
     internal bool CheckPathsReversed()
     {
-      return (from g in _groupList where g.endType == EndType.Polygon select g.pathsReversed).FirstOrDefault();
+      bool result = false;
+      foreach (Group g in _groupList)
+        if (g.endType == EndType.Polygon)
+        {
+          result = g.pathsReversed;
+          break;
+        }
+      return result;
     }
 
     private void ExecuteInternal(double delta)
@@ -157,8 +166,9 @@ namespace Clipper2Lib
       // make sure the offset delta is significant
       if (Math.Abs(delta) < 0.5)
       {
-        foreach (Path64 path in _groupList.SelectMany(group => group.inPaths))
-          _solution.Add(path);
+        foreach (Group group in _groupList)
+          foreach (Path64 path in group.inPaths)
+            _solution.Add(path);
         return;
       }
 
@@ -230,9 +240,10 @@ namespace Clipper2Lib
       Point64 botPt = new Point64(long.MaxValue, long.MinValue);
       for (int i = 0; i < paths.Count; ++i)
       {
-        foreach (Point64 pt in paths[i].Where(pt => (pt.Y >= botPt.Y) &&
-                                                    ((pt.Y != botPt.Y) || (pt.X < botPt.X))))
-        {
+        foreach (Point64 pt in paths[i])
+		    {
+          if ((pt.Y < botPt.Y) ||
+            ((pt.Y == botPt.Y) && (pt.X >= botPt.X))) continue;
           result = i;
           botPt.X = pt.X;
           botPt.Y = pt.Y;

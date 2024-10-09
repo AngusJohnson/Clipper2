@@ -1,6 +1,6 @@
 ﻿/*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  10 May 2024                                                     *
+* Date      :  10 October 2024                                                 *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2024                                         *
 * Purpose   :  This module contains simple functions that will likely cover    *
@@ -14,7 +14,6 @@
 #nullable enable
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Runtime.CompilerServices;
 
 namespace Clipper2Lib
@@ -261,7 +260,10 @@ namespace Clipper2Lib
 
     public static double Area(Paths64 paths)
     {
-      return paths.Sum(Area);
+      double a = 0.0;
+      foreach (Path64 path in paths)
+        a += Area(path);
+      return a;
     }
 
     public static double Area(PathD path)
@@ -280,7 +282,10 @@ namespace Clipper2Lib
 
     public static double Area(PathsD paths)
     {
-      return paths.Sum(Area);
+      double a = 0.0;
+      foreach (PathD path in paths)
+        a += Area(path);
+      return a;
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -297,26 +302,37 @@ namespace Clipper2Lib
 
     public static string Path64ToString(Path64 path)
     {
-      string result = path.Aggregate("", (current, pt) => current + pt.ToString());
+      string result = "";
+      foreach (Point64 pt in path)
+        result += pt.ToString();
       return result + '\n';
     }
     public static string Paths64ToString(Paths64 paths)
     {
-      return paths.Aggregate("", (current, path) => current + Path64ToString(path));
+      string result = "";
+      foreach (Path64 path in paths)
+        result += Path64ToString(path);
+      return result;
     }
     public static string PathDToString(PathD path)
     {
-      string result = path.Aggregate("", (current, pt) => current + pt.ToString());
+      string result = "";
+      foreach (PointD pt in path)
+        result += pt.ToString();
       return result + '\n';
     }
     public static string PathsDToString(PathsD paths)
     {
-      return paths.Aggregate("", (current, path) => current + PathDToString(path));
+      string result = "";
+      foreach (PathD path in paths)
+        result += PathDToString(path);
+      return result;
     }
     public static Path64 OffsetPath(Path64 path, long dx, long dy)
     {
       Path64 result = new Path64(path.Count);
-      result.AddRange(path.Select(pt => new Point64(pt.X + dx, pt.Y + dy)));
+      foreach (Point64 pt in path)
+        result.Add(new Point64(pt.X + dx, pt.Y + dy));
       return result;
     }
 
@@ -366,11 +382,12 @@ namespace Clipper2Lib
     {
       if (InternalClipper.IsAlmostZero(scale - 1)) return path;
       Path64 result = new Path64(path.Count);
-      result.AddRange(path.Select(pt => new Point64(pt.X * scale, pt.Y * scale)));
 #if USINGZ
       foreach (Point64 pt in path)
         result.Add(new Point64(pt.X * scale, pt.Y * scale, pt.Z));
 #else
+      foreach (Point64 pt in path)
+        result.Add(new Point64(pt.X * scale, pt.Y * scale));
 #endif
       return result;
     }
@@ -379,7 +396,8 @@ namespace Clipper2Lib
     {
       if (InternalClipper.IsAlmostZero(scale - 1)) return paths;
       Paths64 result = new Paths64(paths.Count);
-      result.AddRange(paths.Select(path => ScalePath(path, scale)));
+      foreach (Path64 path in paths)
+        result.Add(ScalePath(path, scale));
       return result;
     }
 
@@ -387,7 +405,8 @@ namespace Clipper2Lib
     {
       if (InternalClipper.IsAlmostZero(scale - 1)) return path;
       PathD result = new PathD(path.Count);
-      result.AddRange(path.Select(pt => new PointD(pt, scale)));
+      foreach (PointD pt in path)
+        result.Add(new PointD(pt, scale));
       return result;
     }
 
@@ -395,7 +414,8 @@ namespace Clipper2Lib
     {
       if (InternalClipper.IsAlmostZero(scale - 1)) return paths;
       PathsD result = new PathsD(paths.Count);
-      result.AddRange(paths.Select(path => ScalePath(path, scale)));
+      foreach (PathD path in paths)
+        result.Add(ScalePath(path, scale));
       return result;
     }
 
@@ -404,7 +424,8 @@ namespace Clipper2Lib
     {
       int cnt = path.Count;
       Path64 res = new Path64(cnt);
-      res.AddRange(path.Select(pt => new Point64(pt, scale)));
+      foreach (PointD pt in path)
+        res.Add(new Point64(pt, scale));
       return res;
     }
 
@@ -412,7 +433,8 @@ namespace Clipper2Lib
     {
       int cnt = paths.Count;
       Paths64 res = new Paths64(cnt);
-      res.AddRange(paths.Select(path => ScalePath64(path, scale)));
+      foreach (PathD path in paths)
+        res.Add(ScalePath64(path, scale));
       return res;
     }
 
@@ -420,7 +442,8 @@ namespace Clipper2Lib
     {
       int cnt = path.Count;
       PathD res = new PathD(cnt);
-      res.AddRange(path.Select(pt => new PointD(pt, scale)));
+      foreach (Point64 pt in path)
+        res.Add(new PointD(pt, scale));
       return res;
     }
 
@@ -428,7 +451,8 @@ namespace Clipper2Lib
     {
       int cnt = paths.Count;
       PathsD res = new PathsD(cnt);
-      res.AddRange(paths.Select(path => ScalePathD(path, scale)));
+      foreach (Path64 path in paths)
+        res.Add(ScalePathD(path, scale));
       return res;
     }
 
@@ -436,56 +460,64 @@ namespace Clipper2Lib
     public static Path64 Path64(PathD path)
     {
       Path64 result = new Path64(path.Count);
-      result.AddRange(path.Select(pt => new Point64(pt)));
+      foreach (PointD pt in path)
+        result.Add(new Point64(pt));
       return result;
     }
 
     public static Paths64 Paths64(PathsD paths)
     {
       Paths64 result = new Paths64(paths.Count);
-      result.AddRange(paths.Select(Path64));
+      foreach (PathD path in paths)
+        result.Add(Path64(path));
       return result;
     }
 
     public static PathsD PathsD(Paths64 paths)
     {
       PathsD result = new PathsD(paths.Count);
-      result.AddRange(paths.Select(PathD));
+      foreach (Path64 path in paths)
+        result.Add(PathD(path));
       return result;
     }
 
     public static PathD PathD(Path64 path)
     {
       PathD result = new PathD(path.Count);
-      result.AddRange(path.Select(pt => new PointD(pt)));
+      foreach (Point64 pt in path)
+        result.Add(new PointD(pt));
       return result;
     }
 
     public static Path64 TranslatePath(Path64 path, long dx, long dy)
     {
       Path64 result = new Path64(path.Count);
-      result.AddRange(path.Select(pt => new Point64(pt.X + dx, pt.Y + dy)));
+      foreach (Point64 pt in path)
+        result.Add(new Point64(pt.X + dx, pt.Y + dy));
       return result;
     }
 
     public static Paths64 TranslatePaths(Paths64 paths, long dx, long dy)
     {
       Paths64 result = new Paths64(paths.Count);
-      result.AddRange(paths.Select(path => OffsetPath(path, dx, dy)));
+      foreach (Path64 path in paths)
+        result.Add(OffsetPath(path, dx, dy));
       return result;
     }
 
     public static PathD TranslatePath(PathD path, double dx, double dy)
     {
       PathD result = new PathD(path.Count);
-      result.AddRange(path.Select(pt => new PointD(pt.x + dx, pt.y + dy)));
+      foreach (PointD pt in path)
+        result.Add(new PointD(pt.x + dx, pt.y + dy));
       return result;
     }
 
     public static PathsD TranslatePaths(PathsD paths, double dx, double dy)
     {
       PathsD result = new PathsD(paths.Count);
-      result.AddRange(paths.Select(path => TranslatePath(path, dx, dy)));
+      foreach (PathD path in paths)
+        result.Add(TranslatePath(path, dx, dy));
       return result;
     }
 
@@ -506,7 +538,8 @@ namespace Clipper2Lib
     public static Paths64 ReversePaths(Paths64 paths)
     {
       Paths64 result = new Paths64(paths.Count);
-      result.AddRange(paths.Select(ReversePath));
+      foreach (Path64 t in paths)
+        result.Add(ReversePath(t));
 
       return result;
     }
@@ -514,7 +547,8 @@ namespace Clipper2Lib
     public static PathsD ReversePaths(PathsD paths)
     {
       PathsD result = new PathsD(paths.Count);
-      result.AddRange(paths.Select(ReversePath));
+      foreach (PathD path in paths)
+        result.Add(ReversePath(path));
       return result;
     }
 
@@ -534,13 +568,14 @@ namespace Clipper2Lib
     public static Rect64 GetBounds(Paths64 paths)
     {
       Rect64 result = InvalidRect64;
-      foreach (Point64 pt in paths.SelectMany(path => path))
-      {
-        if (pt.X < result.left) result.left = pt.X;
-        if (pt.X > result.right) result.right = pt.X;
-        if (pt.Y < result.top) result.top = pt.Y;
-        if (pt.Y > result.bottom) result.bottom = pt.Y;
-      }
+      foreach (Path64 path in paths)
+        foreach (Point64 pt in path)
+        {
+          if (pt.X < result.left) result.left = pt.X;
+          if (pt.X > result.right) result.right = pt.X;
+          if (pt.Y < result.top) result.top = pt.Y;
+          if (pt.Y > result.bottom) result.bottom = pt.Y;
+        }
       return result.left == long.MaxValue ? new Rect64() : result;
     }
 
@@ -560,13 +595,14 @@ namespace Clipper2Lib
     public static RectD GetBounds(PathsD paths)
     {
       RectD result = InvalidRectD;
-      foreach (PointD pt in paths.SelectMany(path => path))
-      {
-        if (pt.x < result.left) result.left = pt.x;
-        if (pt.x > result.right) result.right = pt.x;
-        if (pt.y < result.top) result.top = pt.y;
-        if (pt.y > result.bottom) result.bottom = pt.y;
-      }
+      foreach (PathD path in paths)
+        foreach (PointD pt in path)
+        {
+          if (pt.x < result.left) result.left = pt.x;
+          if (pt.x > result.right) result.right = pt.x;
+          if (pt.y < result.top) result.top = pt.y;
+          if (pt.y > result.bottom) result.bottom = pt.y;
+        }
       return Math.Abs(result.left - double.MaxValue) < InternalClipper.floatingPointTolerance ? new RectD() : result;
     }
 
@@ -819,7 +855,8 @@ namespace Clipper2Lib
     public static Paths64 RamerDouglasPeucker(Paths64 paths, double epsilon)
     {
       Paths64 result = new Paths64(paths.Count);
-      result.AddRange(paths.Select(path => RamerDouglasPeucker(path, epsilon)));
+      foreach (Path64 path in paths)
+        result.Add(RamerDouglasPeucker(path, epsilon));
       return result;
     }
 
@@ -867,7 +904,8 @@ namespace Clipper2Lib
     public static PathsD RamerDouglasPeucker(PathsD paths, double epsilon)
     {
       PathsD result = new PathsD(paths.Count);
-      result.AddRange(paths.Select(path => RamerDouglasPeucker(path, epsilon)));
+      foreach (PathD path in paths)
+        result.Add(RamerDouglasPeucker(path, epsilon));
       return result;
     }
 
@@ -964,7 +1002,8 @@ namespace Clipper2Lib
       double epsilon, bool isClosedPaths = true)
     {
       Paths64 result = new Paths64(paths.Count);
-      result.AddRange(paths.Select(path => SimplifyPath(path, epsilon, isClosedPaths)));
+      foreach (Path64 path in paths)
+        result.Add(SimplifyPath(path, epsilon, isClosedPaths));
       return result;
     }
 
@@ -1036,7 +1075,8 @@ namespace Clipper2Lib
       double epsilon, bool isClosedPath = true)
     {
       PathsD result = new PathsD(paths.Count);
-      result.AddRange(paths.Select(path => SimplifyPath(path, epsilon, isClosedPath)));
+      foreach (PathD path in paths)
+        result.Add(SimplifyPath(path, epsilon, isClosedPath));
       return result;
     }
 

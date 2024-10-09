@@ -1,6 +1,6 @@
 ﻿/*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  5 July 2024                                                     *
+* Date      :  10 October 2024                                                 *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2024                                         *
 * Purpose   :  FAST rectangular clipping                                       *
@@ -10,7 +10,6 @@
 #nullable enable
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Runtime.CompilerServices;
 
 namespace Clipper2Lib
@@ -92,8 +91,10 @@ namespace Clipper2Lib
       // nb: occasionally, due to rounding, path1 may 
       // appear (momentarily) inside or outside path2.
       int ioCount = 0;
-      foreach (PointInPolygonResult pip in path2.Select(pt => InternalClipper.PointInPolygon(pt, path1)))
+      foreach (Point64 pt in path2)
       {
+        PointInPolygonResult pip = 
+          InternalClipper.PointInPolygon(pt, path1);
         switch(pip)
         {
           case PointInPolygonResult.IsInside:
@@ -636,8 +637,9 @@ namespace Clipper2Lib
         if (startLocs.Count > 0)
         {
           prev = loc;
-          foreach (Location loc2 in startLocs.Where(loc2 => prev != loc2))
+          foreach (Location loc2 in startLocs)
           {
+            if (prev == loc2) continue;
             AddCorner(ref prev, HeadingClockwise(prev, loc2));
             prev = loc2;
           }
@@ -652,8 +654,9 @@ namespace Clipper2Lib
     {
       Paths64 result = new Paths64();
       if (rect_.IsEmpty()) return result;
-      foreach (Path64 path in paths.Where(path => path.Count >= 3))
+      foreach (Path64 path in paths)
       {
+        if (path.Count < 3) continue;
         pathBounds_ = Clipper.GetBounds(path);
         if (!rect_.Intersects(pathBounds_))
           continue; // the path must be completely outside fRect
@@ -668,7 +671,11 @@ namespace Clipper2Lib
         for (int i = 0; i < 4; ++i)
           TidyEdgePair(i, edges_[i * 2], edges_[i * 2 + 1]);
 
-        result.AddRange(results_.Select(GetPath).Where(tmp => tmp.Count > 0));
+        foreach (OutPt2? op in results_)
+        {
+          Path64 tmp = GetPath(op);
+          if (tmp.Count > 0) result.Add(tmp);
+        }
 
         //clean up after every loop
         results_.Clear();
@@ -955,8 +962,9 @@ namespace Clipper2Lib
     {
       Paths64 result = new Paths64();
       if (rect_.IsEmpty()) return result;
-      foreach (Path64 path in paths.Where(path => path.Count >= 2))
+      foreach (Path64 path in paths)
       {
+        if (path.Count < 2) continue;
         pathBounds_ = Clipper.GetBounds(path);
         if (!rect_.Intersects(pathBounds_))
           continue; // the path must be completely outside fRect
@@ -965,7 +973,11 @@ namespace Clipper2Lib
         // fRect, simply by comparing path bounds with fRect.
         ExecuteInternal(path);
 
-        result.AddRange(results_.Select(GetPath).Where(tmp => tmp.Count > 0));
+        foreach (OutPt2? op in results_)
+        {
+          Path64 tmp = GetPath(op);
+          if (tmp.Count > 0) result.Add(tmp);
+        }
 
         //clean up after every loop
         results_.Clear();
