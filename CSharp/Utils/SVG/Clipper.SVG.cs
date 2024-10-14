@@ -233,8 +233,8 @@ namespace Clipper2Lib
       var scale = 1.0;
       if (maxWidth > 0 && maxHeight > 0)
         scale = Math.Min(
-           (maxWidth - margin * 2) / bounds.Width,
-            (maxHeight - margin * 2) / bounds.Height);
+           (maxWidth - (margin * 2)) / bounds.Width,
+            (maxHeight - (margin * 2)) / bounds.Height);
 
       var offsetX = margin - (long) (bounds.left * scale);
       var offsetY = margin - (long) (bounds.top * scale);
@@ -250,8 +250,8 @@ namespace Clipper2Lib
       }
 
       if (maxWidth <= 0 || maxHeight <= 0)
-        writer.Write(svg_header, (bounds.right - bounds.left) + margin * 2,
-          (bounds.bottom - bounds.top) + margin * 2);
+        writer.Write(svg_header, (bounds.right - bounds.left) + (margin * 2),
+          (bounds.bottom - bounds.top) + (margin * 2));
       else
         writer.Write(svg_header, maxWidth, maxHeight);
 
@@ -263,13 +263,13 @@ namespace Clipper2Lib
           if (path.Count < 2) continue;
           if (!pi.IsOpen && path.Count < 3) continue;
           writer.Write(string.Format(NumberFormatInfo.InvariantInfo, " M {0:f2} {1:f2}",
-              (path[0].X * scale + offsetX),
-              (path[0].Y * scale + offsetY)));
+              ((path[0].X * scale) + offsetX),
+              ((path[0].Y * scale) + offsetY)));
           for (var j = 1; j < path.Count; j++)
           {
             writer.Write(string.Format(NumberFormatInfo.InvariantInfo, " L {0:f2} {1:f2}",
-            (path[j].X * scale + offsetX),
-            (path[j].Y * scale + offsetY)));
+            ((path[j].X * scale) + offsetX),
+            ((path[j].Y * scale) + offsetY)));
           }
           if (!pi.IsOpen) writer.Write(" z");
         }
@@ -296,7 +296,7 @@ namespace Clipper2Lib
                 (pt.X * scale + offsetX), (pt.Y * scale + offsetY), pt.X, pt.Y, pt.Z);
 #else
               writer.Write("<text x=\"{0:f2}\" y=\"{1:f2}\">{2:f2},{3:f2}</text>\n", 
-                (pt.X * scale + offsetX), (pt.Y * scale + offsetY), pt.X, pt.Y);
+                ((pt.X * scale) + offsetX), ((pt.Y * scale) + offsetY), pt.X, pt.Y);
 #endif
             }
           }
@@ -309,8 +309,8 @@ namespace Clipper2Lib
         writer.Write("<g font-family=\"Verdana\" font-style=\"normal\" " +
                      "font-weight=\"normal\" font-size=\"{0}\" fill=\"{1}\">\n", 
                      captionInfo.fontSize, ColorToHtml(captionInfo.fontColor));
-        writer.Write("<text x=\"{0:f2}\" y=\"{1:f2}\">{2}</text>\n</g>\n", 
-          captionInfo.posX * scale + offsetX, captionInfo.posY * scale + offsetY, captionInfo.text);
+        writer.Write("<text x=\"{0:f2}\" y=\"{1:f2}\">{2}</text>\n</g>\n",
+          (captionInfo.posX * scale) + offsetX, (captionInfo.posY * scale) + offsetY, captionInfo.text);
       }
 
       writer.Write("</svg>\n");

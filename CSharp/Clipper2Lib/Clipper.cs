@@ -606,7 +606,7 @@ public static class Clipper
     var len = arr.Length / 2;
     var p = new Path64(len);
     for (var i = 0; i < len; i++)
-      p.Add(new Point64(arr[i * 2], arr[i * 2 + 1]));
+      p.Add(new Point64(arr[i * 2], arr[(i * 2) + 1]));
     return p;
   }
 
@@ -615,7 +615,7 @@ public static class Clipper
     var len = arr.Length / 2;
     var p = new Path64(len);
     for (var i = 0; i < len; i++)
-      p.Add(new Point64(arr[i * 2], arr[i * 2 + 1]));
+      p.Add(new Point64(arr[i * 2], arr[(i * 2) + 1]));
     return p;
   }
 
@@ -624,7 +624,7 @@ public static class Clipper
     var len = arr.Length / 2;
     var p = new PathD(len);
     for (var i = 0; i < len; i++)
-      p.Add(new PointD(arr[i * 2], arr[i * 2 + 1]));
+      p.Add(new PointD(arr[i * 2], arr[(i * 2) + 1]));
     return p;
   }
 
@@ -790,7 +790,7 @@ public static class Clipper
     var c = line2.X - line1.X;
     var d = line2.Y - line1.Y;
     if (c == 0 && d == 0) return 0;
-    return Sqr(a * d - c * b) / (c * c + d * d);
+    return Sqr((a * d) - (c * b)) / ((c * c) + (d * d));
   }
 
   [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -801,7 +801,7 @@ public static class Clipper
     var c = (double) line2.X - line1.X;
     var d = (double) line2.Y - line1.Y;
     if (c == 0 && d == 0) return 0;
-    return Sqr(a * d - c * b) / (c * c + d * d);
+    return Sqr((a * d) - (c * b)) / ((c * c) + (d * d));
   }
 
   internal static void RDP(Path64 path, int begin, int end, double epsSqrd, List<bool> flags)
@@ -1155,9 +1155,9 @@ public static class Clipper
     var result = new Path64(steps) { new Point64(center.X + radiusX, center.Y) };
     for (var i = 1; i < steps; ++i)
     {
-      result.Add(new Point64(center.X + radiusX * dx, center.Y + radiusY * dy));
-      var x = dx * co - dy * si;
-      dy = dy * co + dx * si;
+      result.Add(new Point64(center.X + (radiusX * dx), center.Y + (radiusY * dy)));
+      var x = (dx * co) - (dy * si);
+      dy = (dy * co) + (dx * si);
       dx = x;
     }
     return result;
@@ -1177,9 +1177,9 @@ public static class Clipper
     var result = new PathD(steps) { new PointD(center.X + radiusX, center.Y) };
     for (var i = 1; i < steps; ++i)
     {
-      result.Add(new PointD(center.X + radiusX * dx, center.Y + radiusY * dy));
-      var x = dx * co - dy * si;
-      dy = dy * co + dx * si;
+      result.Add(new PointD(center.X + (radiusX * dx), center.Y + (radiusY * dy)));
+      var x = (dx * co) - (dy * si);
+      dy = (dy * co) + (dx * si);
       dx = x;
     }
     return result;

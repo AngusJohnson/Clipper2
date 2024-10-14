@@ -114,7 +114,7 @@ namespace ClipperDemo1
       ClipperOffset co = new();
       co.AddPaths(p, JoinType.Square, EndType.Butt);
       co.Execute(
-        (path, path_norms, currPt, prevPt) => currPt * currPt + 10, solution);
+        (path, path_norms, currPt, prevPt) => (currPt * currPt) + 10, solution);
 
       const string filename = "../../../variable_offset.svg";
       SvgWriter svg = new();

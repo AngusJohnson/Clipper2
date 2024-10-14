@@ -664,7 +664,7 @@ public class RectClip64
       ExecuteInternal(path);
       CheckEdges();
       for (var i = 0; i < 4; ++i)
-        TidyEdgePair(i, edges_[i * 2], edges_[i * 2 + 1]);
+        TidyEdgePair(i, edges_[i * 2], edges_[(i * 2) + 1]);
 
       foreach (var op in results_)
       {
@@ -728,7 +728,7 @@ public class RectClip64
             if (IsHeadingClockwise(op2.prev!.pt, op2.pt, j))
               AddToEdge(edges_[j * 2], op2);
             else
-              AddToEdge(edges_[j * 2 + 1], op2);
+              AddToEdge(edges_[(j * 2) + 1], op2);
           }
         }
         edgeSet1 = edgeSet2;

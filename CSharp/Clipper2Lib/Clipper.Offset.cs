@@ -219,7 +219,7 @@ public class ClipperOffset
     double dy = (pt2.Y - pt1.Y);
     if ((dx == 0) && (dy == 0)) return new PointD();
 
-    var f = 1.0 / Math.Sqrt(dx * dx + dy * dy);
+    var f = 1.0 / Math.Sqrt((dx * dx) + (dy * dy));
     dx *= f;
     dy *= f;
 
@@ -304,25 +304,25 @@ public class ClipperOffset
     {
       if (InternalClipper.IsAlmostZero(pt2a.X - pt2b.X)) return new PointD(0, 0);
       var m2 = (pt2b.Y - pt2a.Y) / (pt2b.X - pt2a.X);
-      var b2 = pt2a.Y - m2 * pt2a.X;
-      return new PointD(pt1a.X, m2 * pt1a.X + b2);
+      var b2 = pt2a.Y - (m2 * pt2a.X);
+      return new PointD(pt1a.X, (m2 * pt1a.X) + b2);
     }
 
     if (InternalClipper.IsAlmostZero(pt2a.X - pt2b.X)) //vertical
     {
       var m1 = (pt1b.Y - pt1a.Y) / (pt1b.X - pt1a.X);
-      var b1 = pt1a.Y - m1 * pt1a.X;
-      return new PointD(pt2a.X, m1 * pt2a.X + b1);
+      var b1 = pt1a.Y - (m1 * pt1a.X);
+      return new PointD(pt2a.X, (m1 * pt2a.X) + b1);
     }
     else
     {
       var m1 = (pt1b.Y - pt1a.Y) / (pt1b.X - pt1a.X);
-      var b1 = pt1a.Y - m1 * pt1a.X;
+      var b1 = pt1a.Y - (m1 * pt1a.X);
       var m2 = (pt2b.Y - pt2a.Y) / (pt2b.X - pt2a.X);
-      var b2 = pt2a.Y - m2 * pt2a.X;
+      var b2 = pt2a.Y - (m2 * pt2a.X);
       if (InternalClipper.IsAlmostZero(m1 - m2)) return new PointD(0, 0);
       var x = (b2 - b1) / (m1 - m2);
-      return new PointD(x, m1 * x + b1);
+      return new PointD(x, (m1 * x) + b1);
     }
   }
 
@@ -333,8 +333,8 @@ public class ClipperOffset
     return new Point64(pt.X + norm.X * _groupDelta,
       pt.Y + norm.Y * _groupDelta, pt.Z);
 #else
-    return new Point64(pt.X + norm.X * _groupDelta,
-      pt.Y + norm.Y * _groupDelta);
+    return new Point64(pt.X + (norm.X * _groupDelta),
+      pt.Y + (norm.Y * _groupDelta));
 #endif
   }
 
@@ -345,8 +345,8 @@ public class ClipperOffset
     return new PointD(pt.X + norm.X * _groupDelta,
       pt.Y + norm.Y * _groupDelta, pt.Z);
 #else
-    return new PointD(pt.X + norm.X * _groupDelta,
-      pt.Y + norm.Y * _groupDelta);
+    return new PointD(pt.X + (norm.X * _groupDelta),
+      pt.Y + (norm.Y * _groupDelta));
 #endif
   }
 
@@ -366,11 +366,11 @@ public class ClipperOffset
         path[j].Y + absDelta * _normals[j].Y, path[j].Z);
 #else
       pt1 = new Point64(
-        path[j].X - absDelta * _normals[j].X,
-        path[j].Y - absDelta * _normals[j].Y);
+        path[j].X - (absDelta * _normals[j].X),
+        path[j].Y - (absDelta * _normals[j].Y));
       pt2 = new Point64(
-        path[j].X + absDelta * _normals[j].X,
-        path[j].Y + absDelta * _normals[j].Y);
+        path[j].X + (absDelta * _normals[j].X),
+        path[j].Y + (absDelta * _normals[j].Y));
 #endif
     }
     else
@@ -384,11 +384,11 @@ public class ClipperOffset
         path[j].Y + _groupDelta * _normals[j].Y, path[j].Z);
 #else
       pt1 = new Point64(
-        path[j].X + _groupDelta * _normals[k].X,
-        path[j].Y + _groupDelta * _normals[k].Y);
+        path[j].X + (_groupDelta * _normals[k].X),
+        path[j].Y + (_groupDelta * _normals[k].Y));
       pt2 = new Point64(
-        path[j].X + _groupDelta * _normals[j].X,
-        path[j].Y + _groupDelta * _normals[j].Y);
+        path[j].X + (_groupDelta * _normals[j].X),
+        path[j].Y + (_groupDelta * _normals[j].Y));
 #endif
     }
     pathOut.Add(pt1);
@@ -424,8 +424,8 @@ public class ClipperOffset
     if (j == k)
     {
       var pt4 = new PointD(
-        pt3.X + vec.X * _groupDelta,
-        pt3.Y + vec.Y * _groupDelta);
+        pt3.X + (vec.X * _groupDelta),
+        pt3.Y + (vec.Y * _groupDelta));
       var pt = IntersectPoint(pt1, pt2, pt3, pt4);
 #if USINGZ
       pt.Z = ptQ.Z;
@@ -458,8 +458,8 @@ public class ClipperOffset
         path[j].Z));
 #else
     pathOut.Add(new Point64(
-        path[j].X + (_normals[k].X + _normals[j].X) * q,
-        path[j].Y + (_normals[k].Y + _normals[j].Y) * q));
+        path[j].X + ((_normals[k].X + _normals[j].X) * q),
+        path[j].Y + ((_normals[k].Y + _normals[j].Y) * q)));
 #endif
   }
 
@@ -474,7 +474,7 @@ public class ClipperOffset
       var arcTol = ArcTolerance > 0.01 ?
         ArcTolerance :
         Math.Log10(2 + absDelta) * InternalClipper.defaultArcTolerance;
-      var stepsPer360 = Math.PI / Math.Acos(1 - arcTol / absDelta);
+      var stepsPer360 = Math.PI / Math.Acos(1 - (arcTol / absDelta));
       _stepSin = Math.Sin((2 * Math.PI) / stepsPer360);
       _stepCos = Math.Cos((2 * Math.PI) / stepsPer360);
       if (_groupDelta < 0.0) _stepSin = -_stepSin;
@@ -492,8 +492,8 @@ public class ClipperOffset
     var steps = (int) Math.Ceiling(_stepsPerRad * Math.Abs(angle));
     for (var i = 1; i < steps; i++) // ie 1 less than steps
     {
-      offsetVec = new PointD(offsetVec.X * _stepCos - _stepSin * offsetVec.Y,
-          offsetVec.X * _stepSin + offsetVec.Y * _stepCos);
+      offsetVec = new PointD((offsetVec.X * _stepCos) - (_stepSin * offsetVec.Y),
+          (offsetVec.X * _stepSin) + (offsetVec.Y * _stepCos));
 #if USINGZ
       pathOut.Add(new Point64(pt.X + offsetVec.X, pt.Y + offsetVec.Y, pt.Z));
 #else
@@ -688,7 +688,7 @@ public class ClipperOffset
       var arcTol = ArcTolerance > 0.01 ?
         ArcTolerance :
         Math.Log10(2 + absDelta) * InternalClipper.defaultArcTolerance;
-      var stepsPer360 = Math.PI / Math.Acos(1 - arcTol / absDelta);
+      var stepsPer360 = Math.PI / Math.Acos(1 - (arcTol / absDelta));
       _stepSin = Math.Sin((2 * Math.PI) / stepsPer360);
       _stepCos = Math.Cos((2 * Math.PI) / stepsPer360);
       if (_groupDelta < 0.0) _stepSin = -_stepSin;

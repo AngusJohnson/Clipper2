@@ -170,9 +170,9 @@ namespace ClipperDemo1
           var measuredArea = Clipper.Area(solution);
 
           var count_diff = (cnt <= 0) ? 0 :
-            Math.Abs( measuredCnt / (double)cnt - 1.0);
+            Math.Abs((measuredCnt / (double)cnt) - 1.0);
 
-          var area_diff = area <= 0 ? 0 : Math.Abs(measuredArea / area -1.0);
+          var area_diff = area <= 0 ? 0 : Math.Abs((measuredArea / area) - 1.0);
 
           if (count_diff > 0.05)
             Console.WriteLine($"{test_number}: count {cnt} vs {measuredCnt}");

@@ -243,14 +243,14 @@ public struct PointD
 
   public PointD(long x, long y)
   {
-    this.X = x;
-    this.Y = y;
+    X = x;
+    Y = y;
   }
 
   public PointD(double x, double y)
   {
-    this.X = x;
-    this.Y = y;
+    X = x;
+    Y = y;
   }
 
   public readonly string ToString(int precision = 2)
@@ -579,8 +579,8 @@ public static class InternalClipper
   public static double CrossProduct(Point64 pt1, Point64 pt2, Point64 pt3)
   {
     // typecast to double to avoid potential int overflow
-    return ((double) (pt2.X - pt1.X) * (pt3.Y - pt2.Y) -
-            (double) (pt2.Y - pt1.Y) * (pt3.X - pt2.X));
+    return (((double) (pt2.X - pt1.X) * (pt3.Y - pt2.Y)) -
+            ((double) (pt2.Y - pt1.Y) * (pt3.X - pt2.X)));
   }
 
 #if USINGZ
@@ -622,11 +622,11 @@ public static class InternalClipper
   public static MultiplyUInt64Result MultiplyUInt64(ulong a, ulong b) // #834,#835
   {
     var x1 = (a & 0xFFFFFFFF) * (b & 0xFFFFFFFF);
-    var x2 = (a >> 32) * (b & 0xFFFFFFFF) + (x1 >> 32);
-    var x3 = (a & 0xFFFFFFFF) * (b >> 32) + (x2 & 0xFFFFFFFF);
+    var x2 = ((a >> 32) * (b & 0xFFFFFFFF)) + (x1 >> 32);
+    var x3 = ((a & 0xFFFFFFFF) * (b >> 32)) + (x2 & 0xFFFFFFFF);
     MultiplyUInt64Result result;
     result.lo64 = (x3 & 0xFFFFFFFF) << 32 | (x1 & 0xFFFFFFFF);
-    result.hi64 = (a >> 32) * (b >> 32) + (x2 >> 32) + (x3 >> 32);
+    result.hi64 = ((a >> 32) * (b >> 32)) + (x2 >> 32) + (x3 >> 32);
     return result;
   }
 
@@ -665,20 +665,20 @@ public static class InternalClipper
   internal static double DotProduct(Point64 pt1, Point64 pt2, Point64 pt3)
   {
     // typecast to double to avoid potential int overflow
-    return ((double) (pt2.X - pt1.X) * (pt3.X - pt2.X) +
-            (double) (pt2.Y - pt1.Y) * (pt3.Y - pt2.Y));
+    return (((double) (pt2.X - pt1.X) * (pt3.X - pt2.X)) +
+            ((double) (pt2.Y - pt1.Y) * (pt3.Y - pt2.Y)));
   }
 
   [MethodImpl(MethodImplOptions.AggressiveInlining)]
   internal static double CrossProduct(PointD vec1, PointD vec2)
   {
-    return (vec1.Y * vec2.X - vec2.Y * vec1.X);
+    return ((vec1.Y * vec2.X) - (vec2.Y * vec1.X));
   }
 
   [MethodImpl(MethodImplOptions.AggressiveInlining)]
   internal static double DotProduct(PointD vec1, PointD vec2)
   {
-    return (vec1.X * vec2.X + vec1.Y * vec2.Y);
+    return ((vec1.X * vec2.X) + (vec1.Y * vec2.Y));
   }
 
   [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -696,21 +696,21 @@ public static class InternalClipper
     double dx1 = (ln1b.X - ln1a.X);
     double dy2 = (ln2b.Y - ln2a.Y);
     double dx2 = (ln2b.X - ln2a.X);
-    var det = dy1 * dx2 - dy2 * dx1;
+    var det = (dy1 * dx2) - (dy2 * dx1);
     if (det == 0.0)
     {
       ip = new Point64();
       return false;
     }
 
-    var t = ((ln1a.X - ln2a.X) * dy2 - (ln1a.Y - ln2a.Y) * dx2) / det;
+    var t = (((ln1a.X - ln2a.X) * dy2) - ((ln1a.Y - ln2a.Y) * dx2)) / det;
     if (t <= 0.0) ip = ln1a;
     else if (t >= 1.0) ip = ln1b;
     else
     {
       // avoid using constructor (and rounding too) as they affect performance //664
-      ip.X = (long) (ln1a.X + t * dx1);
-      ip.Y = (long) (ln1a.Y + t * dy1);
+      ip.X = (long) (ln1a.X + (t * dx1));
+      ip.Y = (long) (ln1a.Y + (t * dy1));
 #if USINGZ
       ip.Z = 0;
 #endif
@@ -741,8 +741,8 @@ public static class InternalClipper
     if (seg1.X == seg2.X && seg1.Y == seg2.Y) return seg1;
     double dx = (seg2.X - seg1.X);
     double dy = (seg2.Y - seg1.Y);
-    var q = ((offPt.X - seg1.X) * dx +
-      (offPt.Y - seg1.Y) * dy) / ((dx * dx) + (dy * dy));
+    var q = (((offPt.X - seg1.X) * dx) +
+      ((offPt.Y - seg1.Y) * dy)) / ((dx * dx) + (dy * dy));
     if (q < 0) q = 0; else if (q > 1) q = 1;
     return new Point64(
       // use MidpointRounding.ToEven in order to explicitly match the nearbyint behaviour on the C++ side
