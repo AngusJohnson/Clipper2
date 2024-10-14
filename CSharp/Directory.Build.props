@@ -7,6 +7,6 @@
 	</PropertyGroup>
 
 	<PropertyGroup>
-		<DefineConstants>$(DefineConstants);USINGZ</DefineConstants>
+		<!--<DefineConstants>$(DefineConstants);USINGZ</DefineConstants>-->
 	</PropertyGroup>
 </Project>

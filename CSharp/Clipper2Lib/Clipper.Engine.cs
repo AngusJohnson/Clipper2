@@ -88,18 +88,11 @@ internal readonly struct LocalMinima
 // IntersectNode: a structure representing 2 intersecting edges.
 // Intersections must be sorted so they are processed from the largest
 // Y coordinates to the smallest while keeping edges adjacent.
-internal readonly struct IntersectNode
+internal readonly struct IntersectNode(Point64 pt, Active edge1, Active edge2)
 {
-  public readonly Point64 pt;
-  public readonly Active edge1;
-  public readonly Active edge2;
-
-  public IntersectNode(Point64 pt, Active edge1, Active edge2)
-  {
-    this.pt = pt;
-    this.edge1 = edge1;
-    this.edge2 = edge2;
-  }
+  public readonly Point64 pt = pt;
+  public readonly Active edge1 = edge1;
+  public readonly Active edge2 = edge2;
 }
 
 internal struct LocMinSorter : IComparer<LocalMinima>
@@ -161,15 +154,10 @@ internal class HorzSegment
   }
 }
 
-internal class HorzJoin
+internal class HorzJoin(OutPt ltor, OutPt rtol)
 {
-  public OutPt? op1;
-  public OutPt? op2;
-  public HorzJoin(OutPt ltor, OutPt rtol)
-  {
-    op1 = ltor;
-    op2 = rtol;
-  }
+  public OutPt? op1 = ltor;
+  public OutPt? op2 = rtol;
 }
 
 ///////////////////////////////////////////////////////////////////
@@ -223,7 +211,7 @@ internal static class ClipperEngine
   [MethodImpl(MethodImplOptions.AggressiveInlining)]
   internal static void EnsureCapacity<T>(this List<T> list, int minCapacity)
   {
-    if(list.Capacity < minCapacity)
+    if (list.Capacity < minCapacity)
       list.Capacity = minCapacity;
   }
 
@@ -663,9 +651,9 @@ public class ClipperBase
 
     //make sure that outrec isn't an owner of newOwner
     var tmp = newOwner;
-    while (tmp != null && tmp != outrec) 
+    while (tmp != null && tmp != outrec)
       tmp = tmp.owner;
-    if (tmp != null) 
+    if (tmp != null)
       newOwner.owner = outrec.owner;
     outrec.owner = newOwner;
   }
@@ -822,7 +810,7 @@ public class ClipperBase
   {
     return _minimaList[_currentLocMin++];
   }
- 
+
   [MethodImpl(MethodImplOptions.AggressiveInlining)]
   public void AddSubject(Path64 path)
   {
@@ -1503,10 +1491,10 @@ public class ClipperBase
 
     if (IsJoined(ae)) Split(ae, ae.bot);
 
-    if (IsHorizontal(ae)) 
+    if (IsHorizontal(ae))
     {
       if (!IsOpen(ae)) TrimHorz(ae, PreserveCollinear);
-      return; 
+      return;
     }
     InsertScanline(ae.top.Y);
 
@@ -1554,13 +1542,13 @@ public class ClipperBase
       switch (_fillrule)
       {
         case FillRule.Positive:
-          if (ae2.windCount != 1) return; 
+          if (ae2.windCount != 1) return;
           break;
         case FillRule.Negative:
-          if (ae2.windCount != -1) return; 
+          if (ae2.windCount != -1) return;
           break;
         default:
-          if (Math.Abs(ae2.windCount) != 1) return; 
+          if (Math.Abs(ae2.windCount) != 1) return;
           break;
       }
 
@@ -1664,7 +1652,7 @@ public class ClipperBase
     var e1WindCountIs0or1 = oldE1WindCount == 0 || oldE1WindCount == 1;
     var e2WindCountIs0or1 = oldE2WindCount == 0 || oldE2WindCount == 1;
 
-    if ((!IsHotEdge(ae1) && !e1WindCountIs0or1) || 
+    if ((!IsHotEdge(ae1) && !e1WindCountIs0or1) ||
       (!IsHotEdge(ae2) && !e2WindCountIs0or1)) return;
 
     // NOW PROCESS THE INTERSECTION ...
@@ -1758,7 +1746,7 @@ public class ClipperBase
       }
       else if (oldE1WindCount == 1 && oldE2WindCount == 1)
       {
-        resultOp = null; 
+        resultOp = null;
         switch (_cliptype)
         {
           case ClipType.Union:
@@ -1846,7 +1834,7 @@ public class ClipperBase
       DoTopOfScanbeam(y);
       while (PopHorz(out ae)) DoHorizontal(ae!);
     }
-    if (_succeeded) ProcessHorzJoins(); 
+    if (_succeeded) ProcessHorzJoins();
   }
 
   [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -1868,7 +1856,7 @@ public class ClipperBase
   {
     if (!InternalClipper.GetSegmentIntersectPt(
       ae1.bot, ae1.top, ae2.bot, ae2.top, out var ip))
-        ip = new Point64(ae1.curX, topY);
+      ip = new Point64(ae1.curX, topY);
 
     if (ip.Y > _currentBotY || ip.Y < topY)
     {
@@ -1877,30 +1865,30 @@ public class ClipperBase
       switch (absDx1 > 100)
       {
         case true when absDx2 > 100:
-        {
-          if (absDx1 > absDx2)
-            ip = InternalClipper.GetClosestPtOnSegment(ip, ae1.bot, ae1.top);
-          else
-            ip = InternalClipper.GetClosestPtOnSegment(ip, ae2.bot, ae2.top);
-          break;
-        }
+          {
+            if (absDx1 > absDx2)
+              ip = InternalClipper.GetClosestPtOnSegment(ip, ae1.bot, ae1.top);
+            else
+              ip = InternalClipper.GetClosestPtOnSegment(ip, ae2.bot, ae2.top);
+            break;
+          }
         case true:
           ip = InternalClipper.GetClosestPtOnSegment(ip, ae1.bot, ae1.top);
           break;
         default:
-        {
-          if (absDx2 > 100)
-            ip = InternalClipper.GetClosestPtOnSegment(ip, ae2.bot, ae2.top);
-          else
           {
-            if (ip.Y < topY) ip.Y = topY;
-            else ip.Y = _currentBotY;
-            if (absDx1 < absDx2) ip.X = TopX(ae1, ip.Y);
-            else ip.X = TopX(ae2, ip.Y);
-          }
+            if (absDx2 > 100)
+              ip = InternalClipper.GetClosestPtOnSegment(ip, ae2.bot, ae2.top);
+            else
+            {
+              if (ip.Y < topY) ip.Y = topY;
+              else ip.Y = _currentBotY;
+              if (absDx1 < absDx2) ip.X = TopX(ae1, ip.Y);
+              else ip.X = TopX(ae2, ip.Y);
+            }
 
-          break;
-        }
+            break;
+          }
       }
     }
     var node = new IntersectNode(ip, ae1, ae2);
@@ -2094,13 +2082,13 @@ public class ClipperBase
 
   [MethodImpl(MethodImplOptions.AggressiveInlining)]
   private static OutPt GetLastOp(Active hotEdge)
-  { 
+  {
     var outrec = hotEdge.outrec!;
     return (hotEdge == outrec.frontEdge) ?
       outrec.pts! : outrec.pts!.next!;
   }
 
-private void DoHorizontal(Active horz)
+  private void DoHorizontal(Active horz)
   /*******************************************************************************
    * Notes: Horizontal edges (HEs) at scanline intersections (i.e. at the top or    *
    * bottom of a scanbeam) are processed as if layered.The order in which HEs     *
@@ -2245,7 +2233,7 @@ private void DoHorizontal(Active horz)
         vertex_max, out leftX, out rightX);
     } // end for loop and end of (possible consecutive) horizontals
 
-    if (IsHotEdge(horz)) 
+    if (IsHotEdge(horz))
     {
       var op = AddOutPt(horz, horz.top);
       AddToHorzSegList(op);
@@ -2367,8 +2355,8 @@ private void DoHorizontal(Active horz)
     Point64 pt, bool checkCurrX = false)
   {
     var prev = e.prevInAEL;
-    if (prev == null || 
-      !IsHotEdge(e) || !IsHotEdge(prev) || 
+    if (prev == null ||
+      !IsHotEdge(e) || !IsHotEdge(prev) ||
       IsHorizontal(e) || IsHorizontal(prev) ||
       IsOpen(e) || IsOpen(prev)) return;
     if ((pt.Y < e.top.Y + 2 || pt.Y < prev.top.Y + 2) &&  // avoid trivial joins
@@ -2392,16 +2380,16 @@ private void DoHorizontal(Active horz)
   }
 
   [MethodImpl(MethodImplOptions.AggressiveInlining)]
-  private void CheckJoinRight(Active e, 
+  private void CheckJoinRight(Active e,
     Point64 pt, bool checkCurrX = false)
   {
     var next = e.nextInAEL;
-    if (next == null || 
-      !IsHotEdge(e) || !IsHotEdge(next) || 
+    if (next == null ||
+      !IsHotEdge(e) || !IsHotEdge(next) ||
       IsHorizontal(e) || IsHorizontal(next) ||
-      IsOpen(e) || IsOpen(next)) return; 
+      IsOpen(e) || IsOpen(next)) return;
     if ((pt.Y < e.top.Y + 2 || pt.Y < next.top.Y + 2) &&  // avoid trivial joins
-      ((e.bot.Y > pt.Y) || (next.bot.Y > pt.Y)))  return; // (#490)
+      ((e.bot.Y > pt.Y) || (next.bot.Y > pt.Y))) return; // (#490)
 
     if (checkCurrX)
     {
@@ -2524,14 +2512,14 @@ private void DoHorizontal(Active horz)
     if (k < 2) return;
     _horzSegList.Sort(HorzSegSort);
 
-    for (var i = 0; i < k -1; i++)
+    for (var i = 0; i < k - 1; i++)
     {
       var hs1 = _horzSegList[i];
       // for each HorzSegment, find others that overlap
       for (var j = i + 1; j < k; j++)
       {
         var hs2 = _horzSegList[j];
-        if ((hs2.leftOp!.pt.X >= hs1.rightOp!.pt.X) || 
+        if ((hs2.leftOp!.pt.X >= hs1.rightOp!.pt.X) ||
           (hs2.leftToRight == hs1.leftToRight) ||
           (hs2.rightOp!.pt.X <= hs1.leftOp!.pt.X)) continue;
         var curr_y = hs1.leftOp.pt.Y;
@@ -2562,7 +2550,7 @@ private void DoHorizontal(Active horz)
           _horzJoinList.Add(join);
         }
       }
-    } 
+    }
   }
 
   [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -2630,7 +2618,7 @@ private void DoHorizontal(Active horz)
       }
 
       if (op2.pt.X <= pt.X || op2.prev.pt.X <= pt.X)
-      {          
+      {
         if ((op2.prev.pt.X < pt.X && op2.pt.X < pt.X))
           val = 1 - val; // toggle val
         else
@@ -2638,7 +2626,7 @@ private void DoHorizontal(Active horz)
           var d = InternalClipper.CrossProduct(op2.prev.pt, op2.pt, pt);
           if (d == 0) return PointInPolygonResult.IsOn;
           if ((d < 0) == isAbove) val = 1 - val;
-        } 
+        }
       }
       isAbove = !isAbove;
       op2 = op2.next!;
@@ -2761,12 +2749,12 @@ private void DoHorizontal(Active horz)
 
   [MethodImpl(MethodImplOptions.AggressiveInlining)]
   private static bool IsVerySmallTriangle(OutPt op)
-	  {
-		  return op.next!.next == op.prev &&
-			(PtsReallyClose(op.prev.pt, op.next.pt) ||
-				PtsReallyClose(op.pt, op.next.pt) ||
-				PtsReallyClose(op.pt, op.prev.pt));
-	  }
+  {
+    return op.next!.next == op.prev &&
+    (PtsReallyClose(op.prev.pt, op.next.pt) ||
+      PtsReallyClose(op.pt, op.next.pt) ||
+      PtsReallyClose(op.pt, op.prev.pt));
+  }
 
   [MethodImpl(MethodImplOptions.AggressiveInlining)]
   private static bool IsValidClosedPath(OutPt? op)
@@ -2775,7 +2763,7 @@ private void DoHorizontal(Active horz)
       (op.next != op.prev || !IsVerySmallTriangle(op)));
   }
 
-  
+
   [MethodImpl(MethodImplOptions.AggressiveInlining)]
   private static OutPt? DisposeOutPt(OutPt op)
   {
@@ -2790,10 +2778,10 @@ private void DoHorizontal(Active horz)
   private void CleanCollinear(OutRec? outrec)
   {
     outrec = GetRealOutRec(outrec);
-    
+
     if (outrec == null || outrec.isOpen) return;
 
-    if(!IsValidClosedPath(outrec.pts))
+    if (!IsValidClosedPath(outrec.pts))
     {
       outrec.pts = null;
       return;
@@ -2844,7 +2832,7 @@ private void DoHorizontal(Active horz)
 
     var area1 = Area(prevOp);
     var absArea1 = Math.Abs(area1);
-    
+
     if (absArea1 < 2)
     {
       outrec.pts = null;
@@ -2863,7 +2851,7 @@ private void DoHorizontal(Active horz)
     }
     else
     {
-      var newOp2 = new OutPt(ip, outrec) { prev = prevOp, next = nextNextOp };        
+      var newOp2 = new OutPt(ip, outrec) { prev = prevOp, next = nextNextOp };
       nextNextOp.prev = newOp2;
       prevOp.next = newOp2;
     }
@@ -2941,7 +2929,7 @@ private void DoHorizontal(Active horz)
       op2 = op.next!;
     }
     path.Add(lastPt);
-      
+
     while (op2 != op)
     {
       if (op2.pt != lastPt)
@@ -2964,7 +2952,7 @@ private void DoHorizontal(Active horz)
     solutionOpen.Clear();
     solutionClosed.EnsureCapacity(_outrecList.Count);
     solutionOpen.EnsureCapacity(_outrecList.Count);
-    
+
     var i = 0;
     // _outrecList.Count is not static here because
     // CleanCollinear can indirectly add additional OutRec
@@ -2977,7 +2965,7 @@ private void DoHorizontal(Active horz)
       if (outrec.isOpen)
       {
         if (BuildPath(outrec.pts, ReverseSolution, true, path))
-            solutionOpen.Add(path);
+          solutionOpen.Add(path);
       }
       else
       {
@@ -2993,18 +2981,18 @@ private void DoHorizontal(Active horz)
 
   [MethodImpl(MethodImplOptions.AggressiveInlining)]
   private static Rect64 GetBounds(Path64 path)
-	  {
-		  if (path.Count == 0) return new Rect64();
+  {
+    if (path.Count == 0) return new Rect64();
     var result = Clipper.InvalidRect64;
-		  foreach (var pt in path)
-		  {
-			  if (pt.X < result.left) result.left = pt.X;
-			  if (pt.X > result.right) result.right = pt.X;
-			  if (pt.Y < result.top) result.top = pt.Y;
-			  if (pt.Y > result.bottom) result.bottom = pt.Y;
-		  }
-		  return result;
-	  }
+    foreach (var pt in path)
+    {
+      if (pt.X < result.left) result.left = pt.X;
+      if (pt.X > result.right) result.right = pt.X;
+      if (pt.Y < result.top) result.top = pt.Y;
+      if (pt.Y > result.bottom) result.bottom = pt.Y;
+    }
+    return result;
+  }
 
   [MethodImpl(MethodImplOptions.AggressiveInlining)]
   private bool CheckBounds(OutRec outrec)
@@ -3014,7 +3002,7 @@ private void DoHorizontal(Active horz)
     CleanCollinear(outrec);
     if (outrec.pts == null ||
       !BuildPath(outrec.pts, ReverseSolution, false, outrec.path))
-        return false;
+      return false;
     outrec.bounds = GetBounds(outrec.path);
     return true;
   }
@@ -3045,8 +3033,8 @@ private void DoHorizontal(Active horz)
 
     while (outrec.owner != null)
     {
-      if (outrec.owner.splits != null && 
-        CheckSplitOwner(outrec, outrec.owner.splits)) break; 
+      if (outrec.owner.splits != null &&
+        CheckSplitOwner(outrec, outrec.owner.splits)) break;
       if (outrec.owner.pts != null && CheckBounds(outrec.owner) &&
         Path1InsidePath2(outrec.pts!, outrec.owner.pts!)) break;
       outrec.owner = outrec.owner.owner;
@@ -3056,7 +3044,7 @@ private void DoHorizontal(Active horz)
     {
       if (outrec.owner.polypath == null)
         RecursiveCheckOwners(outrec.owner, polypath);
-      outrec.polypath = outrec.owner.polypath!.AddChild(outrec.path); 
+      outrec.polypath = outrec.owner.polypath!.AddChild(outrec.path);
     }
     else
       outrec.polypath = polypath.AddChild(outrec.path);
@@ -3401,7 +3389,7 @@ public abstract class PolyPathBase : IEnumerable
       _nodes = new List<PolyPathBase>(nodes);
     }
 
-    
+
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public bool MoveNext()
     {
@@ -3469,7 +3457,7 @@ public abstract class PolyPathBase : IEnumerable
 
     for (var i = 0; i < Count; i++)
       if (_childs[i].Count > 0)
-        result += _childs[i].ToStringInternal(i, level +1);
+        result += _childs[i].ToStringInternal(i, level + 1);
     return result;
   }
 
@@ -3490,7 +3478,7 @@ public class PolyPath64 : PolyPathBase
 {
   public Path64? Polygon { get; private set; } // polytree root's polygon == null
 
-  public PolyPath64(PolyPathBase? parent = null) : base(parent) {}
+  public PolyPath64(PolyPathBase? parent = null) : base(parent) { }
 
   [MethodImpl(MethodImplOptions.AggressiveInlining)]
   public override PolyPathBase AddChild(Path64 p)
@@ -3535,7 +3523,7 @@ public class PolyPathD : PolyPathBase
   internal double Scale { get; set; }
   public PathD? Polygon { get; private set; }
 
-  public PolyPathD(PolyPathBase? parent = null) : base(parent) {}
+  public PolyPathD(PolyPathBase? parent = null) : base(parent) { }
 
   [MethodImpl(MethodImplOptions.AggressiveInlining)]
   public override PolyPathBase AddChild(Path64 p)
@@ -3580,7 +3568,7 @@ public class PolyPathD : PolyPathBase
   }
 }
 
-public class PolyTree64 : PolyPath64 {}
+public class PolyTree64 : PolyPath64 { }
 
 public class PolyTreeD : PolyPathD
 {
@@ -3589,5 +3577,5 @@ public class PolyTreeD : PolyPathD
 
 public class ClipperLibException : Exception
 {
-  public ClipperLibException(string description) : base(description) {}
+  public ClipperLibException(string description) : base(description) { }
 }

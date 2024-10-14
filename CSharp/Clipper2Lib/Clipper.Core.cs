@@ -87,16 +87,15 @@ public struct Point64
   }
 
 #else
-  public Point64(Point64 pt)
-  {
-    X = pt.X;
-    Y = pt.Y;
-  }
 
   public Point64(long x, long y)
   {
     X = x;
     Y = y;
+  }
+
+  public Point64(Point64 pt) : this(pt.X, pt.Y)
+  {
   }
 
   public Point64(double x, double y)
@@ -105,22 +104,16 @@ public struct Point64
     Y = (long) Math.Round(y, MidpointRounding.AwayFromZero);
   }
 
-  public Point64(PointD pt)
+  public Point64(PointD pt) : this(pt.X, pt.Y)
   {
-    X = (long) Math.Round(pt.X, MidpointRounding.AwayFromZero);
-    Y = (long) Math.Round(pt.Y, MidpointRounding.AwayFromZero);
   }
 
-  public Point64(Point64 pt, double scale)
+  public Point64(Point64 pt, double scale) : this(pt.X * scale, pt.Y * scale)
   {
-    X = (long) Math.Round(pt.X * scale, MidpointRounding.AwayFromZero);
-    Y = (long) Math.Round(pt.Y * scale, MidpointRounding.AwayFromZero);
   }
 
-  public Point64(PointD pt, double scale)
+  public Point64(PointD pt, double scale) : this(pt.X * scale, pt.Y * scale)
   {
-    X = (long) Math.Round(pt.X * scale, MidpointRounding.AwayFromZero);
-    Y = (long) Math.Round(pt.Y * scale, MidpointRounding.AwayFromZero);
   }
 
   public static bool operator ==(Point64 lhs, Point64 rhs)
@@ -217,40 +210,27 @@ public struct PointD
   }
 
 #else
-  public PointD(PointD pt)
-  {
-    X = pt.X;
-    Y = pt.Y;
-  }
-
-  public PointD(Point64 pt)
-  {
-    X = pt.X;
-    Y = pt.Y;
-  }
-
-  public PointD(PointD pt, double scale)
-  {
-    X = pt.X * scale;
-    Y = pt.Y * scale;
-  }
-
-  public PointD(Point64 pt, double scale)
-  {
-    X = pt.X * scale;
-    Y = pt.Y * scale;
-  }
-
-  public PointD(long x, long y)
-  {
-    X = x;
-    Y = y;
-  }
 
   public PointD(double x, double y)
   {
     X = x;
     Y = y;
+  }
+
+  public PointD(PointD pt) : this(pt.X, pt.Y)
+  {
+  }
+
+  public PointD(Point64 pt) : this(pt.X, pt.Y)
+  {
+  }
+
+  public PointD(PointD pt, double scale) : this(pt.X * scale, pt.Y * scale)
+  {
+  }
+
+  public PointD(Point64 pt, double scale) : this(pt.X * scale, pt.Y * scale)
+  {
   }
 
   public readonly string ToString(int precision = 2)
@@ -369,14 +349,13 @@ public struct Rect64
 
   public readonly Path64 AsPath()
   {
-    var result = new Path64(4)
-    {
+    return
+    [
       new Point64(left, top),
       new Point64(right, top),
       new Point64(right, bottom),
       new Point64(left, bottom)
-    };
-    return result;
+    ];
   }
 }
 
@@ -457,14 +436,13 @@ public struct RectD
 
   public readonly PathD AsPath()
   {
-    var result = new PathD(4)
-    {
+    return
+    [
       new PointD(left, top),
       new PointD(right, top),
       new PointD(right, bottom),
       new PointD(left, bottom)
-    };
-    return result;
+    ];
   }
 }
 
