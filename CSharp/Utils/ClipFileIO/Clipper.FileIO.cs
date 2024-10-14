@@ -15,20 +15,20 @@ namespace Clipper2Lib
     public static Paths64 PathFromStr(string? s)
     {
       if (s == null) return new Paths64();
-      Path64 p = new Path64();
-      Paths64 pp = new Paths64();
+      var p = new Path64();
+      var pp = new Paths64();
       int len = s.Length, i = 0;
       while (i < len)
       {
         while (s[i] < 33 && i < len) i++;
         if (i >= len) break;
         //get X ...
-        bool isNeg = s[i] == 45;
+        var isNeg = s[i] == 45;
         if (isNeg) i++;
         if (i >= len || s[i] < 48 || s[i] > 57) break;
-        int j = i + 1;
+        var j = i + 1;
         while (j < len && s[j] > 47 && s[j] < 58) j++;
-        if (!long.TryParse(s.Substring(i, j - i), out long x)) break;
+        if (!long.TryParse(s.Substring(i, j - i), out var x)) break;
         if (isNeg) x = -x;
         //skip space or comma between X & Y ...
         i = j;
@@ -40,12 +40,12 @@ namespace Clipper2Lib
         if (i >= len || s[i] < 48 || s[i] > 57) break;
         j = i + 1;
         while (j < len && s[j] > 47 && s[j] < 58) j++;
-        if (!long.TryParse(s.Substring(i,j-i), out long y)) break;
+        if (!long.TryParse(s.Substring(i,j-i), out var y)) break;
         if (isNeg) y = -y;
         p.Add(new Point64(x, y));
         //skip trailing space, comma ...
         i = j;
-        int nlCnt = 0;
+        var nlCnt = 0;
         while (i < len && (s[i] < 33 || s[i] == 44))
         {
           if (i >= len) break;
@@ -75,7 +75,7 @@ namespace Clipper2Lib
       if (clip == null) clip = new Paths64(); else clip.Clear();
       ct = ClipType.Intersection;
       fillRule = FillRule.EvenOdd;
-      bool result = false;
+      var result = false;
       if (num < 1) num = 1;
       caption = "";
       area = 0;
@@ -91,7 +91,7 @@ namespace Clipper2Lib
       }
       while (true)
       {
-        string? s = reader.ReadLine();
+        var s = reader.ReadLine();
         if (s == null) break;
         
         if (s.IndexOf("CAPTION: ", StringComparison.Ordinal) == 0)
@@ -146,7 +146,7 @@ namespace Clipper2Lib
         {
           s = reader.ReadLine();
           if (s == null) break;
-          Paths64? paths = PathFromStr(s); //0 or 1 path
+          var paths = PathFromStr(s); //0 or 1 path
           if (paths == null || paths.Count == 0)
           {
             if (GetIdx == 3) return result;
@@ -191,9 +191,9 @@ namespace Clipper2Lib
       if (subj != null && subj.Count > 0)
       {
         writer.Write("SUBJECTS\r\n");
-        foreach (Path64 p in subj)
+        foreach (var p in subj)
         {
-          foreach (Point64 ip in p)
+          foreach (var ip in p)
             writer.Write("{0},{1} ", ip.X, ip.Y);
           writer.Write("\r\n");
         }
@@ -201,9 +201,9 @@ namespace Clipper2Lib
       if (subj_open != null && subj_open.Count > 0)
       {
         writer.Write("SUBJECTS_OPEN\r\n");
-        foreach (Path64 p in subj_open)
+        foreach (var p in subj_open)
         {
-          foreach (Point64 ip in p)
+          foreach (var ip in p)
             writer.Write("{0},{1} ", ip.X, ip.Y);
           writer.Write("\r\n");
         }
@@ -211,9 +211,9 @@ namespace Clipper2Lib
       if (clip != null && clip.Count > 0)
       {
         writer.Write("CLIPS\r\n");
-        foreach (Path64 p in clip)
+        foreach (var p in clip)
         {
-          foreach (Point64 ip in p)
+          foreach (var ip in p)
             writer.Write(ip.ToString());
           writer.Write("\r\n");
         }
@@ -242,10 +242,10 @@ namespace Clipper2Lib
         return;
       }
       writer.Write(paths.Count);
-      foreach (Path64 path in paths)
+      foreach (var path in paths)
       {
         writer.Write(path.Count);
-        foreach (Point64 pt in path)
+        foreach (var pt in path)
         {
           writer.Write(pt.X);
           writer.Write(pt.Y);
@@ -257,11 +257,11 @@ namespace Clipper2Lib
 
     public static Paths64 AffineTranslatePaths(Paths64 paths, long dx, long dy)
     {
-      Paths64 result = new Paths64(paths.Count);
-      foreach (Path64 path in paths)
+      var result = new Paths64(paths.Count);
+      foreach (var path in paths)
       {
-        Path64 p = new Path64(path.Count);
-        foreach (Point64 pt in path)
+        var p = new Path64(path.Count);
+        foreach (var pt in path)
           p.Add(new Point64(pt.X + dx, pt.Y + dy));
         result.Add(p);
       }
@@ -270,9 +270,9 @@ namespace Clipper2Lib
 
     public static void OpenFileWithDefaultApp(string filename)
     {
-      string path = Path.GetFullPath(filename);
+      var path = Path.GetFullPath(filename);
       if (!File.Exists(path)) return;
-      Process p = new Process() { StartInfo = new ProcessStartInfo(path) { UseShellExecute = true } };
+      var p = new Process() { StartInfo = new ProcessStartInfo(path) { UseShellExecute = true } };
       p.Start();
     }
   }

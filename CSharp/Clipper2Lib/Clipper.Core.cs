@@ -32,7 +32,7 @@ public struct Point64
     Y = (long) Math.Round(pt.Y * scale, MidpointRounding.AwayFromZero);
     Z = (long) Math.Round(pt.Z * scale, MidpointRounding.AwayFromZero);
   }
-  
+
   public Point64(long x, long y, long z = 0)
   {
     X = x;
@@ -369,7 +369,7 @@ public struct Rect64
 
   public readonly Path64 AsPath()
   {
-    Path64 result = new Path64(4)
+    var result = new Path64(4)
     {
       new Point64(left, top),
       new Point64(right, top),
@@ -457,7 +457,7 @@ public struct RectD
 
   public readonly PathD AsPath()
   {
-    PathD result = new PathD(4)
+    var result = new PathD(4)
     {
       new PointD(left, top),
       new PointD(right, top),
@@ -475,8 +475,8 @@ public class Path64 : List<Point64>
   public Path64(IEnumerable<Point64> path) : base(path) { }
   public override string ToString()
   {
-    string s = "";
-    foreach (Point64 p in this)
+    var s = "";
+    foreach (var p in this)
       s = s + p.ToString() + ", ";
     if (s != "") s = s.Remove(s.Length - 2);
     return s;
@@ -490,8 +490,8 @@ public class Paths64 : List<Path64>
   public Paths64(IEnumerable<Path64> paths) : base(paths) { }
   public override string ToString()
   {
-    string s = "";
-    foreach (Path64 p in this)
+    var s = "";
+    foreach (var p in this)
       s = s + p + "\n";
     return s;
   }
@@ -504,8 +504,8 @@ public class PathD : List<PointD>
   public PathD(IEnumerable<PointD> path) : base(path) { }
   public string ToString(int precision = 2)
   {
-    string s = "";
-    foreach (PointD p in this)
+    var s = "";
+    foreach (var p in this)
       s = s + p.ToString(precision) + ", ";
     if (s != "") s = s.Remove(s.Length - 2);
     return s;
@@ -519,8 +519,8 @@ public class PathsD : List<PathD>
   public PathsD(IEnumerable<PathD> paths) : base(paths) { }
   public string ToString(int precision = 2)
   {
-    string s = "";
-    foreach (PathD p in this)
+    var s = "";
+    foreach (var p in this)
       s = s + p.ToString(precision) + "\n";
     return s;
   }
@@ -586,8 +586,8 @@ public static class InternalClipper
 #if USINGZ
   public static Path64 SetZ(Path64 path, long Z)
   {
-    Path64 result = new Path64(path.Count);
-    foreach (Point64 pt in path) result.Add(new Point64(pt.X, pt.Y, Z));
+    var result = new Path64(path.Count);
+    foreach (var pt in path) result.Add(new Point64(pt.X, pt.Y, Z));
     return result;
   }
 #endif
@@ -621,9 +621,9 @@ public static class InternalClipper
   [MethodImpl(MethodImplOptions.AggressiveInlining)]
   public static MultiplyUInt64Result MultiplyUInt64(ulong a, ulong b) // #834,#835
   {
-    ulong x1 = (a & 0xFFFFFFFF) * (b & 0xFFFFFFFF);
-    ulong x2 = (a >> 32) * (b & 0xFFFFFFFF) + (x1 >> 32);
-    ulong x3 = (a & 0xFFFFFFFF) * (b >> 32) + (x2 & 0xFFFFFFFF);
+    var x1 = (a & 0xFFFFFFFF) * (b & 0xFFFFFFFF);
+    var x2 = (a >> 32) * (b & 0xFFFFFFFF) + (x1 >> 32);
+    var x3 = (a & 0xFFFFFFFF) * (b >> 32) + (x2 & 0xFFFFFFFF);
     MultiplyUInt64Result result;
     result.lo64 = (x3 & 0xFFFFFFFF) << 32 | (x1 & 0xFFFFFFFF);
     result.hi64 = (a >> 32) * (b >> 32) + (x2 >> 32) + (x3 >> 32);
@@ -634,17 +634,17 @@ public static class InternalClipper
   internal static bool ProductsAreEqual(long a, long b, long c, long d)
   {
     // nb: unsigned values will be needed for CalcOverflowCarry()
-    ulong absA = (ulong) Math.Abs(a);
-    ulong absB = (ulong) Math.Abs(b);
-    ulong absC = (ulong) Math.Abs(c);
-    ulong absD = (ulong) Math.Abs(d);
+    var absA = (ulong) Math.Abs(a);
+    var absB = (ulong) Math.Abs(b);
+    var absC = (ulong) Math.Abs(c);
+    var absD = (ulong) Math.Abs(d);
 
-    MultiplyUInt64Result mul_ab = MultiplyUInt64(absA, absB);
-    MultiplyUInt64Result mul_cd = MultiplyUInt64(absC, absD);
+    var mul_ab = MultiplyUInt64(absA, absB);
+    var mul_cd = MultiplyUInt64(absC, absD);
 
     // nb: it's important to differentiate 0 values here from other values
-    int sign_ab = TriSign(a) * TriSign(b);
-    int sign_cd = TriSign(c) * TriSign(d);
+    var sign_ab = TriSign(a) * TriSign(b);
+    var sign_cd = TriSign(c) * TriSign(d);
 
     return mul_ab.lo64 == mul_cd.lo64 && mul_ab.hi64 == mul_cd.hi64 && sign_ab == sign_cd;
   }
@@ -652,10 +652,10 @@ public static class InternalClipper
   [MethodImpl(MethodImplOptions.AggressiveInlining)]
   internal static bool IsCollinear(Point64 pt1, Point64 sharedPt, Point64 pt2)
   {
-    long a = sharedPt.X - pt1.X;
-    long b = pt2.Y - sharedPt.Y;
-    long c = sharedPt.Y - pt1.Y;
-    long d = pt2.X - sharedPt.X;
+    var a = sharedPt.X - pt1.X;
+    var b = pt2.Y - sharedPt.Y;
+    var c = sharedPt.Y - pt1.Y;
+    var d = pt2.X - sharedPt.X;
     // When checking for collinearity with very large coordinate values
     // then ProductsAreEqual is more accurate than using CrossProduct.
     return ProductsAreEqual(a, b, c, d);
@@ -696,14 +696,14 @@ public static class InternalClipper
     double dx1 = (ln1b.X - ln1a.X);
     double dy2 = (ln2b.Y - ln2a.Y);
     double dx2 = (ln2b.X - ln2a.X);
-    double det = dy1 * dx2 - dy2 * dx1;
+    var det = dy1 * dx2 - dy2 * dx1;
     if (det == 0.0)
     {
       ip = new Point64();
       return false;
     }
 
-    double t = ((ln1a.X - ln2a.X) * dy2 - (ln1a.Y - ln2a.Y) * dx2) / det;
+    var t = ((ln1a.X - ln2a.X) * dy2 - (ln1a.Y - ln2a.Y) * dx2) / det;
     if (t <= 0.0) ip = ln1a;
     else if (t >= 1.0) ip = ln1b;
     else
@@ -726,11 +726,11 @@ public static class InternalClipper
                CrossProduct(seg1b, seg2a, seg2b) < 0) &&
              (CrossProduct(seg2a, seg1a, seg1b) *
                CrossProduct(seg2b, seg1a, seg1b) < 0);
-    double res1 = CrossProduct(seg1a, seg2a, seg2b);
-    double res2 = CrossProduct(seg1b, seg2a, seg2b);
+    var res1 = CrossProduct(seg1a, seg2a, seg2b);
+    var res2 = CrossProduct(seg1b, seg2a, seg2b);
     if (res1 * res2 > 0) return false;
-    double res3 = CrossProduct(seg2a, seg1a, seg1b);
-    double res4 = CrossProduct(seg2b, seg1a, seg1b);
+    var res3 = CrossProduct(seg2a, seg1a, seg1b);
+    var res4 = CrossProduct(seg2b, seg1a, seg1b);
     if (res3 * res4 > 0) return false;
     // ensure NOT collinear
     return (res1 != 0 || res2 != 0 || res3 != 0 || res4 != 0);
@@ -741,7 +741,7 @@ public static class InternalClipper
     if (seg1.X == seg2.X && seg1.Y == seg2.Y) return seg1;
     double dx = (seg2.X - seg1.X);
     double dy = (seg2.Y - seg1.Y);
-    double q = ((offPt.X - seg1.X) * dx +
+    var q = ((offPt.X - seg1.X) * dx +
       (offPt.Y - seg1.Y) * dy) / ((dx * dx) + (dy * dy));
     if (q < 0) q = 0; else if (q > 1) q = 1;
     return new Point64(

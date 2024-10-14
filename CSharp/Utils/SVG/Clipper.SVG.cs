@@ -125,7 +125,7 @@ namespace Clipper2Lib
     public void AddClosedPath(Path64 path, uint brushColor,
       uint penColor, double penWidth, bool showCoords = false)
     {
-      Paths64 tmp = new Paths64();
+      var tmp = new Paths64();
       tmp.Add(path);
       AddClosedPaths(tmp, brushColor, penColor, penWidth, showCoords);
     }
@@ -133,7 +133,7 @@ namespace Clipper2Lib
     public void AddClosedPath(PathD path, uint brushColor,
       uint penColor, double penWidth, bool showCoords = false)
     {
-      PathsD tmp = new PathsD();
+      var tmp = new PathsD();
       tmp.Add(path);
       AddClosedPaths(tmp, brushColor, penColor, penWidth, showCoords);
     }
@@ -157,7 +157,7 @@ namespace Clipper2Lib
     public void AddOpenPath(Path64 path,  uint penColor, 
       double penWidth, bool showCoords = false)
     {
-      Paths64 tmp = new Paths64();
+      var tmp = new Paths64();
       tmp.Add(path);
       AddOpenPaths(tmp, penColor, penWidth, showCoords);
     }
@@ -165,7 +165,7 @@ namespace Clipper2Lib
     public void AddOpenPath(PathD path, uint penColor, 
       double penWidth, bool showCoords = false)
     {
-      PathsD tmp = new PathsD();
+      var tmp = new PathsD();
       tmp.Add(path);
       AddOpenPaths(tmp, penColor, penWidth, showCoords);
     }
@@ -193,10 +193,10 @@ namespace Clipper2Lib
 
     private RectD GetBounds()
     {
-      RectD bounds = new RectD(RectMax);
-      foreach (PolyInfo pi in PolyInfoList)
-        foreach (PathD path in pi.paths)
-          foreach (PointD pt in path)
+      var bounds = new RectD(RectMax);
+      foreach (var pi in PolyInfoList)
+        foreach (var path in pi.paths)
+          foreach (var pt in path)
           {
             if (pt.x < bounds.left) bounds.left = pt.x;
             if (pt.x > bounds.right) bounds.right = pt.x;
@@ -219,17 +219,17 @@ namespace Clipper2Lib
     public bool SaveToFile(string filename, int maxWidth = 0, int maxHeight = 0, int margin = -1)
     {
       if (margin < 0) margin = 20;
-      RectD bounds = GetBounds();
+      var bounds = GetBounds();
       if (bounds.IsEmpty()) return false;
 
-      double scale = 1.0;
+      var scale = 1.0;
       if (maxWidth > 0 && maxHeight > 0)
         scale = Math.Min(
            (maxWidth - margin * 2) / bounds.Width,
             (maxHeight - margin * 2) / bounds.Height);
 
-      long offsetX = margin - (long) (bounds.left * scale);
-      long offsetY = margin - (long) (bounds.top * scale);
+      var offsetX = margin - (long) (bounds.left * scale);
+      var offsetY = margin - (long) (bounds.top * scale);
 
       StreamWriter writer;
       try
@@ -247,17 +247,17 @@ namespace Clipper2Lib
       else
         writer.Write(svg_header, maxWidth, maxHeight);
 
-      foreach (PolyInfo pi in PolyInfoList)
+      foreach (var pi in PolyInfoList)
       {
         writer.Write(" <path d=\"");
-        foreach (PathD path in pi.paths)
+        foreach (var path in pi.paths)
         {
           if (path.Count < 2) continue;
           if (!pi.IsOpen && path.Count < 3) continue;
           writer.Write(string.Format(NumberFormatInfo.InvariantInfo, " M {0:f2} {1:f2}",
               (path[0].x * scale + offsetX),
               (path[0].y * scale + offsetY)));
-          for (int j = 1; j < path.Count; j++)
+          for (var j = 1; j < path.Count; j++)
           {
             writer.Write(string.Format(NumberFormatInfo.InvariantInfo, " L {0:f2} {1:f2}",
             (path[j].x * scale + offsetX),
@@ -279,9 +279,9 @@ namespace Clipper2Lib
         {
           writer.Write("<g font-family=\"{0}\" font-size=\"{1}\" fill=\"{2}\">\n", 
             coordStyle.FontName, coordStyle.FontSize, ColorToHtml(coordStyle.FontColor));
-          foreach (PathD path in pi.paths)
+          foreach (var path in pi.paths)
           {
-            foreach (PointD pt in path)
+            foreach (var pt in path)
             {
 #if USINGZ
               writer.Write("<text x=\"{0:f2}\" y=\"{1:f2}\">{2:f2},{3:f2},{4}</text>\n", 
@@ -296,7 +296,7 @@ namespace Clipper2Lib
         }
       }
 
-      foreach (TextInfo captionInfo in textInfos)
+      foreach (var captionInfo in textInfos)
       {
         writer.Write("<g font-family=\"Verdana\" font-style=\"normal\" " +
                      "font-weight=\"normal\" font-size=\"{0}\" fill=\"{1}\">\n", 

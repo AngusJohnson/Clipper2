@@ -47,7 +47,7 @@ public class RectClip64
     rectPath_ = rect_.AsPath();
     results_ = new List<OutPt2?>();
     edges_ = new List<OutPt2?>[8];
-    for (int i = 0; i < 8; i++)
+    for (var i = 0; i < 8; i++)
       edges_[i] = new List<OutPt2?>();
   }
 
@@ -55,7 +55,7 @@ public class RectClip64
   {  // this method is only called by InternalExecute.
      // Later splitting and rejoining won't create additional op's,
      // though they will change the (non-storage) fResults count.
-    int currIdx = results_.Count;
+    var currIdx = results_.Count;
     OutPt2 result;
     if ((currIdx == 0) || startingNewPath)
     {
@@ -68,7 +68,7 @@ public class RectClip64
     else
     {
       currIdx--;
-      OutPt2? prevOp = results_[currIdx];
+      var prevOp = results_[currIdx];
       if (prevOp!.pt == pt) return prevOp;
       result = new OutPt2(pt)
       {
@@ -87,10 +87,10 @@ public class RectClip64
   {
     // nb: occasionally, due to rounding, path1 may 
     // appear (momentarily) inside or outside path2.
-    int ioCount = 0;
-    foreach (Point64 pt in path2)
+    var ioCount = 0;
+    foreach (var pt in path2)
     {
-      PointInPolygonResult pip =
+      var pip =
         InternalClipper.PointInPolygon(pt, path1);
       switch (pip)
       {
@@ -128,7 +128,7 @@ public class RectClip64
   [MethodImpl(MethodImplOptions.AggressiveInlining)]
   private static Location GetAdjacentLocation(Location loc, bool isClockwise)
   {
-    int delta = (isClockwise) ? 1 : 3;
+    var delta = (isClockwise) ? 1 : 3;
     return (Location) (((int) loc + delta) % 4);
   }
 
@@ -199,9 +199,9 @@ public class RectClip64
   private static void UncoupleEdge(OutPt2 op)
   {
     if (op.edge == null) return;
-    for (int i = 0; i < op.edge.Count; i++)
+    for (var i = 0; i < op.edge.Count; i++)
     {
-      OutPt2? op2 = op.edge[i];
+      var op2 = op.edge[i];
       if (op2 != op) continue;
       op.edge[i] = null;
       break;
@@ -213,7 +213,7 @@ public class RectClip64
   private static void SetNewOwner(OutPt2 op, int newIdx)
   {
     op.ownerIdx = newIdx;
-    OutPt2 op2 = op.next!;
+    var op2 = op.next!;
     while (op2 != op)
     {
       op2.ownerIdx = newIdx;
@@ -275,8 +275,8 @@ public class RectClip64
   private static bool GetSegmentIntersection(Point64 p1,
   Point64 p2, Point64 p3, Point64 p4, out Point64 ip)
   {
-    double res1 = InternalClipper.CrossProduct(p1, p3, p4);
-    double res2 = InternalClipper.CrossProduct(p2, p3, p4);
+    var res1 = InternalClipper.CrossProduct(p1, p3, p4);
+    var res2 = InternalClipper.CrossProduct(p2, p3, p4);
     if (res1 == 0)
     {
       ip = p1;
@@ -300,8 +300,8 @@ public class RectClip64
       return false;
     }
 
-    double res3 = InternalClipper.CrossProduct(p3, p1, p2);
-    double res4 = InternalClipper.CrossProduct(p4, p1, p2);
+    var res3 = InternalClipper.CrossProduct(p3, p1, p2);
+    var res4 = InternalClipper.CrossProduct(p4, p1, p2);
     if (res3 == 0)
     {
       ip = p3;
@@ -480,10 +480,10 @@ public class RectClip64
 
   private static bool StartLocsAreClockwise(List<Location> startLocs)
   {
-    int result = 0;
-    for (int i = 1; i < startLocs.Count; i++)
+    var result = 0;
+    for (var i = 1; i < startLocs.Count; i++)
     {
-      int d = (int) startLocs[i] - (int) startLocs[i - 1];
+      var d = (int) startLocs[i] - (int) startLocs[i - 1];
       switch (d)
       {
         case -1: result -= 1; break;
@@ -498,43 +498,43 @@ public class RectClip64
   private void ExecuteInternal(Path64 path)
   {
     if (path.Count < 3 || rect_.IsEmpty()) return;
-    List<Location> startLocs = new List<Location>();
+    var startLocs = new List<Location>();
 
-    Location firstCross = Location.inside;
+    var firstCross = Location.inside;
     Location crossingLoc = firstCross, prev = firstCross;
 
     int i, highI = path.Count - 1;
-    if (!GetLocation(rect_, path[highI], out Location loc))
+    if (!GetLocation(rect_, path[highI], out var loc))
     {
       i = highI - 1;
       while (i >= 0 && !GetLocation(rect_, path[i], out prev)) i--;
       if (i < 0)
       {
-        foreach (Point64 pt in path) { Add(pt); }
+        foreach (var pt in path) { Add(pt); }
         return;
       }
       if (prev == Location.inside) loc = Location.inside;
     }
-    Location startingLoc = loc;
+    var startingLoc = loc;
 
     ///////////////////////////////////////////////////
     i = 0;
     while (i <= highI)
     {
       prev = loc;
-      Location prevCrossLoc = crossingLoc;
+      var prevCrossLoc = crossingLoc;
       GetNextLocation(path, ref loc, ref i, highI);
       if (i > highI) break;
 
-      Point64 prevPt = (i == 0) ? path[highI] : path[i - 1];
+      var prevPt = (i == 0) ? path[highI] : path[i - 1];
       crossingLoc = loc;
       if (!GetIntersection(rectPath_,
-        path[i], prevPt, ref crossingLoc, out Point64 ip))
+        path[i], prevPt, ref crossingLoc, out var ip))
       {
         // ie remaining outside
         if (prevCrossLoc == Location.inside)
         {
-          bool isClockw = IsClockwise(prev, loc, prevPt, path[i], mp_);
+          var isClockw = IsClockwise(prev, loc, prevPt, path[i], mp_);
           do
           {
             startLocs.Add(prev);
@@ -544,7 +544,7 @@ public class RectClip64
         }
         else if (prev != Location.inside && prev != loc)
         {
-          bool isClockw = IsClockwise(prev, loc, prevPt, path[i], mp_);
+          var isClockw = IsClockwise(prev, loc, prevPt, path[i], mp_);
           do
           {
             AddCorner(ref prev, isClockw);
@@ -567,7 +567,7 @@ public class RectClip64
         }
         else if (prev != crossingLoc)
         {
-          bool isClockw = IsClockwise(prev, crossingLoc, prevPt, path[i], mp_);
+          var isClockw = IsClockwise(prev, crossingLoc, prevPt, path[i], mp_);
           do
           {
             AddCorner(ref prev, isClockw);
@@ -580,7 +580,7 @@ public class RectClip64
         // intersect pt but we'll also need the first intersect pt (ip2)
         loc = prev;
         GetIntersection(rectPath_,
-          prevPt, path[i], ref loc, out Point64 ip2);
+          prevPt, path[i], ref loc, out var ip2);
         if (prevCrossLoc != Location.inside && prevCrossLoc != loc) //#597
           AddCorner(prevCrossLoc, loc);
 
@@ -618,10 +618,10 @@ public class RectClip64
       if (startingLoc == Location.inside) return;
       if (!pathBounds_.Contains(rect_) ||
           !Path1ContainsPath2(path, rectPath_)) return;
-      bool startLocsClockwise = StartLocsAreClockwise(startLocs);
-      for (int j = 0; j < 4; j++)
+      var startLocsClockwise = StartLocsAreClockwise(startLocs);
+      for (var j = 0; j < 4; j++)
       {
-        int k = startLocsClockwise ? j : 3 - j; // ie reverse result path
+        var k = startLocsClockwise ? j : 3 - j; // ie reverse result path
         Add(rectPath_[k]);
         AddToEdge(edges_[k * 2], results_[0]!);
       }
@@ -632,7 +632,7 @@ public class RectClip64
       if (startLocs.Count > 0)
       {
         prev = loc;
-        foreach (Location loc2 in startLocs)
+        foreach (var loc2 in startLocs)
         {
           if (prev == loc2) continue;
           AddCorner(ref prev, HeadingClockwise(prev, loc2));
@@ -647,9 +647,9 @@ public class RectClip64
 
   public Paths64 Execute(Paths64 paths)
   {
-    Paths64 result = new Paths64();
+    var result = new Paths64();
     if (rect_.IsEmpty()) return result;
-    foreach (Path64 path in paths)
+    foreach (var path in paths)
     {
       if (path.Count < 3) continue;
       pathBounds_ = Clipper.GetBounds(path);
@@ -663,18 +663,18 @@ public class RectClip64
       }
       ExecuteInternal(path);
       CheckEdges();
-      for (int i = 0; i < 4; ++i)
+      for (var i = 0; i < 4; ++i)
         TidyEdgePair(i, edges_[i * 2], edges_[i * 2 + 1]);
 
-      foreach (OutPt2? op in results_)
+      foreach (var op in results_)
       {
-        Path64 tmp = GetPath(op);
+        var tmp = GetPath(op);
         if (tmp.Count > 0) result.Add(tmp);
       }
 
       //clean up after every loop
       results_.Clear();
-      for (int i = 0; i < 8; i++)
+      for (var i = 0; i < 8; i++)
         edges_[i].Clear();
     }
     return result;
@@ -682,7 +682,7 @@ public class RectClip64
 
   private void CheckEdges()
   {
-    for (int i = 0; i < results_.Count; i++)
+    for (var i = 0; i < results_.Count; i++)
     {
       OutPt2? op = results_[i], op2 = op;
       if (op == null) continue;
@@ -714,15 +714,15 @@ public class RectClip64
       }
       results_[i] = op2; // safety first
 
-      uint edgeSet1 = GetEdgesForPt(op!.prev!.pt, rect_);
+      var edgeSet1 = GetEdgesForPt(op!.prev!.pt, rect_);
       op2 = op;
       do
       {
-        uint edgeSet2 = GetEdgesForPt(op2!.pt, rect_);
+        var edgeSet2 = GetEdgesForPt(op2!.pt, rect_);
         if (edgeSet2 != 0 && op2.edge == null)
         {
-          uint combinedSet = (edgeSet1 & edgeSet2);
-          for (int j = 0; j < 4; ++j)
+          var combinedSet = (edgeSet1 & edgeSet2);
+          for (var j = 0; j < 4; ++j)
           {
             if ((combinedSet & (1 << j)) == 0) continue;
             if (IsHeadingClockwise(op2.prev!.pt, op2.pt, j))
@@ -740,13 +740,13 @@ public class RectClip64
   private void TidyEdgePair(int idx, List<OutPt2?> cw, List<OutPt2?> ccw)
   {
     if (ccw.Count == 0) return;
-    bool isHorz = ((idx == 1) || (idx == 3));
-    bool cwIsTowardLarger = ((idx == 1) || (idx == 2));
+    var isHorz = ((idx == 1) || (idx == 3));
+    var cwIsTowardLarger = ((idx == 1) || (idx == 2));
     int i = 0, j = 0;
 
     while (i < cw.Count)
     {
-      OutPt2? p1 = cw[i];
+      var p1 = cw[i];
       if (p1 == null || p1.next == p1.prev)
       {
         cw[i++] = null;
@@ -754,7 +754,7 @@ public class RectClip64
         continue;
       }
 
-      int jLim = ccw.Count;
+      var jLim = ccw.Count;
       while (j < jLim &&
         (ccw[j] == null || ccw[j]!.next == ccw[j]!.prev)) ++j;
 
@@ -795,7 +795,7 @@ public class RectClip64
       }
 
       // to get here we're either splitting or rejoining
-      bool isRejoining = cw[i]!.ownerIdx != ccw[j]!.ownerIdx;
+      var isRejoining = cw[i]!.ownerIdx != ccw[j]!.ownerIdx;
 
       if (isRejoining)
       {
@@ -825,7 +825,7 @@ public class RectClip64
 
       if (!isRejoining)
       {
-        int new_idx = results_.Count;
+        var new_idx = results_.Count;
         results_.Add(p1a);
         SetNewOwner(p1a, new_idx);
       }
@@ -921,9 +921,9 @@ public class RectClip64
 
   private static Path64 GetPath(OutPt2? op)
   {
-    Path64 result = new Path64();
+    var result = new Path64();
     if (op == null || op.prev == op.next) return result;
-    OutPt2? op2 = op.next;
+    var op2 = op.next;
     while (op2 != null && op2 != op)
     {
       if (InternalClipper.IsCollinear(
@@ -954,9 +954,9 @@ public class RectClipLines64 : RectClip64
 
   public new Paths64 Execute(Paths64 paths)
   {
-    Paths64 result = new Paths64();
+    var result = new Paths64();
     if (rect_.IsEmpty()) return result;
-    foreach (Path64 path in paths)
+    foreach (var path in paths)
     {
       if (path.Count < 2) continue;
       pathBounds_ = Clipper.GetBounds(path);
@@ -967,15 +967,15 @@ public class RectClipLines64 : RectClip64
       // fRect, simply by comparing path bounds with fRect.
       ExecuteInternal(path);
 
-      foreach (OutPt2? op in results_)
+      foreach (var op in results_)
       {
-        Path64 tmp = GetPath(op);
+        var tmp = GetPath(op);
         if (tmp.Count > 0) result.Add(tmp);
       }
 
       //clean up after every loop
       results_.Clear();
-      for (int i = 0; i < 8; i++)
+      for (var i = 0; i < 8; i++)
         edges_[i].Clear();
     }
     return result;
@@ -983,11 +983,11 @@ public class RectClipLines64 : RectClip64
 
   private static Path64 GetPath(OutPt2? op)
   {
-    Path64 result = new Path64();
+    var result = new Path64();
     if (op == null || op == op.next) return result;
     op = op.next; // starting at path beginning 
     result.Add(op!.pt);
-    OutPt2 op2 = op.next!;
+    var op2 = op.next!;
     while (op2 != op)
     {
       result.Add(op2.pt);
@@ -1001,14 +1001,14 @@ public class RectClipLines64 : RectClip64
     results_.Clear();
     if (path.Count < 2 || rect_.IsEmpty()) return;
 
-    Location prev = Location.inside;
+    var prev = Location.inside;
     int i = 1, highI = path.Count - 1;
-    if (!GetLocation(rect_, path[0], out Location loc))
+    if (!GetLocation(rect_, path[0], out var loc))
     {
       while (i <= highI && !GetLocation(rect_, path[i], out prev)) i++;
       if (i > highI)
       {
-        foreach (Point64 pt in path) Add(pt);
+        foreach (var pt in path) Add(pt);
         return;
       }
       if (prev == Location.inside) loc = Location.inside;
@@ -1022,10 +1022,10 @@ public class RectClipLines64 : RectClip64
       prev = loc;
       GetNextLocation(path, ref loc, ref i, highI);
       if (i > highI) break;
-      Point64 prevPt = path[i - 1];
+      var prevPt = path[i - 1];
 
-      Location crossingLoc = loc;
-      if (!GetIntersection(rectPath_, path[i], prevPt, ref crossingLoc, out Point64 ip))
+      var crossingLoc = loc;
+      if (!GetIntersection(rectPath_, path[i], prevPt, ref crossingLoc, out var ip))
       {
         // ie remaining outside (& crossingLoc still == loc)
         ++i;
@@ -1045,7 +1045,7 @@ public class RectClipLines64 : RectClip64
         // passing right through rect. 'ip' here will be the second 
         // intersect pt but we'll also need the first intersect pt (ip2)
         crossingLoc = prev;
-        GetIntersection(rectPath_, prevPt, path[i], ref crossingLoc, out Point64 ip2);
+        GetIntersection(rectPath_, prevPt, path[i], ref crossingLoc, out var ip2);
         Add(ip2, true);
         Add(ip);
       }

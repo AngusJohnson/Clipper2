@@ -90,7 +90,7 @@ namespace Clipper2Lib.Benchmark
         public static Path64 MakeRandomPath(int width, int height, int count, Random rand)
         {
             Path64 result = new (count);
-            for (int i = 0; i < count; ++i)
+            for (var i = 0; i < count; ++i)
                 result.Add(MakeRandomPt(width, height, rand));
             return result;
         }

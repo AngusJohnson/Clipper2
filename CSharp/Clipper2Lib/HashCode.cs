@@ -57,18 +57,18 @@ public struct HashCode
 
   private static uint GenerateGlobalSeed()
   {
-    using RandomNumberGenerator randomNumberGenerator = RandomNumberGenerator.Create();
-    byte[] data = new byte[sizeof(uint)];
+    using var randomNumberGenerator = RandomNumberGenerator.Create();
+    var data = new byte[sizeof(uint)];
     randomNumberGenerator.GetBytes(data);
     return BitConverter.ToUInt32(data, 0);
   }
 
   public static int Combine<T1, T2>(T1 value1, T2 value2)
   {
-    uint hc1 = (uint) (value1?.GetHashCode() ?? 0);
-    uint hc2 = (uint) (value2?.GetHashCode() ?? 0);
+    var hc1 = (uint) (value1?.GetHashCode() ?? 0);
+    var hc2 = (uint) (value2?.GetHashCode() ?? 0);
 
-    uint hash = MixEmptyState();
+    var hash = MixEmptyState();
     hash += 8;
 
     hash = QueueRound(hash, hc1);

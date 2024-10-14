@@ -54,7 +54,7 @@ public class Application
     SvgUtils.AddSolution(svg, solution, true);
 
     PathsD ellipses = new();
-    for (int i = 0; i < solution[0].Count; i++)
+    for (var i = 0; i < solution[0].Count; i++)
     {
       if (solution[0][i].z < 0)
         ellipses.Add(Clipper.Ellipse(
@@ -69,7 +69,7 @@ public class Application
 
   public static void OpenFileWithDefaultApp(string filename)
   {
-    string path = Path.GetFullPath(filename);
+    var path = Path.GetFullPath(filename);
     if (!File.Exists(path)) return;
     Process p = new()
     {

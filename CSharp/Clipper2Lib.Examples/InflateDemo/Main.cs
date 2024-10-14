@@ -28,7 +28,7 @@ namespace ClipperDemo1
       //triangle offset - with large miter
       Paths64 p0 = new() { Clipper.MakePath(new [] { 30,150, 60,350, 0,350 }) };
       Paths64 p = new();
-      for (int i = 0; i < 5; ++i)
+      for (var i = 0; i < 5; ++i)
       {
         //nb: the last parameter here (10) greatly increases miter limit
         p0 = Clipper.InflatePaths(p0, 5, JoinType.Miter, EndType.Polygon, 10);
@@ -64,7 +64,7 @@ namespace ClipperDemo1
 
     public static void DoRabbit()
     {
-      PathsD pd = LoadPathsFromResource("InflateDemo.rabbit.bin");
+      var pd = LoadPathsFromResource("InflateDemo.rabbit.bin");
 
       PathsD solution = new (pd);
       while (pd.Count > 0)
@@ -86,20 +86,20 @@ namespace ClipperDemo1
 
     public static PathsD LoadPathsFromResource(string resourceName)
     {
-      using Stream stream = Assembly.GetExecutingAssembly().
+      using var stream = Assembly.GetExecutingAssembly().
         GetManifestResourceStream(resourceName);
       if (stream == null) return new PathsD();
       using BinaryReader reader = new (stream);
-      int len = reader.ReadInt32();
+      var len = reader.ReadInt32();
       PathsD result = new (len);
-      for (int i = 0; i < len; i++)
+      for (var i = 0; i < len; i++)
       {
-        int len2 = reader.ReadInt32();
+        var len2 = reader.ReadInt32();
         PathD p = new (len2);
-        for (int j = 0; j < len2; j++)
+        for (var j = 0; j < len2; j++)
         {
-          long X = reader.ReadInt64();
-          long Y = reader.ReadInt64();
+          var X = reader.ReadInt64();
+          var Y = reader.ReadInt64();
           p.Add(new PointD(X, Y));
         }
         result.Add(p);

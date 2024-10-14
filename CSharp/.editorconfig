@@ -84,11 +84,11 @@ dotnet_style_object_initializer = true:suggestion
 #Style - implicit and explicit types
 
 #prefer explicit type over var in all cases, unless overridden by another code style rule
-csharp_style_var_elsewhere = false:suggestion
+csharp_style_var_elsewhere = true:suggestion
 #prefer explicit type over var to declare variables with built-in system types such as int
-csharp_style_var_for_built_in_types = false:suggestion
+csharp_style_var_for_built_in_types = true:suggestion
 #prefer explicit type over var when the type is already mentioned on the right-hand side of a declaration
-csharp_style_var_when_type_is_apparent = false:suggestion
+csharp_style_var_when_type_is_apparent = true:suggestion
 
 #Style - language keyword and framework type options
 
@@ -118,3 +118,120 @@ dotnet_style_qualification_for_field = false:suggestion
 dotnet_style_qualification_for_method = false:suggestion
 #prefer properties not to be prefaced with this. or Me. in Visual Basic
 dotnet_style_qualification_for_property = false:suggestion
+
+[*.cs]
+#### Stili di denominazione ####
+
+# Regole di denominazione
+
+dotnet_naming_rule.interface_should_be_begins_with_i.severity = suggestion
+dotnet_naming_rule.interface_should_be_begins_with_i.symbols = interface
+dotnet_naming_rule.interface_should_be_begins_with_i.style = begins_with_i
+
+dotnet_naming_rule.types_should_be_pascal_case.severity = suggestion
+dotnet_naming_rule.types_should_be_pascal_case.symbols = types
+dotnet_naming_rule.types_should_be_pascal_case.style = pascal_case
+
+dotnet_naming_rule.non_field_members_should_be_pascal_case.severity = suggestion
+dotnet_naming_rule.non_field_members_should_be_pascal_case.symbols = non_field_members
+dotnet_naming_rule.non_field_members_should_be_pascal_case.style = pascal_case
+
+# Specifiche dei simboli
+
+dotnet_naming_symbols.interface.applicable_kinds = interface
+dotnet_naming_symbols.interface.applicable_accessibilities = public, internal, private, protected, protected_internal, private_protected
+dotnet_naming_symbols.interface.required_modifiers = 
+
+dotnet_naming_symbols.types.applicable_kinds = class, struct, interface, enum
+dotnet_naming_symbols.types.applicable_accessibilities = public, internal, private, protected, protected_internal, private_protected
+dotnet_naming_symbols.types.required_modifiers = 
+
+dotnet_naming_symbols.non_field_members.applicable_kinds = property, event, method
+dotnet_naming_symbols.non_field_members.applicable_accessibilities = public, internal, private, protected, protected_internal, private_protected
+dotnet_naming_symbols.non_field_members.required_modifiers = 
+
+# Stili di denominazione
+
+dotnet_naming_style.begins_with_i.required_prefix = I
+dotnet_naming_style.begins_with_i.required_suffix = 
+dotnet_naming_style.begins_with_i.word_separator = 
+dotnet_naming_style.begins_with_i.capitalization = pascal_case
+
+dotnet_naming_style.pascal_case.required_prefix = 
+dotnet_naming_style.pascal_case.required_suffix = 
+dotnet_naming_style.pascal_case.word_separator = 
+dotnet_naming_style.pascal_case.capitalization = pascal_case
+
+dotnet_naming_style.pascal_case.required_prefix = 
+dotnet_naming_style.pascal_case.required_suffix = 
+dotnet_naming_style.pascal_case.word_separator = 
+dotnet_naming_style.pascal_case.capitalization = pascal_case
+csharp_style_expression_bodied_constructors = false:silent
+csharp_style_expression_bodied_indexers = true:silent
+csharp_style_expression_bodied_lambdas = true:silent
+csharp_style_expression_bodied_local_functions = false:silent
+csharp_style_conditional_delegate_call = true:suggestion
+csharp_style_inlined_variable_declaration = true:suggestion
+csharp_style_deconstructed_variable_declaration = true:suggestion
+
+[*.vb]
+#### Stili di denominazione ####
+
+# Regole di denominazione
+
+dotnet_naming_rule.interface_should_be_inizia_con_i.severity = suggestion
+dotnet_naming_rule.interface_should_be_inizia_con_i.symbols = interface
+dotnet_naming_rule.interface_should_be_inizia_con_i.style = inizia_con_i
+
+dotnet_naming_rule.tipi_should_be_notazione_pascal.severity = suggestion
+dotnet_naming_rule.tipi_should_be_notazione_pascal.symbols = tipi
+dotnet_naming_rule.tipi_should_be_notazione_pascal.style = notazione_pascal
+
+dotnet_naming_rule.membri_non_di_campo_should_be_notazione_pascal.severity = suggestion
+dotnet_naming_rule.membri_non_di_campo_should_be_notazione_pascal.symbols = membri_non_di_campo
+dotnet_naming_rule.membri_non_di_campo_should_be_notazione_pascal.style = notazione_pascal
+
+# Specifiche dei simboli
+
+dotnet_naming_symbols.interface.applicable_kinds = interface
+dotnet_naming_symbols.interface.applicable_accessibilities = public, friend, private, protected, protected_friend, private_protected
+dotnet_naming_symbols.interface.required_modifiers = 
+
+dotnet_naming_symbols.tipi.applicable_kinds = class, struct, interface, enum
+dotnet_naming_symbols.tipi.applicable_accessibilities = public, friend, private, protected, protected_friend, private_protected
+dotnet_naming_symbols.tipi.required_modifiers = 
+
+dotnet_naming_symbols.membri_non_di_campo.applicable_kinds = property, event, method
+dotnet_naming_symbols.membri_non_di_campo.applicable_accessibilities = public, friend, private, protected, protected_friend, private_protected
+dotnet_naming_symbols.membri_non_di_campo.required_modifiers = 
+
+# Stili di denominazione
+
+dotnet_naming_style.inizia_con_i.required_prefix = I
+dotnet_naming_style.inizia_con_i.required_suffix = 
+dotnet_naming_style.inizia_con_i.word_separator = 
+dotnet_naming_style.inizia_con_i.capitalization = pascal_case
+
+dotnet_naming_style.notazione_pascal.required_prefix = 
+dotnet_naming_style.notazione_pascal.required_suffix = 
+dotnet_naming_style.notazione_pascal.word_separator = 
+dotnet_naming_style.notazione_pascal.capitalization = pascal_case
+
+dotnet_naming_style.notazione_pascal.required_prefix = 
+dotnet_naming_style.notazione_pascal.required_suffix = 
+dotnet_naming_style.notazione_pascal.word_separator = 
+dotnet_naming_style.notazione_pascal.capitalization = pascal_case
+
+[*.{cs,vb}]
+dotnet_style_operator_placement_when_wrapping = beginning_of_line
+end_of_line = crlf
+dotnet_style_coalesce_expression = true:suggestion
+dotnet_style_null_propagation = true:suggestion
+dotnet_style_prefer_is_null_check_over_reference_equality_method = true:suggestion
+dotnet_style_prefer_auto_properties = true:silent
+dotnet_style_object_initializer = true:suggestion
+dotnet_style_collection_initializer = true:suggestion
+dotnet_style_prefer_simplified_boolean_expressions = true:suggestion
+dotnet_style_prefer_conditional_expression_over_assignment = true:silent
+dotnet_style_prefer_conditional_expression_over_return = true:silent
+dotnet_style_predefined_type_for_locals_parameters_members = true:suggestion

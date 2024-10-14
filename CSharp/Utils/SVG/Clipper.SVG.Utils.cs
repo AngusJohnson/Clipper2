@@ -17,13 +17,13 @@ namespace Clipper2Lib
 
     public static void AddSubject(SvgWriter svg, Path64 path)
     {
-      Paths64 paths = new Paths64();
+      var paths = new Paths64();
       paths.Add(path);
       svg.AddClosedPaths(paths, 0x1800009C, 0xAAB3B3DA, 0.8);
     }
     public static void AddSubject(SvgWriter svg, PathD path)
     {
-      PathsD paths = new PathsD();
+      var paths = new PathsD();
       paths.Add(path);
       svg.AddClosedPaths(paths, 0x1800009C, 0xAAB3B3DA, 0.8);
     }
@@ -49,14 +49,14 @@ namespace Clipper2Lib
 
     public static void AddClip(SvgWriter svg, Path64 path)
     {
-      Paths64 paths = new Paths64();
+      var paths = new Paths64();
       paths.Add(path);
       svg.AddClosedPaths(paths, 0x129C0000, 0xCCFFA07A, 0.8);
     }
 
     public static void AddClip(SvgWriter svg, PathD path)
     {
-      PathsD paths = new PathsD();
+      var paths = new PathsD();
       paths.Add(path);
       svg.AddClosedPaths(paths, 0x129C0000, 0xCCFFA07A, 0.8);
     }

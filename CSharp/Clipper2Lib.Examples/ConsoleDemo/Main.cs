@@ -41,12 +41,12 @@ namespace ClipperDemo1
       const int w = 800, h = 600;
       const FillRule fillrule = FillRule.NonZero;
 
-      Path64 shape = Clipper.MakePath(new int[] { 0, 0, size, 0, size, size, 0, size });
+      var shape = Clipper.MakePath(new int[] { 0, 0, size, 0, size, size, 0, size });
       Paths64 subjects = new(), solution;
       Random rand = new();
-      for (int i = 0; i < h / size; ++i)
+      for (var i = 0; i < h / size; ++i)
       {
-        for (int j = 0; j < w / size; ++j)
+        for (var j = 0; j < w / size; ++j)
         {
           shape = Clipper.TranslatePath(shape, size, 0);
           if (rand.Next(5) != 0) subjects.Add(shape);
@@ -73,14 +73,14 @@ namespace ClipperDemo1
       const int w = 800, h = 600;
       const FillRule fillrule = FillRule.NonZero;
 
-      Path64 tri1 = Clipper.MakePath(new int[] { 0,0, size * 2,0, size,size * 2 });
-      Path64 tri2 = Clipper.MakePath(new int[] { size * 2, 0, size, size * 2, size*3, size*2 });
+      var tri1 = Clipper.MakePath(new int[] { 0,0, size * 2,0, size,size * 2 });
+      var tri2 = Clipper.MakePath(new int[] { size * 2, 0, size, size * 2, size*3, size*2 });
 
       Paths64 subjects = new(), solution;
       Random rand = new();
-      for (int i = 0; i < h / size / 2; ++i)
+      for (var i = 0; i < h / size / 2; ++i)
       {
-        for (int j = 0; j < w / size / 2; ++j)
+        for (var j = 0; j < w / size / 2; ++j)
         {
           if (rand.Next(4) != 0) subjects.Add(tri1);
           if (rand.Next(4) != 0) subjects.Add(tri2);
@@ -110,12 +110,12 @@ namespace ClipperDemo1
       const int w = 800, h = 600;
       const FillRule fillrule = FillRule.NonZero;
 
-      Path64 shape = Clipper.MakePath(new int[] { size, 0, size * 2, size, size, size * 2, 0, size });
+      var shape = Clipper.MakePath(new int[] { size, 0, size * 2, size, size, size * 2, 0, size });
       Paths64 subjects = new(), solution;
       Random rand = new();
-      for (int i = 0; i < h / size / 2; ++i)
+      for (var i = 0; i < h / size / 2; ++i)
       {
-        for (int j = 0; j < w / size; ++j)
+        for (var j = 0; j < w / size; ++j)
         {
           if (rand.Next(7) != 0) subjects.Add(shape);
           if ((j & 1) == 0)
@@ -146,18 +146,18 @@ namespace ClipperDemo1
       Paths64 clip = new();
       Paths64 solution = new();
       Paths64 solution_open = new();
-      bool do_all = (start == 0 && end == 0);
+      var do_all = (start == 0 && end == 0);
       if (do_all) { start = 1; end = 0xFFFF; }
       else if (end == 0) end = start;
 
       if (do_all)
         Console.WriteLine("\nCount and area differences (expected vs measured):\n");
-      int test_number = start;
+      var test_number = start;
       for (; test_number <= end; ++test_number)
       {
         if (!ClipperFileIO.LoadTestNum(@"..\..\..\..\..\..\Tests\Polygons.txt", 
               test_number, subject, subject_open, clip, 
-              out ClipType ct, out FillRule fr, out long area, out int cnt, out _)) break;
+              out var ct, out var fr, out var area, out var cnt, out _)) break;
         Clipper64 c64 = new();
         c64.AddSubject(subject);
         c64.AddOpenSubject(subject_open);
@@ -166,13 +166,13 @@ namespace ClipperDemo1
 
         if (do_all)
         {
-          int measuredCnt = solution.Count;
-          double measuredArea = Clipper.Area(solution);
+          var measuredCnt = solution.Count;
+          var measuredArea = Clipper.Area(solution);
 
-          double count_diff = (cnt <= 0) ? 0 :
+          var count_diff = (cnt <= 0) ? 0 :
             Math.Abs( measuredCnt / (double)cnt - 1.0);
 
-          double area_diff = area <= 0 ? 0 : Math.Abs(measuredArea / area -1.0);
+          var area_diff = area <= 0 ? 0 : Math.Abs(measuredArea / area -1.0);
 
           if (count_diff > 0.05)
             Console.WriteLine($"{test_number}: count {cnt} vs {measuredCnt}");
@@ -190,7 +190,7 @@ namespace ClipperDemo1
           solution = Clipper.ReversePaths(solution);
         SvgUtils.AddSolution(svg, solution, false);
         SvgUtils.AddCaption(svg, test_number.ToString(), 20, 20);
-        string filename = @"..\..\..\poly" + (test_number - 1).ToString() + ".svg";
+        var filename = @"..\..\..\poly" + (test_number - 1).ToString() + ".svg";
         SvgUtils.SaveToFile(svg, filename, fr, 800, 600, 10);
         ClipperFileIO.OpenFileWithDefaultApp(filename);
       }
@@ -202,20 +202,20 @@ namespace ClipperDemo1
 
     public static Paths64 LoadPathsFromResource(string resourceName)
     {
-      using Stream stream = Assembly.GetExecutingAssembly().
+      using var stream = Assembly.GetExecutingAssembly().
         GetManifestResourceStream(resourceName);
       if (stream == null) return new Paths64();
       using BinaryReader reader = new (stream);
-      int len = reader.ReadInt32();
+      var len = reader.ReadInt32();
       Paths64 result = new (len);
-      for (int i = 0; i < len; i++)
+      for (var i = 0; i < len; i++)
       {
-        int len2 = reader.ReadInt32();
+        var len2 = reader.ReadInt32();
         Path64 p = new (len2);
-        for (int j = 0; j < len2; j++)
+        for (var j = 0; j < len2; j++)
         {
-          long X = reader.ReadInt64();
-          long Y = reader.ReadInt64();
+          var X = reader.ReadInt64();
+          var Y = reader.ReadInt64();
           p.Add(new Point64(X, Y));
         }
         result.Add(p);
@@ -226,9 +226,9 @@ namespace ClipperDemo1
     public static void ClipTestPolys()
     {
       const FillRule fillrule = FillRule.NonZero;
-      Paths64 subject = LoadPathsFromResource("ConsoleDemo.subj.bin");
-      Paths64 clip = LoadPathsFromResource("ConsoleDemo.clip.bin");
-      Paths64 solution = Clipper.Intersect(subject, clip, fillrule);
+      var subject = LoadPathsFromResource("ConsoleDemo.subj.bin");
+      var clip = LoadPathsFromResource("ConsoleDemo.clip.bin");
+      var solution = Clipper.Intersect(subject, clip, fillrule);
 
       SvgWriter svg = new();
       SvgUtils.AddSubject(svg, subject);

@@ -43,9 +43,9 @@ public class ClipperOffset
       this.joinType = joinType;
       this.endType = endType;
 
-      bool isJoined = ((endType == EndType.Polygon) || (endType == EndType.Joined));
+      var isJoined = ((endType == EndType.Polygon) || (endType == EndType.Joined));
       inPaths = new Paths64(paths.Count);
-      foreach (Path64 path in paths)
+      foreach (var path in paths)
         inPaths.Add(Clipper.StripDuplicates(path, isJoined));
 
       if (endType == EndType.Polygon)
@@ -122,31 +122,31 @@ public class ClipperOffset
 
   public void AddPath(Path64 path, JoinType joinType, EndType endType)
   {
-    int cnt = path.Count;
+    var cnt = path.Count;
     if (cnt == 0) return;
-    Paths64 pp = new Paths64(1) { path };
+    var pp = new Paths64(1) { path };
     AddPaths(pp, joinType, endType);
   }
 
   public void AddPaths(Paths64 paths, JoinType joinType, EndType endType)
   {
-    int cnt = paths.Count;
+    var cnt = paths.Count;
     if (cnt == 0) return;
     _groupList.Add(new Group(paths, joinType, endType));
   }
 
   private int CalcSolutionCapacity()
   {
-    int result = 0;
-    foreach (Group g in _groupList)
+    var result = 0;
+    foreach (var g in _groupList)
       result += (g.endType == EndType.Joined) ? g.inPaths.Count * 2 : g.inPaths.Count;
     return result;
   }
 
   internal bool CheckPathsReversed()
   {
-    bool result = false;
-    foreach (Group g in _groupList)
+    var result = false;
+    foreach (var g in _groupList)
       if (g.endType == EndType.Polygon)
       {
         result = g.pathsReversed;
@@ -163,8 +163,8 @@ public class ClipperOffset
     // make sure the offset delta is significant
     if (Math.Abs(delta) < 0.5)
     {
-      foreach (Group group in _groupList)
-        foreach (Path64 path in group.inPaths)
+      foreach (var group in _groupList)
+        foreach (var path in group.inPaths)
           _solution.Add(path);
       return;
     }
@@ -173,16 +173,16 @@ public class ClipperOffset
     _mitLimSqr = (MiterLimit <= 1 ?
       2.0 : 2.0 / Clipper.Sqr(MiterLimit));
 
-    foreach (Group group in _groupList)
+    foreach (var group in _groupList)
       DoGroupOffset(group);
 
     if (_groupList.Count == 0) return;
 
-    bool pathsReversed = CheckPathsReversed();
-    FillRule fillRule = pathsReversed ? FillRule.Negative : FillRule.Positive;
+    var pathsReversed = CheckPathsReversed();
+    var fillRule = pathsReversed ? FillRule.Negative : FillRule.Positive;
 
     // clean up self-intersections ...
-    Clipper64 c = new Clipper64
+    var c = new Clipper64
     {
       PreserveCollinear = PreserveCollinear, // the solution should retain the orientation of the input
       ReverseSolution = ReverseSolution != pathsReversed
@@ -219,7 +219,7 @@ public class ClipperOffset
     double dy = (pt2.Y - pt1.Y);
     if ((dx == 0) && (dy == 0)) return new PointD();
 
-    double f = 1.0 / Math.Sqrt(dx * dx + dy * dy);
+    var f = 1.0 / Math.Sqrt(dx * dx + dy * dy);
     dx *= f;
     dy *= f;
 
@@ -234,11 +234,11 @@ public class ClipperOffset
 
   internal static int GetLowestPathIdx(Paths64 paths)
   {
-    int result = -1;
-    Point64 botPt = new Point64(long.MaxValue, long.MinValue);
-    for (int i = 0; i < paths.Count; ++i)
+    var result = -1;
+    var botPt = new Point64(long.MaxValue, long.MinValue);
+    for (var i = 0; i < paths.Count; ++i)
     {
-      foreach (Point64 pt in paths[i])
+      foreach (var pt in paths[i])
       {
         if ((pt.Y < botPt.Y) ||
           ((pt.Y == botPt.Y) && (pt.X >= botPt.X))) continue;
@@ -285,9 +285,9 @@ public class ClipperOffset
   [MethodImpl(MethodImplOptions.AggressiveInlining)]
   private static PointD NormalizeVector(PointD vec)
   {
-    double h = Hypotenuse(vec.x, vec.y);
+    var h = Hypotenuse(vec.x, vec.y);
     if (AlmostZero(h)) return new PointD(0, 0);
-    double inverseHypot = 1 / h;
+    var inverseHypot = 1 / h;
     return new PointD(vec.x * inverseHypot, vec.y * inverseHypot);
   }
 
@@ -303,25 +303,25 @@ public class ClipperOffset
     if (InternalClipper.IsAlmostZero(pt1a.x - pt1b.x)) //vertical
     {
       if (InternalClipper.IsAlmostZero(pt2a.x - pt2b.x)) return new PointD(0, 0);
-      double m2 = (pt2b.y - pt2a.y) / (pt2b.x - pt2a.x);
-      double b2 = pt2a.y - m2 * pt2a.x;
+      var m2 = (pt2b.y - pt2a.y) / (pt2b.x - pt2a.x);
+      var b2 = pt2a.y - m2 * pt2a.x;
       return new PointD(pt1a.x, m2 * pt1a.x + b2);
     }
 
     if (InternalClipper.IsAlmostZero(pt2a.x - pt2b.x)) //vertical
     {
-      double m1 = (pt1b.y - pt1a.y) / (pt1b.x - pt1a.x);
-      double b1 = pt1a.y - m1 * pt1a.x;
+      var m1 = (pt1b.y - pt1a.y) / (pt1b.x - pt1a.x);
+      var b1 = pt1a.y - m1 * pt1a.x;
       return new PointD(pt2a.x, m1 * pt2a.x + b1);
     }
     else
     {
-      double m1 = (pt1b.y - pt1a.y) / (pt1b.x - pt1a.x);
-      double b1 = pt1a.y - m1 * pt1a.x;
-      double m2 = (pt2b.y - pt2a.y) / (pt2b.x - pt2a.x);
-      double b2 = pt2a.y - m2 * pt2a.x;
+      var m1 = (pt1b.y - pt1a.y) / (pt1b.x - pt1a.x);
+      var b1 = pt1a.y - m1 * pt1a.x;
+      var m2 = (pt2b.y - pt2a.y) / (pt2b.x - pt2a.x);
+      var b2 = pt2a.y - m2 * pt2a.x;
       if (InternalClipper.IsAlmostZero(m1 - m2)) return new PointD(0, 0);
-      double x = (b2 - b1) / (m1 - m2);
+      var x = (b2 - b1) / (m1 - m2);
       return new PointD(x, m1 * x + b1);
     }
   }
@@ -356,7 +356,7 @@ public class ClipperOffset
     Point64 pt1, pt2;
     if (j == k)
     {
-      double absDelta = Math.Abs(_groupDelta);
+      var absDelta = Math.Abs(_groupDelta);
 #if USINGZ
       pt1 = new Point64(
         path[j].X - absDelta * _normals[j].x, 
@@ -410,23 +410,23 @@ public class ClipperOffset
         new PointD(_normals[j].y, -_normals[j].x));
     }
 
-    double absDelta = Math.Abs(_groupDelta);
+    var absDelta = Math.Abs(_groupDelta);
     // now offset the original vertex delta units along unit vector
-    PointD ptQ = new PointD(path[j]);
+    var ptQ = new PointD(path[j]);
     ptQ = TranslatePoint(ptQ, absDelta * vec.x, absDelta * vec.y);
 
     // get perpendicular vertices
-    PointD pt1 = TranslatePoint(ptQ, _groupDelta * vec.y, _groupDelta * -vec.x);
-    PointD pt2 = TranslatePoint(ptQ, _groupDelta * -vec.y, _groupDelta * vec.x);
+    var pt1 = TranslatePoint(ptQ, _groupDelta * vec.y, _groupDelta * -vec.x);
+    var pt2 = TranslatePoint(ptQ, _groupDelta * -vec.y, _groupDelta * vec.x);
     // get 2 vertices along one edge offset
-    PointD pt3 = GetPerpendicD(path[k], _normals[k]);
+    var pt3 = GetPerpendicD(path[k], _normals[k]);
 
     if (j == k)
     {
-      PointD pt4 = new PointD(
+      var pt4 = new PointD(
         pt3.x + vec.x * _groupDelta,
         pt3.y + vec.y * _groupDelta);
-      PointD pt = IntersectPoint(pt1, pt2, pt3, pt4);
+      var pt = IntersectPoint(pt1, pt2, pt3, pt4);
 #if USINGZ
       pt.z = ptQ.z;
 #endif    
@@ -436,8 +436,8 @@ public class ClipperOffset
     }
     else
     {
-      PointD pt4 = GetPerpendicD(path[j], _normals[k]);
-      PointD pt = IntersectPoint(pt1, pt2, pt3, pt4);
+      var pt4 = GetPerpendicD(path[j], _normals[k]);
+      var pt = IntersectPoint(pt1, pt2, pt3, pt4);
 #if USINGZ
       pt.z = ptQ.z;
 #endif
@@ -450,7 +450,7 @@ public class ClipperOffset
   [MethodImpl(MethodImplOptions.AggressiveInlining)]
   private void DoMiter(Path64 path, int j, int k, double cosA)
   {
-    double q = _groupDelta / (cosA + 1);
+    var q = _groupDelta / (cosA + 1);
 #if USINGZ
     pathOut.Add(new Point64(
         path[j].X + (_normals[k].x + _normals[j].x) * q,
@@ -470,27 +470,27 @@ public class ClipperOffset
     {
       // when DeltaCallback is assigned, _groupDelta won't be constant,
       // so we'll need to do the following calculations for *every* vertex.
-      double absDelta = Math.Abs(_groupDelta);
-      double arcTol = ArcTolerance > 0.01 ?
+      var absDelta = Math.Abs(_groupDelta);
+      var arcTol = ArcTolerance > 0.01 ?
         ArcTolerance :
         Math.Log10(2 + absDelta) * InternalClipper.defaultArcTolerance;
-      double stepsPer360 = Math.PI / Math.Acos(1 - arcTol / absDelta);
+      var stepsPer360 = Math.PI / Math.Acos(1 - arcTol / absDelta);
       _stepSin = Math.Sin((2 * Math.PI) / stepsPer360);
       _stepCos = Math.Cos((2 * Math.PI) / stepsPer360);
       if (_groupDelta < 0.0) _stepSin = -_stepSin;
       _stepsPerRad = stepsPer360 / (2 * Math.PI);
     }
 
-    Point64 pt = path[j];
-    PointD offsetVec = new PointD(_normals[k].x * _groupDelta, _normals[k].y * _groupDelta);
+    var pt = path[j];
+    var offsetVec = new PointD(_normals[k].x * _groupDelta, _normals[k].y * _groupDelta);
     if (j == k) offsetVec.Negate();
 #if USINGZ
     pathOut.Add(new Point64(pt.X + offsetVec.x, pt.Y + offsetVec.y, pt.Z));
 #else
     pathOut.Add(new Point64(pt.X + offsetVec.x, pt.Y + offsetVec.y));
 #endif
-    int steps = (int) Math.Ceiling(_stepsPerRad * Math.Abs(angle));
-    for (int i = 1; i < steps; i++) // ie 1 less than steps
+    var steps = (int) Math.Ceiling(_stepsPerRad * Math.Abs(angle));
+    for (var i = 1; i < steps; i++) // ie 1 less than steps
     {
       offsetVec = new PointD(offsetVec.x * _stepCos - _stepSin * offsetVec.y,
           offsetVec.x * _stepSin + offsetVec.y * _stepCos);
@@ -506,11 +506,11 @@ public class ClipperOffset
   [MethodImpl(MethodImplOptions.AggressiveInlining)]
   private void BuildNormals(Path64 path)
   {
-    int cnt = path.Count;
+    var cnt = path.Count;
     _normals.Clear();
     if (cnt == 0) return;
     _normals.EnsureCapacity(cnt);
-    for (int i = 0; i < cnt - 1; i++)
+    for (var i = 0; i < cnt - 1; i++)
       _normals.Add(GetUnitNormal(path[i], path[i + 1]));
     _normals.Add(GetUnitNormal(path[cnt - 1], path[0]));
   }
@@ -524,8 +524,8 @@ public class ClipperOffset
     // A == PI: edges 'spike'
     // sin(A) < 0: right turning
     // cos(A) < 0: change in angle is more than 90 degree
-    double sinA = InternalClipper.CrossProduct(_normals[j], _normals[k]);
-    double cosA = InternalClipper.DotProduct(_normals[j], _normals[k]);
+    var sinA = InternalClipper.CrossProduct(_normals[j], _normals[k]);
+    var cosA = InternalClipper.DotProduct(_normals[j], _normals[k]);
     if (sinA > 1.0) sinA = 1.0;
     else if (sinA < -1.0) sinA = -1.0;
 
@@ -587,7 +587,7 @@ public class ClipperOffset
   {
     pathOut = new Path64();
     int cnt = path.Count, prev = cnt - 1;
-    for (int i = 0; i < cnt; i++)
+    for (var i = 0; i < cnt; i++)
       OffsetPoint(group, path, i, ref prev);
     _solution.Add(pathOut);
   }
@@ -604,7 +604,7 @@ public class ClipperOffset
   private void OffsetOpenPath(Group group, Path64 path)
   {
     pathOut = new Path64();
-    int highI = path.Count - 1;
+    var highI = path.Count - 1;
 
     if (DeltaCallback != null)
       _groupDelta = DeltaCallback(path, _normals, 0, 0);
@@ -631,7 +631,7 @@ public class ClipperOffset
       OffsetPoint(group, path, i, ref k);
 
     // reverse normals ...
-    for (int i = highI; i > 0; i--)
+    for (var i = highI; i > 0; i--)
       _normals[i] = new PointD(-_normals[i - 1].x, -_normals[i - 1].y);
     _normals[0] = _normals[highI];
 
@@ -673,7 +673,7 @@ public class ClipperOffset
     else
       _groupDelta = Math.Abs(_delta);
 
-    double absDelta = Math.Abs(_groupDelta);
+    var absDelta = Math.Abs(_groupDelta);
 
     _joinType = group.joinType;
     _endType = group.endType;
@@ -685,29 +685,29 @@ public class ClipperOffset
       // arcTol - when arc_tolerance_ is undefined (0) then curve imprecision
       // will be relative to the size of the offset (delta). Obviously very
       //large offsets will almost always require much less precision.
-      double arcTol = ArcTolerance > 0.01 ?
+      var arcTol = ArcTolerance > 0.01 ?
         ArcTolerance :
         Math.Log10(2 + absDelta) * InternalClipper.defaultArcTolerance;
-      double stepsPer360 = Math.PI / Math.Acos(1 - arcTol / absDelta);
+      var stepsPer360 = Math.PI / Math.Acos(1 - arcTol / absDelta);
       _stepSin = Math.Sin((2 * Math.PI) / stepsPer360);
       _stepCos = Math.Cos((2 * Math.PI) / stepsPer360);
       if (_groupDelta < 0.0) _stepSin = -_stepSin;
       _stepsPerRad = stepsPer360 / (2 * Math.PI);
     }
 
-    using List<Path64>.Enumerator pathIt = group.inPaths.GetEnumerator();
+    using var pathIt = group.inPaths.GetEnumerator();
     while (pathIt.MoveNext())
     {
-      Path64 p = pathIt.Current!;
+      var p = pathIt.Current!;
 
       pathOut = new Path64();
-      int cnt = p.Count;
+      var cnt = p.Count;
 
       switch (cnt)
       {
         case 1:
           {
-            Point64 pt = p[0];
+            var pt = p[0];
 
             if (DeltaCallback != null)
             {
@@ -719,7 +719,7 @@ public class ClipperOffset
             // single vertex so build a circle or square ...
             if (group.endType == EndType.Round)
             {
-              int steps = (int) Math.Ceiling(_stepsPerRad * 2 * Math.PI);
+              var steps = (int) Math.Ceiling(_stepsPerRad * 2 * Math.PI);
               pathOut = Clipper.Ellipse(pt, absDelta, absDelta, steps);
 #if USINGZ
           pathOut = InternalClipper.SetZ(pathOut, pt.Z);
@@ -727,8 +727,8 @@ public class ClipperOffset
             }
             else
             {
-              int d = (int) Math.Ceiling(_groupDelta);
-              Rect64 r = new Rect64(pt.X - d, pt.Y - d, pt.X + d, pt.Y + d);
+              var d = (int) Math.Ceiling(_groupDelta);
+              var r = new Rect64(pt.X - d, pt.Y - d, pt.X + d, pt.Y + d);
               pathOut = r.AsPath();
 #if USINGZ
           pathOut = InternalClipper.SetZ(pathOut, pt.Z);
