@@ -3200,8 +3200,8 @@ public class Clipper64 : ClipperBase
 
 #if USINGZ
   public ZCallback64? ZCallback {
-    get { return this._zCallback; }
-    set { this._zCallback = value; } 
+    get { return _zCallback; }
+    set { _zCallback = value; } 
   }
 #endif
 
@@ -3253,7 +3253,7 @@ public class ClipperD : ClipperBase
       Clipper.ScalePointD(bot2, _invScale),
       Clipper.ScalePointD(top2, _invScale), ref tmp);
     intersectPt = new Point64(intersectPt.X,
-        intersectPt.Y, tmp.z);
+        intersectPt.Y, tmp.Z);
   }
 #endif
 

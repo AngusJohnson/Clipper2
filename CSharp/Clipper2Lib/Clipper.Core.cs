@@ -49,16 +49,16 @@ public struct Point64
 
   public Point64(PointD pt)
   {
-    X = (long) Math.Round(pt.x, MidpointRounding.AwayFromZero);
-    Y = (long) Math.Round(pt.y, MidpointRounding.AwayFromZero);
-    Z = pt.z;
+    X = (long) Math.Round(pt.X, MidpointRounding.AwayFromZero);
+    Y = (long) Math.Round(pt.Y, MidpointRounding.AwayFromZero);
+    Z = pt.Z;
   }
 
   public Point64(PointD pt, double scale)
   {
-    X = (long) Math.Round(pt.x * scale, MidpointRounding.AwayFromZero);
-    Y = (long) Math.Round(pt.y * scale, MidpointRounding.AwayFromZero);
-    Z = pt.z;
+    X = (long) Math.Round(pt.X * scale, MidpointRounding.AwayFromZero);
+    Y = (long) Math.Round(pt.Y * scale, MidpointRounding.AwayFromZero);
+    Z = pt.Z;
   }
 
   public static bool operator ==(Point64 lhs, Point64 rhs)
@@ -107,8 +107,8 @@ public struct Point64
 
   public Point64(PointD pt)
   {
-    X = (long) Math.Round(pt.x, MidpointRounding.AwayFromZero);
-    Y = (long) Math.Round(pt.y, MidpointRounding.AwayFromZero);
+    X = (long) Math.Round(pt.X, MidpointRounding.AwayFromZero);
+    Y = (long) Math.Round(pt.Y, MidpointRounding.AwayFromZero);
   }
 
   public Point64(Point64 pt, double scale)
@@ -119,8 +119,8 @@ public struct Point64
 
   public Point64(PointD pt, double scale)
   {
-    X = (long) Math.Round(pt.x * scale, MidpointRounding.AwayFromZero);
-    Y = (long) Math.Round(pt.y * scale, MidpointRounding.AwayFromZero);
+    X = (long) Math.Round(pt.X * scale, MidpointRounding.AwayFromZero);
+    Y = (long) Math.Round(pt.Y * scale, MidpointRounding.AwayFromZero);
   }
 
   public static bool operator ==(Point64 lhs, Point64 rhs)
@@ -163,112 +163,112 @@ public struct Point64
 
 public struct PointD
 {
-  public double x;
-  public double y;
+  public double X;
+  public double Y;
 
 #if USINGZ
-  public long z;
+  public long Z;
 
   public PointD(PointD pt)
   {
-    x = pt.x;
-    y = pt.y;
-    z = pt.z;
+    X = pt.X;
+    Y = pt.Y;
+    Z = pt.Z;
   }
 
   public PointD(Point64 pt)
   {
-    x = pt.X;
-    y = pt.Y;
-    z = pt.Z;
+    X = pt.X;
+    Y = pt.Y;
+    Z = pt.Z;
   }
 
   public PointD(Point64 pt, double scale)
   {
-    x = pt.X * scale;
-    y = pt.Y * scale;
-    z = pt.Z;
+    X = pt.X * scale;
+    Y = pt.Y * scale;
+    Z = pt.Z;
   }
 
   public PointD(PointD pt, double scale)
   {
-    x = pt.x * scale;
-    y = pt.y * scale;
-    z = pt.z;
+    X = pt.X * scale;
+    Y = pt.Y * scale;
+    Z = pt.Z;
   }
 
   public PointD(long x, long y, long z = 0)
   {
-    this.x = x;
-    this.y = y;
-    this.z = z;
+    X = x;
+    Y = y;
+    Z = z;
   }
 
   public PointD(double x, double y, long z = 0)
   {
-    this.x = x;
-    this.y = y;
-    this.z = z;
+    X = x;
+    Y = y;
+    Z = z;
   }
 
   public readonly string ToString(int precision = 2)
   {
-    return string.Format($"{{0:F{precision}}},{{1:F{precision}}},{{2:D}}", x,y,z);
+    return string.Format($"{{0:F{precision}}},{{1:F{precision}}},{{2:D}}", X, Y, Z);
   }
 
 #else
   public PointD(PointD pt)
   {
-    x = pt.x;
-    y = pt.y;
+    X = pt.X;
+    Y = pt.Y;
   }
 
   public PointD(Point64 pt)
   {
-    x = pt.X;
-    y = pt.Y;
+    X = pt.X;
+    Y = pt.Y;
   }
 
   public PointD(PointD pt, double scale)
   {
-    x = pt.x * scale;
-    y = pt.y * scale;
+    X = pt.X * scale;
+    Y = pt.Y * scale;
   }
 
   public PointD(Point64 pt, double scale)
   {
-    x = pt.X * scale;
-    y = pt.Y * scale;
+    X = pt.X * scale;
+    Y = pt.Y * scale;
   }
 
   public PointD(long x, long y)
   {
-    this.x = x;
-    this.y = y;
+    this.X = x;
+    this.Y = y;
   }
 
   public PointD(double x, double y)
   {
-    this.x = x;
-    this.y = y;
+    this.X = x;
+    this.Y = y;
   }
 
   public readonly string ToString(int precision = 2)
   {
-    return string.Format($"{{0:F{precision}}},{{1:F{precision}}}", x, y);
+    return string.Format($"{{0:F{precision}}},{{1:F{precision}}}", X, Y);
   }
 
 #endif
   public static bool operator ==(PointD lhs, PointD rhs)
   {
-    return InternalClipper.IsAlmostZero(lhs.x - rhs.x) &&
-      InternalClipper.IsAlmostZero(lhs.y - rhs.y);
+    return InternalClipper.IsAlmostZero(lhs.X - rhs.X) &&
+      InternalClipper.IsAlmostZero(lhs.Y - rhs.Y);
   }
 
   public static bool operator !=(PointD lhs, PointD rhs)
   {
-    return !InternalClipper.IsAlmostZero(lhs.x - rhs.x) ||
-      !InternalClipper.IsAlmostZero(lhs.y - rhs.y);
+    return !InternalClipper.IsAlmostZero(lhs.X - rhs.X) ||
+      !InternalClipper.IsAlmostZero(lhs.Y - rhs.Y);
   }
 
   public readonly override bool Equals(object? obj)
@@ -278,11 +278,11 @@ public struct PointD
     return false;
   }
 
-  public void Negate() { x = -x; y = -y; }
+  public void Negate() { X = -X; Y = -Y; }
 
   public readonly override int GetHashCode()
   {
-    return HashCode.Combine(x, y); //#599
+    return HashCode.Combine(X, Y); //#599
   }
 }
 
@@ -439,8 +439,8 @@ public struct RectD
 
   public readonly bool Contains(PointD pt)
   {
-    return pt.x > left && pt.x < right &&
-      pt.y > top && pt.y < bottom;
+    return pt.X > left && pt.X < right &&
+      pt.Y > top && pt.Y < bottom;
   }
 
   public readonly bool Contains(RectD rec)
@@ -672,13 +672,13 @@ public static class InternalClipper
   [MethodImpl(MethodImplOptions.AggressiveInlining)]
   internal static double CrossProduct(PointD vec1, PointD vec2)
   {
-    return (vec1.y * vec2.x - vec2.y * vec1.x);
+    return (vec1.Y * vec2.X - vec2.Y * vec1.X);
   }
 
   [MethodImpl(MethodImplOptions.AggressiveInlining)]
   internal static double DotProduct(PointD vec1, PointD vec2)
   {
-    return (vec1.x * vec2.x + vec1.y * vec2.y);
+    return (vec1.X * vec2.X + vec1.Y * vec2.Y);
   }
 
   [MethodImpl(MethodImplOptions.AggressiveInlining)]

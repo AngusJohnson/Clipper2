@@ -206,10 +206,10 @@ namespace Clipper2Lib
         foreach (var path in pi.paths)
           foreach (var pt in path)
           {
-            if (pt.x < bounds.left) bounds.left = pt.x;
-            if (pt.x > bounds.right) bounds.right = pt.x;
-            if (pt.y < bounds.top) bounds.top = pt.y;
-            if (pt.y > bounds.bottom) bounds.bottom = pt.y;
+            if (pt.X < bounds.left) bounds.left = pt.X;
+            if (pt.X > bounds.right) bounds.right = pt.X;
+            if (pt.Y < bounds.top) bounds.top = pt.Y;
+            if (pt.Y > bounds.bottom) bounds.bottom = pt.Y;
           }
       return !IsValidRect(bounds) ? RectEmpty : bounds;
     }
@@ -263,13 +263,13 @@ namespace Clipper2Lib
           if (path.Count < 2) continue;
           if (!pi.IsOpen && path.Count < 3) continue;
           writer.Write(string.Format(NumberFormatInfo.InvariantInfo, " M {0:f2} {1:f2}",
-              (path[0].x * scale + offsetX),
-              (path[0].y * scale + offsetY)));
+              (path[0].X * scale + offsetX),
+              (path[0].Y * scale + offsetY)));
           for (var j = 1; j < path.Count; j++)
           {
             writer.Write(string.Format(NumberFormatInfo.InvariantInfo, " L {0:f2} {1:f2}",
-            (path[j].x * scale + offsetX),
-            (path[j].y * scale + offsetY)));
+            (path[j].X * scale + offsetX),
+            (path[j].Y * scale + offsetY)));
           }
           if (!pi.IsOpen) writer.Write(" z");
         }
@@ -293,10 +293,10 @@ namespace Clipper2Lib
             {
 #if USINGZ
               writer.Write("<text x=\"{0:f2}\" y=\"{1:f2}\">{2:f2},{3:f2},{4}</text>\n", 
-                (pt.x * scale + offsetX), (pt.y * scale + offsetY), pt.x, pt.y, pt.z);
+                (pt.X * scale + offsetX), (pt.Y * scale + offsetY), pt.X, pt.Y, pt.Z);
 #else
               writer.Write("<text x=\"{0:f2}\" y=\"{1:f2}\">{2:f2},{3:f2}</text>\n", 
-                (pt.x * scale + offsetX), (pt.y * scale + offsetY), pt.x, pt.y);
+                (pt.X * scale + offsetX), (pt.Y * scale + offsetY), pt.X, pt.Y);
 #endif
             }
           }

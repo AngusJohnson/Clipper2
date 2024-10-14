@@ -28,7 +28,7 @@ public class Application
         PointD ___, PointD ____, ref PointD intersectPt)
     {
       cnt--;
-      intersectPt.z = cnt;
+      intersectPt.Z = cnt;
     }
   }
 
@@ -56,11 +56,11 @@ public class Application
     PathsD ellipses = [];
     for (var i = 0; i < solution[0].Count; i++)
     {
-      if (solution[0][i].z < 0)
+      if (solution[0][i].Z < 0)
         ellipses.Add(Clipper.Ellipse(
-          new PointD(solution[0][i].x, solution[0][i].y), 4));
-      svg.AddText(solution[0][i].z.ToString(),
-        solution[0][i].x, solution[0][i].y, 12, 0xFF000000);
+          new PointD(solution[0][i].X, solution[0][i].Y), 4));
+      svg.AddText(solution[0][i].Z.ToString(),
+        solution[0][i].X, solution[0][i].Y, 12, 0xFF000000);
     }
     svg.AddClosedPaths(ellipses, 0x20FF0000, 0xFFFF0000, 1);
     svg.SaveToFile("usingz.svg", 300, 300);

@@ -270,7 +270,7 @@ public static class Clipper
     var prevPt = path[cnt - 1];
     foreach (var pt in path)
     {
-      a += (prevPt.y + pt.y) * (prevPt.x - pt.x);
+      a += (prevPt.Y + pt.Y) * (prevPt.X - pt.X);
       prevPt = pt;
     }
     return a * 0.5;
@@ -351,10 +351,10 @@ public static class Clipper
   {
     var result = new PointD()
     {
-      x = pt.X * scale,
-      y = pt.Y * scale,
+      X = pt.X * scale,
+      Y = pt.Y * scale,
 #if USINGZ
-      z = pt.Z,
+      Z = pt.Z,
 #endif
     };
     return result;
@@ -504,7 +504,7 @@ public static class Clipper
   {
     var result = new PathD(path.Count);
     foreach (var pt in path)
-      result.Add(new PointD(pt.x + dx, pt.y + dy));
+      result.Add(new PointD(pt.X + dx, pt.Y + dy));
     return result;
   }
 
@@ -579,10 +579,10 @@ public static class Clipper
     var result = InvalidRectD;
     foreach (var pt in path)
     {
-      if (pt.x < result.left) result.left = pt.x;
-      if (pt.x > result.right) result.right = pt.x;
-      if (pt.y < result.top) result.top = pt.y;
-      if (pt.y > result.bottom) result.bottom = pt.y;
+      if (pt.X < result.left) result.left = pt.X;
+      if (pt.X > result.right) result.right = pt.X;
+      if (pt.Y < result.top) result.top = pt.Y;
+      if (pt.Y > result.bottom) result.bottom = pt.Y;
     }
     return Math.Abs(result.left - double.MaxValue) < InternalClipper.floatingPointTolerance ? new RectD() : result;
   }
@@ -593,10 +593,10 @@ public static class Clipper
     foreach (var path in paths)
       foreach (var pt in path)
       {
-        if (pt.x < result.left) result.left = pt.x;
-        if (pt.x > result.right) result.right = pt.x;
-        if (pt.y < result.top) result.top = pt.y;
-        if (pt.y > result.bottom) result.bottom = pt.y;
+        if (pt.X < result.left) result.left = pt.X;
+        if (pt.X > result.right) result.right = pt.X;
+        if (pt.Y < result.top) result.top = pt.Y;
+        if (pt.Y > result.bottom) result.bottom = pt.Y;
       }
     return Math.Abs(result.left - double.MaxValue) < InternalClipper.floatingPointTolerance ? new RectD() : result;
   }
@@ -674,7 +674,7 @@ public static class Clipper
   [MethodImpl(MethodImplOptions.AggressiveInlining)]
   public static PointD MidPoint(PointD pt1, PointD pt2)
   {
-    return new PointD((pt1.x + pt2.x) / 2, (pt1.y + pt2.y) / 2);
+    return new PointD((pt1.X + pt2.X) / 2, (pt1.Y + pt2.Y) / 2);
   }
 
   [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -698,7 +698,7 @@ public static class Clipper
   [MethodImpl(MethodImplOptions.AggressiveInlining)]
   public static bool PointsNearEqual(PointD pt1, PointD pt2, double distanceSqrd)
   {
-    return Sqr(pt1.x - pt2.x) + Sqr(pt1.y - pt2.y) < distanceSqrd;
+    return Sqr(pt1.X - pt2.X) + Sqr(pt1.Y - pt2.Y) < distanceSqrd;
   }
 
   public static PathD StripNearDuplicates(PathD path,
@@ -785,10 +785,10 @@ public static class Clipper
   [MethodImpl(MethodImplOptions.AggressiveInlining)]
   public static double PerpendicDistFromLineSqrd(PointD pt, PointD line1, PointD line2)
   {
-    var a = pt.x - line1.x;
-    var b = pt.y - line1.y;
-    var c = line2.x - line1.x;
-    var d = line2.y - line1.y;
+    var a = pt.X - line1.X;
+    var b = pt.Y - line1.Y;
+    var c = line2.X - line1.X;
+    var d = line2.Y - line1.Y;
     if (c == 0 && d == 0) return 0;
     return Sqr(a * d - c * b) / (c * c + d * d);
   }
@@ -1174,10 +1174,10 @@ public static class Clipper
     var si = Math.Sin(2 * Math.PI / steps);
     var co = Math.Cos(2 * Math.PI / steps);
     double dx = co, dy = si;
-    var result = new PathD(steps) { new PointD(center.x + radiusX, center.y) };
+    var result = new PathD(steps) { new PointD(center.X + radiusX, center.Y) };
     for (var i = 1; i < steps; ++i)
     {
-      result.Add(new PointD(center.x + radiusX * dx, center.y + radiusY * dy));
+      result.Add(new PointD(center.X + radiusX * dx, center.Y + radiusY * dy));
       var x = dx * co - dy * si;
       dy = dy * co + dx * si;
       dx = x;
