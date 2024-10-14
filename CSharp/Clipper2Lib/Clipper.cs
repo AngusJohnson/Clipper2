@@ -157,14 +157,14 @@ public static class Clipper
 
   public static Paths64 RectClip(Rect64 rect, Paths64 paths)
   {
-    if (rect.IsEmpty() || paths.Count == 0) return new Paths64();
+    if (rect.IsEmpty() || paths.Count == 0) return [];
     var rc = new RectClip64(rect);
     return rc.Execute(paths);
   }
 
   public static Paths64 RectClip(Rect64 rect, Path64 path)
   {
-    if (rect.IsEmpty() || path.Count == 0) return new Paths64();
+    if (rect.IsEmpty() || path.Count == 0) return [];
     var tmp = new Paths64 { path };
     return RectClip(rect, tmp);
   }
@@ -172,7 +172,7 @@ public static class Clipper
   public static PathsD RectClip(RectD rect, PathsD paths, int precision = 2)
   {
     InternalClipper.CheckPrecision(precision);
-    if (rect.IsEmpty() || paths.Count == 0) return new PathsD();
+    if (rect.IsEmpty() || paths.Count == 0) return [];
     var scale = Math.Pow(10, precision);
     var r = ScaleRect(rect, scale);
     var tmpPath = ScalePaths64(paths, scale);
@@ -183,20 +183,20 @@ public static class Clipper
 
   public static PathsD RectClip(RectD rect, PathD path, int precision = 2)
   {
-    if (rect.IsEmpty() || path.Count == 0) return new PathsD();
+    if (rect.IsEmpty() || path.Count == 0) return [];
     var tmp = new PathsD { path };
     return RectClip(rect, tmp, precision);
   }
   public static Paths64 RectClipLines(Rect64 rect, Paths64 paths)
   {
-    if (rect.IsEmpty() || paths.Count == 0) return new Paths64();
+    if (rect.IsEmpty() || paths.Count == 0) return [];
     var rc = new RectClipLines64(rect);
     return rc.Execute(paths);
   }
 
   public static Paths64 RectClipLines(Rect64 rect, Path64 path)
   {
-    if (rect.IsEmpty() || path.Count == 0) return new Paths64();
+    if (rect.IsEmpty() || path.Count == 0) return [];
     var tmp = new Paths64 { path };
     return RectClipLines(rect, tmp);
   }
@@ -205,7 +205,7 @@ public static class Clipper
     PathsD paths, int precision = 2)
   {
     InternalClipper.CheckPrecision(precision);
-    if (rect.IsEmpty() || paths.Count == 0) return new PathsD();
+    if (rect.IsEmpty() || paths.Count == 0) return [];
     var scale = Math.Pow(10, precision);
     var r = ScaleRect(rect, scale);
     var tmpPath = ScalePaths64(paths, scale);
@@ -215,7 +215,7 @@ public static class Clipper
   }
   public static PathsD RectClipLines(RectD rect, PathD path, int precision = 2)
   {
-    if (rect.IsEmpty() || path.Count == 0) return new PathsD();
+    if (rect.IsEmpty() || path.Count == 0) return [];
     var tmp = new PathsD { path };
     return RectClipLines(rect, tmp, precision);
   }
@@ -1086,7 +1086,7 @@ public static class Clipper
     if (len - i < 3)
     {
       if (!isOpen || len < 2 || path[0] == path[1])
-        return new Path64();
+        return [];
       return path;
     }
 
@@ -1144,7 +1144,7 @@ public static class Clipper
   public static Path64 Ellipse(Point64 center,
     double radiusX, double radiusY = 0, int steps = 0)
   {
-    if (radiusX <= 0) return new Path64();
+    if (radiusX <= 0) return [];
     if (radiusY <= 0) radiusY = radiusX;
     if (steps <= 2)
       steps = (int) Math.Ceiling(Math.PI * Math.Sqrt((radiusX + radiusY) / 2));
@@ -1166,7 +1166,7 @@ public static class Clipper
   public static PathD Ellipse(PointD center,
     double radiusX, double radiusY = 0, int steps = 0)
   {
-    if (radiusX <= 0) return new PathD();
+    if (radiusX <= 0) return [];
     if (radiusY <= 0) radiusY = radiusX;
     if (steps <= 2)
       steps = (int) Math.Ceiling(Math.PI * Math.Sqrt((radiusX + radiusY) / 2));

@@ -34,11 +34,11 @@ public class Application
 
   public static void Main()
   {
-    PathsD solution = new();
-    PathsD subject = new()
-  {
+    PathsD solution = [];
+    PathsD subject =
+  [
     Clipper.MakePathZ(new double[] { 100,50,1, 10,79,2, 65,2,3, 65,98,4, 10,21,5 })
-  };
+  ];
 
     ClipperD clipperD = new();
     MyCallbacks cb = new();
@@ -53,7 +53,7 @@ public class Application
     SvgUtils.AddSubject(svg, subject);
     SvgUtils.AddSolution(svg, solution, true);
 
-    PathsD ellipses = new();
+    PathsD ellipses = [];
     for (var i = 0; i < solution[0].Count; i++)
     {
       if (solution[0][i].z < 0)

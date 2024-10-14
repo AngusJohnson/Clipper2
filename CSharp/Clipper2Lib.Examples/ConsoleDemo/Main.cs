@@ -42,7 +42,7 @@ namespace ClipperDemo1
       const FillRule fillrule = FillRule.NonZero;
 
       var shape = Clipper.MakePath(new int[] { 0, 0, size, 0, size, size, 0, size });
-      Paths64 subjects = new(), solution;
+      Paths64 subjects = [], solution;
       Random rand = new();
       for (var i = 0; i < h / size; ++i)
       {
@@ -76,7 +76,7 @@ namespace ClipperDemo1
       var tri1 = Clipper.MakePath(new int[] { 0,0, size * 2,0, size,size * 2 });
       var tri2 = Clipper.MakePath(new int[] { size * 2, 0, size, size * 2, size*3, size*2 });
 
-      Paths64 subjects = new(), solution;
+      Paths64 subjects = [], solution;
       Random rand = new();
       for (var i = 0; i < h / size / 2; ++i)
       {
@@ -111,7 +111,7 @@ namespace ClipperDemo1
       const FillRule fillrule = FillRule.NonZero;
 
       var shape = Clipper.MakePath(new int[] { size, 0, size * 2, size, size, size * 2, 0, size });
-      Paths64 subjects = new(), solution;
+      Paths64 subjects = [], solution;
       Random rand = new();
       for (var i = 0; i < h / size / 2; ++i)
       {
@@ -141,11 +141,11 @@ namespace ClipperDemo1
 
     public static void LoopThruTestPolygons(int start = 0, int end = 0)
     {
-      Paths64 subject = new();
-      Paths64 subject_open = new();
-      Paths64 clip = new();
-      Paths64 solution = new();
-      Paths64 solution_open = new();
+      Paths64 subject = [];
+      Paths64 subject_open = [];
+      Paths64 clip = [];
+      Paths64 solution = [];
+      Paths64 solution_open = [];
       var do_all = (start == 0 && end == 0);
       if (do_all) { start = 1; end = 0xFFFF; }
       else if (end == 0) end = start;
@@ -204,7 +204,7 @@ namespace ClipperDemo1
     {
       using var stream = Assembly.GetExecutingAssembly().
         GetManifestResourceStream(resourceName);
-      if (stream == null) return new Paths64();
+      if (stream == null) return [];
       using BinaryReader reader = new (stream);
       var len = reader.ReadInt32();
       Paths64 result = new (len);

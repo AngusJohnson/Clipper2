@@ -87,8 +87,8 @@ namespace Clipper2Lib
     }
 
     public FillRule FillRule { get; set; }
-    private readonly List<PolyInfo> PolyInfoList = new List<PolyInfo>();
-    private readonly List<TextInfo> textInfos = new List<TextInfo>();
+    private readonly List<PolyInfo> PolyInfoList = [];
+    private readonly List<TextInfo> textInfos = [];
     private readonly CoordStyle coordStyle;
 
     private const string svg_header = "<?xml version=\"1.0\" standalone=\"no\"?>\n" +
@@ -125,16 +125,20 @@ namespace Clipper2Lib
     public void AddClosedPath(Path64 path, uint brushColor,
       uint penColor, double penWidth, bool showCoords = false)
     {
-      var tmp = new Paths64();
-      tmp.Add(path);
+      var tmp = new Paths64
+      {
+        path
+      };
       AddClosedPaths(tmp, brushColor, penColor, penWidth, showCoords);
     }
 
     public void AddClosedPath(PathD path, uint brushColor,
       uint penColor, double penWidth, bool showCoords = false)
     {
-      var tmp = new PathsD();
-      tmp.Add(path);
+      var tmp = new PathsD
+      {
+        path
+      };
       AddClosedPaths(tmp, brushColor, penColor, penWidth, showCoords);
     }
 
@@ -157,16 +161,20 @@ namespace Clipper2Lib
     public void AddOpenPath(Path64 path,  uint penColor, 
       double penWidth, bool showCoords = false)
     {
-      var tmp = new Paths64();
-      tmp.Add(path);
+      var tmp = new Paths64
+      {
+        path
+      };
       AddOpenPaths(tmp, penColor, penWidth, showCoords);
     }
 
     public void AddOpenPath(PathD path, uint penColor, 
       double penWidth, bool showCoords = false)
     {
-      var tmp = new PathsD();
-      tmp.Add(path);
+      var tmp = new PathsD
+      {
+        path
+      };
       AddOpenPaths(tmp, penColor, penWidth, showCoords);
     }
 

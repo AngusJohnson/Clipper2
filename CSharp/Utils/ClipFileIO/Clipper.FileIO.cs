@@ -14,7 +14,7 @@ namespace Clipper2Lib
   {
     public static Paths64 PathFromStr(string? s)
     {
-      if (s == null) return new Paths64();
+      if (s == null) return [];
       var p = new Path64();
       var pp = new Paths64();
       int len = s.Length, i = 0;
@@ -55,7 +55,7 @@ namespace Clipper2Lib
             if (nlCnt == 2)
             {
               if (p.Count > 0) pp.Add(p);
-              p = new Path64();
+              p = [];
             }
           }
           i++;
@@ -70,9 +70,9 @@ namespace Clipper2Lib
       Paths64? subj, Paths64? subj_open, Paths64? clip,
       out ClipType ct, out FillRule fillRule, out long area, out int count, out string caption)
     {
-      if (subj == null) subj = new Paths64(); else subj.Clear();
-      if (subj_open == null) subj_open = new Paths64(); else subj_open.Clear();
-      if (clip == null) clip = new Paths64(); else clip.Clear();
+      if (subj == null) subj = []; else subj.Clear();
+      if (subj_open == null) subj_open = []; else subj_open.Clear();
+      if (clip == null) clip = []; else clip.Clear();
       ct = ClipType.Intersection;
       fillRule = FillRule.EvenOdd;
       var result = false;

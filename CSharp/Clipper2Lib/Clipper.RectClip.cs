@@ -45,10 +45,10 @@ public class RectClip64
     rect_ = rect;
     mp_ = rect.MidPoint();
     rectPath_ = rect_.AsPath();
-    results_ = new List<OutPt2?>();
+    results_ = [];
     edges_ = new List<OutPt2?>[8];
     for (var i = 0; i < 8; i++)
-      edges_[i] = new List<OutPt2?>();
+      edges_[i] = [];
   }
 
   internal OutPt2 Add(Point64 pt, bool startingNewPath = false)
@@ -935,7 +935,7 @@ public class RectClip64
       else
         op2 = op2.next;
     }
-    if (op2 == null) return new Path64();
+    if (op2 == null) return [];
 
     result.Add(op.pt);
     op2 = op.next;

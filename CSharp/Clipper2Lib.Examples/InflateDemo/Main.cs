@@ -26,8 +26,8 @@ namespace ClipperDemo1
       ClipperOffset co = new();
 
       //triangle offset - with large miter
-      Paths64 p0 = new() { Clipper.MakePath(new [] { 30,150, 60,350, 0,350 }) };
-      Paths64 p = new();
+      Paths64 p0 = [Clipper.MakePath(new [] { 30,150, 60,350, 0,350 })];
+      Paths64 p = [];
       for (var i = 0; i < 5; ++i)
       {
         //nb: the last parameter here (10) greatly increases miter limit
@@ -88,7 +88,7 @@ namespace ClipperDemo1
     {
       using var stream = Assembly.GetExecutingAssembly().
         GetManifestResourceStream(resourceName);
-      if (stream == null) return new PathsD();
+      if (stream == null) return [];
       using BinaryReader reader = new (stream);
       var len = reader.ReadInt32();
       PathsD result = new (len);
@@ -109,8 +109,8 @@ namespace ClipperDemo1
 
     public static void DoVariableOffset()
     {
-      Paths64 p = new() { Clipper.MakePath(new int[] { 0,50, 20,50, 40,50, 60,50, 80,50, 100,50 }) };
-      Paths64 solution = new();
+      Paths64 p = [Clipper.MakePath(new int[] { 0,50, 20,50, 40,50, 60,50, 80,50, 100,50 })];
+      Paths64 solution = [];
       ClipperOffset co = new();
       co.AddPaths(p, JoinType.Square, EndType.Butt);
       co.Execute(

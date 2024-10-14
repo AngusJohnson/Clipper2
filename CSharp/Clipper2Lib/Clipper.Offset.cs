@@ -66,10 +66,10 @@ public class ClipperOffset
 
   private const double Tolerance = 1.0E-12;
 
-  private readonly List<Group> _groupList = new List<Group>();
-  private Path64 pathOut = new Path64();
-  private readonly PathD _normals = new PathD();
-  private Paths64 _solution = new Paths64();
+  private readonly List<Group> _groupList = [];
+  private Path64 pathOut = [];
+  private readonly PathD _normals = [];
+  private Paths64 _solution = [];
   private PolyTree64? _solutionTree;
 
   private double _groupDelta; //*0.5 for open paths; *-1.0 for negative areas
@@ -585,7 +585,7 @@ public class ClipperOffset
   [MethodImpl(MethodImplOptions.AggressiveInlining)]
   private void OffsetPolygon(Group group, Path64 path)
   {
-    pathOut = new Path64();
+    pathOut = [];
     int cnt = path.Count, prev = cnt - 1;
     for (var i = 0; i < cnt; i++)
       OffsetPoint(group, path, i, ref prev);
@@ -603,7 +603,7 @@ public class ClipperOffset
 
   private void OffsetOpenPath(Group group, Path64 path)
   {
-    pathOut = new Path64();
+    pathOut = [];
     var highI = path.Count - 1;
 
     if (DeltaCallback != null)
@@ -700,7 +700,7 @@ public class ClipperOffset
     {
       var p = pathIt.Current!;
 
-      pathOut = new Path64();
+      pathOut = [];
       var cnt = p.Count;
 
       switch (cnt)

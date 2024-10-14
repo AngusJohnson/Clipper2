@@ -142,7 +142,7 @@ internal class OutRec
   public OutPt? pts;
   public PolyPathBase? polypath;
   public Rect64 bounds;
-  public Path64 path = new Path64();
+  public Path64 path = [];
   public bool isOpen;
   public List<int>? splits;
   public OutRec? recursiveSplit;
@@ -327,8 +327,8 @@ public class ReuseableDataContainer64
   internal readonly List<Vertex> _vertexList;
   public ReuseableDataContainer64()
   {
-    _minimaList = new List<LocalMinima>();
-    _vertexList = new List<Vertex>();
+    _minimaList = [];
+    _vertexList = [];
   }
   public void Clear()
   {
@@ -373,13 +373,13 @@ public class ClipperBase
 #endif
   public ClipperBase()
   {
-    _minimaList = new List<LocalMinima>();
-    _intersectList = new List<IntersectNode>();
-    _vertexList = new List<Vertex>();
-    _outrecList = new List<OutRec>();
-    _scanlineList = new List<long>();
-    _horzSegList = new List<HorzSegment>();
-    _horzJoinList = new List<HorzJoin>();
+    _minimaList = [];
+    _intersectList = [];
+    _vertexList = [];
+    _outrecList = [];
+    _scanlineList = [];
+    _horzSegList = [];
+    _horzJoinList = [];
     PreserveCollinear = true;
   }
 
@@ -2684,7 +2684,7 @@ private void DoHorizontal(Active horz)
   private static void MoveSplits(OutRec fromOr, OutRec toOr)
   {
     if (fromOr.splits == null) return;
-    toOr.splits ??= new List<int>();
+    toOr.splits ??= [];
     foreach (var i in fromOr.splits)
       toOr.splits.Add(i);
     fromOr.splits = null;
@@ -2733,7 +2733,7 @@ private void DoHorizontal(Active horz)
           else
             or2.owner = or1.owner;
 
-          or1.splits ??= new List<int>();
+          or1.splits ??= [];
           or1.splits.Add(or2.idx);
         }
         else
@@ -2889,12 +2889,12 @@ private void DoHorizontal(Active horz)
     if (!_using_polytree) return;
     if (Path1InsidePath2(prevOp, newOp))
     {
-      newOutRec.splits ??= new List<int>();
+      newOutRec.splits ??= [];
       newOutRec.splits.Add(outrec.idx);
     }
     else
     {
-      outrec.splits ??= new List<int>();
+      outrec.splits ??= [];
       outrec.splits.Add(newOutRec.idx);
     }
     //else { splitOp = null; splitOp.next = null; }
@@ -3170,7 +3170,7 @@ public class Clipper64 : ClipperBase
   [MethodImpl(MethodImplOptions.AggressiveInlining)]
   public bool Execute(ClipType clipType, FillRule fillRule, Paths64 solutionClosed)
   {
-    return Execute(clipType, fillRule, solutionClosed, new Paths64());
+    return Execute(clipType, fillRule, solutionClosed, []);
   }
 
   public bool Execute(ClipType clipType, FillRule fillRule, PolyTree64 polytree, Paths64 openPaths)
@@ -3195,7 +3195,7 @@ public class Clipper64 : ClipperBase
   [MethodImpl(MethodImplOptions.AggressiveInlining)]
   public bool Execute(ClipType clipType, FillRule fillRule, PolyTree64 polytree)
   {
-    return Execute(clipType, fillRule, polytree, new Paths64());
+    return Execute(clipType, fillRule, polytree, []);
   }
 
 #if USINGZ
@@ -3308,7 +3308,7 @@ public class ClipperD : ClipperBase
   public bool Execute(ClipType clipType, FillRule fillRule,
       PathsD solutionClosed, PathsD solutionOpen)
   {
-    Paths64 solClosed64 = new Paths64(), solOpen64 = new Paths64();
+    Paths64 solClosed64 = [], solOpen64 = [];
 #if USINGZ
     CheckZCallback();
 #endif
@@ -3342,7 +3342,7 @@ public class ClipperD : ClipperBase
   [MethodImpl(MethodImplOptions.AggressiveInlining)]
   public bool Execute(ClipType clipType, FillRule fillRule, PathsD solutionClosed)
   {
-    return Execute(clipType, fillRule, solutionClosed, new PathsD());
+    return Execute(clipType, fillRule, solutionClosed, []);
   }
 
   public bool Execute(ClipType clipType, FillRule fillRule, PolyTreeD polytree, PathsD openPaths)
@@ -3377,14 +3377,14 @@ public class ClipperD : ClipperBase
 
   public bool Execute(ClipType clipType, FillRule fillRule, PolyTreeD polytree)
   {
-    return Execute(clipType, fillRule, polytree, new PathsD());
+    return Execute(clipType, fillRule, polytree, []);
   }
 } // ClipperD class
 
 public abstract class PolyPathBase : IEnumerable
 {
   internal PolyPathBase? _parent;
-  internal List<PolyPathBase> _childs = new List<PolyPathBase>();
+  internal List<PolyPathBase> _childs = [];
 
   public IEnumerator GetEnumerator()
   {
