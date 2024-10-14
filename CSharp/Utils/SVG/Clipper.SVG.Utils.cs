@@ -6,8 +6,6 @@
 * License   :  http://www.boost.org/LICENSE_1_0.txt                            *
 *******************************************************************************/
 
-using System.IO;
-
 namespace Clipper2Lib
 {
   public static class SvgUtils
@@ -102,7 +100,5 @@ namespace Clipper2Lib
       svg.FillRule = fill_rule;
       svg.SaveToFile(filename, max_width, max_height, margin);
     }
-
   }
-
 }

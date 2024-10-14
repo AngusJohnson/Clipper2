@@ -3,20 +3,7 @@
 	<PropertyGroup>
 		<TargetFramework>net8.0</TargetFramework>
 		<OutputType>Exe</OutputType>
-		<ImplicitUsings>enable</ImplicitUsings>
-		<Nullable>enable</Nullable>
 		<ApplicationIcon>Clipper2.ico</ApplicationIcon>
-	</PropertyGroup>
-
-	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
-		<AllowUnsafeBlocks>false</AllowUnsafeBlocks>
-		<Optimize>false</Optimize>
-		<GenerateSerializationAssemblies>Auto</GenerateSerializationAssemblies>
-		<DefineConstants>TRACE</DefineConstants>
-	</PropertyGroup>
-
-	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
-		<DefineConstants>TRACE</DefineConstants>
 	</PropertyGroup>
 
 	<ItemGroup>
@@ -31,7 +18,6 @@
 
 	<ItemGroup>
 		<Resource Include="Clipper2.ico" />
-		<Resource Include="Main.cs" />
 	</ItemGroup>
 
 	<ItemGroup>

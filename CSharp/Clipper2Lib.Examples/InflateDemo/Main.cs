@@ -6,16 +6,13 @@
 * License   :  http://www.boost.org/LICENSE_1_0.txt                            *
 *******************************************************************************/
 
-using System.IO;
 using System.Reflection;
 using Clipper2Lib;
 
 namespace ClipperDemo1
 {
-
   public static class Application
   {
-
     public static void Main()
     {
       DoSimpleShapes();
@@ -126,7 +123,5 @@ namespace ClipperDemo1
       SvgUtils.SaveToFile(svg, filename, FillRule.EvenOdd, 500, 500, 60);
       ClipperFileIO.OpenFileWithDefaultApp(filename);
     }
-
   } //end Application
-
 } //namespace

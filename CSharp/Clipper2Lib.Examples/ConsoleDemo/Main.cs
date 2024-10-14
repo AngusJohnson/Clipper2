@@ -7,9 +7,7 @@
 *******************************************************************************/
 
 using System.Reflection;
-using System.IO;
 using Clipper2Lib;
-using System;
 
 namespace ClipperDemo1
 {
@@ -239,7 +237,6 @@ namespace ClipperDemo1
       SvgUtils.SaveToFile(svg, @"..\..\..\clipperD.svg", fillrule, 800, 600, 20);
       ClipperFileIO.OpenFileWithDefaultApp(@"..\..\..\clipperD.svg");
     }
-
 
   } //end Application
 } //namespace

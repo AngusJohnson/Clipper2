@@ -6,13 +6,10 @@
 * License   :  http://www.boost.org/LICENSE_1_0.txt                            *
 *******************************************************************************/
 
-using System;
-using System.IO;
 using System.Diagnostics;
 
 namespace Clipper2Lib
 {
-
   public static class ClipperFileIO
   {
     public static Paths64 PathFromStr(string? s)
@@ -278,6 +275,5 @@ namespace Clipper2Lib
       Process p = new Process() { StartInfo = new ProcessStartInfo(path) { UseShellExecute = true } };
       p.Start();
     }
-
   }
 }

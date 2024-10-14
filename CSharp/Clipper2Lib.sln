@@ -10,6 +10,7 @@ EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{3B52CBF2-1267-44C7-B447-C51ACDD25371}"
 	ProjectSection(SolutionItems) = preProject
 		.editorconfig = .editorconfig
+		Directory.Build.props = Directory.Build.props
 	EndProjectSection
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Clipper2.SVG", "Utils\SVG\Clipper2.SVG.csproj", "{BC8E75BA-24E1-4D6A-AE54-0B1019C18EFE}"
@@ -19,6 +20,10 @@ EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ConsoleDemo", "Clipper2Lib.Examples\ConsoleDemo\ConsoleDemo.csproj", "{DBFB59C1-C08D-48DC-9A15-CD18B5897BE4}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "InflateDemo", "Clipper2Lib.Examples\InflateDemo\InflateDemo.csproj", "{DB7B56ED-474F-49A7-91F1-75EEB76A8B2B}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Clipper2LibZ", "USINGZ\Clipper2LibZ.csproj", "{693585C2-0C2E-44E1-BD8F-1FA1EA4B6DBA}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "UsingZTestApp", "USINGZ.TestApp\UsingZTestApp.csproj", "{7D49185B-69EC-4890-85D4-D6DCB92EBF51}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -50,6 +55,14 @@ Global
 		{DB7B56ED-474F-49A7-91F1-75EEB76A8B2B}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{DB7B56ED-474F-49A7-91F1-75EEB76A8B2B}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{DB7B56ED-474F-49A7-91F1-75EEB76A8B2B}.Release|Any CPU.Build.0 = Release|Any CPU
+		{693585C2-0C2E-44E1-BD8F-1FA1EA4B6DBA}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{693585C2-0C2E-44E1-BD8F-1FA1EA4B6DBA}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{693585C2-0C2E-44E1-BD8F-1FA1EA4B6DBA}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{693585C2-0C2E-44E1-BD8F-1FA1EA4B6DBA}.Release|Any CPU.Build.0 = Release|Any CPU
+		{7D49185B-69EC-4890-85D4-D6DCB92EBF51}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{7D49185B-69EC-4890-85D4-D6DCB92EBF51}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{7D49185B-69EC-4890-85D4-D6DCB92EBF51}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{7D49185B-69EC-4890-85D4-D6DCB92EBF51}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

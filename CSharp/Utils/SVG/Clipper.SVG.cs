@@ -6,10 +6,7 @@
 * License   :  http://www.boost.org/LICENSE_1_0.txt                            *
 *******************************************************************************/
 
-using System;
-using System.Collections.Generic;
 using System.Globalization;
-using System.IO;
 
 namespace Clipper2Lib
 {
@@ -189,7 +186,6 @@ namespace Clipper2Lib
         0x0, penColor, penWidth, showCoords, true));
     }
 
-
     public void AddText(string cap, double posX, double posY, int fontSize, uint fontClr = black)
     {
       textInfos.Add(new TextInfo(cap, posX, posY, fontSize, fontClr));
@@ -314,5 +310,4 @@ namespace Clipper2Lib
       return true;
     }
   }
-
 }
