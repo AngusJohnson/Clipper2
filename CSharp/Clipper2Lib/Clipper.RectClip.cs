@@ -283,15 +283,15 @@ public class RectClip64
       if (res2 == 0) return false; // segments are collinear
       if (p1 == p3 || p1 == p4) return true;
       //else if (p2 == p3 || p2 == p4) { ip = p2; return true; }
-      if (IsHorizontal(p3, p4)) return ((p1.X > p3.X) == (p1.X < p4.X));
-      return ((p1.Y > p3.Y) == (p1.Y < p4.Y));
+      if (IsHorizontal(p3, p4)) return (p1.X > p3.X) == (p1.X < p4.X);
+      return (p1.Y > p3.Y) == (p1.Y < p4.Y);
     }
     if (res2 == 0)
     {
       ip = p2;
       if (p2 == p3 || p2 == p4) return true;
-      if (IsHorizontal(p3, p4)) return ((p2.X > p3.X) == (p2.X < p4.X));
-      return ((p2.Y > p3.Y) == (p2.Y < p4.Y));
+      if (IsHorizontal(p3, p4)) return (p2.X > p3.X) == (p2.X < p4.X);
+      return (p2.Y > p3.Y) == (p2.Y < p4.Y);
     }
 
     if ((res1 > 0) == (res2 > 0))
@@ -306,15 +306,15 @@ public class RectClip64
     {
       ip = p3;
       if (p3 == p1 || p3 == p2) return true;
-      if (IsHorizontal(p1, p2)) return ((p3.X > p1.X) == (p3.X < p2.X));
-      return ((p3.Y > p1.Y) == (p3.Y < p2.Y));
+      if (IsHorizontal(p1, p2)) return (p3.X > p1.X) == (p3.X < p2.X);
+      return (p3.Y > p1.Y) == (p3.Y < p2.Y);
     }
     if (res4 == 0)
     {
       ip = p4;
       if (p4 == p1 || p4 == p2) return true;
-      if (IsHorizontal(p1, p2)) return ((p4.X > p1.X) == (p4.X < p2.X));
-      return ((p4.Y > p1.Y) == (p4.Y < p2.Y));
+      if (IsHorizontal(p1, p2)) return (p4.X > p1.X) == (p4.X < p2.X);
+      return (p4.Y > p1.Y) == (p4.Y < p2.Y);
     }
     if ((res3 > 0) == (res4 > 0))
     {

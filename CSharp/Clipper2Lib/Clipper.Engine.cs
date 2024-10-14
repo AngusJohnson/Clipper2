@@ -374,7 +374,7 @@ public class ClipperBase
 #if USINGZ
   private bool XYCoordsEqual(Point64 pt1, Point64 pt2)
   {
-    return (pt1.X == pt2.X && pt1.Y == pt2.Y);
+    return pt1.X == pt2.X && pt1.Y == pt2.Y;
   }
   
   private void SetZ(Active e1, Active e2, ref Point64 intersectPt)
@@ -417,7 +417,7 @@ public class ClipperBase
   [MethodImpl(MethodImplOptions.AggressiveInlining)]
   private static bool IsOdd(int val)
   {
-    return ((val & 1) != 0);
+    return (val & 1) != 0;
   }
 
   [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -456,7 +456,7 @@ public class ClipperBase
   [MethodImpl(MethodImplOptions.AggressiveInlining)]
   private static bool IsFront(Active ae)
   {
-    return (ae == ae.outrec!.frontEdge);
+    return ae == ae.outrec!.frontEdge;
   }
 
   /*******************************************************************************
@@ -487,19 +487,19 @@ public class ClipperBase
   [MethodImpl(MethodImplOptions.AggressiveInlining)]
   private static bool IsHorizontal(Active ae)
   {
-    return (ae.top.Y == ae.bot.Y);
+    return ae.top.Y == ae.bot.Y;
   }
 
   [MethodImpl(MethodImplOptions.AggressiveInlining)]
   private static bool IsHeadingRightHorz(Active ae)
   {
-    return (double.IsNegativeInfinity(ae.dx));
+    return double.IsNegativeInfinity(ae.dx);
   }
 
   [MethodImpl(MethodImplOptions.AggressiveInlining)]
   private static bool IsHeadingLeftHorz(Active ae)
   {
-    return (double.IsPositiveInfinity(ae.dx));
+    return double.IsPositiveInfinity(ae.dx);
   }
 
   [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -541,7 +541,7 @@ public class ClipperBase
   [MethodImpl(MethodImplOptions.AggressiveInlining)]
   private static bool IsMaxima(Vertex vertex)
   {
-    return ((vertex.flags & VertexFlags.LocalMax) != VertexFlags.None);
+    return (vertex.flags & VertexFlags.LocalMax) != VertexFlags.None;
   }
 
   [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -711,7 +711,7 @@ public class ClipperBase
   [MethodImpl(MethodImplOptions.AggressiveInlining)]
   private static bool OutrecIsAscending(Active hotEdge)
   {
-    return (hotEdge == hotEdge.outrec!.frontEdge);
+    return hotEdge == hotEdge.outrec!.frontEdge;
   }
 
   [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -802,7 +802,7 @@ public class ClipperBase
   [MethodImpl(MethodImplOptions.AggressiveInlining)]
   private bool HasLocMinAtY(long y)
   {
-    return (_currentLocMin < _minimaList.Count && _minimaList[_currentLocMin].vertex.pt.Y == y);
+    return _currentLocMin < _minimaList.Count && _minimaList[_currentLocMin].vertex.pt.Y == y;
   }
 
   [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -1058,7 +1058,7 @@ public class ClipperBase
 
     // get the turning direction  a1.top, a2.bot, a2.top
     var d = InternalClipper.CrossProduct(resident.top, newcomer.bot, newcomer.top);
-    if (d != 0) return (d < 0);
+    if (d != 0) return d < 0;
 
     // edges must be collinear to get here
 
@@ -2316,7 +2316,7 @@ public class ClipperBase
         AddLocalMaxPoly(ae, maxPair, ae.top);
       DeleteFromAEL(maxPair);
       DeleteFromAEL(ae);
-      return (prevE != null ? prevE.nextInAEL : _actives);
+      return prevE != null ? prevE.nextInAEL : _actives;
     }
 
     // here ae.nextInAel == ENext == EMaxPair ...
@@ -2325,7 +2325,7 @@ public class ClipperBase
 
     DeleteFromAEL(ae);
     DeleteFromAEL(maxPair);
-    return (prevE != null ? prevE.nextInAEL : _actives);
+    return prevE != null ? prevE.nextInAEL : _actives;
   }
 
   [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -2523,17 +2523,17 @@ public class ClipperBase
           (hs2.leftToRight == hs1.leftToRight) ||
           (hs2.rightOp!.pt.X <= hs1.leftOp!.pt.X)) continue;
         var curr_y = hs1.leftOp.pt.Y;
-        if ((hs1).leftToRight)
+        if (hs1.leftToRight)
         {
           while (hs1.leftOp.next!.pt.Y == curr_y &&
             hs1.leftOp.next.pt.X <= hs2.leftOp.pt.X)
             hs1.leftOp = hs1.leftOp.next;
           while (hs2.leftOp.prev.pt.Y == curr_y &&
             hs2.leftOp.prev.pt.X <= hs1.leftOp.pt.X)
-            (hs2).leftOp = (hs2).leftOp.prev;
+            hs2.leftOp = hs2.leftOp.prev;
           var join = new HorzJoin(
-            DuplicateOp((hs1).leftOp, true),
-            DuplicateOp((hs2).leftOp, false));
+            DuplicateOp(hs1.leftOp, true),
+            DuplicateOp(hs2.leftOp, false));
           _horzJoinList.Add(join);
         }
         else
@@ -2542,11 +2542,11 @@ public class ClipperBase
             hs1.leftOp.prev.pt.X <= hs2.leftOp.pt.X)
             hs1.leftOp = hs1.leftOp.prev;
           while (hs2.leftOp.next!.pt.Y == curr_y &&
-            hs2.leftOp.next.pt.X <= (hs1).leftOp.pt.X)
-            hs2.leftOp = (hs2).leftOp.next;
+            hs2.leftOp.next.pt.X <= hs1.leftOp.pt.X)
+            hs2.leftOp = hs2.leftOp.next;
           var join = new HorzJoin(
-            DuplicateOp((hs2).leftOp, true),
-            DuplicateOp((hs1).leftOp, false));
+            DuplicateOp(hs2.leftOp, true),
+            DuplicateOp(hs1.leftOp, false));
           _horzJoinList.Add(join);
         }
       }
@@ -2619,7 +2619,7 @@ public class ClipperBase
 
       if (op2.pt.X <= pt.X || op2.prev.pt.X <= pt.X)
       {
-        if ((op2.prev.pt.X < pt.X && op2.pt.X < pt.X))
+        if (op2.prev.pt.X < pt.X && op2.pt.X < pt.X)
           val = 1 - val; // toggle val
         else
         {
@@ -2662,7 +2662,7 @@ public class ClipperBase
       }
       op = op.next!;
     } while (op != op1 && Math.Abs(outside_cnt) < 2);
-    if (Math.Abs(outside_cnt) > 1) return (outside_cnt < 0);
+    if (Math.Abs(outside_cnt) > 1) return outside_cnt < 0;
     // since path1's location is still equivocal, check its midpoint
     var mp = GetBounds(GetCleanPath(op1)).MidPoint();
     var path2 = GetCleanPath(op2);
@@ -2759,10 +2759,9 @@ public class ClipperBase
   [MethodImpl(MethodImplOptions.AggressiveInlining)]
   private static bool IsValidClosedPath(OutPt? op)
   {
-    return (op != null && op.next != op &&
-      (op.next != op.prev || !IsVerySmallTriangle(op)));
+    return op != null && op.next != op &&
+      (op.next != op.prev || !IsVerySmallTriangle(op));
   }
-
 
   [MethodImpl(MethodImplOptions.AggressiveInlining)]
   private static OutPt? DisposeOutPt(OutPt op)
@@ -3389,12 +3388,11 @@ public abstract class PolyPathBase : IEnumerable
       _nodes = new List<PolyPathBase>(nodes);
     }
 
-
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public bool MoveNext()
     {
       position++;
-      return (position < _nodes.Count);
+      return position < _nodes.Count;
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -3575,7 +3573,6 @@ public class PolyTreeD : PolyPathD
   public new double Scale => base.Scale;
 }
 
-public class ClipperLibException : Exception
+public class ClipperLibException(string description) : Exception(description)
 {
-  public ClipperLibException(string description) : base(description) { }
 }

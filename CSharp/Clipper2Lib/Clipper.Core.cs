@@ -557,8 +557,8 @@ public static class InternalClipper
   public static double CrossProduct(Point64 pt1, Point64 pt2, Point64 pt3)
   {
     // typecast to double to avoid potential int overflow
-    return (((double) (pt2.X - pt1.X) * (pt3.Y - pt2.Y)) -
-            ((double) (pt2.Y - pt1.Y) * (pt3.X - pt2.X)));
+    return ((double) (pt2.X - pt1.X) * (pt3.Y - pt2.Y)) -
+            ((double) (pt2.Y - pt1.Y) * (pt3.X - pt2.X));
   }
 
 #if USINGZ
@@ -580,7 +580,7 @@ public static class InternalClipper
   [MethodImpl(MethodImplOptions.AggressiveInlining)]
   internal static bool IsAlmostZero(double value)
   {
-    return (Math.Abs(value) <= floatingPointTolerance);
+    return Math.Abs(value) <= floatingPointTolerance;
   }
 
   [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -643,20 +643,20 @@ public static class InternalClipper
   internal static double DotProduct(Point64 pt1, Point64 pt2, Point64 pt3)
   {
     // typecast to double to avoid potential int overflow
-    return (((double) (pt2.X - pt1.X) * (pt3.X - pt2.X)) +
-            ((double) (pt2.Y - pt1.Y) * (pt3.Y - pt2.Y)));
+    return ((double) (pt2.X - pt1.X) * (pt3.X - pt2.X)) +
+            ((double) (pt2.Y - pt1.Y) * (pt3.Y - pt2.Y));
   }
 
   [MethodImpl(MethodImplOptions.AggressiveInlining)]
   internal static double CrossProduct(PointD vec1, PointD vec2)
   {
-    return ((vec1.Y * vec2.X) - (vec2.Y * vec1.X));
+    return (vec1.Y * vec2.X) - (vec2.Y * vec1.X);
   }
 
   [MethodImpl(MethodImplOptions.AggressiveInlining)]
   internal static double DotProduct(PointD vec1, PointD vec2)
   {
-    return ((vec1.X * vec2.X) + (vec1.Y * vec2.Y));
+    return (vec1.X * vec2.X) + (vec1.Y * vec2.Y);
   }
 
   [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -711,7 +711,7 @@ public static class InternalClipper
     var res4 = CrossProduct(seg2b, seg1a, seg1b);
     if (res3 * res4 > 0) return false;
     // ensure NOT collinear
-    return (res1 != 0 || res2 != 0 || res3 != 0 || res4 != 0);
+    return res1 != 0 || res2 != 0 || res3 != 0 || res4 != 0;
   }
   public static Point64 GetClosestPtOnSegment(Point64 offPt,
   Point64 seg1, Point64 seg2)

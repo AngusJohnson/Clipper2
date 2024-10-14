@@ -9,119 +9,119 @@
 using System.Reflection;
 using Clipper2Lib;
 
-namespace ClipperDemo1
+namespace ClipperDemo1;
+
+public static class Application
 {
-  public static class Application
+  public static void Main()
   {
-    public static void Main()
+    DoSimpleShapes();
+    DoRabbit();
+    DoVariableOffset();
+  }
+
+  public static void DoSimpleShapes()
+  {
+    SvgWriter svg = new();
+    ClipperOffset co = new();
+
+    //triangle offset - with large miter
+    Paths64 p0 = [Clipper.MakePath(new[] { 30, 150, 60, 350, 0, 350 })];
+    Paths64 p = [];
+    for (var i = 0; i < 5; ++i)
     {
-      DoSimpleShapes();
-      DoRabbit();
-      DoVariableOffset();
+      //nb: the last parameter here (10) greatly increases miter limit
+      p0 = Clipper.InflatePaths(p0, 5, JoinType.Miter, EndType.Polygon, 10);
+      p.AddRange(p0);
+    }
+    SvgUtils.AddSolution(svg, p, false);
+    p.Clear();
+
+    //rectangle offset - both squared and rounded
+    //nb: using the ClipperOffest class directly here to control 
+    //different join types within the same offset operation
+    p.Add(Clipper.MakePath(new[] { 100, 0, 340, 0, 340, 200, 100, 200, 100, 0 }));
+    SvgUtils.AddOpenSubject(svg, p);
+    co.AddPaths(p, JoinType.Bevel, EndType.Joined);
+
+    p = Clipper.TranslatePaths(p, 60, 50);
+    SvgUtils.AddOpenSubject(svg, p);
+    co.AddPaths(p, JoinType.Square, EndType.Joined);
+    p = Clipper.TranslatePaths(p, 60, 50);
+    SvgUtils.AddOpenSubject(svg, p);
+    co.AddPaths(p, JoinType.Round, EndType.Joined);
+
+    co.Execute(10, p);
+
+    const string filename = "../../../inflate.svg";
+    SvgUtils.AddSolution(svg, p, false);
+    SvgUtils.AddCaption(svg, "Beveled join", 100, -27);
+    SvgUtils.AddCaption(svg, "Squared join", 160, 23);
+    SvgUtils.AddCaption(svg, "Rounded join", 220, 73);
+    SvgUtils.SaveToFile(svg, filename, FillRule.EvenOdd, 800, 600, 20);
+    ClipperFileIO.OpenFileWithDefaultApp(filename);
+  }
+
+  public static void DoRabbit()
+  {
+    var pd = LoadPathsFromResource("InflateDemo.rabbit.bin");
+
+    PathsD solution = new(pd);
+    while (pd.Count > 0)
+    {
+      // and don't forget to scale the delta offset
+      pd = Clipper.InflatePaths(pd, -2.5, JoinType.Round, EndType.Polygon);
+      // SimplifyPaths - is not essential but it not only 
+      // speeds up the loop but it also tidies the result
+      pd = Clipper.SimplifyPaths(pd, 0.25);
+      solution.AddRange(pd);
     }
 
-    public static void DoSimpleShapes()
-    {
-      SvgWriter svg = new();
-      ClipperOffset co = new();
+    const string filename = "../../../rabbit.svg";
+    SvgWriter svg = new();
+    SvgUtils.AddSolution(svg, solution, false);
+    SvgUtils.SaveToFile(svg, filename, FillRule.EvenOdd, 450, 720, 10);
+    ClipperFileIO.OpenFileWithDefaultApp(filename);
+  }
 
-      //triangle offset - with large miter
-      Paths64 p0 = [Clipper.MakePath(new [] { 30,150, 60,350, 0,350 })];
-      Paths64 p = [];
-      for (var i = 0; i < 5; ++i)
+  public static PathsD LoadPathsFromResource(string resourceName)
+  {
+    using var stream = Assembly.GetExecutingAssembly().
+      GetManifestResourceStream(resourceName);
+    if (stream == null) return [];
+    using BinaryReader reader = new(stream);
+    var len = reader.ReadInt32();
+    PathsD result = new(len);
+    for (var i = 0; i < len; i++)
+    {
+      var len2 = reader.ReadInt32();
+      PathD p = new(len2);
+      for (var j = 0; j < len2; j++)
       {
-        //nb: the last parameter here (10) greatly increases miter limit
-        p0 = Clipper.InflatePaths(p0, 5, JoinType.Miter, EndType.Polygon, 10);
-        p.AddRange(p0);
+        var X = reader.ReadInt64();
+        var Y = reader.ReadInt64();
+        p.Add(new PointD(X, Y));
       }
-      SvgUtils.AddSolution(svg, p, false);
-      p.Clear();  
-
-      //rectangle offset - both squared and rounded
-      //nb: using the ClipperOffest class directly here to control 
-      //different join types within the same offset operation
-      p.Add(Clipper.MakePath(new [] { 100,0, 340,0, 340,200, 100,200, 100, 0 }));
-      SvgUtils.AddOpenSubject(svg, p);
-      co.AddPaths(p, JoinType.Bevel, EndType.Joined);
-
-      p = Clipper.TranslatePaths(p, 60, 50);
-      SvgUtils.AddOpenSubject(svg, p);
-      co.AddPaths(p, JoinType.Square, EndType.Joined);
-      p = Clipper.TranslatePaths(p, 60, 50);
-      SvgUtils.AddOpenSubject(svg, p);
-      co.AddPaths(p, JoinType.Round, EndType.Joined);
-
-      co.Execute(10, p);
-
-      const string filename = "../../../inflate.svg";
-      SvgUtils.AddSolution(svg, p, false);
-      SvgUtils.AddCaption(svg, "Beveled join", 100, -27);
-      SvgUtils.AddCaption(svg, "Squared join", 160, 23);
-      SvgUtils.AddCaption(svg, "Rounded join", 220, 73);
-      SvgUtils.SaveToFile(svg, filename, FillRule.EvenOdd, 800, 600, 20);
-      ClipperFileIO.OpenFileWithDefaultApp(filename);
+      result.Add(p);
     }
+    return result;
+  }
 
-    public static void DoRabbit()
-    {
-      var pd = LoadPathsFromResource("InflateDemo.rabbit.bin");
+  public static void DoVariableOffset()
+  {
+    Paths64 p = [Clipper.MakePath(new int[] { 0, 50, 20, 50, 40, 50, 60, 50, 80, 50, 100, 50 })];
+    Paths64 solution = [];
+    ClipperOffset co = new();
+    co.AddPaths(p, JoinType.Square, EndType.Butt);
+    co.Execute(
+      (path, path_norms, currPt, prevPt) => (currPt * currPt) + 10, solution);
 
-      PathsD solution = new (pd);
-      while (pd.Count > 0)
-      {
-        // and don't forget to scale the delta offset
-        pd = Clipper.InflatePaths(pd, -2.5, JoinType.Round, EndType.Polygon);
-        // SimplifyPaths - is not essential but it not only 
-        // speeds up the loop but it also tidies the result
-        pd = Clipper.SimplifyPaths(pd, 0.25);
-        solution.AddRange(pd);
-      }
-
-      const string filename = "../../../rabbit.svg";
-      SvgWriter svg = new ();
-      SvgUtils.AddSolution(svg, solution, false);
-      SvgUtils.SaveToFile(svg, filename, FillRule.EvenOdd, 450, 720, 10);
-      ClipperFileIO.OpenFileWithDefaultApp(filename);
-    }
-
-    public static PathsD LoadPathsFromResource(string resourceName)
-    {
-      using var stream = Assembly.GetExecutingAssembly().
-        GetManifestResourceStream(resourceName);
-      if (stream == null) return [];
-      using BinaryReader reader = new (stream);
-      var len = reader.ReadInt32();
-      PathsD result = new (len);
-      for (var i = 0; i < len; i++)
-      {
-        var len2 = reader.ReadInt32();
-        PathD p = new (len2);
-        for (var j = 0; j < len2; j++)
-        {
-          var X = reader.ReadInt64();
-          var Y = reader.ReadInt64();
-          p.Add(new PointD(X, Y));
-        }
-        result.Add(p);
-      }
-      return result;
-    }
-
-    public static void DoVariableOffset()
-    {
-      Paths64 p = [Clipper.MakePath(new int[] { 0,50, 20,50, 40,50, 60,50, 80,50, 100,50 })];
-      Paths64 solution = [];
-      ClipperOffset co = new();
-      co.AddPaths(p, JoinType.Square, EndType.Butt);
-      co.Execute(
-        (path, path_norms, currPt, prevPt) => (currPt * currPt) + 10, solution);
-
-      const string filename = "../../../variable_offset.svg";
-      SvgWriter svg = new();
-      SvgUtils.AddOpenSubject(svg, p);
-      SvgUtils.AddSolution(svg, solution, true);
-      SvgUtils.SaveToFile(svg, filename, FillRule.EvenOdd, 500, 500, 60);
-      ClipperFileIO.OpenFileWithDefaultApp(filename);
-    }
-  } //end Application
-} //namespace
+    const string filename = "../../../variable_offset.svg";
+    SvgWriter svg = new();
+    SvgUtils.AddOpenSubject(svg, p);
+    SvgUtils.AddSolution(svg, solution, true);
+    SvgUtils.SaveToFile(svg, filename, FillRule.EvenOdd, 500, 500, 60);
+    ClipperFileIO.OpenFileWithDefaultApp(filename);
+  }
+} //end Application
+//namespace
