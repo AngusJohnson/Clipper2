@@ -30,7 +30,6 @@ public enum EndType
 
 public class ClipperOffset
 {
-
   private class Group
   {
     internal Paths64 inPaths;
@@ -196,7 +195,6 @@ public class ClipperOffset
       c.Execute(ClipType.Union, fillRule, _solutionTree);
     else
       c.Execute(ClipType.Union, fillRule, _solution);
-
   }
 
   public void Execute(double delta, Paths64 solution)
@@ -213,7 +211,6 @@ public class ClipperOffset
     _solution.Clear();
     ExecuteInternal(delta);
   }
-
 
   [MethodImpl(MethodImplOptions.AggressiveInlining)]
   internal static PointD GetUnitNormal(Point64 pt1, Point64 pt2)
@@ -293,7 +290,6 @@ public class ClipperOffset
     double inverseHypot = 1 / h;
     return new PointD(vec.x * inverseHypot, vec.y * inverseHypot);
   }
-
 
   [MethodImpl(MethodImplOptions.AggressiveInlining)]
   private static PointD GetAvgUnitVector(PointD vec1, PointD vec2)
@@ -748,7 +744,6 @@ public class ClipperOffset
           break;
       }
 
-
       BuildNormals(p);
       switch (_endType)
       {
@@ -765,5 +760,3 @@ public class ClipperOffset
     }
   }
 }
-
-// namespace

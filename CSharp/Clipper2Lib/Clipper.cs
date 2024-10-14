@@ -15,7 +15,6 @@ using System.Runtime.CompilerServices;
 
 namespace Clipper2Lib;
 
-
 // PRE-COMPILER CONDITIONAL ...
 // USINGZ: For user defined Z-coordinates. See Clipper.SetZ
 
@@ -361,7 +360,6 @@ public static class Clipper
     return result;
   }
 
-
   [MethodImpl(MethodImplOptions.AggressiveInlining)]
   public static Rect64 ScaleRect(RectD rec, double scale)
   {
@@ -649,7 +647,6 @@ public static class Clipper
   }
 #endif
 
-
   [MethodImpl(MethodImplOptions.AggressiveInlining)]
   public static double Sqr(double val)
   {
@@ -785,7 +782,6 @@ public static class Clipper
     return result;
   }
 
-
   [MethodImpl(MethodImplOptions.AggressiveInlining)]
   public static double PerpendicDistFromLineSqrd(PointD pt, PointD line1, PointD line2)
   {
@@ -905,7 +901,6 @@ public static class Clipper
       result.Add(RamerDouglasPeucker(path, epsilon));
     return result;
   }
-
 
   [MethodImpl(MethodImplOptions.AggressiveInlining)]
   private static int GetNext(int current, int high, ref bool[] flags)
@@ -1231,6 +1226,4 @@ public static class Clipper
     Console.WriteLine("Polytree Root");
     foreach (PolyPathD child in polytree) { ShowPolyPathStructure(child, 1); }
   }
-
 } // Clipper
-  // namespace

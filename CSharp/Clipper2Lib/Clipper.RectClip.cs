@@ -326,7 +326,6 @@ public class RectClip64
     return InternalClipper.GetSegmentIntersectPt(p1, p2, p3, p4, out ip);
   }
 
-
   static protected bool GetIntersection(Path64 rectPath, Point64 p, Point64 p2, ref Location loc, out Point64 ip)
   {
     // gets the pt of intersection between rectPath and segment(p, p2) that's closest to 'p'
@@ -543,7 +542,6 @@ public class RectClip64
           } while (prev != loc);
           crossingLoc = prevCrossLoc; // still not crossed 
         }
-
         else if (prev != Location.inside && prev != loc)
         {
           bool isClockw = IsClockwise(prev, loc, prevPt, path[i], mp_);
@@ -948,7 +946,6 @@ public class RectClip64
     }
     return result;
   }
-
 } // RectClip class
 
 public class RectClipLines64 : RectClip64
@@ -1059,7 +1056,4 @@ public class RectClipLines64 : RectClip64
     } //while i <= highI
     ///////////////////////////////////////////////////      
   } // RectClipLines.ExecuteInternal
-
 } // RectClipLines class
-
-// namespace

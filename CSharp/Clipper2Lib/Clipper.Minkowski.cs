@@ -83,7 +83,4 @@ public static class Minkowski
       Clipper.ScalePath64(path, scale), false, isClosed), FillRule.NonZero);
     return Clipper.ScalePathsD(tmp, 1 / scale);
   }
-
 }
-
-// namespace

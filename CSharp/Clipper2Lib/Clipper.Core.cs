@@ -159,7 +159,6 @@ public struct Point64
   {
     return HashCode.Combine(X, Y); //#599
   }
-
 }
 
 public struct PointD
@@ -285,7 +284,6 @@ public struct PointD
   {
     return HashCode.Combine(x, y); //#599
   }
-
 }
 
 public struct Rect64
@@ -380,7 +378,6 @@ public struct Rect64
     };
     return result;
   }
-
 }
 
 public struct RectD
@@ -469,7 +466,6 @@ public struct RectD
     };
     return result;
   }
-
 }
 
 public class Path64 : List<Point64>
@@ -692,7 +688,6 @@ public static class InternalClipper
     return (long) Math.Round(val, MidpointRounding.AwayFromZero);
   }
 
-
   [MethodImpl(MethodImplOptions.AggressiveInlining)]
   public static bool GetSegmentIntersectPt(Point64 ln1a,
     Point64 ln1b, Point64 ln2a, Point64 ln2b, out Point64 ip)
@@ -827,7 +822,4 @@ public static class InternalClipper
 
     return val == 0 ? PointInPolygonResult.IsOutside : PointInPolygonResult.IsInside;
   }
-
 } // InternalClipper
-
-// namespace

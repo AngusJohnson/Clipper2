@@ -14,7 +14,6 @@ using System.Runtime.CompilerServices;
 
 namespace Clipper2Lib;
 
-
 // Vertex: a pre-clipping data structure. It is used to separate polygons
 // into ascending and descending 'bounds' (or sides) that start at local
 // minima and ascend to a local maxima, before descending again.
@@ -132,7 +131,6 @@ internal class OutPt
 
 internal enum JoinWith { None, Left, Right }
 internal enum HorzPosition { Bottom, Middle, Top }
-
 
 // OutRec: path data structure for clipping solutions
 internal class OutRec
@@ -539,7 +537,6 @@ public class ClipperBase
   {
     ae.dx = GetDx(ae.bot, ae.top);
   }
-
 
   [MethodImpl(MethodImplOptions.AggressiveInlining)]
   private static Vertex NextVertex(Active ae)
@@ -1438,7 +1435,6 @@ public class ClipperBase
   [MethodImpl(MethodImplOptions.AggressiveInlining)]
   private static OutPt AddOutPt(Active ae, Point64 pt)
   {
-
     // Outrec.OutPts: a circular doubly-linked-list of POutPt where ...
     // opFront[.Prev]* ~~~> opBack & opBack == opFront.Next
     OutRec outrec = ae.outrec!;
@@ -2218,7 +2214,6 @@ private void DoHorizontal(Active horz)
 
         if (IsHotEdge(horz))
           AddToHorzSegList(GetLastOp(horz));
-
       } // we've reached the end of this horizontal
 
       // check if we've finished looping
@@ -2248,7 +2243,6 @@ private void DoHorizontal(Active horz)
 
       isLeftToRight = ResetHorzDirection(horz,
         vertex_max, out leftX, out rightX);
-
     } // end for loop and end of (possible consecutive) horizontals
 
     if (IsHotEdge(horz)) 
@@ -2437,7 +2431,6 @@ private void DoHorizontal(Active horz)
     } while (op != outrec.pts);
   }
 
-
   [MethodImpl(MethodImplOptions.AggressiveInlining)]
   private static bool SetHorzSegHeadingForward(HorzSegment hs, OutPt opP, OutPt opN)
   {
@@ -2572,7 +2565,6 @@ private void DoHorizontal(Active horz)
     } 
   }
 
-
   [MethodImpl(MethodImplOptions.AggressiveInlining)]
   private static Path64 GetCleanPath(OutPt op)
   {
@@ -2596,7 +2588,6 @@ private void DoHorizontal(Active horz)
     }
     return result;
   }
-
 
   private static PointInPolygonResult PointInOpPolygon(Point64 pt, OutPt op)
   {
@@ -2761,7 +2752,6 @@ private void DoHorizontal(Active horz)
       }
     }
   }
-
 
   [MethodImpl(MethodImplOptions.AggressiveInlining)]
   private static bool PtsReallyClose(Point64 pt1, Point64 pt2)
@@ -3100,7 +3090,6 @@ private void DoHorizontal(Active horz)
     }
   }
 
-
   [MethodImpl(MethodImplOptions.AggressiveInlining)]
   public Rect64 GetBounds()
   {
@@ -3119,9 +3108,7 @@ private void DoHorizontal(Active horz)
     }
     return bounds.IsEmpty() ? new Rect64(0, 0, 0, 0) : bounds;
   }
-
 } // ClipperBase class
-
 
 public class Clipper64 : ClipperBase
 {
@@ -3437,7 +3424,6 @@ public abstract class PolyPathBase : IEnumerable
         return _nodes[position];
       }
     }
-
   }
 
   public bool IsHole => GetIsHole();
@@ -3498,7 +3484,6 @@ public abstract class PolyPathBase : IEnumerable
         result += _childs[i].ToStringInternal(i, 1);
     return result + '\n';
   }
-
 } // PolyPathBase class
 
 public class PolyPath64 : PolyPathBase
@@ -3532,7 +3517,6 @@ public class PolyPath64 : PolyPathBase
       throw new InvalidOperationException();
     return (PolyPath64) _childs[index];
   }
-
 
   [MethodImpl(MethodImplOptions.AggressiveInlining)]
   public double Area()
@@ -3607,4 +3591,3 @@ public class ClipperLibException : Exception
 {
   public ClipperLibException(string description) : base(description) {}
 }
-// namespace
