@@ -2842,7 +2842,7 @@ var
   Y: Int64;
   e: PActive;
 begin
-  if clipType = ctNone then Exit;
+  if clipType = ctNoClip then Exit;
   FFillRule := fillRule;
   FClipType := clipType;
   Reset;
