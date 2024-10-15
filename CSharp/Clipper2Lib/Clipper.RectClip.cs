@@ -11,18 +11,14 @@ using System.Runtime.CompilerServices;
 
 namespace Clipper2Lib;
 
-public class OutPt2
+public class OutPt2(Point64 pt)
 {
   public OutPt2? next;
   public OutPt2? prev;
 
-  public Point64 pt;
+  public Point64 pt = pt;
   public int ownerIdx;
   public List<OutPt2?>? edge;
-  public OutPt2(Point64 pt)
-  {
-    this.pt = pt;
-  }
 }
 
 public class RectClip64
@@ -85,7 +81,7 @@ public class RectClip64
 
   private static bool Path1ContainsPath2(Path64 path1, Path64 path2)
   {
-    // nb: occasionally, due to rounding, path1 may 
+    // nb: occasionally, due to rounding, path1 may
     // appear (momentarily) inside or outside path2.
     var ioCount = 0;
     foreach (var pt in path2)
@@ -540,7 +536,7 @@ public class RectClip64
             startLocs.Add(prev);
             prev = GetAdjacentLocation(prev, isClockw);
           } while (prev != loc);
-          crossingLoc = prevCrossLoc; // still not crossed 
+          crossingLoc = prevCrossLoc; // still not crossed
         }
         else if (prev != Location.inside && prev != loc)
         {
@@ -576,7 +572,7 @@ public class RectClip64
       }
       else if (prev != Location.inside)
       {
-        // passing right through rect. 'ip' here will be the second 
+        // passing right through rect. 'ip' here will be the second
         // intersect pt but we'll also need the first intersect pt (ip2)
         loc = prev;
         GetIntersection(rectPath_,
@@ -985,7 +981,7 @@ public class RectClipLines64 : RectClip64
   {
     var result = new Path64();
     if (op == null || op == op.next) return result;
-    op = op.next; // starting at path beginning 
+    op = op.next; // starting at path beginning
     result.Add(op!.pt);
     var op2 = op.next!;
     while (op2 != op)
@@ -1042,7 +1038,7 @@ public class RectClipLines64 : RectClip64
       }
       else if (prev != Location.inside)
       {
-        // passing right through rect. 'ip' here will be the second 
+        // passing right through rect. 'ip' here will be the second
         // intersect pt but we'll also need the first intersect pt (ip2)
         crossingLoc = prev;
         GetIntersection(rectPath_, prevPt, path[i], ref crossingLoc, out var ip2);
@@ -1054,6 +1050,6 @@ public class RectClipLines64 : RectClip64
         Add(ip);
       }
     } //while i <= highI
-    ///////////////////////////////////////////////////      
+    ///////////////////////////////////////////////////
   } // RectClipLines.ExecuteInternal
 } // RectClipLines class

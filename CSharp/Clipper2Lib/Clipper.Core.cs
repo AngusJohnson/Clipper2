@@ -551,8 +551,7 @@ public static class InternalClipper
   internal const double floatingPointTolerance = 1E-12;
   internal const double defaultMinimumEdgeLength = 0.1;
 
-  private static readonly string
-    precision_range_error = "Error: Precision is out of range.";
+  private const string precision_range_error = "Error: Precision is out of range.";
 
   public static double CrossProduct(Point64 pt1, Point64 pt2, Point64 pt3)
   {

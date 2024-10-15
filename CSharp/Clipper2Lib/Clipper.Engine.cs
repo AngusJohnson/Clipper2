@@ -35,34 +35,19 @@ internal enum VertexFlags
   LocalMin = 8
 }
 
-internal class Vertex
+internal class Vertex(Point64 pt, VertexFlags flags, Vertex? prev)
 {
-  public readonly Point64 pt;
-  public Vertex? next;
-  public Vertex? prev;
-  public VertexFlags flags;
-
-  public Vertex(Point64 pt, VertexFlags flags, Vertex? prev)
-  {
-    this.pt = pt;
-    this.flags = flags;
-    next = null;
-    this.prev = prev;
-  }
+  public readonly Point64 pt = pt;
+  public Vertex? next = null;
+  public Vertex? prev = prev;
+  public VertexFlags flags = flags;
 }
 
-internal readonly struct LocalMinima
+internal readonly struct LocalMinima(Vertex vertex, PathType polytype, bool isOpen = false)
 {
-  public readonly Vertex vertex;
-  public readonly PathType polytype;
-  public readonly bool isOpen;
-
-  public LocalMinima(Vertex vertex, PathType polytype, bool isOpen = false)
-  {
-    this.vertex = vertex;
-    this.polytype = polytype;
-    this.isOpen = isOpen;
-  }
+  public readonly Vertex vertex = vertex;
+  public readonly PathType polytype = polytype;
+  public readonly bool isOpen = isOpen;
 
   public static bool operator ==(LocalMinima lm1, LocalMinima lm2)
   {
@@ -141,17 +126,11 @@ internal class OutRec
   public OutRec? recursiveSplit;
 }
 
-internal class HorzSegment
+internal class HorzSegment(OutPt op)
 {
-  public OutPt? leftOp;
-  public OutPt? rightOp;
-  public bool leftToRight;
-  public HorzSegment(OutPt op)
-  {
-    leftOp = op;
-    rightOp = null;
-    leftToRight = true;
-  }
+  public OutPt? leftOp = op;
+  public OutPt? rightOp = null;
+  public bool leftToRight = true;
 }
 
 internal class HorzJoin(OutPt ltor, OutPt rtol)
@@ -376,7 +355,7 @@ public class ClipperBase
   {
     return pt1.X == pt2.X && pt1.Y == pt2.Y;
   }
-  
+
   private void SetZ(Active e1, Active e2, ref Point64 intersectPt)
   {
     if (_zCallback == null) return;
@@ -612,7 +591,7 @@ public class ClipperBase
   [MethodImpl(MethodImplOptions.AggressiveInlining)]
   private static void SwapOutrecs(Active ae1, Active ae2)
   {
-    var or1 = ae1.outrec; // at least one edge has 
+    var or1 = ae1.outrec; // at least one edge has
     var or2 = ae2.outrec; // an assigned outrec
     if (or1 == or2)
     {
@@ -2119,7 +2098,7 @@ public class ClipperBase
 #if USINGZ
       var op = AddOutPt(horz, new Point64(horz.curX, Y, horz.bot.Z));
 #else
-      OutPt op = AddOutPt(horz, new Point64(horz.curX, Y));
+      var op = AddOutPt(horz, new Point64(horz.curX, Y));
 #endif
       AddToHorzSegList(op);
     }
@@ -2673,8 +2652,7 @@ public class ClipperBase
   {
     if (fromOr.splits == null) return;
     toOr.splits ??= [];
-    foreach (var i in fromOr.splits)
-      toOr.splits.Add(i);
+    toOr.splits.AddRange(fromOr.splits);
     fromOr.splits = null;
   }
 
@@ -3186,9 +3164,10 @@ public class Clipper64 : ClipperBase
   }
 
 #if USINGZ
-  public ZCallback64? ZCallback {
+  public ZCallback64? ZCallback
+  {
     get { return _zCallback; }
-    set { _zCallback = value; } 
+    set { _zCallback = value; }
   }
 #endif
 
@@ -3377,16 +3356,11 @@ public abstract class PolyPathBase : IEnumerable
   {
     return new NodeEnumerator(_childs);
   }
-  private class NodeEnumerator : IEnumerator
+  [method: MethodImpl(MethodImplOptions.AggressiveInlining)]
+  private class NodeEnumerator(List<PolyPathBase> nodes) : IEnumerator
   {
     private int position = -1;
-    private readonly List<PolyPathBase> _nodes;
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public NodeEnumerator(List<PolyPathBase> nodes)
-    {
-      _nodes = new List<PolyPathBase>(nodes);
-    }
+    private readonly List<PolyPathBase> _nodes = new List<PolyPathBase>(nodes);
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public bool MoveNext()
@@ -3461,7 +3435,7 @@ public abstract class PolyPathBase : IEnumerable
 
   public override string ToString()
   {
-    if (Level > 0) return ""; //only accept tree root 
+    if (Level > 0) return ""; //only accept tree root
     var plural = "s";
     if (_childs.Count == 1) plural = "";
     var result = $"Polytree with {_childs.Count} polygon{plural}.\n";
@@ -3472,11 +3446,9 @@ public abstract class PolyPathBase : IEnumerable
   }
 } // PolyPathBase class
 
-public class PolyPath64 : PolyPathBase
+public class PolyPath64(PolyPathBase? parent = null) : PolyPathBase(parent)
 {
   public Path64? Polygon { get; private set; } // polytree root's polygon == null
-
-  public PolyPath64(PolyPathBase? parent = null) : base(parent) { }
 
   [MethodImpl(MethodImplOptions.AggressiveInlining)]
   public override PolyPathBase AddChild(Path64 p)
@@ -3566,7 +3538,7 @@ public class PolyPathD : PolyPathBase
   }
 }
 
-public class PolyTree64 : PolyPath64 { }
+public class PolyTree64 : PolyPath64;
 
 public class PolyTreeD : PolyPathD
 {

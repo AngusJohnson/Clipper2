@@ -20,10 +20,10 @@ namespace Clipper2Lib;
 
 public static class Clipper
 {
-  private static Rect64 invalidRect64 = new Rect64(false);
+  private static Rect64 invalidRect64 = new(false);
   public static Rect64 InvalidRect64 => invalidRect64;
 
-  private static RectD invalidRectD = new RectD(false);
+  private static RectD invalidRectD = new(false);
   public static RectD InvalidRectD => invalidRectD;
 
   public static Paths64 Intersect(Paths64 subject, Paths64 clip, FillRule fillRule)
@@ -381,7 +381,7 @@ public static class Clipper
     foreach (var pt in path)
       result.Add(new Point64(pt.X * scale, pt.Y * scale, pt.Z));
 #else
-    foreach (Point64 pt in path)
+    foreach (var pt in path)
       result.Add(new Point64(pt.X * scale, pt.Y * scale));
 #endif
     return result;
@@ -634,7 +634,7 @@ public static class Clipper
     var len = arr.Length / 3;
     var p = new Path64(len);
     for (var i = 0; i < len; i++)
-      p.Add(new Point64(arr[i * 3], arr[i * 3 + 1], arr[i * 3 + 2]));
+      p.Add(new Point64(arr[i * 3], arr[(i * 3) + 1], arr[(i * 3) + 2]));
     return p;
   }
   public static PathD MakePathZ(double[] arr)
@@ -642,7 +642,7 @@ public static class Clipper
     var len = arr.Length / 3;
     var p = new PathD(len);
     for (var i = 0; i < len; i++)
-      p.Add(new PointD(arr[i * 3], arr[i * 3 + 1], (long)arr[i * 3 + 2]));
+      p.Add(new PointD(arr[i * 3], arr[(i * 3) + 1], (long)arr[(i * 3) + 2]));
     return p;
   }
 #endif

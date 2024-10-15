@@ -330,8 +330,8 @@ public class ClipperOffset
   private Point64 GetPerpendic(Point64 pt, PointD norm)
   {
 #if USINGZ
-    return new Point64(pt.X + norm.X * _groupDelta,
-      pt.Y + norm.Y * _groupDelta, pt.Z);
+    return new Point64(pt.X + (norm.X * _groupDelta),
+      pt.Y + (norm.Y * _groupDelta), pt.Z);
 #else
     return new Point64(pt.X + (norm.X * _groupDelta),
       pt.Y + (norm.Y * _groupDelta));
@@ -342,8 +342,8 @@ public class ClipperOffset
   private PointD GetPerpendicD(Point64 pt, PointD norm)
   {
 #if USINGZ
-    return new PointD(pt.X + norm.X * _groupDelta,
-      pt.Y + norm.Y * _groupDelta, pt.Z);
+    return new PointD(pt.X + (norm.X * _groupDelta),
+      pt.Y + (norm.Y * _groupDelta), pt.Z);
 #else
     return new PointD(pt.X + (norm.X * _groupDelta),
       pt.Y + (norm.Y * _groupDelta));
@@ -359,11 +359,11 @@ public class ClipperOffset
       var absDelta = Math.Abs(_groupDelta);
 #if USINGZ
       pt1 = new Point64(
-        path[j].X - absDelta * _normals[j].X, 
-        path[j].Y - absDelta * _normals[j].Y, path[j].Z);
+        path[j].X - (absDelta * _normals[j].X),
+        path[j].Y - (absDelta * _normals[j].Y), path[j].Z);
       pt2 = new Point64(
-        path[j].X + absDelta * _normals[j].X, 
-        path[j].Y + absDelta * _normals[j].Y, path[j].Z);
+        path[j].X + (absDelta * _normals[j].X),
+        path[j].Y + (absDelta * _normals[j].Y), path[j].Z);
 #else
       pt1 = new Point64(
         path[j].X - (absDelta * _normals[j].X),
@@ -377,11 +377,11 @@ public class ClipperOffset
     {
 #if USINGZ
       pt1 = new Point64(
-        path[j].X + _groupDelta * _normals[k].X,
-        path[j].Y + _groupDelta * _normals[k].Y, path[j].Z);
+        path[j].X + (_groupDelta * _normals[k].X),
+        path[j].Y + (_groupDelta * _normals[k].Y), path[j].Z);
       pt2 = new Point64(
-        path[j].X + _groupDelta * _normals[j].X,
-        path[j].Y + _groupDelta * _normals[j].Y, path[j].Z);
+        path[j].X + (_groupDelta * _normals[j].X),
+        path[j].Y + (_groupDelta * _normals[j].Y), path[j].Z);
 #else
       pt1 = new Point64(
         path[j].X + (_groupDelta * _normals[k].X),
@@ -429,7 +429,7 @@ public class ClipperOffset
       var pt = IntersectPoint(pt1, pt2, pt3, pt4);
 #if USINGZ
       pt.Z = ptQ.Z;
-#endif    
+#endif
       //get the second intersect point through reflecion
       pathOut.Add(new Point64(ReflectPoint(pt, ptQ)));
       pathOut.Add(new Point64(pt));
@@ -453,8 +453,8 @@ public class ClipperOffset
     var q = _groupDelta / (cosA + 1);
 #if USINGZ
     pathOut.Add(new Point64(
-        path[j].X + (_normals[k].X + _normals[j].X) * q,
-        path[j].Y + (_normals[k].Y + _normals[j].Y) * q,
+        path[j].X + ((_normals[k].X + _normals[j].X) * q),
+        path[j].Y + ((_normals[k].Y + _normals[j].Y) * q),
         path[j].Z));
 #else
     pathOut.Add(new Point64(
@@ -543,9 +543,9 @@ public class ClipperOffset
     if (cosA > -0.999 && (sinA * _groupDelta < 0)) // test for concavity first (#593)
     {
       // is concave
-      // by far the simplest way to construct concave joins, especially those joining very 
-      // short segments, is to insert 3 points that produce negative regions. These regions 
-      // will be removed later by the finishing union operation. This is also the best way 
+      // by far the simplest way to construct concave joins, especially those joining very
+      // short segments, is to insert 3 points that produce negative regions. These regions
+      // will be removed later by the finishing union operation. This is also the best way
       // to ensure that path reversals (ie over-shrunk paths) are removed.
       pathOut.Add(GetPerpendic(path[j], _normals[k]));
 
@@ -556,7 +556,7 @@ public class ClipperOffset
     }
     else if ((cosA > 0.999) && (_joinType != JoinType.Round))
     {
-      // almost straight - less than 2.5 degree (#424, #482, #526 & #724) 
+      // almost straight - less than 2.5 degree (#424, #482, #526 & #724)
       DoMiter(path, j, k, cosA);
     }
     else switch (_joinType)
@@ -665,7 +665,7 @@ public class ClipperOffset
   {
     if (group.endType == EndType.Polygon)
     {
-      // a straight path (2 points) can now also be 'polygon' offset 
+      // a straight path (2 points) can now also be 'polygon' offset
       // where the ends will be treated as (180 deg.) joins
       if (group.lowestPathIdx < 0) _delta = Math.Abs(_delta);
       _groupDelta = (group.pathsReversed) ? -_delta : _delta;
@@ -722,7 +722,7 @@ public class ClipperOffset
               var steps = (int) Math.Ceiling(_stepsPerRad * 2 * Math.PI);
               pathOut = Clipper.Ellipse(pt, absDelta, absDelta, steps);
 #if USINGZ
-          pathOut = InternalClipper.SetZ(pathOut, pt.Z);
+              pathOut = InternalClipper.SetZ(pathOut, pt.Z);
 #endif
             }
             else
@@ -731,11 +731,11 @@ public class ClipperOffset
               var r = new Rect64(pt.X - d, pt.Y - d, pt.X + d, pt.Y + d);
               pathOut = r.AsPath();
 #if USINGZ
-          pathOut = InternalClipper.SetZ(pathOut, pt.Z);
+              pathOut = InternalClipper.SetZ(pathOut, pt.Z);
 #endif
             }
             _solution.Add(pathOut);
-            continue; // end of offsetting a single point 
+            continue; // end of offsetting a single point
           }
         case 2 when group.endType == EndType.Joined:
           _endType = (group.joinType == JoinType.Round) ?

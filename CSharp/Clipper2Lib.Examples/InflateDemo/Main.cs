@@ -38,7 +38,7 @@ public static class Application
     p.Clear();
 
     //rectangle offset - both squared and rounded
-    //nb: using the ClipperOffest class directly here to control 
+    //nb: using the ClipperOffest class directly here to control
     //different join types within the same offset operation
     p.Add(Clipper.MakePath(new[] { 100, 0, 340, 0, 340, 200, 100, 200, 100, 0 }));
     SvgUtils.AddOpenSubject(svg, p);
@@ -71,7 +71,7 @@ public static class Application
     {
       // and don't forget to scale the delta offset
       pd = Clipper.InflatePaths(pd, -2.5, JoinType.Round, EndType.Polygon);
-      // SimplifyPaths - is not essential but it not only 
+      // SimplifyPaths - is not essential but it not only
       // speeds up the loop but it also tidies the result
       pd = Clipper.SimplifyPaths(pd, 0.25);
       solution.AddRange(pd);
