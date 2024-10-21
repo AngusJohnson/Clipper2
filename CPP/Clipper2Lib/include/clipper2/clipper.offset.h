@@ -19,12 +19,14 @@ enum class JoinType { Square, Bevel, Round, Miter };
 //Square : Joins are 'squared' at exactly the offset distance (more complex code)
 //Bevel  : Similar to Square, but the offset distance varies with angle (simple code & faster)
 
-enum class EndType {Polygon, Joined, Butt, Square, Round};
-//Butt   : offsets both sides of a path, with square blunt ends
-//Square : offsets both sides of a path, with square extended ends
-//Round  : offsets both sides of a path, with round extended ends
-//Joined : offsets both sides of a path, with joined ends
-//Polygon: offsets only one side of a closed path
+enum class EndType {Polygon, Joined, Butt, Square, Round, ButtLeft, ButtRight};
+//Butt     : offsets both sides of a path, with square blunt ends
+//Square   : offsets both sides of a path, with square extended ends
+//Round    : offsets both sides of a path, with round extended ends
+//Joined   : offsets both sides of a path, with joined ends
+//Polygon  : offsets only one side of a closed path
+//ButtLeft : offsets left side of a path with square blunt ends
+//ButtRight: offsets right side of a path with square blunt ends
 
 typedef std::function<double(const Path64& path, const PathD& path_normals, size_t curr_idx, size_t prev_idx)> DeltaCallback64;
 

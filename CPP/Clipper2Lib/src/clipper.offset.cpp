@@ -319,25 +319,53 @@ void ClipperOffset::OffsetPoint(Group& group, const Path64& path, size_t j, size
 
 	if (cos_a > -0.999 && (sin_a * group_delta_ < 0)) // test for concavity first (#593)
 	{
-		// is concave
-		// by far the simplest way to construct concave joins, especially those joining very 
-		// short segments, is to insert 3 points that produce negative regions. These regions 
-		// will be removed later by the finishing union operation. This is also the best way 
-		// to ensure that path reversals (ie over-shrunk paths) are removed.
+		// in case of EndType::ButtLeft the rectangles, formed by a one-sided offset,
+		// will cause artifacts if the angle is sharper then 90 degree.
+		// to avoid these artifacts calculate the intersection between between the segments 
+		// of the one-sided offset.
+		const size_t l = k > j ? j - 1 : j + 1; // k is always j + 1 or j - 1, l is the opposite 
+		const bool intersect = 
+			end_type_ == EndType::ButtLeft // one-sided offset
+			&& cos_a < 0                   // < 90 degre
+			&& !path_out.empty()           // safety check, can this never happen?
+			&& l < path.size();            // safety check, can this never happen?
+
+		if (!intersect)
+		{
+			// is concave
+			// by far the simplest way to construct concave joins, especially those joining very 
+			// short segments, is to insert 3 points that produce negative regions. These regions 
+			// will be removed later by the finishing union operation. This is also the best way 
+			// to ensure that path reversals (ie over-shrunk paths) are removed.
 #ifdef USINGZ
-		path_out.push_back(Point64(GetPerpendic(path[j], norms[k], group_delta_), path[j].z));
+			path_out.push_back(Point64(GetPerpendic(path[j], norms[k], group_delta_), path[j].z));
 #else
-		path_out.push_back(GetPerpendic(path[j], norms[k], group_delta_));
+			path_out.push_back(GetPerpendic(path[j], norms[k], group_delta_));
 #endif
-		
-		// when the angle is almost flat (cos_a ~= 1), it's safe to skip this middle point
-		if (cos_a < 0.999) path_out.push_back(path[j]); // (#405, #873)
+
+			// when the angle is almost flat (cos_a ~= 1), it's safe to skip this middle point
+			if (cos_a < 0.999) path_out.push_back(path[j]); // (#405, #873)
 
 #ifdef USINGZ
-		path_out.push_back(Point64(GetPerpendic(path[j], norms[j], group_delta_), path[j].z));
+			path_out.push_back(Point64(GetPerpendic(path[j], norms[j], group_delta_), path[j].z));
 #else
-		path_out.push_back(GetPerpendic(path[j], norms[j], group_delta_));
+			path_out.push_back(GetPerpendic(path[j], norms[j], group_delta_));
 #endif
+		}
+		else // point of intersection for one-sided offset
+		{
+			// calculate intersection point between the two line segments
+			// shifted in the offset direction at current point.
+			const PointD pt1a(path_out.back());
+			const PointD pt1b(GetPerpendic(path[j], norms[k], group_delta_));
+			const PointD pt2a(GetPerpendic(path[j], norms[j], group_delta_));
+			const PointD pt2b(GetPerpendic(path[l], norms[j], group_delta_));
+
+			PointD pt;
+			GetSegmentIntersectPt(pt1a, pt1b, pt2a, pt2b, pt);
+			
+			path_out.push_back(Point64(pt));
+		}
 	}
 	else if (cos_a > 0.999 && join_type_ != JoinType::Round)
 	{
@@ -385,8 +413,10 @@ void ClipperOffset::OffsetOpenPath(Group& group, const Path64& path)
 {
 	// do the line start cap
 	if (deltaCallback64_) group_delta_ = deltaCallback64_(path, norms, 0, 0);
+	
+	const double abs_group_delta = std::fabs(group_delta_);
 
-	if (std::fabs(group_delta_) <= floating_point_tolerance)
+	if (abs_group_delta <= floating_point_tolerance)
 		path_out.push_back(path[0]);
 	else
 	{
@@ -398,6 +428,11 @@ void ClipperOffset::OffsetOpenPath(Group& group, const Path64& path)
 		case EndType::Round:
 			DoRound(path, 0, 0, PI);
 			break;
+		case EndType::ButtRight:
+			path_out.push_back(Point64(GetPerpendicD(path[0], norms[0], abs_group_delta)));
+			break;
+		case EndType::ButtLeft:
+			break;
 		default:
 			DoSquare(path, 0, 0);
 			break;
@@ -405,20 +440,27 @@ void ClipperOffset::OffsetOpenPath(Group& group, const Path64& path)
 	}
 
 	size_t highI = path.size() - 1;
-	// offset the left side going forward
-	for (Path64::size_type j = 1, k = 0; j < highI; k = j, ++j)
-		OffsetPoint(group, path, j, k);
-
-	// reverse normals
-	for (size_t i = highI; i > 0; --i)
-		norms[i] = PointD(-norms[i - 1].x, -norms[i - 1].y);
-	norms[0] = norms[highI];
+	
+	if (end_type_ != EndType::ButtLeft)
+	{
+		// offset the left side going forward
+		for (Path64::size_type j = 1, k = 0; j < highI; k = j, ++j)
+			OffsetPoint(group, path, j, k);
+	}
+	
+	if (end_type_ != EndType::ButtRight)
+	{
+		// reverse normals
+		for (size_t i = highI; i > 0; --i)
+			norms[i] = PointD(-norms[i - 1].x, -norms[i - 1].y);
+		norms[0] = norms[highI];
+	}
 
 	// do the line end cap
 	if (deltaCallback64_)
 		group_delta_ = deltaCallback64_(path, norms, highI, highI);
 
-	if (std::fabs(group_delta_) <= floating_point_tolerance)
+	if (abs_group_delta <= floating_point_tolerance)
 		path_out.push_back(path[highI]);
 	else
 	{
@@ -430,14 +472,36 @@ void ClipperOffset::OffsetOpenPath(Group& group, const Path64& path)
 		case EndType::Round:
 			DoRound(path, highI, highI, PI);
 			break;
+		case EndType::ButtRight:
+			path_out.push_back(Point64(GetPerpendicD(path[highI], norms[1], abs_group_delta)));
+			break;
+		case EndType::ButtLeft:
+			path_out.push_back(Point64(GetPerpendicD(path[highI], norms[highI], abs_group_delta)));
+			break;
 		default:
 			DoSquare(path, highI, highI);
 			break;
 		}
 	}
+	
+	if (end_type_ != EndType::ButtRight)
+	{
+		for (size_t j = highI - 1, k = highI; j > 0; k = j, --j)
+			OffsetPoint(group, path, j, k);
+	}
+	
+	if (end_type_ == EndType::ButtLeft)
+	{
+		path_out.reserve(path_out.size() + 1 + path.size());
+		path_out.push_back(Point64(GetPerpendicD(path[0], norms[1], abs_group_delta)));
+		path_out.insert(path_out.begin(), path.begin(), path.end());
+	}
 
-	for (size_t j = highI -1, k = highI; j > 0; k = j, --j)
-		OffsetPoint(group, path, j, k);
+	if(end_type_ == EndType::ButtRight)
+	{
+		path_out.insert(path_out.end(), path.rbegin(), path.rend());
+	}
+
 	solution->push_back(path_out);
 }
 
