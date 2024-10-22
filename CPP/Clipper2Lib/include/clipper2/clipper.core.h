@@ -356,7 +356,7 @@ namespace Clipper2Lib
       bottom *= scale;
     }
 
-    bool IsEmpty() const { return bottom <= top || right <= left; };
+    bool IsEmpty() const { return top <= bottom || right <= left; };
 
     bool Intersects(const Rect<T>& rec) const
     {
