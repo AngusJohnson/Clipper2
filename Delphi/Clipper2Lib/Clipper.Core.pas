@@ -2,7 +2,7 @@ unit Clipper.Core;
 
 (*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  17 September 2024                                               *
+* Date      :  22 November 2024                                                *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2024                                         *
 * Purpose   :  Core Clipper Library module                                     *
@@ -18,12 +18,15 @@ uses
   SysUtils, Classes, Math;
 
 type
+{$IFDEF USINGZ}
+    ZType = Int64; // or alternatively, ZType = double
+{$ENDIF}
 
   PPoint64  = ^TPoint64;
   TPoint64  = record
     X, Y: Int64;
 {$IFDEF USINGZ}
-    Z: Int64;
+    Z: ZType;
 {$ENDIF}
   end;
 
@@ -31,7 +34,7 @@ type
   TPointD   = record
     X, Y: double;
 {$IFDEF USINGZ}
-    Z: Int64;
+    Z: ZType;
 {$ENDIF}
   end;
 
@@ -121,6 +124,7 @@ type
     fCount    : integer;
     fCapacity : integer;
     fList     : TPointerList;
+    fSorted   : Boolean;
   protected
     function UnsafeGet(idx: integer): Pointer; // no range checking
     procedure UnsafeSet(idx: integer; val: Pointer);
@@ -130,10 +134,12 @@ type
     destructor Destroy; override;
     procedure Clear; virtual;
     function Add(item: Pointer): integer;
+    procedure DeleteLast;
     procedure Swap(idx1, idx2: integer);
-    procedure Sort(Compare: TListSortCompare);
+    procedure Sort(Compare: TListSortCompareFunc);
     procedure Resize(count: integer);
     property Count: integer read fCount;
+    property Sorted: Boolean read fSorted;
     property Item[idx: integer]: Pointer read UnsafeGet; default;
   end;
 
@@ -186,11 +192,11 @@ function PointsNearEqual(const pt1, pt2: TPointD; distanceSqrd: double): Boolean
   {$IFDEF INLINING} inline; {$ENDIF}
 
 {$IFDEF USINGZ}
-function Point64(const X, Y: Int64; Z: Int64 = 0): TPoint64; overload;
+function Point64(const X, Y: Int64; Z: ZType = 0): TPoint64; overload;
 {$IFDEF INLINING} inline; {$ENDIF}
-function Point64(const X, Y: Double; Z: Int64 = 0): TPoint64; overload;
+function Point64(const X, Y: Double; Z: ZType = 0): TPoint64; overload;
 {$IFDEF INLINING} inline; {$ENDIF}
-function PointD(const X, Y: Double; Z: Int64 = 0): TPointD; overload;
+function PointD(const X, Y: Double; Z: ZType = 0): TPointD; overload;
 {$IFDEF INLINING} inline; {$ENDIF}
 {$ELSE}
 function Point64(const X, Y: Int64): TPoint64; overload; {$IFDEF INLINING} inline; {$ENDIF}
@@ -540,6 +546,7 @@ begin
   fList := nil;
   fCount := 0;
   fCapacity := 0;
+  fSorted := false;
 end;
 //------------------------------------------------------------------------------
 
@@ -555,6 +562,13 @@ begin
   fList[fCount] := item;
   Result := fCount;
   inc(fCount);
+  fSorted := false;
+end;
+//------------------------------------------------------------------------------
+
+procedure TListEx.DeleteLast;
+begin
+  dec(fCount);
 end;
 //------------------------------------------------------------------------------
 
@@ -611,10 +625,11 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-procedure TListEx.Sort(Compare: TListSortCompare);
+procedure TListEx.Sort(Compare: TListSortCompareFunc);
 begin
   if fCount < 2 then Exit;
   QuickSort(FList, 0, fCount - 1, Compare);
+  fSorted := true;
 end;
 //------------------------------------------------------------------------------
 
@@ -654,6 +669,7 @@ begin
   p := fList[idx1];
   fList[idx1] := fList[idx2];
   fList[idx2] := p;
+  fSorted := false;
 end;
 
 //------------------------------------------------------------------------------
@@ -1383,7 +1399,7 @@ end;
 //------------------------------------------------------------------------------
 
 {$IFDEF USINGZ}
-function Point64(const X, Y: Int64; Z: Int64): TPoint64;
+function Point64(const X, Y: Int64; Z: ZType): TPoint64;
 begin
   Result.X := X;
   Result.Y := Y;
@@ -1391,7 +1407,7 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-function Point64(const X, Y: Double; Z: Int64): TPoint64;
+function Point64(const X, Y: Double; Z: ZType): TPoint64;
 begin
   Result.X := Round(X);
   Result.Y := Round(Y);
@@ -1399,7 +1415,7 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-function PointD(const X, Y: Double; Z: Int64): TPointD;
+function PointD(const X, Y: Double; Z: ZType): TPointD;
 begin
   Result.X := X;
   Result.Y := Y;
