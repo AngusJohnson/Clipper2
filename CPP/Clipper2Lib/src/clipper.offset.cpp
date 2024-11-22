@@ -1,6 +1,6 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  24 July 2024                                                    *
+* Date      :  22 November 2024                                                *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2024                                         *
 * Purpose   :  Path Offset (Inflate/Shrink)                                    *
@@ -326,16 +326,11 @@ void ClipperOffset::OffsetPoint(Group& group, const Path64& path, size_t j, size
 		// to ensure that path reversals (ie over-shrunk paths) are removed.
 #ifdef USINGZ
 		path_out.push_back(Point64(GetPerpendic(path[j], norms[k], group_delta_), path[j].z));
-#else
-		path_out.push_back(GetPerpendic(path[j], norms[k], group_delta_));
-#endif
-		
-		// when the angle is almost flat (cos_a ~= 1), it's safe to skip this middle point
-		if (cos_a < 0.999) path_out.push_back(path[j]); // (#405, #873)
-
-#ifdef USINGZ
+		path_out.push_back(path[j]); // (#405, #873, #916)
 		path_out.push_back(Point64(GetPerpendic(path[j], norms[j], group_delta_), path[j].z));
 #else
+		path_out.push_back(GetPerpendic(path[j], norms[k], group_delta_));
+		path_out.push_back(path[j]); // (#405, #873, #916)
 		path_out.push_back(GetPerpendic(path[j], norms[j], group_delta_));
 #endif
 	}
@@ -594,7 +589,8 @@ void ClipperOffset::ExecuteInternal(double delta)
 
 	if (!solution->size()) return;
 
-	bool paths_reversed = CheckReverseOrientation();
+		bool paths_reversed = CheckReverseOrientation();
+
 	//clean up self-intersections ...
 	Clipper64 c;
 	c.PreserveCollinear(false);
@@ -621,6 +617,7 @@ void ClipperOffset::ExecuteInternal(double delta)
 		else
 			c.Execute(ClipType::Union, FillRule::Positive, *solution);
 	}
+
 }
 
 void ClipperOffset::Execute(double delta, Paths64& paths)
