@@ -2,7 +2,7 @@ unit Clipper.Engine;
 
 (*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  27 April 2024                                                   *
+* Date      :  22 November 2024                                                *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2024                                         *
 * Purpose   :  This is the main polygon clipping module                        *
@@ -219,7 +219,7 @@ type
     FSucceeded          : Boolean;
     FReverseSolution    : Boolean;
   {$IFDEF USINGZ}
-    fDefaultZ           : Int64;
+    fDefaultZ           : Ztype;
     fZCallback          : TZCallback64;
   {$ENDIF}
     procedure Reset;
@@ -287,7 +287,7 @@ type
   {$IFDEF USINGZ}
     procedure SetZ( e1, e2: PActive; var intersectPt: TPoint64);
     property  ZCallback : TZCallback64 read fZCallback write fZCallback;
-    property  DefaultZ : Int64 read fDefaultZ write fDefaultZ;
+    property  DefaultZ : Ztype read fDefaultZ write fDefaultZ;
   {$ENDIF}
     property  Succeeded : Boolean read FSucceeded;
   public
@@ -372,8 +372,7 @@ type
     FInvScale: double;
   {$IFDEF USINGZ}
     fZCallback : TZCallbackD;
-    procedure ZCB(const bot1, top1, bot2, top2: TPoint64;
-      var intersectPt: TPoint64);
+    procedure ZCB(const bot1, top1, bot2, top2: TPoint64; var intersectPt: TPoint64);
     procedure CheckCallback;
   {$ENDIF}
   public
@@ -1017,6 +1016,11 @@ begin
   GetMem(v, sizeof(TVertex) * totalVerts);
   vertexList.Add(v);
 
+  {$IF not defined(FPC) and (CompilerVersion <= 26.0)}
+  // Delphi 7-XE5 have a problem with "continue" and the
+  // code analysis, marking "ascending" as "not initialized"
+  ascending := False;
+  {$IFEND}
   for i := 0 to High(paths) do
   begin
     len := Length(paths[i]);
@@ -2559,9 +2563,8 @@ procedure TClipperBase.IntersectEdges(e1, e2: PActive; pt: TPoint64);
 var
   e1WindCnt, e2WindCnt, e1WindCnt2, e2WindCnt2: Integer;
   e3: PActive;
-  resultOp, op2: POutPt;
+  op, op2: POutPt;
 begin
-  resultOp := nil;
   // MANAGE OPEN PATH INTERSECTIONS SEPARATELY ...
   if FHasOpenPaths and (IsOpen(e1) or IsOpen(e2)) then
   begin
@@ -2586,7 +2589,7 @@ begin
     // toggle contribution ...
     if IsHotEdge(e1) then
     begin
-      resultOp := AddOutPt(e1, pt);
+      op := AddOutPt(e1, pt);
       if IsFront(e1) then
         e1.outrec.frontE := nil else
         e1.outrec.backE := nil;
@@ -2610,12 +2613,12 @@ begin
           SetSides(e3.outrec, e3, e1);
         Exit;
       end else
-        resultOp := StartOpenPath(e1, pt);
+        op := StartOpenPath(e1, pt);
     end else
-      resultOp := StartOpenPath(e1, pt);
+      op := StartOpenPath(e1, pt);
 
     {$IFDEF USINGZ}
-    SetZ(e1, e2, resultOp.pt);
+    SetZ(e1, e2, op.pt);
     {$ENDIF}
     Exit;
   end;
@@ -2679,9 +2682,9 @@ begin
     if not (e1WindCnt in [0,1]) or not (e2WindCnt in [0,1]) or
       (not IsSamePolyType(e1, e2) and (fClipType <> ctXor)) then
     begin
-      resultOp := AddLocalMaxPoly(e1, e2, pt);
+      op := AddLocalMaxPoly(e1, e2, pt);
       {$IFDEF USINGZ}
-      if Assigned(Result) then SetZ(e1, e2, Result.pt);
+      if Assigned(op) then SetZ(e1, e2, op.pt);
       {$ENDIF}
 
     end else if IsFront(e1) or (e1.outrec = e2.outrec) then
@@ -2689,10 +2692,10 @@ begin
       // this 'else if' condition isn't strictly needed but
       // it's sensible to split polygons that ony touch at
       // a common vertex (not at common edges).
-      resultOp := AddLocalMaxPoly(e1, e2, pt);
+      op := AddLocalMaxPoly(e1, e2, pt);
       {$IFDEF USINGZ}
       op2 := AddLocalMinPoly(e1, e2, pt);
-      if Assigned(Result) then SetZ(e1, e2, Result.pt);
+      if Assigned(op) then SetZ(e1, e2, op.pt);
       SetZ(e1, e2, op2.pt);
       {$ELSE}
       AddLocalMinPoly(e1, e2, pt);
@@ -2700,10 +2703,10 @@ begin
     end else
     begin
       // can't treat as maxima & minima
-      resultOp := AddOutPt(e1, pt);
+      op := AddOutPt(e1, pt);
       {$IFDEF USINGZ}
       op2 := AddOutPt(e2, pt);
-      SetZ(e1, e2, Result.pt);
+      SetZ(e1, e2, op.pt);
       SetZ(e1, e2, op2.pt);
       {$ELSE}
       AddOutPt(e2, pt);
@@ -2715,17 +2718,17 @@ begin
   // if one or other edge is 'hot' ...
   else if IsHotEdge(e1) then
   begin
-    resultOp := AddOutPt(e1, pt);
+    op := AddOutPt(e1, pt);
     {$IFDEF USINGZ}
-    SetZ(e1, e2, Result.pt);
+    SetZ(e1, e2, op.pt);
     {$ENDIF}
     SwapOutRecs(e1, e2);
   end
   else if IsHotEdge(e2) then
   begin
-    resultOp := AddOutPt(e2, pt);
+    op := AddOutPt(e2, pt);
     {$IFDEF USINGZ}
-    SetZ(e1, e2, Result.pt);
+    SetZ(e1, e2, op.pt);
     {$ENDIF}
     SwapOutRecs(e1, e2);
   end
@@ -2753,32 +2756,32 @@ begin
 
     if not IsSamePolyType(e1, e2) then
     begin
-      resultOp := AddLocalMinPoly(e1, e2, pt, false);
+      op := AddLocalMinPoly(e1, e2, pt, false);
       {$IFDEF USINGZ}
-      SetZ(e1, e2, Result.pt);
+      SetZ(e1, e2, op.pt);
       {$ENDIF}
     end
     else if (e1WindCnt = 1) and (e2WindCnt = 1) then
     begin
-      resultOp := nil;
+      op := nil;
       case FClipType of
         ctIntersection:
           if (e1WindCnt2 <= 0) or (e2WindCnt2 <= 0) then Exit
-          else resultOp := AddLocalMinPoly(e1, e2, pt, false);
+          else op := AddLocalMinPoly(e1, e2, pt, false);
         ctUnion:
           if (e1WindCnt2 <= 0) and (e2WindCnt2 <= 0) then
-            resultOp := AddLocalMinPoly(e1, e2, pt, false);
+            op := AddLocalMinPoly(e1, e2, pt, false);
         ctDifference:
           if ((GetPolyType(e1) = ptClip) and
                 (e1WindCnt2 > 0) and (e2WindCnt2 > 0)) or
               ((GetPolyType(e1) = ptSubject) and
                 (e1WindCnt2 <= 0) and (e2WindCnt2 <= 0)) then
-            resultOp := AddLocalMinPoly(e1, e2, pt, false);
+            op := AddLocalMinPoly(e1, e2, pt, false);
         else // xOr
-            resultOp := AddLocalMinPoly(e1, e2, pt, false);
+            op := AddLocalMinPoly(e1, e2, pt, false);
       end;
       {$IFDEF USINGZ}
-      if assigned(Result) then SetZ(e1, e2, Result.pt);
+      if assigned(op) then SetZ(e1, e2, op.pt);
       {$ENDIF}
     end;
   end;

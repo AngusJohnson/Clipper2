@@ -1,6 +1,6 @@
 ﻿/*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  24 July 2024                                                    *
+* Date      :  22 November 2024                                                *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2024                                         *
 * Purpose   :  Path Offset (Inflate/Shrink)                                    *
@@ -551,10 +551,7 @@ namespace Clipper2Lib
         // will be removed later by the finishing union operation. This is also the best way 
         // to ensure that path reversals (ie over-shrunk paths) are removed.
         pathOut.Add(GetPerpendic(path[j], _normals[k]));
-
-        // when the angle is almost flat (cos_a ~= 1), it's safe to skip this middle point
-        if (cosA < 0.999) pathOut.Add(path[j]); // (#405, #873)
-
+        pathOut.Add(path[j]); // (#405, #873, #916)
         pathOut.Add(GetPerpendic(path[j], _normals[j]));
       }
       else if ((cosA > 0.999) && (_joinType != JoinType.Round))

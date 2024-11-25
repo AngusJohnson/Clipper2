@@ -2,7 +2,7 @@ unit Clipper.Offset;
 
 (*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  24 July 2024                                                    *
+* Date      :  22 November 2024                                                *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2010-2024                                         *
 * Purpose   :  Path Offset (Inflate/Shrink)                                    *
@@ -72,13 +72,14 @@ type
     fZCallback64 : TZCallback64;
     procedure ZCB(const bot1, top1, bot2, top2: TPoint64;
       var intersectPt: TPoint64);
-    procedure AddPoint(x,y: double; z: Int64); overload;
+    procedure AddPoint(x,y: double; z: ZType); overload;
     procedure AddPoint(const pt: TPoint64); overload;
       {$IFDEF INLINING} inline; {$ENDIF}
-    procedure AddPoint(const pt: TPoint64; newZ: Int64); overload;
+    procedure AddPoint(const pt: TPoint64; newZ: ZType); overload;
       {$IFDEF INLINING} inline; {$ENDIF}
 {$ELSE}
     procedure AddPoint(x,y: double); overload;
+
     procedure AddPoint(const pt: TPoint64); overload;
       {$IFDEF INLINING} inline; {$ENDIF}
 {$ENDIF}
@@ -695,7 +696,7 @@ end;
 //------------------------------------------------------------------------------
 
 {$IFDEF USINGZ}
-procedure TClipperOffset.AddPoint(x,y: double; z: Int64);
+procedure TClipperOffset.AddPoint(x,y: double; z: ZType);
 {$ELSE}
 procedure TClipperOffset.AddPoint(x,y: double);
 {$ENDIF}
@@ -719,7 +720,7 @@ end;
 //------------------------------------------------------------------------------
 
 {$IFDEF USINGZ}
-procedure TClipperOffset.AddPoint(const pt: TPoint64; newZ: Int64);
+procedure TClipperOffset.AddPoint(const pt: TPoint64; newZ: ZType);
 begin
   AddPoint(pt.X, pt.Y, newZ);
 end;
@@ -996,15 +997,11 @@ begin
     // (ie over-shrunk paths) are removed.
 {$IFDEF USINGZ}
     AddPoint(GetPerpendic(fInPath[j], fNorms[k], fGroupDelta), fInPath[j].Z);
-{$ELSE}
-    AddPoint(GetPerpendic(fInPath[j], fNorms[k], fGroupDelta));
-{$ENDIF}
-    // when the angle is almost flat (cos_a ~= 1),
-    // it's safe to skip inserting this middle point
-		if (cosA < 0.999) then AddPoint(fInPath[j]); // (#405, #873)
-{$IFDEF USINGZ}
+    AddPoint(fInPath[j]); // (#405, #873)
     AddPoint(GetPerpendic(fInPath[j], fNorms[j], fGroupDelta), fInPath[j].Z);
 {$ELSE}
+    AddPoint(GetPerpendic(fInPath[j], fNorms[k], fGroupDelta));
+    AddPoint(fInPath[j]); // (#405, #873)
     AddPoint(GetPerpendic(fInPath[j], fNorms[j], fGroupDelta));
 {$ENDIF}
   end
