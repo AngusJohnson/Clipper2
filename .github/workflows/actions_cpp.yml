@@ -80,22 +80,22 @@ jobs:
       run: |
         cd CPP/build
         env CTEST_OUTPUT_ON_FAILURE=1 make test
-  ubuntu-latest-clang-13:
+  ubuntu-latest-clang-17:
     runs-on: 'ubuntu-latest'
     steps:
     - uses: actions/checkout@v4
     - uses: actions/setup-node@v4
       with:
         node-version: '16'
-    - name: Install clang 13
+    - name: Install clang 17
       run: |
         wget https://apt.llvm.org/llvm.sh
         chmod +x llvm.sh
-        sudo ./llvm.sh 13
+        sudo ./llvm.sh 17
     - name: Build
       run: |
-        export CC=/usr/bin/clang-13
-        export CXX=/usr/bin/clang++-13
+        export CC=/usr/bin/clang-17
+        export CXX=/usr/bin/clang++-17
         mkdir CPP/build
         cd CPP/build
         cmake .. -DCLIPPER2_TESTS=ON
