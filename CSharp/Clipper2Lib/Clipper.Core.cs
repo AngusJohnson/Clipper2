@@ -1,8 +1,8 @@
 ﻿/*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  10 October 2024                                                 *
+* Date      :  22 January 2025                                                 *
 * Website   :  http://www.angusj.com                                           *
-* Copyright :  Angus Johnson 2010-2024                                         *
+* Copyright :  Angus Johnson 2010-2025                                         *
 * Purpose   :  Core structures and functions for the Clipper Library           *
 * License   :  http://www.boost.org/LICENSE_1_0.txt                            *
 *******************************************************************************/
@@ -523,7 +523,6 @@ namespace Clipper2Lib
     internal const double min_coord = -MaxCoord;
     internal const long Invalid64 = MaxInt64;
 
-    internal const double defaultArcTolerance = 0.25;
     internal const double floatingPointTolerance = 1E-12;
     internal const double defaultMinimumEdgeLength = 0.1;
 

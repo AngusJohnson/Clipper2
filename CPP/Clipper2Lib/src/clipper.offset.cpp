@@ -1,8 +1,8 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  22 November 2024                                                *
+* Date      :  22 January 2025                                                 *
 * Website   :  http://www.angusj.com                                           *
-* Copyright :  Angus Johnson 2010-2024                                         *
+* Copyright :  Angus Johnson 2010-2025                                         *
 * Purpose   :  Path Offset (Inflate/Shrink)                                    *
 * License   :  http://www.boost.org/LICENSE_1_0.txt                            *
 *******************************************************************************/
@@ -13,8 +13,22 @@
 
 namespace Clipper2Lib {
 
-const double default_arc_tolerance = 0.25;
 const double floating_point_tolerance = 1e-12;
+
+// Clipper2 approximates arcs by using series of relatively short straight
+//line segments. And logically, shorter line segments will produce better arc
+// approximations. But very short segments can degrade performance, usually
+// with little or no discernable improvement in curve quality. Very short
+// segments can even detract from curve quality, due to the effects of integer
+// rounding. Since there isn't an optimal number of line segments for any given
+// arc radius (that perfectly balances curve approximation with performance),
+// arc tolerance is user defined. Nevertheless, when the user doesn't define
+// an arc tolerance (ie leaves alone the 0 default value), the calculated
+// default arc tolerance (offset_radius / 500) generally produces good (smooth)
+// arc approximations without producing excessively small segment lengths.
+// See also: https://www.angusj.com/clipper2/Docs/Trigonometry.htm
+const double arc_const = 0.002; // <-- 1/500
+
 
 //------------------------------------------------------------------------------
 // Miscellaneous methods
@@ -50,11 +64,10 @@ inline double Hypot(double x, double y)
 
 static PointD GetUnitNormal(const Point64& pt1, const Point64& pt2)
 {
-	double dx, dy, inverse_hypot;
 	if (pt1 == pt2) return PointD(0.0, 0.0);
-	dx = static_cast<double>(pt2.x - pt1.x);
-	dy = static_cast<double>(pt2.y - pt1.y);
-	inverse_hypot = 1.0 / Hypot(dx, dy);
+	double dx = static_cast<double>(pt2.x - pt1.x);
+	double dy = static_cast<double>(pt2.y - pt1.y);
+	double inverse_hypot = 1.0 / Hypot(dx, dy);
 	dx *= inverse_hypot;
 	dy *= inverse_hypot;
 	return PointD(dy, -dx);
@@ -260,8 +273,7 @@ void ClipperOffset::DoRound(const Path64& path, size_t j, size_t k, double angle
 		// so we'll need to do the following calculations for *every* vertex.
 		double abs_delta = std::fabs(group_delta_);
 		double arcTol = (arc_tolerance_ > floating_point_tolerance ?
-			std::min(abs_delta, arc_tolerance_) :
-			std::log10(2 + abs_delta) * default_arc_tolerance);
+			std::min(abs_delta, arc_tolerance_) : abs_delta * arc_const);
 		double steps_per_360 = std::min(PI / std::acos(1 - arcTol / abs_delta), abs_delta * PI);
 		step_sin_ = std::sin(2 * PI / steps_per_360);
 		step_cos_ = std::cos(2 * PI / steps_per_360);
@@ -459,9 +471,8 @@ void ClipperOffset::DoGroupOffset(Group& group)
 		// arcTol - when arc_tolerance_ is undefined (0) then curve imprecision
 		// will be relative to the size of the offset (delta). Obviously very
 		//large offsets will almost always require much less precision.
-		double arcTol = (arc_tolerance_ > floating_point_tolerance ?
-			std::min(abs_delta, arc_tolerance_) :
-			std::log10(2 + abs_delta) * default_arc_tolerance);
+		double arcTol = (arc_tolerance_ > floating_point_tolerance) ?
+			std::min(abs_delta, arc_tolerance_) : abs_delta * arc_const;
 
 		double steps_per_360 = std::min(PI / std::acos(1 - arcTol / abs_delta), abs_delta * PI);
 		step_sin_ = std::sin(2 * PI / steps_per_360);
@@ -590,7 +601,6 @@ void ClipperOffset::ExecuteInternal(double delta)
 	if (!solution->size()) return;
 
 		bool paths_reversed = CheckReverseOrientation();
-
 	//clean up self-intersections ...
 	Clipper64 c;
 	c.PreserveCollinear(false);
@@ -617,13 +627,12 @@ void ClipperOffset::ExecuteInternal(double delta)
 		else
 			c.Execute(ClipType::Union, FillRule::Positive, *solution);
 	}
-
 }
 
-void ClipperOffset::Execute(double delta, Paths64& paths)
+void ClipperOffset::Execute(double delta, Paths64& paths64)
 {
-	paths.clear();
-	solution = &paths;
+	paths64.clear();
+	solution = &paths64;
 	solution_tree = nullptr;
 	ExecuteInternal(delta);
 }

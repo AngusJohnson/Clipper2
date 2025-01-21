@@ -2,9 +2,9 @@ unit Clipper.Offset;
 
 (*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  22 November 2024                                                *
+* Date      :  22 January 2025                                                 *
 * Website   :  http://www.angusj.com                                           *
-* Copyright :  Angus Johnson 2010-2024                                         *
+* Copyright :  Angus Johnson 2010-2025                                         *
 * Purpose   :  Path Offset (Inflate/Shrink)                                    *
 * License   :  http://www.boost.org/LICENSE_1_0.txt                            *
 *******************************************************************************)
@@ -141,6 +141,20 @@ resourcestring
 const
   TwoPi     : Double = 2 * PI;
   InvTwoPi  : Double = 1/(2 * PI);
+
+// Clipper2 approximates arcs by using series of relatively short straight
+//line segments. And logically, shorter line segments will produce better arc
+// approximations. But very short segments can degrade performance, usually
+// with little or no discernable improvement in curve quality. Very short
+// segments can even detract from curve quality, due to the effects of integer
+// rounding. Since there isn't an optimal number of line segments for any given
+// arc radius (that perfectly balances curve approximation with performance),
+// arc tolerance is user defined. Nevertheless, when the user doesn't define
+// an arc tolerance (ie leaves alone the 0 default value), the calculated
+// default arc tolerance (offset_radius / 500) generally produces good (smooth)
+// arc approximations without producing excessively small segment lengths.
+// See also: https://www.angusj.com/clipper2/Docs/Trigonometry.htm
+const arc_const = 0.002; // <-- 1/500
 
 //------------------------------------------------------------------------------
 //  Miscellaneous offset support functions
@@ -368,9 +382,8 @@ begin
 		// arcTol - when arc_tolerance_ is undefined (0) then curve imprecision
     // will be relative to the size of the offset (delta). Obviously very
     //large offsets will almost always require much less precision.
-    arcTol := Iif(fArcTolerance > 0.01,
-      Min(absDelta, fArcTolerance),
-      Log10(2 + absDelta) * 0.25); // empirically derived
+    arcTol := Iif(fArcTolerance > 0.0,
+      Min(absDelta, fArcTolerance), absDelta * arc_const);
 
     stepsPer360 := Pi / ArcCos(1 - arcTol / absDelta);
 		if (stepsPer360 > absDelta * Pi) then
@@ -917,10 +930,8 @@ begin
     // when fDeltaCallback64 is assigned, fGroupDelta won't be constant,
     // so we'll need to do the following calculations for *every* vertex.
     absDelta := Abs(fGroupDelta);
-    arcTol := Iif(fArcTolerance > 0.01,
-      Min(absDelta, fArcTolerance),
-      Log10(2 + absDelta) * 0.25); // empirically derived
-    //http://www.angusj.com/clipper2/Docs/Trigonometry.htm
+    arcTol := Iif(fArcTolerance > 0.0,
+      Min(absDelta, fArcTolerance), absDelta * arc_const);
     stepsPer360 := Pi / ArcCos(1 - arcTol / absDelta);
 		if (stepsPer360 > absDelta * Pi) then
 			stepsPer360 := absDelta * Pi;  // avoid excessive precision
