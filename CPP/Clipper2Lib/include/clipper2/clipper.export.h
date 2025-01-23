@@ -1,8 +1,8 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  17 September 2024                                               *
+* Date      :  24 January 2025                                                 *
 * Website   :  http://www.angusj.com                                           *
-* Copyright :  Angus Johnson 2010-2024                                         *
+* Copyright :  Angus Johnson 2010-2025                                         *
 * Purpose   :  This module exports the Clipper2 Library (ie DLL/so)            *
 * License   :  http://www.boost.org/LICENSE_1_0.txt                            *
 *******************************************************************************/
@@ -19,27 +19,31 @@
 
 The path structures used extensively in other parts of this library are all
 based on std::vector classes. Since C++ classes can't be accessed by other
-languages, these paths are converted here into very simple array data
-structures that can be parsed by just about any programming language.
+languages, these paths are exported here as very simple array structures 
+(either of int64_t or double) that can be parsed by just about any 
+programming language.
 
 These 2D paths are defined by series of x and y coordinates together with an
 optional user-defined 'z' value (see Z-values below). Hence, a vertex refers
-to a single x and y coordinate (+/- a user-defined value). These values will
-be either type int64_t or type double. Data structures have names that
-indicate the array type by a suffixed '64' or a 'D'. For example, the data
-structure CPath64 contains an array of int64_t values, whereas the data
-structure CPathD contains an array of double. Where documentation omits
-the type suffix (eg CPath), it is simply agnostic to the array's data type.
+to a single x and y coordinate (+/- a user-defined value). Data structures 
+have names with suffixes that indicate the array type (either int64_t or 
+double). For example, the data structure CPath64 contains an array of int64_t 
+values, whereas the data structure CPathD contains an array of double. 
+Where documentation omits the type suffix (eg CPath), it is referring to an 
+array whose data type could be either int64_t or double.
 
 For conciseness, the following letters are used in the diagrams below:
 N: Number of vertices in a given path
-C: Count of structure's paths
-A: Array size (as distinct from the size in memory)
+C: Count (ie number) of paths (or PolyPaths) in the structure
+A: Number of elements in an array
 
 
 CPath64 and CPathD:
-These are arrays of consecutive vertices preceeded by a pair of values
-containing the number of vertices (N) in the path, and a 0 value.
+These are arrays of either int64_t or double values. Apart from 
+the first two elements, these arrays are a series of vertices 
+that together define a path. The very first element contains the 
+number of vertices (N) in the path, while second element should 
+contain a 0 value.
 _______________________________________________________________
 | counters | vertex1      | vertex2      | ... | vertexN      |
 | N, 0     | x1, y1, (z1) | x2, y2, (z2) | ... | xN, yN, (zN) |
@@ -47,10 +51,11 @@ _______________________________________________________________
 
 
 CPaths64 and CPathsD:
-These are also arrays containing any number of consecutive CPath
-structures. Preceeding these consecutive paths, there is a pair of
-values that contain the length of the array structure (A) and
-the count of following CPath structures (C).
+These are also arrays of either int64_t or double values that
+contain any number of consecutive CPath structures. However, 
+preceeding the first path is a pair of values. The first value
+contains the length of the entire array structure (A), and the 
+second contains the number (ie count) of contained paths (C).
   Memory allocation for CPaths64 = A * sizeof(int64_t)
   Memory allocation for CPathsD  = A * sizeof(double)
 __________________________________________
@@ -60,12 +65,13 @@ __________________________________________
 
 
 CPolytree64 and CPolytreeD:
-These structures consist of two values followed by a series of CPolyPath
-structures. The first value indicates the total length of the array (A).
-The second value indicates the number of following CPolyPath structures
-that are the top level CPolyPath in the CPolytree (C). These CPolyPath
-may, in turn, contain their own nested CPolyPath children that
-collectively make a tree structure.
+The entire polytree structure is an array of int64_t or double. The 
+first element in the array indicates the array's total length (A). 
+The second element indicates the number (C) of CPolyPath structures 
+that are the TOP LEVEL CPolyPath in the polytree, and these top
+level CPolyPath immediately follow these first two array elements. 
+These top level CPolyPath structures may, in turn, contain nested 
+CPolyPath children, and these collectively make a tree structure.
 _________________________________________________________
 | counters | CPolyPath1 | CPolyPath2 | ... | CPolyPathC |
 | A, C     |            |            | ... |            |
