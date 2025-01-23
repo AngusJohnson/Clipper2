@@ -1,8 +1,8 @@
 ﻿/*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  10 October 2024                                                 *
+* Date      :  22 January 2025                                                 *
 * Website   :  http://www.angusj.com                                           *
-* Copyright :  Angus Johnson 2010-2024                                         *
+* Copyright :  Angus Johnson 2010-2025                                         *
 * Purpose   :  This module contains simple functions that will likely cover    *
 *              most polygon boolean and offsetting needs, while also avoiding  *
 *              the inherent complexities of the other modules.                 *
@@ -138,9 +138,9 @@ namespace Clipper2Lib
     }
 
     public static Paths64 InflatePaths(Paths64 paths, double delta, JoinType joinType,
-      EndType endType, double miterLimit = 2.0)
+      EndType endType, double miterLimit = 2.0, double arcTolerance = 0.0)
     {
-      ClipperOffset co = new ClipperOffset(miterLimit);
+      ClipperOffset co = new ClipperOffset(miterLimit, arcTolerance);
       co.AddPaths(paths, joinType, endType);
       Paths64 solution = new Paths64();
       co.Execute(delta, solution);
@@ -148,12 +148,12 @@ namespace Clipper2Lib
     }
 
     public static PathsD InflatePaths(PathsD paths, double delta, JoinType joinType,
-      EndType endType, double miterLimit = 2.0, int precision = 2)
+      EndType endType, double miterLimit = 2.0, int precision = 2, double arcTolerance = 0.0)
     {
       InternalClipper.CheckPrecision(precision);
       double scale = Math.Pow(10, precision);
       Paths64 tmp = ScalePaths64(paths, scale);
-      ClipperOffset co = new ClipperOffset(miterLimit);
+      ClipperOffset co = new ClipperOffset(miterLimit, arcTolerance);
       co.AddPaths(tmp, joinType, endType);
       co.Execute(delta * scale, tmp); // reuse 'tmp' to receive (scaled) solution
       return ScalePathsD(tmp, 1 / scale);
