@@ -167,7 +167,7 @@ namespace Clipper2Lib {
 	};
 
 #ifdef USINGZ
-		typedef std::function<void(const Point64& e1bot, const Point64& e1top,
+	typedef std::function<void(const Point64& e1bot, const Point64& e1top,
 		const Point64& e2bot, const Point64& e2top, Point64& pt)> ZCallback64;
 
 	typedef std::function<void(const PointD& e1bot, const PointD& e1top,
