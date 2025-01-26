@@ -5,7 +5,7 @@ unit Clipper.Minkowski;
 * Date      :  21 December 2023                                                *
 * Copyright :  Angus Johnson 2010-2022                                         *
 * Purpose   :  Minkowski Addition and Difference                               *
-* License   :  http://www.boost.org/LICENSE_1_0.txt                            *
+* License   :  https://www.boost.org/LICENSE_1_0.txt                           *
 *******************************************************************************)
 
 {$I Clipper.inc}

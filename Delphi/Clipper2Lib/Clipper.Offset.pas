@@ -3,10 +3,10 @@ unit Clipper.Offset;
 (*******************************************************************************
 * Author    :  Angus Johnson                                                   *
 * Date      :  22 January 2025                                                 *
-* Website   :  http://www.angusj.com                                           *
+* Website   :  https://www.angusj.com                                          *
 * Copyright :  Angus Johnson 2010-2025                                         *
 * Purpose   :  Path Offset (Inflate/Shrink)                                    *
-* License   :  http://www.boost.org/LICENSE_1_0.txt                            *
+* License   :  https://www.boost.org/LICENSE_1_0.txt                           *
 *******************************************************************************)
 
 {$I Clipper.inc}
@@ -378,7 +378,7 @@ begin
   if (group.joinType = jtRound) or (group.endType = etRound) then
   begin
 		// calculate the number of steps required to approximate a circle
-    // (see http://www.angusj.com/clipper2/Docs/Trigonometry.htm)
+    // (see https://www.angusj.com/clipper2/Docs/Trigonometry.htm)
 		// arcTol - when arc_tolerance_ is undefined (0) then curve imprecision
     // will be relative to the size of the offset (delta). Obviously very
     //large offsets will almost always require much less precision.
@@ -758,7 +758,7 @@ var
   m1,b1,m2,b2: double;
 begin
   result := NullPointD;
-  //see http://astronomy.swin.edu.au/~pbourke/geometry/lineline2d/
+  //see https://paulbourke.net/geometry/pointlineplane/#i2l
   if (ln1B.X = ln1A.X) then
   begin
     if (ln2B.X = ln2A.X) then exit; //parallel lines

@@ -1,10 +1,10 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
 * Date      :  1 November 2023                                                 *
-* Website   :  http://www.angusj.com                                           *
+* Website   :  https://www.angusj.com                                          *
 * Copyright :  Angus Johnson 2010-2023                                         *
 * Purpose   :  Minkowski Sum and Difference                                    *
-* License   :  http://www.boost.org/LICENSE_1_0.txt                            *
+* License   :  https://www.boost.org/LICENSE_1_0.txt                           *
 *******************************************************************************/
 
 #ifndef CLIPPER_MINKOWSKI_H

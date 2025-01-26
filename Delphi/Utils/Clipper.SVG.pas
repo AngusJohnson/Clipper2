@@ -3,10 +3,10 @@
 (*******************************************************************************
 * Author    :  Angus Johnson                                                   *
 * Date      :  21 March 2024                                                   *
-* Website   :  http://www.angusj.com                                           *
+* Website   :  https://www.angusj.com                                          *
 * Copyright :  Angus Johnson 2010-2024                                         *
 * Purpose   :  This module provides a very simple SVG Writer for Clipper2      *
-* License   :  http://www.boost.org/LICENSE_1_0.txt                            *
+* License   :  https://www.boost.org/LICENSE_1_0.txt                           *
 *******************************************************************************)
 
 interface
