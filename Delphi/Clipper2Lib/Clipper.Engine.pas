@@ -899,7 +899,7 @@ begin
       while (op2 <> op) and (op2.pt.Y > pt.Y) do op2 := op2.next;
     if (op2 = op) then break;
 
-    // must have touched or crossed the pt.Y horizonal
+    // must have touched or crossed the pt.Y horizontal
     // and this must happen an even number of times
 
     if (op2.pt.Y = pt.Y) then // touching the horizontal
@@ -2690,7 +2690,7 @@ begin
     end else if IsFront(e1) or (e1.outrec = e2.outrec) then
     begin
       // this 'else if' condition isn't strictly needed but
-      // it's sensible to split polygons that ony touch at
+      // it's sensible to split polygons that only touch at
       // a common vertex (not at common edges).
       op := AddLocalMaxPoly(e1, e2, pt);
       {$IFDEF USINGZ}
@@ -3528,7 +3528,7 @@ begin
       end;
       if IsHotEdge(horzEdge) then
       begin
-        //nb: The outrec containining the op returned by IntersectEdges
+        //nb: The outrec containing the op returned by IntersectEdges
         //above may no longer be associated with horzEdge.
         FHorzSegList.Add(GetLastOp(horzEdge));
       end;

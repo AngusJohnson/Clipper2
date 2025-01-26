@@ -517,7 +517,7 @@ namespace Clipper2Lib {
         while (op2 != op && op2->pt.y > pt.y) op2 = op2->next;
       if (op2 == op) break;
 
-      // must have touched or crossed the pt.Y horizonal
+      // must have touched or crossed the pt.Y horizontal
       // and this must happen an even number of times
 
       if (op2->pt.y == pt.y) // touching the horizontal
@@ -1961,7 +1961,7 @@ namespace Clipper2Lib {
       else if (IsFront(e1) || (e1.outrec == e2.outrec))
       {
         //this 'else if' condition isn't strictly needed but
-        //it's sensible to split polygons that ony touch at
+        //it's sensible to split polygons that only touch at
         //a common vertex (not at common edges).
 
 #ifdef USINGZ
@@ -2661,7 +2661,7 @@ namespace Clipper2Lib {
 
         if (horz.outrec)
         {
-          //nb: The outrec containining the op returned by IntersectEdges
+          //nb: The outrec containing the op returned by IntersectEdges
           //above may no longer be associated with horzEdge.
           AddTrialHorzJoin(GetLastOp(horz));
         }

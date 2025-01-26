@@ -821,7 +821,7 @@ function DistanceSqrd(const pt1, pt2: TPoint64): double;
 var
   x1,y1,x2,y2: double;
 begin
-  // nb: older versions of Delphi don't allow explicit typcasting
+  // nb: older versions of Delphi don't allow explicit typecasting
   x1 := pt1.X; y1 := pt1.Y;
   x2 := pt2.X; y2 := pt2.Y;
   result := Sqr(x1 - x2) + Sqr(y1 - y2);

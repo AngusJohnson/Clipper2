@@ -53,7 +53,7 @@ _______________________________________________________________
 CPaths64 and CPathsD:
 These are also arrays of either int64_t or double values that
 contain any number of consecutive CPath structures. However, 
-preceeding the first path is a pair of values. The first value
+preceding the first path is a pair of values. The first value
 contains the length of the entire array structure (A), and the 
 second contains the number (ie count) of contained paths (C).
   Memory allocation for CPaths64 = A * sizeof(int64_t)
