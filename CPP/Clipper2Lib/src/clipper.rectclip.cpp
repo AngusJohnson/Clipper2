@@ -7,7 +7,6 @@
 * License   :  https://www.boost.org/LICENSE_1_0.txt                           *
 *******************************************************************************/
 
-#include <cmath>
 #include "clipper2/clipper.h"
 #include "clipper2/clipper.rectclip.h"
 
