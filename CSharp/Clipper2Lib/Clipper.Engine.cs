@@ -1691,7 +1691,7 @@ namespace Clipper2Lib
         else if (IsFront(ae1) || (ae1.outrec == ae2.outrec))
         {
           // this 'else if' condition isn't strictly needed but
-          // it's sensible to split polygons that ony touch at
+          // it's sensible to split polygons that only touch at
           // a common vertex (not at common edges).
           resultOp = AddLocalMaxPoly(ae1, ae2, pt);
 #if USINGZ
@@ -2628,7 +2628,7 @@ private void DoHorizontal(Active horz)
           while (op2 != op && op2.pt.Y > pt.Y) op2 = op2.next!;
         if (op2 == op) break;
 
-        // must have touched or crossed the pt.Y horizonal
+        // must have touched or crossed the pt.Y horizontal
         // and this must happen an even number of times
 
         if (op2.pt.Y == pt.Y) // touching the horizontal
