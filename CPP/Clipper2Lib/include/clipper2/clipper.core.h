@@ -331,10 +331,10 @@ namespace Clipper2Lib
     {
       Path<T> result;
       result.reserve(4);
-      result.push_back(Point<T>(left, top));
-      result.push_back(Point<T>(right, top));
-      result.push_back(Point<T>(right, bottom));
-      result.push_back(Point<T>(left, bottom));
+      result.emplace_back(left, top);
+      result.emplace_back(right, top);
+      result.emplace_back(right, bottom);
+      result.emplace_back(left, bottom);
       return result;
     }
 
@@ -618,13 +618,13 @@ namespace Clipper2Lib
     result.reserve(path.size());
     typename Path<T>::const_iterator path_iter = path.cbegin();
     Point<T> first_pt = *path_iter++, last_pt = first_pt;
-    result.push_back(first_pt);
+    result.emplace_back(first_pt);
     for (; path_iter != path.cend(); ++path_iter)
     {
       if (!NearEqual(*path_iter, last_pt, max_dist_sqrd))
       {
         last_pt = *path_iter;
-        result.push_back(last_pt);
+        result.emplace_back(last_pt);
       }
     }
     if (!is_closed_path) return result;
@@ -642,7 +642,7 @@ namespace Clipper2Lib
     for (typename Paths<T>::const_iterator paths_citer = paths.cbegin();
       paths_citer != paths.cend(); ++paths_citer)
     {
-      result.push_back(StripNearEqual(*paths_citer, max_dist_sqrd, is_closed_path));
+      result.emplace_back(std::move(StripNearEqual(*paths_citer, max_dist_sqrd, is_closed_path)));
     }
     return result;
   }

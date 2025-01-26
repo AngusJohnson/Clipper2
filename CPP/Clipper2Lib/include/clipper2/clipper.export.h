@@ -392,9 +392,9 @@ static Path<T> ConvertCPathToPathT(T* path)
       T x = *v++, y = *v++;
 #ifdef USINGZ
       z_type z = Reinterpret<z_type>(*v++);
-      result.push_back(Point<T>(x, y, z));
+      result.emplace_back(x, y, z);
 #else  
-      result.push_back(Point<T>(x, y));
+      result.emplace_back(x, y);
 #endif
   }
   return result;
@@ -419,12 +419,12 @@ static Paths<T> ConvertCPathsToPathsT(T* paths)
       T x = *v++, y = *v++;
 #ifdef USINGZ
       z_type z = Reinterpret<z_type>(*v++);
-      path.push_back(Point<T>(x, y, z));
+      path.emplace_back(x, y, z);
 #else
-      path.push_back(Point<T>(x, y));
+      path.emplace_back(x, y);
 #endif
     }
-    result.push_back(path);
+    result.emplace_back(std::move(path));
   }
   return result;
 }
@@ -443,9 +443,9 @@ static Path64 ConvertCPathDToPath64WithScale(const CPathD path, double scale)
         double y = *v++ * scale;
 #ifdef USINGZ
         z_type z = Reinterpret<z_type>(*v++);
-        result.push_back(Point64(x, y, z));
+        result.emplace_back(x, y, z);
 #else  
-        result.push_back(Point64(x, y));
+        result.emplace_back(x, y);
 #endif
     }
     return result;
@@ -471,12 +471,12 @@ static Paths64 ConvertCPathsDToPaths64(const CPathsD paths, double scale)
       double y = *v++ * scale;
 #ifdef USINGZ
       z_type z = Reinterpret<z_type>(*v++);
-      path.push_back(Point64(x, y, z));
+      path.emplace_back(x, y, z);
 #else
-      path.push_back(Point64(x, y));
+      path.emplace_back(x, y);
 #endif
     }
-    result.push_back(path);
+    result.emplace_back(std::move(path));
   }
   return result;
 }

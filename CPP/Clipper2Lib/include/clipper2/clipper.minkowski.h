@@ -35,7 +35,7 @@ namespace Clipper2Lib
           Path64 path2(pattern.size());
           std::transform(pattern.cbegin(), pattern.cend(),
             path2.begin(), [p](const Point64& pt2) {return p + pt2; });
-          tmp.push_back(path2);
+          tmp.emplace_back(std::move(path2));
         }
       }
       else
@@ -45,7 +45,7 @@ namespace Clipper2Lib
           Path64 path2(pattern.size());
           std::transform(pattern.cbegin(), pattern.cend(),
             path2.begin(), [p](const Point64& pt2) {return p - pt2; });
-          tmp.push_back(path2);
+          tmp.emplace_back(std::move(path2));
         }
       }
 
@@ -59,14 +59,14 @@ namespace Clipper2Lib
           Path64 quad;
           quad.reserve(4);
           {
-            quad.push_back(tmp[g][h]);
-            quad.push_back(tmp[i][h]);
-            quad.push_back(tmp[i][j]);
-            quad.push_back(tmp[g][j]);
+            quad.emplace_back(tmp[g][h]);
+            quad.emplace_back(tmp[i][h]);
+            quad.emplace_back(tmp[i][j]);
+            quad.emplace_back(tmp[g][j]);
           };
           if (!IsPositive(quad))
             std::reverse(quad.begin(), quad.end());
-          result.push_back(quad);
+          result.emplace_back(std::move(quad));
           h = j;
         }
         g = i;
