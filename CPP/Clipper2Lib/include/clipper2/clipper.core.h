@@ -1,10 +1,10 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
 * Date      :  12 May 2024                                                     *
-* Website   :  http://www.angusj.com                                           *
+* Website   :  https://www.angusj.com                                          *
 * Copyright :  Angus Johnson 2010-2024                                         *
 * Purpose   :  Core Clipper Library structures and functions                   *
-* License   :  http://www.boost.org/LICENSE_1_0.txt                            *
+* License   :  https://www.boost.org/LICENSE_1_0.txt                           *
 *******************************************************************************/
 
 #ifndef CLIPPER_CORE_H
@@ -787,7 +787,7 @@ namespace Clipper2Lib
     const Point<T>& line1, const Point<T>& line2)
   {
     //perpendicular distance of point (x³,y³) = (Ax³ + By³ + C)/Sqrt(A² + B²)
-    //see http://en.wikipedia.org/wiki/Perpendicular_distance
+    //see https://en.wikipedia.org/wiki/Perpendicular_distance
     double a = static_cast<double>(pt.x - line1.x);
     double b = static_cast<double>(pt.y - line1.y);
     double c = static_cast<double>(line2.x - line1.x);
