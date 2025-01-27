@@ -7,15 +7,9 @@
 * License   :  https://www.boost.org/LICENSE_1_0.txt                           *
 *******************************************************************************/
 
-#include <cstdlib>
-#include <cmath>
-#include <stdexcept>
-#include <vector>
-#include <numeric>
-#include <algorithm>
-
 #include "clipper2/clipper.engine.h"
 #include "clipper2/clipper.h"
+#include <stdexcept>
 
 // https://github.com/AngusJohnson/Clipper2/discussions/334
 // #discussioncomment-4248602
