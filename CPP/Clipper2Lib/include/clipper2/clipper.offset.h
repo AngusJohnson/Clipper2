@@ -12,6 +12,7 @@
 
 #include "clipper.core.h"
 #include "clipper.engine.h"
+#include <optional>
 
 namespace Clipper2Lib {
 

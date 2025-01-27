@@ -10,16 +10,10 @@
 #ifndef CLIPPER_ENGINE_H
 #define CLIPPER_ENGINE_H
 
-#include <cstdlib>
-#include <stdint.h> //#541
-#include <iostream>
-#include <queue>
-#include <vector>
-#include <functional>
-#include <numeric>
-#include <memory>
-
 #include "clipper2/clipper.core.h"
+#include <queue>
+#include <functional>
+#include <memory>
 
 namespace Clipper2Lib {
 

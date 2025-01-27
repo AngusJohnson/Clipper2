@@ -10,10 +10,8 @@
 #ifndef CLIPPER_RECTCLIP_H
 #define CLIPPER_RECTCLIP_H
 
-#include <cstdlib>
-#include <vector>
-#include <queue>
 #include "clipper2/clipper.core.h"
+#include <queue>
 
 namespace Clipper2Lib
 {

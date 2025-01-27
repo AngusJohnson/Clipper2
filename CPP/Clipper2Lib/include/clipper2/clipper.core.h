@@ -10,17 +10,14 @@
 #ifndef CLIPPER_CORE_H
 #define CLIPPER_CORE_H
 
+#include "clipper2/clipper.version.h"
 #include <cstdint>
-#include <cstdlib>
-#include <cmath>
 #include <vector>
 #include <string>
 #include <iostream>
 #include <algorithm>
-#include <climits>
 #include <numeric>
-#include <optional>
-#include "clipper2/clipper.version.h"
+#include <cmath>
 
 namespace Clipper2Lib
 {
