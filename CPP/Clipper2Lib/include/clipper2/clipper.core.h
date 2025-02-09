@@ -248,6 +248,20 @@ namespace Clipper2Lib
   template <typename T>
   using Paths = std::vector<Path<T>>;
 
+  template <typename T, typename T2=T>
+  Path<T>& operator<<(Path<T>& poly, const Point<T2>& p)
+  {
+    poly.emplace_back(p);
+    return poly;
+  }
+
+  template <typename T>
+  Paths<T>& operator<<(Paths<T>& polys, const Path<T>& p)
+  {
+    polys.emplace_back(p);
+    return polys;
+  }
+
   using Path64 = Path<int64_t>;
   using PathD = Path<double>;
   using Paths64 = std::vector< Path64>;
