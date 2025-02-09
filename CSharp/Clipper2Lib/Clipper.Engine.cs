@@ -1,8 +1,8 @@
 ﻿/*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  10 October 2024                                                 *
+* Date      :  9 February 2025                                                 *
 * Website   :  https://www.angusj.com                                          *
-* Copyright :  Angus Johnson 2010-2024                                         *
+* Copyright :  Angus Johnson 2010-2025                                         *
 * Purpose   :  This is the main polygon clipping module                        *
 * Thanks    :  Special thanks to Thong Nguyen, Guus Kuiper, Phil Stopford,     *
 *           :  and Daniel Gosnell for their invaluable assistance with C#.     *
@@ -2917,16 +2917,18 @@ private void DoHorizontal(Active horz)
     private void FixSelfIntersects(OutRec outrec)
     {
       OutPt op2 = outrec.pts!;
+      // triangles can't self-intersect
+      if (op2.prev == op2.next!.next) return;
       for (; ; )
       {
-        // triangles can't self-intersect
-        if (op2.prev == op2.next!.next) break;
         if (InternalClipper.SegsIntersect(op2.prev.pt,
-                op2.pt, op2.next.pt, op2.next.next!.pt))
+                op2.pt, op2.next!.pt, op2.next.next!.pt))
         {
           DoSplitOp(outrec, op2);
           if (outrec.pts == null) return;
           op2 = outrec.pts;
+          // triangles can't self-intersect
+          if (op2.prev == op2.next!.next) break;
           continue;
         }
 
@@ -3036,7 +3038,10 @@ private void DoHorizontal(Active horz)
     {
       foreach (int i in splits!)
       {
-        OutRec? split = GetRealOutRec(_outrecList[i]);
+        OutRec? split = _outrecList[i];
+        if (split.pts == null && split.splits != null &&
+          CheckSplitOwner(outrec, split.splits)) return true; //#942
+        split = GetRealOutRec(split);
         if (split == null || split == outrec || split.recursiveSplit == outrec) continue;
         split.recursiveSplit = outrec; //#599
         if (split.splits != null && CheckSplitOwner(outrec, split.splits)) return true;

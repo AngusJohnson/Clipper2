@@ -2,9 +2,9 @@ unit Clipper.Engine;
 
 (*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  22 November 2024                                                *
+* Date      :  9 February 2025                                                 *
 * Website   :  https://www.angusj.com                                          *
-* Copyright :  Angus Johnson 2010-2024                                         *
+* Copyright :  Angus Johnson 2010-2025                                         *
 * Purpose   :  This is the main polygon clipping module                        *
 * License   :  https://www.boost.org/LICENSE_1_0.txt                           *
 *******************************************************************************)
@@ -2229,17 +2229,18 @@ var
   op2: POutPt;
 begin
   op2 := outrec.pts;
+  // triangles can't self-intersect
+  if (op2.prev = op2.next.next) then Exit;
   while true do
   begin
-    // triangles can't self-intersect
-    if (op2.prev = op2.next.next) then
-      Break
-    else if SegmentsIntersect(op2.prev.pt, op2.pt,
+    if SegmentsIntersect(op2.prev.pt, op2.pt,
       op2.next.pt, op2.next.next.pt) then
     begin
       DoSplitOp(outrec, op2);
       if not assigned(outrec.pts) then Break;
       op2 := outrec.pts;
+      // triangles can't self-intersect
+      if (op2.prev = op2.next.next) then Break;
       Continue;
     end else
       op2 := op2.next;
@@ -3088,7 +3089,7 @@ begin
         or1.pts.outrec := or1;
       end;
 
-      if FUsingPolytree then //#498, #520, #584, D#576, #618
+      if FUsingPolytree then // #498, #520, #584, D#576, #618
       begin
         if Path1InsidePath2(or1.pts, or2.pts) then
         begin
@@ -3104,7 +3105,7 @@ begin
         else if Path1InsidePath2(or2.pts, or1.pts) then
         begin
           or2.owner := or1;
-        end 
+        end
         else
           or2.owner := or1.owner;
 
@@ -3115,10 +3116,10 @@ begin
     end else
     begin
       or2.pts := nil;
-      if FUsingPolytree then   
+      if FUsingPolytree then
       begin
         SetOwner(or2, or1);
-        MoveSplits(or2, or1); //#618
+        MoveSplits(or2, or1); // #618
       end else
         or2.owner := or1;
     end;
@@ -3737,12 +3738,15 @@ begin
   Result := true;
   for i := 0 to High(splits) do
   begin
-    split := GetRealOutRec(splits[i]);
-    if (split = nil) or 
-       (split = outrec) or 
-       (split.recursiveCheck = outrec) then Continue;
-       
+    split := splits[i];
+    if not Assigned(split.pts) and Assigned(split.splits) and
+      CheckSplitOwner(outrec, split.splits) then Exit;          // #942
+
+    split := GetRealOutRec(split);
+    if (split = nil) or (split = outrec) or
+      (split.recursiveCheck = outrec) then Continue;
     split.recursiveCheck := outrec; // prevent infinite loops
+
     if Assigned(split.splits) and
       CheckSplitOwner(outrec, split.splits) then Exit
     else if IsValidOwner(outrec, split) and
