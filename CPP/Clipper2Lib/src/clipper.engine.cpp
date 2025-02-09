@@ -1,8 +1,8 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  17 September 2024                                               *
+* Date      :  9 February 2025                                                 *
 * Website   :  https://www.angusj.com                                          *
-* Copyright :  Angus Johnson 2010-2024                                         *
+* Copyright :  Angus Johnson 2010-2025                                         *
 * Purpose   :  This is the main polygon clipping module                        *
 * License   :  https://www.boost.org/LICENSE_1_0.txt                           *
 *******************************************************************************/
@@ -1648,10 +1648,10 @@ namespace Clipper2Lib {
   void ClipperBase::FixSelfIntersects(OutRec* outrec)
   {
     OutPt* op2 = outrec->pts;
+    // triangles can't self-intersect
+    if (op2->prev == op2->next->next) return;
     for (; ; )
     {
-      // triangles can't self-intersect
-      if (op2->prev == op2->next->next) break;
       if (SegmentsIntersect(op2->prev->pt,
         op2->pt, op2->next->pt, op2->next->next->pt))
       {
@@ -1660,6 +1660,8 @@ namespace Clipper2Lib {
         DoSplitOp(outrec, op2);
         if (!outrec->pts) break;
         op2 = outrec->pts;
+        // triangles can't self-intersect
+        if (op2->prev == op2->next->next) break;
         continue;
       }
       else
@@ -2932,12 +2934,14 @@ namespace Clipper2Lib {
   {
     for (auto split : *splits)
     {
+      if (!split->pts && split->splits &&
+        CheckSplitOwner(outrec, split->splits)) return true; //#942
       split = GetRealOutRec(split);
-      if(!split || split == outrec || split->recursive_split == outrec) continue;
+      if (!split || split == outrec || split->recursive_split == outrec) continue;
       split->recursive_split = outrec; // prevent infinite loops
 
       if (split->splits && CheckSplitOwner(outrec, split->splits))
-          return true;
+        return true;
       else if (CheckBounds(split) &&
         IsValidOwner(outrec, split) &&
         split->bounds.Contains(outrec->bounds) &&
