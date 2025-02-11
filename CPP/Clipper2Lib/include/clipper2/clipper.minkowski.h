@@ -10,6 +10,7 @@
 #ifndef CLIPPER_MINKOWSKI_H
 #define CLIPPER_MINKOWSKI_H
 
+#include <cstdlib>
 #include "clipper2/clipper.core.h"
 
 namespace Clipper2Lib

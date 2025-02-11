@@ -20,7 +20,7 @@ namespace Clipper2Lib
   enum class Location { Left, Top, Right, Bottom, Inside };
 
   class OutPt2;
-  typedef std::vector<OutPt2*> OutPt2List;
+  typedef std::vector<OutPt2*, Allocator<OutPt2*>> OutPt2List;
 
   class OutPt2 {
   public:
@@ -44,10 +44,10 @@ namespace Clipper2Lib
     const Path64 rect_as_path_;
     const Point64 rect_mp_;
     Rect64 path_bounds_;
-    std::deque<OutPt2> op_container_;
+    std::deque<OutPt2, Allocator<OutPt2>> op_container_;
     OutPt2List results_;  // each path can be broken into multiples
     OutPt2List edges_[8]; // clockwise and counter-clockwise
-    std::vector<Location> start_locs_;
+    std::vector<Location, Allocator<Location>> start_locs_;
     void CheckEdges();
     void TidyEdges(size_t idx, OutPt2List& cw, OutPt2List& ccw);
     void GetNextLocation(const Path64& path,

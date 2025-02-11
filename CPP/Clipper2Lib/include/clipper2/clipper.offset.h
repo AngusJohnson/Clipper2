@@ -53,7 +53,7 @@ private:
 	Path64 path_out;
 	Paths64* solution = nullptr;
 	PolyTree64* solution_tree = nullptr;
-	std::vector<Group> groups_;
+	std::vector<Group, Allocator<Group>> groups_;
 	JoinType join_type_ = JoinType::Bevel;
 	EndType end_type_ = EndType::Polygon;
 
