@@ -305,7 +305,7 @@ namespace Clipper2Lib {
     OutPt* result = op->next;
     op->prev->next = op->next;
     op->next->prev = op->prev;
-    delete op;
+    Delete(op);
     return result;
   }
 
@@ -318,7 +318,7 @@ namespace Clipper2Lib {
     {
       OutPt* tmp = op;
       op = op->next;
-      delete tmp;
+      Delete(tmp);
     };
     outrec->pts = nullptr;
   }
@@ -763,7 +763,7 @@ namespace Clipper2Lib {
     {
       Active* e2 = e;
       e = e->next_in_ael;
-      delete e2;
+      Delete(e2);
     }
   }
 
@@ -888,7 +888,7 @@ namespace Clipper2Lib {
     for (auto outrec : outrec_list_)
     {
       if (outrec->pts) DisposeOutPts(outrec);
-      delete outrec;
+      Delete(outrec);
     }
     outrec_list_.resize(0);
   }
@@ -1644,8 +1644,8 @@ namespace Clipper2Lib {
     }
     else
     {
-      delete splitOp->next;
-      delete splitOp;
+      Delete(splitOp->next);
+      Delete(splitOp);
     }
   }
 
@@ -2101,7 +2101,7 @@ namespace Clipper2Lib {
     else
       actives_ = next;
     if (next) next->prev_in_ael = prev;
-    delete& e;
+    Delete(& e);
   }
 
 
