@@ -373,6 +373,8 @@ namespace Clipper2Lib {
 
 		const Path64& Polygon() const { return polygon_; };
 
+		Path64& Polygon() { return polygon_; };
+
 		double Area() const
 		{
 			return std::accumulate(childs_.cbegin(), childs_.cend(),
