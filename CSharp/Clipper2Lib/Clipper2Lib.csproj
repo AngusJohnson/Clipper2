@@ -9,7 +9,7 @@
     <Description>Polygon Clipping and Offsetting Library</Description>
     <Title>Clipper2</Title>
     <PackageId>Clipper2</PackageId>
-    <PackageProjectUrl>http://www.angusj.com/clipper2/Docs/Overview.htm</PackageProjectUrl>
+    <PackageProjectUrl>https://www.angusj.com/clipper2/Docs/Overview.htm</PackageProjectUrl>
     <Copyright>Copyright © 2010-2023</Copyright>
     <RepositoryType>git</RepositoryType>
     <RepositoryUrl>https://github.com/AngusJohnson/Clipper2</RepositoryUrl>

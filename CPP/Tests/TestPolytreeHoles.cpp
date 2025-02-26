@@ -21,6 +21,7 @@ TEST(Clipper2Tests, TestPolytreeHoles1)
   c.Execute(ct, fr, solution, solution_open);
   EXPECT_TRUE(CheckPolytreeFullyContainsChildren(solution));
 }
+
 void PolyPathContainsPoint(const PolyPath64& pp, const Point64 pt, int& counter)
 {
   if (pp.Polygon().size() > 0)
@@ -34,6 +35,7 @@ void PolyPathContainsPoint(const PolyPath64& pp, const Point64 pt, int& counter)
   for (const auto& child : pp)
     PolyPathContainsPoint(*child, pt, counter);
 }
+
 bool PolytreeContainsPoint(const PolyPath64& pp, const Point64 pt)
 {
   int counter = 0;
@@ -42,6 +44,7 @@ bool PolytreeContainsPoint(const PolyPath64& pp, const Point64 pt)
   EXPECT_GE(counter, 0); //ie 'pt' can't be inside more holes than outers
   return counter != 0;
 }
+
 void GetPolyPathArea(const PolyPath64& pp, double& area)
 {
   area += Area(pp.Polygon());
@@ -55,6 +58,7 @@ double GetPolytreeArea(const PolyPath64& pp)
     GetPolyPathArea(*child, result);
   return result;
 }
+
 TEST(Clipper2Tests, TestPolytreeHoles2)
 {
   std::ifstream ifs("PolytreeHoleOwner2.txt");
@@ -125,6 +129,7 @@ TEST(Clipper2Tests, TestPolytreeHoles2)
   for (const auto& poi_inside : points_of_interest_inside)
     EXPECT_TRUE(PolytreeContainsPoint(solution_tree, poi_inside));
 }
+
 TEST(Clipper2Tests, TestPolytreeHoles3)
 {
   Paths64 subject, clip, sol;
@@ -142,6 +147,7 @@ TEST(Clipper2Tests, TestPolytreeHoles3)
   c.Execute(ClipType::Intersection, FillRule::NonZero, solution);
   EXPECT_TRUE(solution.Count() == 1 && solution[0]->Count() == 2);
 }
+
 TEST(Clipper2Tests, TestPolytreeHoles4) //#618
 {
   Paths64 subject;
@@ -162,6 +168,7 @@ TEST(Clipper2Tests, TestPolytreeHoles4) //#618
   //      +- Hole
   EXPECT_TRUE(solution.Count() == 1 && solution[0]->Count() == 3);
 }
+
 TEST(Clipper2Tests, TestPolytreeHoles5)
 {
   Paths64 subject, clip;
@@ -179,6 +186,7 @@ TEST(Clipper2Tests, TestPolytreeHoles5)
   //  + -Polygon (2) contains 2 holes.
   EXPECT_TRUE(tree.Count() == 3 && tree[2]->Count() == 2);
 }
+
 TEST(Clipper2Tests, TestPolytreeHoles6) //#618
 {
   Paths64 subject, clip;
@@ -201,6 +209,7 @@ TEST(Clipper2Tests, TestPolytreeHoles6) //#618
   //  + -Polygon (2) contains 1 holes.
   EXPECT_TRUE(tree.Count() == 3 && tree[2]->Count() == 1);
 }
+
 TEST(Clipper2Tests, TestPolytreeHoles7) //#618
 {
   Paths64 subject;
@@ -214,3 +223,39 @@ TEST(Clipper2Tests, TestPolytreeHoles7) //#618
   //std::cout << polytree << std::endl;
   EXPECT_TRUE(polytree.Count() == 1 && polytree[0]->Count() == 1);
 }
+
+TEST(Clipper2Tests, TestPolytreeHoles8) // #942
+{
+  Paths64 subject;
+  PolyTree64 solution;
+  Clipper64 c;
+  subject.push_back(MakePath({ 1588700,-8717600, 1616200,-8474800, 
+    1588700,-8474800 }));
+  subject.push_back(MakePath({ 13583800,-15601600, 13582800,-15508500, 
+    13555300,-15508500, 13555500,-15182200, 13010900,-15185400 }));
+  subject.push_back(MakePath({ 956700,-3092300, 1152600,3147400, 25600,3151700 }));
+  subject.push_back(MakePath({ 22575900,-16604000, 31286800,-12171900, 
+    31110200,4882800, 30996200,4826300, 30414400,5447400, 30260000,5391500, 
+    29662200,5805400, 28844500,5337900, 28435000,5789300, 27721400,5026400, 
+    22876300,5034300, 21977700,4414900, 21148000,4654700, 20917600,4653400, 
+    19334300,12411000, -2591700,12177200, 53200,3151100, -2564300,12149800, 
+    7819400,4692400, 10116000,5228600, 6975500,3120100, 7379700,3124700, 
+    11037900,596200, 12257000,2587800, 12257000,596200, 15227300,2352700, 
+    18444400,1112100, 19961100,5549400, 20173200,5078600, 20330000,5079300, 
+    20970200,4544300, 20989600,4563700, 19465500,1112100, 21611600,4182100, 
+    22925100,1112200, 22952700,1637200, 23059000,1112200, 24908100,4181200, 
+    27070100,3800600, 27238000,3800700, 28582200,520300, 29367800,1050100, 
+    29291400,179400, 29133700,360700, 29056700,312600, 29121900,332500, 
+    29269900,162300, 28941400,213100, 27491300,-3041500, 27588700,-2997800, 
+    22104900,-16142800, 13010900,-15603000, 13555500,-15182200, 
+    13555300,-15508500, 13582800,-15508500, 13583100,-15154700, 
+    1588700,-8822800, 1588700,-8379900, 1588700,-8474800, 1616200,-8474800, 
+    1003900,-630100, 1253300,-12284500, 12983400,-16239900 }));
+  subject.push_back(MakePath({ 198200,12149800, 1010600,12149800, 1011500,11859600 }));
+  subject.push_back(MakePath({ 21996700,-7432000, 22096700,-7432000, 22096700,-7332000 }));
+  c.AddSubject(subject);
+  c.Execute(ClipType::Union, FillRule::NonZero, solution);
+
+  EXPECT_TRUE(solution.Count() == 1 && solution[0]->Count() == 2 && (*solution[0])[1]->Count() == 1);
+}
+

@@ -1,26 +1,23 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
 * Date      :  12 May 2024                                                     *
-* Website   :  http://www.angusj.com                                           *
+* Website   :  https://www.angusj.com                                          *
 * Copyright :  Angus Johnson 2010-2024                                         *
 * Purpose   :  Core Clipper Library structures and functions                   *
-* License   :  http://www.boost.org/LICENSE_1_0.txt                            *
+* License   :  https://www.boost.org/LICENSE_1_0.txt                           *
 *******************************************************************************/
 
 #ifndef CLIPPER_CORE_H
 #define CLIPPER_CORE_H
 
+#include "clipper2/clipper.version.h"
 #include <cstdint>
-#include <cstdlib>
-#include <cmath>
 #include <vector>
 #include <string>
 #include <iostream>
 #include <algorithm>
-#include <climits>
 #include <numeric>
-#include <optional>
-#include "clipper2/clipper.version.h"
+#include <cmath>
 
 namespace Clipper2Lib
 {
@@ -251,6 +248,20 @@ namespace Clipper2Lib
   template <typename T>
   using Paths = std::vector<Path<T>>;
 
+  template <typename T, typename T2=T>
+  Path<T>& operator<<(Path<T>& poly, const Point<T2>& p)
+  {
+    poly.emplace_back(p);
+    return poly;
+  }
+
+  template <typename T>
+  Paths<T>& operator<<(Paths<T>& polys, const Path<T>& p)
+  {
+    polys.emplace_back(p);
+    return polys;
+  }
+
   using Path64 = Path<int64_t>;
   using PathD = Path<double>;
   using Paths64 = std::vector< Path64>;
@@ -331,10 +342,10 @@ namespace Clipper2Lib
     {
       Path<T> result;
       result.reserve(4);
-      result.push_back(Point<T>(left, top));
-      result.push_back(Point<T>(right, top));
-      result.push_back(Point<T>(right, bottom));
-      result.push_back(Point<T>(left, bottom));
+      result.emplace_back(left, top);
+      result.emplace_back(right, top);
+      result.emplace_back(right, bottom);
+      result.emplace_back(left, bottom);
       return result;
     }
 
@@ -618,13 +629,13 @@ namespace Clipper2Lib
     result.reserve(path.size());
     typename Path<T>::const_iterator path_iter = path.cbegin();
     Point<T> first_pt = *path_iter++, last_pt = first_pt;
-    result.push_back(first_pt);
+    result.emplace_back(first_pt);
     for (; path_iter != path.cend(); ++path_iter)
     {
       if (!NearEqual(*path_iter, last_pt, max_dist_sqrd))
       {
         last_pt = *path_iter;
-        result.push_back(last_pt);
+        result.emplace_back(last_pt);
       }
     }
     if (!is_closed_path) return result;
@@ -642,7 +653,7 @@ namespace Clipper2Lib
     for (typename Paths<T>::const_iterator paths_citer = paths.cbegin();
       paths_citer != paths.cend(); ++paths_citer)
     {
-      result.push_back(StripNearEqual(*paths_citer, max_dist_sqrd, is_closed_path));
+      result.emplace_back(std::move(StripNearEqual(*paths_citer, max_dist_sqrd, is_closed_path)));
     }
     return result;
   }
@@ -787,7 +798,7 @@ namespace Clipper2Lib
     const Point<T>& line1, const Point<T>& line2)
   {
     //perpendicular distance of point (x³,y³) = (Ax³ + By³ + C)/Sqrt(A² + B²)
-    //see http://en.wikipedia.org/wiki/Perpendicular_distance
+    //see https://en.wikipedia.org/wiki/Perpendicular_distance
     double a = static_cast<double>(pt.x - line1.x);
     double b = static_cast<double>(pt.y - line1.y);
     double c = static_cast<double>(line2.x - line1.x);

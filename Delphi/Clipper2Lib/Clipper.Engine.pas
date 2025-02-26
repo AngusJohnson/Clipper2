@@ -2,11 +2,11 @@ unit Clipper.Engine;
 
 (*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  22 November 2024                                                *
-* Website   :  http://www.angusj.com                                           *
-* Copyright :  Angus Johnson 2010-2024                                         *
+* Date      :  9 February 2025                                                 *
+* Website   :  https://www.angusj.com                                          *
+* Copyright :  Angus Johnson 2010-2025                                         *
 * Purpose   :  This is the main polygon clipping module                        *
-* License   :  http://www.boost.org/LICENSE_1_0.txt                            *
+* License   :  https://www.boost.org/LICENSE_1_0.txt                           *
 *******************************************************************************)
 
 interface
@@ -899,7 +899,7 @@ begin
       while (op2 <> op) and (op2.pt.Y > pt.Y) do op2 := op2.next;
     if (op2 = op) then break;
 
-    // must have touched or crossed the pt.Y horizonal
+    // must have touched or crossed the pt.Y horizontal
     // and this must happen an even number of times
 
     if (op2.pt.Y = pt.Y) then // touching the horizontal
@@ -2229,17 +2229,18 @@ var
   op2: POutPt;
 begin
   op2 := outrec.pts;
+  // triangles can't self-intersect
+  if (op2.prev = op2.next.next) then Exit;
   while true do
   begin
-    // triangles can't self-intersect
-    if (op2.prev = op2.next.next) then
-      Break
-    else if SegmentsIntersect(op2.prev.pt, op2.pt,
+    if SegmentsIntersect(op2.prev.pt, op2.pt,
       op2.next.pt, op2.next.next.pt) then
     begin
       DoSplitOp(outrec, op2);
       if not assigned(outrec.pts) then Break;
       op2 := outrec.pts;
+      // triangles can't self-intersect
+      if (op2.prev = op2.next.next) then Break;
       Continue;
     end else
       op2 := op2.next;
@@ -2690,7 +2691,7 @@ begin
     end else if IsFront(e1) or (e1.outrec = e2.outrec) then
     begin
       // this 'else if' condition isn't strictly needed but
-      // it's sensible to split polygons that ony touch at
+      // it's sensible to split polygons that only touch at
       // a common vertex (not at common edges).
       op := AddLocalMaxPoly(e1, e2, pt);
       {$IFDEF USINGZ}
@@ -3088,7 +3089,7 @@ begin
         or1.pts.outrec := or1;
       end;
 
-      if FUsingPolytree then //#498, #520, #584, D#576, #618
+      if FUsingPolytree then // #498, #520, #584, D#576, #618
       begin
         if Path1InsidePath2(or1.pts, or2.pts) then
         begin
@@ -3104,7 +3105,7 @@ begin
         else if Path1InsidePath2(or2.pts, or1.pts) then
         begin
           or2.owner := or1;
-        end 
+        end
         else
           or2.owner := or1.owner;
 
@@ -3115,10 +3116,10 @@ begin
     end else
     begin
       or2.pts := nil;
-      if FUsingPolytree then   
+      if FUsingPolytree then
       begin
         SetOwner(or2, or1);
-        MoveSplits(or2, or1); //#618
+        MoveSplits(or2, or1); // #618
       end else
         or2.owner := or1;
     end;
@@ -3528,7 +3529,7 @@ begin
       end;
       if IsHotEdge(horzEdge) then
       begin
-        //nb: The outrec containining the op returned by IntersectEdges
+        //nb: The outrec containing the op returned by IntersectEdges
         //above may no longer be associated with horzEdge.
         FHorzSegList.Add(GetLastOp(horzEdge));
       end;
@@ -3737,12 +3738,15 @@ begin
   Result := true;
   for i := 0 to High(splits) do
   begin
-    split := GetRealOutRec(splits[i]);
-    if (split = nil) or 
-       (split = outrec) or 
-       (split.recursiveCheck = outrec) then Continue;
-       
+    split := splits[i];
+    if not Assigned(split.pts) and Assigned(split.splits) and
+      CheckSplitOwner(outrec, split.splits) then Exit;          // #942
+
+    split := GetRealOutRec(split);
+    if (split = nil) or (split = outrec) or
+      (split.recursiveCheck = outrec) then Continue;
     split.recursiveCheck := outrec; // prevent infinite loops
+
     if Assigned(split.splits) and
       CheckSplitOwner(outrec, split.splits) then Exit
     else if IsValidOwner(outrec, split) and

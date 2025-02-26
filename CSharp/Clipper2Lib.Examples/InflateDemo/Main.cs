@@ -1,9 +1,9 @@
 ﻿/*******************************************************************************
 * Author    :  Angus Johnson                                                   *
 * Date      :  24 September 2023                                               *
-* Website   :  http://www.angusj.com                                           *
+* Website   :  https://www.angusj.com                                          *
 * Copyright :  Angus Johnson 2010-2023                                         *
-* License   :  http://www.boost.org/LICENSE_1_0.txt                            *
+* License   :  https://www.boost.org/LICENSE_1_0.txt                           *
 *******************************************************************************/
 
 using System.IO;
@@ -26,42 +26,48 @@ namespace ClipperDemo1
     public static void DoSimpleShapes()
     {
       SvgWriter svg = new();
-      ClipperOffset co = new();
 
-      //triangle offset - with large miter
-      Paths64 p0 = new() { Clipper.MakePath(new [] { 30,150, 60,350, 0,350 }) };
-      Paths64 p = new();
+      //TRIANGLE OFFSET - WITH LARGE MITER
+
+      PathsD pp = new() { Clipper.MakePath(new double[] { 30,150, 60,350, 0,350 }) };
+      PathsD solution = new();
       for (int i = 0; i < 5; ++i)
       {
         //nb: the last parameter here (10) greatly increases miter limit
-        p0 = Clipper.InflatePaths(p0, 5, JoinType.Miter, EndType.Polygon, 10);
-        p.AddRange(p0);
+        pp = Clipper.InflatePaths(pp, 5, JoinType.Miter, EndType.Polygon, 10);
+        solution.AddRange(pp);
       }
-      SvgUtils.AddSolution(svg, p, false);
-      p.Clear();  
+      SvgUtils.AddSolution(svg, solution, false);
 
-      //rectangle offset - both squared and rounded
-      //nb: using the ClipperOffest class directly here to control 
-      //different join types within the same offset operation
-      p.Add(Clipper.MakePath(new [] { 100,0, 340,0, 340,200, 100,200, 100, 0 }));
-      SvgUtils.AddOpenSubject(svg, p);
-      co.AddPaths(p, JoinType.Bevel, EndType.Joined);
+      // RECTANGLE OFFSET - BEVEL, SQUARED AND ROUNDED
 
-      p = Clipper.TranslatePaths(p, 60, 50);
-      SvgUtils.AddOpenSubject(svg, p);
-      co.AddPaths(p, JoinType.Square, EndType.Joined);
-      p = Clipper.TranslatePaths(p, 60, 50);
-      SvgUtils.AddOpenSubject(svg, p);
-      co.AddPaths(p, JoinType.Round, EndType.Joined);
+      solution.Clear();
+      solution.Add(Clipper.MakePath(new double[] { 100, 0, 340, 0, 340, 200, 100, 200 }));
+      solution.Add(Clipper.TranslatePath(solution[0], 60, 50));
+      solution.Add(Clipper.TranslatePath(solution[1], 60, 50));
+      SvgUtils.AddOpenSubject(svg, solution);
 
-      co.Execute(10, p);
+      // nb: rather than using InflatePaths(), we have to use the 
+      // ClipperOffest class directly because we want to perform
+      // different join types in a single offset operation
+      ClipperOffset co = new();
+      // because ClipperOffset only accepts Int64 paths, scale them 
+      // so the de-scaled offset result will have greater precision
+      double scale = 100;
+      Paths64 pp64 = Clipper.ScalePaths64(solution, scale);
+      co.AddPath(pp64[0], JoinType.Bevel, EndType.Joined);
+      co.AddPath(pp64[1], JoinType.Square, EndType.Joined);
+      co.AddPath(pp64[2], JoinType.Round, EndType.Joined);
+      co.Execute(10 * scale, pp64);
+      // now de-scale the offset solution
+      solution = Clipper.ScalePathsD(pp64, 1 / scale);
 
       const string filename = "../../../inflate.svg";
-      SvgUtils.AddSolution(svg, p, false);
-      SvgUtils.AddCaption(svg, "Beveled join", 100, -27);
-      SvgUtils.AddCaption(svg, "Squared join", 160, 23);
-      SvgUtils.AddCaption(svg, "Rounded join", 220, 73);
-      SvgUtils.SaveToFile(svg, filename, FillRule.EvenOdd, 800, 600, 20);
+      SvgUtils.AddSolution(svg, solution, false);
+      SvgUtils.AddCaption(svg, "Beveled join", 100, -17);
+      SvgUtils.AddCaption(svg, "Squared join", 160, 33);
+      SvgUtils.AddCaption(svg, "Rounded join", 220, 83);
+      SvgUtils.SaveToFile(svg, filename, FillRule.EvenOdd, 800, 600, 40);
       ClipperFileIO.OpenFileWithDefaultApp(filename);
     }
 
