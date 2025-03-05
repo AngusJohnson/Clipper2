@@ -2,9 +2,9 @@ unit Clipper;
 
 (*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  7 May 2024                                                      *
+* Date      :  5 March 2025                                                    *
 * Website   :  https://www.angusj.com                                          *
-* Copyright :  Angus Johnson 2010-2024                                         *
+* Copyright :  Angus Johnson 2010-2025                                         *
 * Purpose   :  This module provides a simple interface to the Clipper Library  *
 * License   :  https://www.boost.org/LICENSE_1_0.txt                           *
 *******************************************************************************)
@@ -408,7 +408,7 @@ begin
   invScale := 1/scale;
   pp := ScalePaths(paths, scale, scale);
 
-  with TClipperOffset.Create(miterLimit, ArcTolerance) do
+  with TClipperOffset.Create(miterLimit, scale * ArcTolerance) do
   try
     AddPaths(pp, jt, et);
     Execute(delta * scale, pp); // reuse pp to receive the solution.
@@ -683,7 +683,7 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-procedure ShowPolyPathStructure64(pp: TPolyPath64; level: integer;
+procedure ShowPolyPathStructure64(pp: TPolyPath64; ppIdx, level: integer;
   strings: TStrings);
 var
   i: integer;
@@ -692,12 +692,14 @@ begin
   spaces := StringOfChar(' ', level * 2);
   if pp.Count = 1 then plural := '' else plural := 's';
   if pp.IsHole then
-    strings.Add(Format('%sA hole containing %d polygon%s', [spaces, pp.Count, plural]))
+    strings.Add(Format('%sHole (%d) containing %d polygon%s',
+      [spaces, ppIdx, pp.Count, plural]))
   else
-    strings.Add(Format('%sA polygon containing %d hole%s', [spaces, pp.Count, plural]));
+    strings.Add(Format('%sPolygon (%d) containing %d hole%s',
+      [spaces, ppIdx, pp.Count, plural]));
   for i := 0 to pp.Count -1 do
     if pp.child[i].Count> 0 then
-      ShowPolyPathStructure64(pp.child[i], level + 1, strings);
+      ShowPolyPathStructure64(pp.child[i], i, level + 1, strings);
 end;
 //------------------------------------------------------------------------------
 
@@ -710,7 +712,7 @@ begin
     strings.Add(Format('Polytree with just %d polygons.', [polytree.Count]));
   for i := 0 to polytree.Count -1 do
     if polytree[i].Count > 0 then
-      ShowPolyPathStructure64(polytree[i], 1, strings);
+      ShowPolyPathStructure64(polytree[i], i, 1, strings);
 end;
 //------------------------------------------------------------------------------
 
