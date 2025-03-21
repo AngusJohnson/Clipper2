@@ -60,7 +60,7 @@ private:
   {
     while (current < end)
     {
-      uint8_t i = shift[static_cast<unsigned>(*current)];  //compare last byte first
+      unsigned i = shift[static_cast<unsigned>(*current)];  //compare last byte first
       if (!i)                   //last byte matches if i == 0
       {
         char* j = current - needle_len_less1;
@@ -84,7 +84,7 @@ private:
   {
     while (current < end)
     {
-      uint8_t i = shift[case_table[static_cast<unsigned>(*current)]];
+      unsigned i = shift[case_table[static_cast<unsigned>(*current)]];
       if (!i)
       {
         char* j = current - needle_len_less1;
@@ -159,7 +159,7 @@ public:
       *ui = case_table[*ui];
 
     std::fill(std::begin(shift), std::begin(shift) + 256, needle_len_);
-    for (uint8_t j = 0; j < needle_len_less1; ++j)
+    for (unsigned j = 0; j < needle_len_less1; ++j)
       shift[needle_[j]] = needle_len_less1 - j;
 
     jump_ = shift[needle_[needle_len_less1]];
