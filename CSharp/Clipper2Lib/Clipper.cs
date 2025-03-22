@@ -1,6 +1,6 @@
 ﻿/*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  22 January 2025                                                 *
+* Date      :  5 March 2025                                                    *
 * Website   :  https://www.angusj.com                                          *
 * Copyright :  Angus Johnson 2010-2025                                         *
 * Purpose   :  This module contains simple functions that will likely cover    *
@@ -153,7 +153,7 @@ namespace Clipper2Lib
       InternalClipper.CheckPrecision(precision);
       double scale = Math.Pow(10, precision);
       Paths64 tmp = ScalePaths64(paths, scale);
-      ClipperOffset co = new ClipperOffset(miterLimit, arcTolerance);
+      ClipperOffset co = new ClipperOffset(miterLimit, scale * arcTolerance);
       co.AddPaths(tmp, joinType, endType);
       co.Execute(delta * scale, tmp); // reuse 'tmp' to receive (scaled) solution
       return ScalePathsD(tmp, 1 / scale);

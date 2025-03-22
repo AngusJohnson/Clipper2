@@ -1,6 +1,6 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  22 January 2025                                                 *
+* Date      :  5 March 2025                                                    *
 * Website   :  https://www.angusj.com                                          *
 * Copyright :  Angus Johnson 2010-2025                                         *
 * Purpose   :  Path Offset (Inflate/Shrink)                                    *
@@ -597,10 +597,10 @@ void ClipperOffset::ExecuteInternal(double delta)
 
 	if (!solution->size()) return;
 
-		bool paths_reversed = CheckReverseOrientation();
+	bool paths_reversed = CheckReverseOrientation();
 	//clean up self-intersections ...
 	Clipper64 c;
-	c.PreserveCollinear(false);
+	c.PreserveCollinear(preserve_collinear_);
 	//the solution should retain the orientation of the input
 	c.ReverseSolution(reverse_solution_ != paths_reversed);
 #ifdef USINGZ
