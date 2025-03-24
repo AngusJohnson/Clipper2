@@ -1,4 +1,6 @@
 name: C#
+permissions:
+  contents: read
 on:
   push:
   pull_request:
