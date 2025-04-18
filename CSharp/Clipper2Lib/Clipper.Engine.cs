@@ -1,6 +1,6 @@
 ﻿/*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  9 February 2025                                                 *
+* Date      :  18 April 2025                                                   *
 * Website   :  https://www.angusj.com                                          *
 * Copyright :  Angus Johnson 2010-2025                                         *
 * Purpose   :  This is the main polygon clipping module                        *
@@ -2917,19 +2917,32 @@ private void DoHorizontal(Active horz)
     private void FixSelfIntersects(OutRec outrec)
     {
       OutPt op2 = outrec.pts!;
-      // triangles can't self-intersect
-      if (op2.prev == op2.next!.next) return;
+      if (op2.prev == op2.next!.next)
+        return; // because triangles can't self-intersect
       for (; ; )
       {
         if (InternalClipper.SegsIntersect(op2.prev.pt,
                 op2.pt, op2.next!.pt, op2.next.next!.pt))
         {
-          DoSplitOp(outrec, op2);
-          if (outrec.pts == null) return;
-          op2 = outrec.pts;
-          // triangles can't self-intersect
-          if (op2.prev == op2.next!.next) break;
-          continue;
+          if (InternalClipper.SegsIntersect(op2.prev.pt,
+                  op2.pt, op2.next.next!.pt, op2.next.next.next!.pt))
+          {
+            // adjacent intersections (ie a micro self-intersection)
+            op2 = DuplicateOp(op2, false);
+            op2.pt = op2.next!.next!.next!.pt;
+            op2 = op2.next;
+          }
+          else
+          {
+            if (op2 == outrec.pts || op2.next == outrec.pts)
+              outrec.pts = outrec.pts.prev;
+            DoSplitOp(outrec, op2);
+            if (outrec.pts == null) return;
+            op2 = outrec.pts;
+            // triangles can't self-intersect
+            if (op2.prev == op2.next!.next) break;
+            continue;
+          }
         }
 
         op2 = op2.next;

@@ -2,7 +2,7 @@ unit Clipper.Engine;
 
 (*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  9 February 2025                                                 *
+* Date      :  18 April 2025                                                   *
 * Website   :  https://www.angusj.com                                          *
 * Copyright :  Angus Johnson 2010-2025                                         *
 * Purpose   :  This is the main polygon clipping module                        *
@@ -2229,19 +2229,33 @@ var
   op2: POutPt;
 begin
   op2 := outrec.pts;
-  // triangles can't self-intersect
-  if (op2.prev = op2.next.next) then Exit;
+  if (op2.prev = op2.next.next) then
+    Exit; // because triangles can't self-intersect
+
   while true do
   begin
     if SegmentsIntersect(op2.prev.pt, op2.pt,
       op2.next.pt, op2.next.next.pt) then
     begin
-      DoSplitOp(outrec, op2);
-      if not assigned(outrec.pts) then Break;
-      op2 := outrec.pts;
-      // triangles can't self-intersect
-      if (op2.prev = op2.next.next) then Break;
-      Continue;
+      if SegmentsIntersect(op2.prev.pt, op2.pt,
+        op2.next.next.pt, op2.next.next.next.pt) then
+      begin
+        // adjacent intersections (ie a micro self-intersection)
+        op2 := DuplicateOp(op2, false);
+        op2.pt := op2.next.next.next.pt;
+        op2 := op2.next;
+      end else
+      begin
+        if (op2 = outrec.pts) or (op2.next = outrec.pts) then
+          outrec.pts := outrec.pts.prev;
+        // split required
+        DoSplitOp(outrec, op2);
+        if not assigned(outrec.pts) then Break;
+        op2 := outrec.pts;
+        if (op2.prev = op2.next.next) then
+          Break; // because triangles can't self-intersect
+        Continue;
+      end;
     end else
       op2 := op2.next;
     if (op2 = outrec.pts) then Break;

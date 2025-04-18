@@ -1,6 +1,6 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  9 February 2025                                                 *
+* Date      :  18 April 2025                                                   *
 * Website   :  https://www.angusj.com                                          *
 * Copyright :  Angus Johnson 2010-2025                                         *
 * Purpose   :  This is the main polygon clipping module                        *
@@ -532,9 +532,9 @@ namespace Clipper2Lib {
         val = 1 - val; // toggle val
       else
       {
-        double d = CrossProduct(op2->prev->pt, op2->pt, pt);
-        if (d == 0) return PointInPolygonResult::IsOn;
-        if ((d < 0) == is_above) val = 1 - val;
+        int i = CrossProductSign(op2->prev->pt, op2->pt, pt);
+        if (i == 0) return PointInPolygonResult::IsOn;
+        if ((i < 0) == is_above) val = 1 - val;
       }
       is_above = !is_above;
       op2 = op2->next;
@@ -542,9 +542,9 @@ namespace Clipper2Lib {
 
     if (is_above != starting_above)
     {
-      double d = CrossProduct(op2->prev->pt, op2->pt, pt);
-      if (d == 0) return PointInPolygonResult::IsOn;
-      if ((d < 0) == is_above) val = 1 - val;
+      int i = CrossProductSign(op2->prev->pt, op2->pt, pt);
+      if (i == 0) return PointInPolygonResult::IsOn;
+      if ((i < 0) == is_above) val = 1 - val;
     }
 
     if (val == 0) return PointInPolygonResult::IsOutside;
@@ -1122,21 +1122,19 @@ namespace Clipper2Lib {
         return newcomer.curr_x > resident.curr_x;
 
     //get the turning direction  a1.top, a2.bot, a2.top
-    double d = CrossProduct(resident.top, newcomer.bot, newcomer.top);
-    if (d != 0) return d < 0;
+    int i = CrossProductSign(resident.top, newcomer.bot, newcomer.top);
+    if (i != 0) return i < 0;
 
     //edges must be collinear to get here
     //for starting open paths, place them according to
     //the direction they're about to turn
     if (!IsMaxima(resident) && (resident.top.y > newcomer.top.y))
     {
-      return CrossProduct(newcomer.bot,
-        resident.top, NextVertex(resident)->pt) <= 0;
+      return (CrossProductSign(newcomer.bot, resident.top, NextVertex(resident)->pt) <= 0);
     }
     else if (!IsMaxima(newcomer) && (newcomer.top.y > resident.top.y))
     {
-      return CrossProduct(newcomer.bot,
-        newcomer.top, NextVertex(newcomer)->pt) >= 0;
+      return (CrossProductSign(newcomer.bot, newcomer.top, NextVertex(newcomer)->pt) >= 0);
     }
 
     int64_t y = newcomer.bot.y;
@@ -1151,7 +1149,7 @@ namespace Clipper2Lib {
       resident.bot, resident.top)) return true;
     else
       //compare turning direction of the alternate bound
-      return (CrossProduct(PrevPrevVertex(resident)->pt,
+      return (CrossProductSign(PrevPrevVertex(resident)->pt,
         newcomer.bot, PrevPrevVertex(newcomer)->pt) > 0) == newcomerIsLeft;
   }
 
@@ -1648,21 +1646,32 @@ namespace Clipper2Lib {
   void ClipperBase::FixSelfIntersects(OutRec* outrec)
   {
     OutPt* op2 = outrec->pts;
-    // triangles can't self-intersect
-    if (op2->prev == op2->next->next) return;
+    if (op2->prev == op2->next->next) 
+      return; // because triangles can't self-intersect
     for (; ; )
     {
       if (SegmentsIntersect(op2->prev->pt,
         op2->pt, op2->next->pt, op2->next->next->pt))
       {
-        if (op2 == outrec->pts || op2->next == outrec->pts)
-          outrec->pts = outrec->pts->prev;
-        DoSplitOp(outrec, op2);
-        if (!outrec->pts) break;
-        op2 = outrec->pts;
-        // triangles can't self-intersect
-        if (op2->prev == op2->next->next) break;
-        continue;
+        if (SegmentsIntersect(op2->prev->pt,
+          op2->pt, op2->next->next->pt, op2->next->next->next->pt))
+        {
+          // adjacent intersections (ie a micro self-intersections)
+          op2 = DuplicateOp(op2, false);
+          op2->pt = op2->next->next->next->pt;
+          op2 = op2->next;
+        }
+        else
+        {
+          if (op2 == outrec->pts || op2->next == outrec->pts)
+            outrec->pts = outrec->pts->prev;
+          DoSplitOp(outrec, op2);
+          if (!outrec->pts) break;
+          op2 = outrec->pts;
+          if (op2->prev == op2->next->next)
+            break; // again, because triangles can't self-intersect
+          continue;
+        }
       }
       else
         op2 = op2->next;
