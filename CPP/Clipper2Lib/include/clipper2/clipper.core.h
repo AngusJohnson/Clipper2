@@ -761,8 +761,8 @@ namespace Clipper2Lib
 #if (defined(__clang__) || defined(__GNUC__)) && UINTPTR_MAX >= UINT64_MAX
     const auto ab = static_cast<__int128_t>(a) * static_cast<__int128_t>(b);
     const auto cd = static_cast<__int128_t>(c) * static_cast<__int128_t>(d);
-    if ab > cd return 1;
-    else if ab < cd return -1;
+    if (ab > cd) return 1;
+    else if (ab < cd) return -1;
     else return 0;
 #else
     // nb: unsigned values needed for calculating carry into 'hi'
