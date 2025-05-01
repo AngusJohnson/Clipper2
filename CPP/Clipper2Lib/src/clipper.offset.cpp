@@ -9,6 +9,7 @@
 
 #include "clipper2/clipper.h"
 #include "clipper2/clipper.offset.h"
+#include "assert.h"
 
 namespace Clipper2Lib {
 
@@ -145,7 +146,9 @@ ClipperOffset::Group::Group(const Paths64& _paths, JoinType _join_type, EndType 
 		// the lowermost path must be an outer path, so if its orientation is negative,
 		// then flag the whole group is 'reversed' (will negate delta etc.)
 		// as this is much more efficient than reversing every path.
-    is_reversed = (lowest_path_idx.has_value()) && Area(paths_in[lowest_path_idx.value()]) < 0;
+		const auto lowest_path_area = Area(paths_in[lowest_path_idx.value()]);
+		assert(lowest_path_area != 0.0);
+    is_reversed = (lowest_path_idx.has_value()) && lowest_path_area < 0;
 	}
 	else
 	{
