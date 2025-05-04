@@ -589,6 +589,7 @@ namespace Clipper2Lib {
         if (pip == PointInPolygonResult::IsInside) return true;
         pip = PointInPolygonResult::IsInside;
         break;
+      default: break;
       }
       op = op->next;
     } while (op != op1);
