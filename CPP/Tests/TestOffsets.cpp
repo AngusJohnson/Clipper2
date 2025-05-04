@@ -675,3 +675,26 @@ TEST(Clipper2Tests, TestOffsets12) // see #873
   Paths64 solution = InflatePaths(subject, -249561088, JoinType::Miter, EndType::Polygon);
   EXPECT_TRUE(solution.empty());
 }
+
+TEST(Clipper2Tests, TestOffsets13) // see #965
+{
+  const Path64 subject1 = {{0, 0}, {0, 10}, {10, 0}};
+  const auto delta = 2;
+  const auto joinType = JoinType::Miter;
+  const auto endType = EndType::Polygon;
+
+  const Paths64 subjects1 = {
+    subject1
+  };
+  const Paths64 solution1 = InflatePaths(subjects1, delta, joinType, endType);
+  const auto area1 = std::abs(Area(solution1));
+  EXPECT_EQ(area1, 122);
+
+  const Paths64 subjects2 = {
+   subject1,
+   {{0, 20}} // adding this single-point path should not really change the solution
+  };
+  const Paths64 solution2 = InflatePaths(subjects2, delta, joinType, endType);
+  const auto area2 = std::abs(Area(solution2));
+  EXPECT_EQ(area2, 122);
+}
