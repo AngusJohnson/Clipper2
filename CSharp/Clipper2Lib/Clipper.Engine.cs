@@ -1,6 +1,6 @@
 ﻿/*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  18 April 2025                                                   *
+* Date      :  4 May 2025                                                      *
 * Website   :  https://www.angusj.com                                          *
 * Copyright :  Angus Johnson 2010-2025                                         *
 * Purpose   :  This is the main polygon clipping module                        *
@@ -2921,7 +2921,7 @@ private void DoHorizontal(Active horz)
         return; // because triangles can't self-intersect
       for (; ; )
       {
-        if (InternalClipper.SegsIntersect(op2.prev.pt,
+        if (InternalClipper.SegsIntersect(op2!.prev.pt,
                 op2.pt, op2.next!.pt, op2.next.next!.pt))
         {
           if (InternalClipper.SegsIntersect(op2.prev.pt,
@@ -2945,7 +2945,7 @@ private void DoHorizontal(Active horz)
           }
         }
 
-        op2 = op2.next;
+        op2 = op2.next!;
         if (op2 == outrec.pts) break;
       }
     }
@@ -3057,11 +3057,16 @@ private void DoHorizontal(Active horz)
         split = GetRealOutRec(split);
         if (split == null || split == outrec || split.recursiveSplit == outrec) continue;
         split.recursiveSplit = outrec; //#599
+        
         if (split.splits != null && CheckSplitOwner(outrec, split.splits)) return true;
-        if (!IsValidOwner(outrec, split) ||
-            !CheckBounds(split) ||
+
+        if (!CheckBounds(split) ||
             !split.bounds.Contains(outrec.bounds) ||
             !Path1InsidePath2(outrec.pts!, split.pts!)) continue;
+
+        if (!IsValidOwner(outrec, split)) // split is owned by outrec (#957)
+          split.owner = outrec.owner;
+
         outrec.owner = split; //found in split
         return true;
       }

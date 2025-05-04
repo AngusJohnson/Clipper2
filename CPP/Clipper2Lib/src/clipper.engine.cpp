@@ -1,6 +1,6 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  18 April 2025                                                   *
+* Date      :  4 May 2025                                                      *
 * Website   :  https://www.angusj.com                                          *
 * Copyright :  Angus Johnson 2010-2025                                         *
 * Purpose   :  This is the main polygon clipping module                        *
@@ -478,8 +478,7 @@ namespace Clipper2Lib {
   inline void SetOwner(OutRec* outrec, OutRec* new_owner)
   {
     //precondition1: new_owner is never null
-    while (new_owner->owner && !new_owner->owner->pts)
-      new_owner->owner = new_owner->owner->owner;
+    new_owner->owner = GetRealOutRec(new_owner->owner);
     OutRec* tmp = new_owner;
     while (tmp && tmp != outrec) tmp = tmp->owner;
     if (tmp) new_owner->owner = outrec->owner;
@@ -576,27 +575,29 @@ namespace Clipper2Lib {
 
   inline bool Path1InsidePath2(OutPt* op1, OutPt* op2)
   {
-    // we need to make some accommodation for rounding errors
-    // so we won't jump if the first vertex is found outside
-    PointInPolygonResult result;
-    int outside_cnt = 0;
+    // accommodate rounding errors
+    PointInPolygonResult pip = PointInPolygonResult::IsOn;
     OutPt* op = op1;
-    do
-    {
-      result = PointInOpPolygon(op->pt, op2);
-      if (result == PointInPolygonResult::IsOutside) ++outside_cnt;
-      else if (result == PointInPolygonResult::IsInside) --outside_cnt;
+    do {
+      switch (PointInOpPolygon(op->pt, op2))
+      {
+      case PointInPolygonResult::IsOutside:
+        if (pip == PointInPolygonResult::IsOutside) return false;
+        pip = PointInPolygonResult::IsOutside;
+        break;
+      case PointInPolygonResult::IsInside:
+        if (pip == PointInPolygonResult::IsInside) return true;
+        pip = PointInPolygonResult::IsInside;
+        break;
+      }
       op = op->next;
-    } while (op != op1 && std::abs(outside_cnt) < 2);
-    if (std::abs(outside_cnt) > 1) return (outside_cnt < 0);
-    // since path1's location is still equivocal, check its midpoint
+    } while (op != op1);
+    if (pip != PointInPolygonResult::IsInside) return false;
+    // result is likely true but check midpoint
     Point64 mp = GetBounds(GetCleanPath(op1)).MidPoint();
     Path64 path2 = GetCleanPath(op2);
-    return PointInPolygon(mp, path2) != PointInPolygonResult::IsOutside;
+    return PointInPolygon(mp, path2) == PointInPolygonResult::IsInside;    
   }
-
-  //------------------------------------------------------------------------------
-  //------------------------------------------------------------------------------
 
   void AddLocMin(LocalMinimaList& list,
     Vertex& vert, PathType polytype, bool is_open)
@@ -1559,7 +1560,7 @@ namespace Clipper2Lib {
     FixSelfIntersects(outrec);
   }
 
-  void ClipperBase::DoSplitOp(OutRec* outrec, OutPt* splitOp)
+  void ClipperBase::DoSplitOp (OutRec* outrec, OutPt* splitOp)
   {
     // splitOp.prev -> splitOp &&
     // splitOp.next -> splitOp.next.next are intersecting
@@ -2269,7 +2270,6 @@ namespace Clipper2Lib {
 
   void MoveSplits(OutRec* fromOr, OutRec* toOr)
   {
-    if (!fromOr->splits) return;
     if (!toOr->splits) toOr->splits = new OutRecList();
     OutRecList::iterator orIter = fromOr->splits->begin();
     for (; orIter != fromOr->splits->end(); ++orIter)
@@ -2337,7 +2337,8 @@ namespace Clipper2Lib {
         if (using_polytree_)
         {
           SetOwner(or2, or1);
-          MoveSplits(or2, or1); //#618
+          if (or2->splits) 
+            MoveSplits(or2, or1); //#618
         }
         else
           or2->owner = or1;
@@ -2950,15 +2951,17 @@ namespace Clipper2Lib {
       split->recursive_split = outrec; // prevent infinite loops
 
       if (split->splits && CheckSplitOwner(outrec, split->splits))
-        return true;
-      else if (CheckBounds(split) &&
-        IsValidOwner(outrec, split) &&
-        split->bounds.Contains(outrec->bounds) &&
-        Path1InsidePath2(outrec->pts, split->pts))
-      {
-        outrec->owner = split; //found in split
-        return true;
-      }
+        return true;    
+
+      if (!CheckBounds(split) || !split->bounds.Contains(outrec->bounds) ||
+        !Path1InsidePath2(outrec->pts, split->pts)) continue;
+     
+      if (!IsValidOwner(outrec, split)) // split is owned by outrec! (#957)
+          split->owner = outrec->owner;
+
+      outrec->owner = split;
+      return true;
+      
     }
     return false;
   }
