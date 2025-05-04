@@ -257,14 +257,18 @@ namespace Clipper2Lib
       Point64 botPt = new Point64(long.MaxValue, long.MinValue);
       for (int i = 0; i < paths.Count; ++i)
       {
+        double a = double.MaxValue;
         foreach (Point64 pt in paths[i])
 		    {
           if ((pt.Y < botPt.Y) ||
             ((pt.Y == botPt.Y) && (pt.X >= botPt.X))) continue;
-          double a = Clipper.Area(paths[i]);
-          if (a == 0) break; // invalid closed path so break from inner loop
+          if (a == double.MaxValue)
+          {
+            a = Clipper.Area(paths[i]);
+            if (a == 0) break; // invalid closed path so break from inner loop
+            isNegArea = a < 0;
+          }
           idx = i;
-          isNegArea = a < 0;
           botPt.X = pt.X;
           botPt.Y = pt.Y;
         }

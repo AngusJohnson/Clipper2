@@ -39,14 +39,18 @@ void GetLowestClosedPathInfo(const Paths64& paths, std::optional<size_t>& idx, b
 	Point64 botPt = Point64(INT64_MAX, INT64_MIN);
 	for (size_t i = 0; i < paths.size(); ++i)
 	{
+		double a = MAX_DBL;
 		for (const Point64& pt : paths[i])
 		{
-			if ((pt.y < botPt.y) || 
+			if ((pt.y < botPt.y) ||
 				((pt.y == botPt.y) && (pt.x >= botPt.x))) continue;
-			double a = Area(paths[i]);
-			if (a == 0) break; // invalid closed path so break from inner loop
+			if (a == MAX_DBL) 
+			{
+				a = Area(paths[i]);
+				if (a == 0) break; // invalid closed path, so break from inner loop
+				is_neg_area = a < 0;
+			}
       idx = i;
-			is_neg_area = a < 0;
 			botPt.x = pt.x;
 			botPt.y = pt.y;
 		}

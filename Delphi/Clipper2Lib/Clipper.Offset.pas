@@ -227,14 +227,18 @@ begin
   botPt := Point64(MaxInt64, MinInt64);
   for i := 0 to High(paths) do
   begin
+    a := MaxDouble;
     for j := 0 to High(paths[i]) do
       with paths[i][j] do
       begin
         if (Y < botPt.Y) or
           ((Y = botPt.Y) and (X >= botPt.X)) then Continue;
-        a := Area(paths[i]);
-			  if (a = 0) then Break; // invalid closed path so break from inner loop
-        IsNegArea := a < 0;
+        if a = MaxDouble then
+        begin
+          a := Area(paths[i]);
+          if (a = 0) then Break; // invalid closed path, break from inner loop
+          IsNegArea := a < 0;
+        end;
         idx := i;
         botPt.X := X;
         botPt.Y := Y;
