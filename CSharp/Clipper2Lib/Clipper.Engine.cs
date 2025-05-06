@@ -2670,27 +2670,26 @@ private void DoHorizontal(Active horz)
     {
       // we need to make some accommodation for rounding errors
       // so we won't jump if the first vertex is found outside
-      int outside_cnt = 0;
+      PointInPolygonResult pip = PointInPolygonResult.IsOn;
       OutPt op = op1;
       do
       {
-        PointInPolygonResult result = PointInOpPolygon(op.pt, op2);
-        switch (result)
+        switch (PointInOpPolygon(op.pt, op2))
         {
           case PointInPolygonResult.IsOutside:
-            ++outside_cnt;
+            if (pip == PointInPolygonResult.IsOutside) return false;
+            pip = PointInPolygonResult.IsOutside;
             break;
           case PointInPolygonResult.IsInside:
-            --outside_cnt;
+            if (pip == PointInPolygonResult.IsInside) return true;
+            pip = PointInPolygonResult.IsInside;
             break;
+          default: break;
         }
         op = op.next!;
-      } while (op != op1 && Math.Abs(outside_cnt) < 2);
-      if (Math.Abs(outside_cnt) > 1) return (outside_cnt < 0);
-      // since path1's location is still equivocal, check its midpoint
-      Point64 mp = GetBounds(GetCleanPath(op1)).MidPoint();
-      Path64 path2 = GetCleanPath(op2);
-      return InternalClipper.PointInPolygon(mp, path2) != PointInPolygonResult.IsOutside;
+      } while (op != op1);
+      // result is unclear, so try again using cleaned paths
+      return InternalClipper.Path2ContainsPath1(GetCleanPath(op1), GetCleanPath(op2)); // (#973)
     }
 
     private static void MoveSplits(OutRec fromOr, OutRec toOr)
@@ -3020,21 +3019,6 @@ private void DoHorizontal(Active horz)
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static Rect64 GetBounds(Path64 path)
-	  {
-		  if (path.Count == 0) return new Rect64();
-      Rect64 result = Clipper.InvalidRect64;
-		  foreach (Point64 pt in path)
-		  {
-			  if (pt.X < result.left) result.left = pt.X;
-			  if (pt.X > result.right) result.right = pt.X;
-			  if (pt.Y < result.top) result.top = pt.Y;
-			  if (pt.Y > result.bottom) result.bottom = pt.Y;
-		  }
-		  return result;
-	  }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private bool CheckBounds(OutRec outrec)
     {
       if (outrec.pts == null) return false;
@@ -3043,7 +3027,7 @@ private void DoHorizontal(Active horz)
       if (outrec.pts == null ||
         !BuildPath(outrec.pts, ReverseSolution, false, outrec.path))
           return false;
-      outrec.bounds = GetBounds(outrec.path);
+      outrec.bounds = InternalClipper.GetBounds(outrec.path);
       return true;
     }
 
