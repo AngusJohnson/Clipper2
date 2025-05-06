@@ -293,3 +293,27 @@ TEST(Clipper2Tests, TestPolytreeHoles9) // #957
   EXPECT_TRUE(solution.Count() == 1 && solution[0]->Count() == 2 && (*solution[0])[0]->Count() == 1);
 }
 
+
+TEST(Clipper2Tests, TestPolytreeHoles10) // #973
+{
+  Paths64 subject = {
+      MakePath({ 0,0,  79530,0,  79530,940,  0,940,  0,0 }),
+      MakePath({ 0,33360,  79530,33360,  79530,34300,  0,34300,  0,33360 }),
+      MakePath({ 78470,940,  79530,940,  79530,33360,  78470,33360,  78470,940 }),
+      MakePath({ 0,940,  940,940,  940,33360,  0,33360,  0,940 }),
+      MakePath({ 29290,940,  30350,940,  30350,33360,  29290,33360,  29290,940 })
+  };
+
+  Clipper64	c;
+  c.AddSubject(subject);
+
+  Paths64 sol;
+  PolyTree64	solution;
+  c.Execute(ClipType::Union, FillRule::NonZero, solution);
+
+  // cout << solution << endl;
+  // //  Polytree with 1 polygon.
+  // //    + -Polygon(0) contains 2 holes.
+  EXPECT_TRUE(solution.Count() == 1 && solution[0]->Count() == 2);
+}
+

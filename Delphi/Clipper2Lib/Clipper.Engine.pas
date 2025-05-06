@@ -965,12 +965,8 @@ begin
     end;
     op := op.next;
   until (op = op1);
-  if (pip <> pipInside) then Exit;
-  // result is likely true but check midpoint
-  // (eg. a triangle with 2 points touching may not be inside)
-  mp := GetBounds(GetCleanPath(op1)).MidPoint;
-  path := GetCleanPath(op2);
-  Result := PointInPolygon(mp, path) = pipInside;
+  // result unclear, so try again using cleaned paths
+  Result := Path2ContainsPath1(GetCleanPath(op1), GetCleanPath(op2)); // (#973)
 end;
 //------------------------------------------------------------------------------
 
@@ -3759,16 +3755,15 @@ begin
     if Assigned(split.splits) and CheckSplitOwner(outrec, split.splits) then
       Exit; // Result := true
 
-    if CheckBounds(split) and
-      (split.bounds.Contains(outrec.bounds) and
-      Path1InsidePath2(outrec.pts, split.pts)) then
-    begin
-      if not IsValidOwner(outrec, split) then // split is owned by outrec (#957)
-        split.owner := outrec.owner;
+    if not CheckBounds(split) or
+      not (split.bounds.Contains(outrec.bounds) or
+      not Path1InsidePath2(outrec.pts, split.pts)) then Continue;
 
-      outrec.owner := split;
-      Exit; // Result := true
-    end;
+    if not IsValidOwner(outrec, split) then // split is owned by outrec (#957)
+      split.owner := outrec.owner;
+
+    outrec.owner := split;
+    Exit; // Result := true
   end;
   Result := false;
 end;
