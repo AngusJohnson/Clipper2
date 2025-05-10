@@ -2,7 +2,7 @@ unit Clipper.Core;
 
 (*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  22 November 2024                                                *
+* Date      :  10 May 2025                                                     *
 * Website   :  https://www.angusj.com                                          *
 * Copyright :  Angus Johnson 2010-2024                                         *
 * Purpose   :  Core Clipper Library module                                     *
@@ -325,6 +325,7 @@ function GetSegmentIntersectPt(const ln1a, ln1b, ln2a, ln2b: TPoint64;
   out ip: TPoint64): Boolean;
 
 function PointInPolygon(const pt: TPoint64; const polygon: TPath64): TPointInPolygonResult;
+function Path2ContainsPath1(const path1, path2: TPath64): Boolean;
 
 function GetClosestPointOnSegment(const pt, seg1, seg2: TPoint64): TPoint64;
   {$IFDEF INLINING} inline; {$ENDIF}
@@ -2212,6 +2213,38 @@ begin
 end;
 //------------------------------------------------------------------------------
 {$R+}
+
+function Path2ContainsPath1(const path1, path2: TPath64): Boolean;
+var
+  i   : integer;
+  mp  : TPoint64;
+  pip : TPointInPolygonResult;
+begin
+  // precondition: paths must not intersect, except for
+  // transient (and presumed 'micro') path intersections
+  Result := false;
+  pip := pipOn;
+  for i := 0 to High(path1) do
+  begin
+    case PointInPolygon(path1[i], path2) of
+      pipOutside:
+      begin
+        if (pip = pipOutside) then Exit;
+        pip := pipOutside;
+      end;
+      pipInside:
+      begin
+        if (pip = pipInside) then begin Result := true; Exit; end;
+        pip := pipInside;
+      end;
+    end;
+  end;
+  if (pip <> pipInside) then Exit;
+  // result is likely true but check midpoint
+  mp := GetBounds(path1).MidPoint;
+  Result := PointInPolygon(mp, path2) = pipInside;
+end;
+//------------------------------------------------------------------------------
 
 procedure GetSinCos(angle: double; out sinA, cosA: double);
   {$IFDEF INLINE} inline; {$ENDIF}
