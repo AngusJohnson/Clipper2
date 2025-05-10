@@ -2,7 +2,7 @@ unit Clipper.Engine;
 
 (*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  4 May 2025                                                      *
+* Date      :  10 May 2025                                                     *
 * Website   :  https://www.angusj.com                                          *
 * Copyright :  Angus Johnson 2010-2025                                         *
 * Purpose   :  This is the main polygon clipping module                        *
@@ -2191,8 +2191,8 @@ begin
   // splitOp, splitOp.next and the intesect pt, if area1 and area2 have the
   // same sign then area2 must be the larger of the splits.
 
-
-  if ((absArea2 < absArea1) and ((area2 > 0) <> (area1 > 0))) then
+  if (absArea2 < 1) or
+    ((absArea2 < absArea1) and ((area2 > 0) <> (area1 > 0))) then
   begin
     Dispose(splitOp.next);
     Dispose(splitOp);
@@ -3120,7 +3120,8 @@ begin
       end
       else
         or2.owner := or1;
-    end else // or1 <> or2
+    end
+    else // or1 <> or2, hence joining not splitting
     begin
       or2.pts := nil;
       if FUsingPolytree then
@@ -3745,19 +3746,19 @@ begin
   begin
     split := splits[i];
     if not Assigned(split.pts) and Assigned(split.splits) and
-      CheckSplitOwner(outrec, split.splits) then Exit;          // #942
+      CheckSplitOwner(outrec, split.splits) then Exit; // Result := true (#942)
 
     split := GetRealOutRec(split);
-    if (split = nil) or (split = outrec) or
+    if not Assigned(split) or (split = outrec) or
       (split.recursiveCheck = outrec) then Continue;
-
     split.recursiveCheck := outrec; // prevent infinite loops
+
     if Assigned(split.splits) and CheckSplitOwner(outrec, split.splits) then
       Exit; // Result := true
 
     if not CheckBounds(split) or
-      not (split.bounds.Contains(outrec.bounds) or
-      not Path1InsidePath2(outrec.pts, split.pts)) then Continue;
+      not split.bounds.Contains(outrec.bounds) or
+      not Path1InsidePath2(outrec.pts, split.pts) then Continue;
 
     if not IsValidOwner(outrec, split) then // split is owned by outrec (#957)
       split.owner := outrec.owner;
