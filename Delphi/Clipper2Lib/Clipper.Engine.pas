@@ -942,8 +942,6 @@ end;
 function Path1InsidePath2(const op1, op2: POutPt): Boolean;
 var
   op: POutPt;
-  mp: TPoint64;
-  path: TPath64;
   pip: TPointInPolygonResult;
 begin
   // accommodate rounding errors
