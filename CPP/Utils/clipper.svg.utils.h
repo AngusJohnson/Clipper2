@@ -19,6 +19,8 @@
 #include <unistd.h>
 #endif
 
+#include <filesystem>
+
 namespace Clipper2Lib {
 
   static const unsigned subj_brush_clr = 0x1800009C;
@@ -27,10 +29,10 @@ namespace Clipper2Lib {
   static const unsigned clip_stroke_clr = 0xCCFFA07A;
   static const unsigned solution_brush_clr = 0x4466FF66;
 
+
   inline bool FileExists(const std::string& name)
   {
-    struct stat buffer;
-    return (stat(name.c_str(), &buffer) == 0);
+      return std::filesystem::exists(name);
   }
 
   inline void SvgAddCaption(SvgWriter& svg, const std::string& caption, int x, int y)
