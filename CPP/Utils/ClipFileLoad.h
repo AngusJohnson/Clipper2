@@ -14,10 +14,11 @@
 #include <unistd.h>
 #endif
 
+#include <filesystem>
+
 inline bool FileExists(const std::string& name)
 {
-  struct stat buffer;
-  return (stat(name.c_str(), &buffer) == 0);
+    return std::filesystem::exists(name);
 }
 
 bool LoadTestNum(std::ifstream& source, int test_num,

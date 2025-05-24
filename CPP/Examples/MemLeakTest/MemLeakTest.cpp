@@ -40,27 +40,33 @@ inline Path64 MakeRandomPoly(int width, int height, unsigned vertCnt)
 void DoMemoryLeakTest()
 {
 #ifdef _WIN32
-  int edge_cnt = 1000;
+  #ifndef __MINGW32__
+    int edge_cnt = 1000;
 
-  Paths64 subject, clip;
-  subject.push_back(MakeRandomPoly(800, 600, edge_cnt));
-  clip.push_back(MakeRandomPoly(800, 600, edge_cnt));
+    Paths64 subject, clip;
+    subject.push_back(MakeRandomPoly(800, 600, edge_cnt));
+    clip.push_back(MakeRandomPoly(800, 600, edge_cnt));
 
-  _CrtMemState sOld {}, sNew {}, sDiff {};
-  _CrtMemCheckpoint(&sOld); //take a snapshot
-  {
-    Paths64 solution = Intersect(subject, clip, FillRule::NonZero);
-  }
-  _CrtMemCheckpoint(&sNew); //take another snapshot (outside code block)
-  if (_CrtMemDifference(&sDiff, &sOld, &sNew)) // check for a difference
-  {
-    std::cout << std::endl << "Memory leaks!" << std::endl;
-    //_CrtMemDumpStatistics(&sDiff);
-  }
-  else
-  {
-    std::cout << std::endl << "No memory leaks detected :)" << std::endl << std::endl;
-  }
+    _CrtMemState sOld {}, sNew {}, sDiff {};
+    _CrtMemCheckpoint(&sOld); //take a snapshot
+    {
+      Paths64 solution = Intersect(subject, clip, FillRule::NonZero);
+    }
+    _CrtMemCheckpoint(&sNew); //take another snapshot (outside code block)
+    if (_CrtMemDifference(&sDiff, &sOld, &sNew)) // check for a difference
+    {
+      std::cout << std::endl << "Memory leaks!" << std::endl;
+      //_CrtMemDumpStatistics(&sDiff);
+    }
+    else
+    {
+      std::cout << std::endl << "No memory leaks detected :)" << std::endl << std::endl;
+    }
+  #else
+    std::cout << "DoMemoryLeakTest only supported with MSVC on Windows - not MinGW." << std::endl << std::endl;
+  #endif
+#else
+    std::cout << "DoMemoryLeakTest only supported with MSVC on Windows." << std::endl << std::endl;
 #endif
 }
 
