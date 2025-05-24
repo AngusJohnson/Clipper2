@@ -65,6 +65,8 @@ void DoMemoryLeakTest()
   #else
     std::cout << "DoMemoryLeakTest only supported with MSVC on Windows - not MinGW." << std::endl << std::endl;
   #endif
+#else
+    std::cout << "DoMemoryLeakTest only supported with MSVC on Windows." << std::endl << std::endl;
 #endif
 }
 
