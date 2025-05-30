@@ -2,7 +2,7 @@ unit Clipper.Engine;
 
 (*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  10 May 2025                                                     *
+* Date      :  30 May 2025                                                     *
 * Website   :  https://www.angusj.com                                          *
 * Copyright :  Angus Johnson 2010-2025                                         *
 * Purpose   :  This is the main polygon clipping module                        *
@@ -942,8 +942,6 @@ end;
 function Path1InsidePath2(const op1, op2: POutPt): Boolean;
 var
   op: POutPt;
-  mp: TPoint64;
-  path: TPath64;
   pip: TPointInPolygonResult;
 begin
   // accommodate rounding errors
@@ -2390,6 +2388,8 @@ begin
     not IsHotEdge(e) or not IsHotEdge(prev) or
     IsHorizontal(e) or IsHorizontal(prev) or
     IsOpen(e) or IsOpen(prev) then Exit;
+  // Also exit if pt is within a unit of the top of either edge
+  // unless one of the edges is almost horizontal ...
   if ((pt.Y < e.top.Y +2) or (pt.Y < prev.top.Y +2)) and
     ((e.bot.Y > pt.Y) or (prev.bot.Y > pt.Y)) then Exit; // (#490)
 
@@ -2421,6 +2421,9 @@ begin
     not IsHotEdge(e) or not IsHotEdge(next) or
     IsHorizontal(e) or IsHorizontal(next) or
     IsOpen(e) or IsOpen(next) then Exit;
+
+  // Also exit if pt is within a unit of the top of either edge
+  // unless one of the edges is almost horizontal ...
   if ((pt.Y < e.top.Y +2) or (pt.Y < next.top.Y +2)) and
     ((e.bot.Y > pt.Y) or (next.bot.Y > pt.Y)) then Exit; // (#490)
 
@@ -2633,6 +2636,7 @@ begin
   end;
 
   // MANAGING CLOSED PATHS FROM HERE ON
+
   if IsJoined(e1) then UndoJoin(e1, pt);
   if IsJoined(e2) then UndoJoin(e2, pt);
 
@@ -2839,10 +2843,9 @@ begin
     e.prevInSEL := e.prevInAEL;
     e.nextInSEL := e.nextInAEL;
     e.jump := e.nextInSEL;
-    if (e.joinedWith = jwLeft) then
-      e.currX := e.prevInAEL.currX // this also avoids complications
-    else
-      e.currX := TopX(e, topY);
+    // it is safe to ignore 'joined' edges here because
+    // if necessary they will be split in IntersectEdges()
+    e.currX := TopX(e, topY);
     e := e.nextInAEL;
   end;
 end;
@@ -3402,7 +3405,7 @@ var
       Result := assigned(e);
       // nb: this block isn't yet redundant
     end
-    else if horzEdge.currX < horzEdge.top.X then
+    else if (horzEdge.currX < horzEdge.top.X) then
     begin
       horzLeft := horzEdge.currX;
       horzRight := horzEdge.top.X;
@@ -3442,6 +3445,7 @@ begin
   Y := horzEdge.bot.Y;
   maxVertex := nil;
 
+  // maxVertex - manages consecutive horizontal edges
   if horzIsOpen then
     maxVertex := GetCurrYMaximaVertexOpen(horzEdge) else
     maxVertex := GetCurrYMaximaVertex(horzEdge);

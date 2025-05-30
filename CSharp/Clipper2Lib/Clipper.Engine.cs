@@ -1,6 +1,6 @@
 ﻿/*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  4 May 2025                                                      *
+* Date      :  30 May 2025                                                     *
 * Website   :  https://www.angusj.com                                          *
 * Copyright :  Angus Johnson 2010-2025                                         *
 * Purpose   :  This is the main polygon clipping module                        *
@@ -1822,8 +1822,9 @@ namespace Clipper2Lib
         ae.prevInSEL = ae.prevInAEL;
         ae.nextInSEL = ae.nextInAEL;
         ae.jump = ae.nextInSEL;
-        ae.curX = ae.joinWith == JoinWith.Left ? ae.prevInAEL!.curX : // this also avoids complications
-          TopX(ae, topY);
+        // it is safe to ignore 'joined' edges here because
+        // if necessary they will be split in IntersectEdges()
+        ae.curX = TopX(ae, topY);
         // NB don't update ae.curr.Y yet (see AddNewIntersectNode)
         ae = ae.nextInAEL;
       }
