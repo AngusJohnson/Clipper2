@@ -2,7 +2,7 @@ unit Clipper.Engine;
 
 (*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  30 May 2025                                                     *
+* Date      :  15 June 2025                                                    *
 * Website   :  https://www.angusj.com                                          *
 * Copyright :  Angus Johnson 2010-2025                                         *
 * Purpose   :  This is the main polygon clipping module                        *
@@ -3060,7 +3060,8 @@ var
   i: integer;
 begin
   for i := 0 to High(fromOr.splits) do
-    AddSplit(toOr, fromOr.splits[i]);
+    if toOr <> fromOr.splits[i] then
+      AddSplit(toOr, fromOr.splits[i]);
   fromOr.splits := nil;
 end;
 //------------------------------------------------------------------------------

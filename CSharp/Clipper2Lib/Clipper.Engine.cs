@@ -1,6 +1,6 @@
 ﻿/*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  30 May 2025                                                     *
+* Date      :  15 June 2025                                                    *
 * Website   :  https://www.angusj.com                                          *
 * Copyright :  Angus Johnson 2010-2025                                         *
 * Purpose   :  This is the main polygon clipping module                        *
@@ -2698,7 +2698,8 @@ private void DoHorizontal(Active horz)
       if (fromOr.splits == null) return;
       toOr.splits ??= new List<int>();
       foreach (int i in fromOr.splits)
-        toOr.splits.Add(i);
+        if (i != toOr.idx)
+          toOr.splits.Add(i);
       fromOr.splits = null;
     }
 

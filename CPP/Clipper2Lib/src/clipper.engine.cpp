@@ -1,6 +1,6 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  30 May 2025                                                     *
+* Date      :  15 June 2025                                                    *
 * Website   :  https://www.angusj.com                                          *
 * Copyright :  Angus Johnson 2010-2025                                         *
 * Purpose   :  This is the main polygon clipping module                        *
@@ -2271,7 +2271,8 @@ namespace Clipper2Lib {
     if (!toOr->splits) toOr->splits = new OutRecList();
     OutRecList::iterator orIter = fromOr->splits->begin();
     for (; orIter != fromOr->splits->end(); ++orIter)
-      toOr->splits->emplace_back(*orIter);
+      if (toOr != *orIter) // #987
+        toOr->splits->emplace_back(*orIter);
     fromOr->splits->clear();
   }
 
@@ -2969,7 +2970,6 @@ namespace Clipper2Lib {
     // post-condition: if a valid path, outrec will have a polypath
 
     if (outrec->polypath || outrec->bounds.IsEmpty()) return;
-
     while (outrec->owner)
     {
       if (outrec->owner->splits && CheckSplitOwner(outrec, outrec->owner->splits)) break;
