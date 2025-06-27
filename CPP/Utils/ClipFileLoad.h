@@ -14,11 +14,13 @@
 #include <unistd.h>
 #endif
 
-#include <filesystem>
+#include <fstream>
 
-inline bool FileExists(const std::string& name)
+inline bool FileExists(const std::string& filename)
 {
-    return std::filesystem::exists(name);
+    //return std::filesystem::exists(filename); // <filesystem> not available in Ubuntu (#990)
+  std::ifstream file(filename);
+  return file.good();
 }
 
 bool LoadTestNum(std::ifstream& source, int test_num,

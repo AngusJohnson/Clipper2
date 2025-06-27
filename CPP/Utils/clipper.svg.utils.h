@@ -19,7 +19,7 @@
 #include <unistd.h>
 #endif
 
-#include <filesystem>
+#include <fstream>
 
 namespace Clipper2Lib {
 
@@ -30,9 +30,11 @@ namespace Clipper2Lib {
   static const unsigned solution_brush_clr = 0x4466FF66;
 
 
-  inline bool FileExists(const std::string& name)
+  inline bool FileExists(const std::string& filename)
   {
-      return std::filesystem::exists(name);
+    //return std::filesystem::exists(filename); // <filesystem> not available in Ubuntu (#990)
+    std::ifstream file(filename);
+    return file.good();
   }
 
   inline void SvgAddCaption(SvgWriter& svg, const std::string& caption, int x, int y)
