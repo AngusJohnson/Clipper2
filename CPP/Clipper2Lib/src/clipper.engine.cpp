@@ -26,8 +26,9 @@ namespace Clipper2Lib {
   static const Rect64 invalid_rect = Rect64(false);
 
 #ifdef clipper2_custom_allocator
-  void* (*clipper2_malloc)(std::size_t n) = malloc;
-  void  (*clipper2_free)(void* p) = free;
+  thread_local void *clipper2_allocator_userp = NULL;
+  void* (*clipper2_malloc)(void *userp, std::size_t n);
+  void  (*clipper2_free)(void *userp, void* p);
 #endif
 
   // Every closed path (ie polygon) is made up of a series of vertices forming edge 

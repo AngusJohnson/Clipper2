@@ -7,21 +7,23 @@ namespace Clipper2Lib {
 
 #ifdef clipper2_custom_allocator
 
-	extern void* (*clipper2_malloc)(std::size_t n);
-	extern void  (*clipper2_free)(void* p);
+	thread_local extern void *clipper2_allocator_userp;
+	extern void* (*clipper2_malloc)(void *userp, std::size_t n);
+	extern void  (*clipper2_free)(void *userp, void* p);
 
 	template <class T>
 	struct Allocator
 	{
 		using value_type = T;
 
-		Allocator() = default;
+		Allocator() : userp(clipper2_allocator_userp) {}
 
 		template<class U>
 		constexpr Allocator(const Allocator <U>&) noexcept {}
 
-		T* allocate(std::size_t n) { return (T*)clipper2_malloc(n * sizeof(T)); }
-		void deallocate(T* p, std::size_t) { clipper2_free((void*)p); }
+		void *userp = NULL;
+		T* allocate(std::size_t n) { return (T*)clipper2_malloc(userp, n * sizeof(T)); }
+		void deallocate(T* p, std::size_t) { clipper2_free(userp, (void*)p); }
 	};
 
 	template <class T, class U>
