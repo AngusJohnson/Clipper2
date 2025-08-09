@@ -9,9 +9,11 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 
+##########################################################################
+##########################################################################
+
 # CLIPPER2_HI_PRECISION: See GetIntersectPoint() in clipper.core.h 
 option(CLIPPER2_HI_PRECISION "Caution: enabling this will compromise performance" OFF)
-
 option(CLIPPER2_UTILS "Build utilities" ON)
 option(CLIPPER2_EXAMPLES "Build examples" ON)
 option(CLIPPER2_TESTS "Build tests" ON)
@@ -19,10 +21,13 @@ option(USE_EXTERNAL_GTEST "Use system-wide installed GoogleTest" OFF)
 option(USE_EXTERNAL_GBENCHMARK "Use the googlebenchmark" OFF)
 option(BUILD_SHARED_LIBS "Build shared libs" OFF)
 set(CLIPPER2_USINGZ "ON" CACHE STRING "Build Clipper2Z, either \"ON\" or \"OFF\" or \"ONLY\"")
-
 # CLIPPER2_MAX_DECIMAL_PRECISION: maximum decimal precision when scaling PathsD to Paths64.
 # Caution: excessive scaling will increase the likelihood of integer overflow errors.
+# See https://www.angusj.com/clipper2/Docs/Overview.htm#coord_range for more info.
 set(CLIPPER2_MAX_DECIMAL_PRECISION 8 CACHE STRING "Maximum decimal precision range")
+
+##########################################################################
+##########################################################################
 
 
 if (APPLE)
@@ -156,12 +161,12 @@ if(CLIPPER2_UTILS OR CLIPPER2_TESTS OR CLIPPER2_EXAMPLES)
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/Utils>
         $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}/clipper2/Utils>
     )
-    install(TARGETS ${lib}
-            EXPORT  Clipper2-targets
-            PUBLIC_HEADER DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/clipper2/Utils
-            ARCHIVE       DESTINATION ${CMAKE_INSTALL_LIBDIR}
-            LIBRARY       DESTINATION ${CMAKE_INSTALL_LIBDIR}
-            RUNTIME       DESTINATION ${CMAKE_INSTALL_BINDIR})
+#    install(TARGETS ${lib}
+#            EXPORT  Clipper2-targets
+#            PUBLIC_HEADER DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/clipper2/Utils
+#            ARCHIVE       DESTINATION ${CMAKE_INSTALL_LIBDIR}
+#            LIBRARY       DESTINATION ${CMAKE_INSTALL_LIBDIR}
+#            RUNTIME       DESTINATION ${CMAKE_INSTALL_BINDIR})
   endforeach()
 
 endif()
