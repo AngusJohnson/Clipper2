@@ -2,7 +2,7 @@ unit Clipper.Engine;
 
 (*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  9 February 2025                                                 *
+* Date      :  15 June 2025                                                    *
 * Website   :  https://www.angusj.com                                          *
 * Copyright :  Angus Johnson 2010-2025                                         *
 * Purpose   :  This is the main polygon clipping module                        *
@@ -813,7 +813,7 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-function GetMaximaPair(e: PActive): PActive;
+function GetMaximaPair(e: PActive): PActive; {$IFDEF INLINING} inline; {$ENDIF}
 begin
   Result := e.nextInAEL;
   while assigned(Result) do
@@ -942,36 +942,33 @@ end;
 function Path1InsidePath2(const op1, op2: POutPt): Boolean;
 var
   op: POutPt;
-  mp: TPoint64;
-  path: TPath64;
-  pipResult: TPointInPolygonResult;
-  outsideCnt: integer;
+  pip: TPointInPolygonResult;
 begin
-  // precondition - the twi paths or1 & pr2 don't intersect
-  // we need to make some accommodation for rounding errors
-  // so we won't jump if the first vertex is found outside
-  outsideCnt := 0;
+  // accommodate rounding errors
+  Result := false;
+  pip := pipOn;
   op := op1;
   repeat
-    pipResult := PointInOpPolygon(op.pt, op2);
-    if pipResult = pipOutside then inc(outsideCnt)
-    else if pipResult = pipInside then dec(outsideCnt);
+    case (PointInOpPolygon(op.pt, op2)) of
+      pipOutside:
+      begin
+        if (pip = pipOutside) then Exit;
+        pip := pipOutside;
+      end;
+      pipInside:
+      begin
+        if (pip = pipInside) then begin Result := true; Exit end;
+        pip := pipInside;
+      end;
+    end;
     op := op.next;
-  until (op = op1) or (Abs(outsideCnt) = 2);
-  if (Abs(outsideCnt) < 2) then
-  begin
-    // if path1's location is still equivocal then check its midpoint
-    path := GetCleanPath(op1);
-    mp := Clipper.Core.GetBounds(path).MidPoint;
-    path := GetCleanPath(op2);
-    Result := PointInPolygon(mp, path) <> pipOutside;
-  end
-  else
-     Result := (outsideCnt < 0);
+  until (op = op1);
+  // result unclear, so try again using cleaned paths
+  Result := Path2ContainsPath1(GetCleanPath(op1), GetCleanPath(op2)); // (#973)
 end;
 //------------------------------------------------------------------------------
 
-procedure UncoupleOutRec(e: PActive);
+procedure UncoupleOutRec(e: PActive); {$IFDEF INLINING} inline; {$ENDIF}
 var
   outRec: POutRec;
 begin
@@ -1164,7 +1161,7 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-function DisposeOutPt(op: POutPt): POutPt;
+function DisposeOutPt(op: POutPt): POutPt; {$IFDEF INLINING} inline; {$ENDIF}
 begin
   if op.next = op then
     Result := nil else
@@ -1327,16 +1324,13 @@ procedure SetOwner(outrec, newOwner: POutRec);
 var
   tmp: POutRec;
 begin
-  //precondition1: new_owner is never null
-  while Assigned(newOwner.owner) and
-    not Assigned(newOwner.owner.pts) do
-      newOwner.owner := newOwner.owner.owner;
-  //make sure that outrec isn't an owner of newOwner
+  // precondition: new_owner is never null
+  newOwner.owner := GetRealOutRec(newOwner.owner);
+
+  // make sure that outrec isn't an owner of newOwner
   tmp := newOwner;
-  while Assigned(tmp) and (tmp <> outrec) do
-    tmp := tmp.owner;
-  if Assigned(tmp) then
-    newOwner.owner := outrec.owner;
+  while Assigned(tmp) and (tmp <> outrec) do tmp := tmp.owner;
+  if Assigned(tmp) then newOwner.owner := outrec.owner;
   outrec.owner := newOwner;
 end;
 
@@ -2043,6 +2037,8 @@ begin
   newOr.owner := nil;
   e1.outrec := newOr;
   e2.outrec := newOr;
+  Result := NewOutPt(pt, newOr);
+  newOr.pts := Result;
 
   if IsOpen(e1) then
   begin
@@ -2072,8 +2068,6 @@ begin
         SetSides(newOr, e2, e1);
     end;
   end;
-  Result := NewOutPt(pt, newOr);
-  newOr.pts := Result;
 end;
 //------------------------------------------------------------------------------
 
@@ -2158,8 +2152,7 @@ begin
   prevOp := splitOp.prev;
   nextNextOp := splitOp.next.next;
   outrec.pts := prevOp;
-  GetSegmentIntersectPt(
-    prevOp.pt, splitOp.pt, splitOp.next.pt, nextNextOp.pt, ip);
+  GetSegmentIntersectPt(prevOp.pt, splitOp.pt, splitOp.next.pt, nextNextOp.pt, ip);
 {$IFDEF USINGZ}
   if Assigned(fZCallback) then
     fZCallback(prevOp.Pt, splitOp.Pt, splitOp.Next.Pt, nextNextOp.Pt, ip);
@@ -2190,36 +2183,35 @@ begin
     prevOp.next := newOp2;
   end;
 
-  // nb: area1 is the path's area *before* splitting, whereas area2 is
-  // the area of the triangle containing splitOp & splitOp.next.
-  // So the only way for these areas to have the same sign is if
-  // the split triangle is larger than the path containing prevOp or
-  // if there's more than one self-intersection.
-  if (absArea2 > 1) and
-    ((absArea2 > absArea1) or
-    ((area2 > 0) = (area1 > 0))) then
-  begin
-    newOutRec := FOutRecList.Add;
-    newOutRec.owner := outrec.owner;
+  // given we're splitting at a self-intersection, and given area1 is the
+  // path's area *before* splitting (which comprises of both positive and
+  // negative areas), and given area2 is the area of a new triangle containing
+  // splitOp, splitOp.next and the intesect pt, if area1 and area2 have the
+  // same sign then area2 must be the larger of the splits.
 
-    splitOp.outrec := newOutRec;
-    splitOp.next.outrec := newOutRec;
-    newOp := NewOutPt(ip, newOutRec, splitOp.next, splitOp);
-    splitOp.prev := newOp;
-    splitOp.next.next := newOp;
-    newOutRec.pts := newOp;
-
-    if FUsingPolytree then
-    begin
-      if (Path1InsidePath2(prevOp, newOp)) then
-        AddSplit(newOutRec, outrec) else
-        AddSplit(outrec, newOutRec);
-    end;
-
-  end else
+  if (absArea2 < 1) or
+    ((absArea2 < absArea1) and ((area2 > 0) <> (area1 > 0))) then
   begin
     Dispose(splitOp.next);
     Dispose(splitOp);
+    Exit;
+  end;
+
+  newOutRec := FOutRecList.Add;
+  newOutRec.owner := outrec.owner;
+
+  splitOp.outrec := newOutRec;
+  splitOp.next.outrec := newOutRec;
+  newOp := NewOutPt(ip, newOutRec, splitOp.next, splitOp);
+  splitOp.prev := newOp;
+  splitOp.next.next := newOp;
+  newOutRec.pts := newOp;
+
+  if FUsingPolytree then
+  begin
+    if (Path1InsidePath2(prevOp, newOp)) then
+      AddSplit(newOutRec, outrec) else
+      AddSplit(outrec, newOutRec);
   end;
 end;
 //------------------------------------------------------------------------------
@@ -2229,19 +2221,33 @@ var
   op2: POutPt;
 begin
   op2 := outrec.pts;
-  // triangles can't self-intersect
-  if (op2.prev = op2.next.next) then Exit;
+  if (op2.prev = op2.next.next) then
+    Exit; // because triangles can't self-intersect
+
   while true do
   begin
     if SegmentsIntersect(op2.prev.pt, op2.pt,
       op2.next.pt, op2.next.next.pt) then
     begin
-      DoSplitOp(outrec, op2);
-      if not assigned(outrec.pts) then Break;
-      op2 := outrec.pts;
-      // triangles can't self-intersect
-      if (op2.prev = op2.next.next) then Break;
-      Continue;
+      if SegmentsIntersect(op2.prev.pt, op2.pt,
+        op2.next.next.pt, op2.next.next.next.pt) then
+      begin
+        // adjacent intersections (ie a micro self-intersection)
+        op2 := DuplicateOp(op2, false);
+        op2.pt := op2.next.next.next.pt;
+        op2 := op2.next;
+      end else
+      begin
+        if (op2 = outrec.pts) or (op2.next = outrec.pts) then
+          outrec.pts := outrec.pts.prev;
+        // split required
+        DoSplitOp(outrec, op2);
+        if not assigned(outrec.pts) then Break;
+        op2 := outrec.pts;
+        if (op2.prev = op2.next.next) then
+          Break; // because triangles can't self-intersect
+        Continue;
+      end;
     end else
       op2 := op2.next;
     if (op2 = outrec.pts) then Break;
@@ -2284,8 +2290,8 @@ begin
       if not Assigned(e) then
         outRec.owner := nil else
         SetOwner(outRec, e.outrec);
-      // nb: outRec.owner here is likely NOT the real
-      // owner but this will be checked in DeepCheckOwner()
+      // nb: outRec.owner here is likely NOT the real owner
+      // but this will be checked in DeepCheckOwner()
     end;
     UncoupleOutRec(e1);
   end
@@ -2382,6 +2388,8 @@ begin
     not IsHotEdge(e) or not IsHotEdge(prev) or
     IsHorizontal(e) or IsHorizontal(prev) or
     IsOpen(e) or IsOpen(prev) then Exit;
+  // Also exit if pt is within a unit of the top of either edge
+  // unless one of the edges is almost horizontal ...
   if ((pt.Y < e.top.Y +2) or (pt.Y < prev.top.Y +2)) and
     ((e.bot.Y > pt.Y) or (prev.bot.Y > pt.Y)) then Exit; // (#490)
 
@@ -2413,6 +2421,9 @@ begin
     not IsHotEdge(e) or not IsHotEdge(next) or
     IsHorizontal(e) or IsHorizontal(next) or
     IsOpen(e) or IsOpen(next) then Exit;
+
+  // Also exit if pt is within a unit of the top of either edge
+  // unless one of the edges is almost horizontal ...
   if ((pt.Y < e.top.Y +2) or (pt.Y < next.top.Y +2)) and
     ((e.bot.Y > pt.Y) or (next.bot.Y > pt.Y)) then Exit; // (#490)
 
@@ -2625,6 +2636,7 @@ begin
   end;
 
   // MANAGING CLOSED PATHS FROM HERE ON
+
   if IsJoined(e1) then UndoJoin(e1, pt);
   if IsJoined(e2) then UndoJoin(e2, pt);
 
@@ -2831,10 +2843,9 @@ begin
     e.prevInSEL := e.prevInAEL;
     e.nextInSEL := e.nextInAEL;
     e.jump := e.nextInSEL;
-    if (e.joinedWith = jwLeft) then
-      e.currX := e.prevInAEL.currX // this also avoids complications
-    else
-      e.currX := TopX(e, topY);
+    // it is safe to ignore 'joined' edges here because
+    // if necessary they will be split in IntersectEdges()
+    e.currX := TopX(e, topY);
     e := e.nextInAEL;
   end;
 end;
@@ -3044,13 +3055,13 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-procedure MoveSplits(fromOr, toOr: POutRec);
+procedure MoveSplits(fromOr, toOr: POutRec); {$IFDEF INLINING} inline; {$ENDIF}
 var
   i: integer;
 begin
-  if not assigned(fromOr.splits) then Exit;
   for i := 0 to High(fromOr.splits) do
-    AddSplit(toOr, fromOr.splits[i]);
+    if toOr <> fromOr.splits[i] then
+      AddSplit(toOr, fromOr.splits[i]);
   fromOr.splits := nil;
 end;
 //------------------------------------------------------------------------------
@@ -3113,13 +3124,15 @@ begin
       end
       else
         or2.owner := or1;
-    end else
+    end
+    else // or1 <> or2, hence joining not splitting
     begin
       or2.pts := nil;
       if FUsingPolytree then
       begin
         SetOwner(or2, or1);
-        MoveSplits(or2, or1); // #618
+        if assigned(or2.splits) then
+          MoveSplits(or2, or1); // #618
       end else
         or2.owner := or1;
     end;
@@ -3393,7 +3406,7 @@ var
       Result := assigned(e);
       // nb: this block isn't yet redundant
     end
-    else if horzEdge.currX < horzEdge.top.X then
+    else if (horzEdge.currX < horzEdge.top.X) then
     begin
       horzLeft := horzEdge.currX;
       horzRight := horzEdge.top.X;
@@ -3433,6 +3446,7 @@ begin
   Y := horzEdge.bot.Y;
   maxVertex := nil;
 
+  // maxVertex - manages consecutive horizontal edges
   if horzIsOpen then
     maxVertex := GetCurrYMaximaVertexOpen(horzEdge) else
     maxVertex := GetCurrYMaximaVertex(horzEdge);
@@ -3713,18 +3727,15 @@ end;
 
 function TClipperBase.CheckBounds(outrec: POutRec): Boolean;
 begin
-  if not Assigned(outrec.pts) then
-    Result := false
-  else if not outrec.bounds.IsEmpty then
-    Result := true
-  else
+  if outrec.bounds.IsEmpty then
   begin
     CleanCollinear(outrec);
     result := Assigned(outrec.pts) and
       BuildPath(outrec.pts, FReverseSolution, false, outrec.path);
     if not Result then Exit;
     outrec.bounds := Clipper.Core.GetBounds(outrec.path);
-  end;
+  end else
+    Result := true;
 end;
 //------------------------------------------------------------------------------
 
@@ -3740,23 +3751,25 @@ begin
   begin
     split := splits[i];
     if not Assigned(split.pts) and Assigned(split.splits) and
-      CheckSplitOwner(outrec, split.splits) then Exit;          // #942
+      CheckSplitOwner(outrec, split.splits) then Exit; // Result := true (#942)
 
     split := GetRealOutRec(split);
-    if (split = nil) or (split = outrec) or
+    if not Assigned(split) or (split = outrec) or
       (split.recursiveCheck = outrec) then Continue;
     split.recursiveCheck := outrec; // prevent infinite loops
 
-    if Assigned(split.splits) and
-      CheckSplitOwner(outrec, split.splits) then Exit
-    else if IsValidOwner(outrec, split) and
-      CheckBounds(split) and
-      (split.bounds.Contains(outrec.bounds) and
-      Path1InsidePath2(outrec.pts, split.pts)) then
-    begin
-      outrec.owner := split;
-      Exit;
-    end;
+    if Assigned(split.splits) and CheckSplitOwner(outrec, split.splits) then
+      Exit; // Result := true
+
+    if not CheckBounds(split) or
+      not split.bounds.Contains(outrec.bounds) or
+      not Path1InsidePath2(outrec.pts, split.pts) then Continue;
+
+    if not IsValidOwner(outrec, split) then // split is owned by outrec (#957)
+      split.owner := outrec.owner;
+
+    outrec.owner := split;
+    Exit; // Result := true
   end;
   Result := false;
 end;

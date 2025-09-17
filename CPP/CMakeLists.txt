@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.15)
-project(Clipper2 VERSION 1.5.2 LANGUAGES C CXX)
+project(Clipper2 VERSION 1.5.4 LANGUAGES C CXX)
 
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 if(NOT DEFINED CMAKE_CXX_STANDARD OR CMAKE_CXX_STANDARD LESS 17)
@@ -9,9 +9,11 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 
+##########################################################################
+##########################################################################
+
 # CLIPPER2_HI_PRECISION: See GetIntersectPoint() in clipper.core.h 
 option(CLIPPER2_HI_PRECISION "Caution: enabling this will compromise performance" OFF)
-
 option(CLIPPER2_UTILS "Build utilities" ON)
 option(CLIPPER2_EXAMPLES "Build examples" ON)
 option(CLIPPER2_TESTS "Build tests" ON)
@@ -19,10 +21,13 @@ option(USE_EXTERNAL_GTEST "Use system-wide installed GoogleTest" OFF)
 option(USE_EXTERNAL_GBENCHMARK "Use the googlebenchmark" OFF)
 option(BUILD_SHARED_LIBS "Build shared libs" OFF)
 set(CLIPPER2_USINGZ "ON" CACHE STRING "Build Clipper2Z, either \"ON\" or \"OFF\" or \"ONLY\"")
-
 # CLIPPER2_MAX_DECIMAL_PRECISION: maximum decimal precision when scaling PathsD to Paths64.
 # Caution: excessive scaling will increase the likelihood of integer overflow errors.
+# See https://www.angusj.com/clipper2/Docs/Overview.htm#coord_range for more info.
 set(CLIPPER2_MAX_DECIMAL_PRECISION 8 CACHE STRING "Maximum decimal precision range")
+
+##########################################################################
+##########################################################################
 
 
 if (APPLE)
@@ -73,7 +78,7 @@ if (NOT (CLIPPER2_USINGZ STREQUAL "ONLY"))
   if (MSVC)
     target_compile_options(Clipper2 PRIVATE /W4 /WX)
   else()
-    target_compile_options(Clipper2 PRIVATE -Wall -Wextra -Wpedantic -Werror -Wno-c++20-compat)
+    target_compile_options(Clipper2 PRIVATE -Wall -Wextra -Wpedantic -Werror)
     target_link_libraries(Clipper2 PUBLIC -lm)
   endif()
 endif()
@@ -98,7 +103,7 @@ if (NOT (CLIPPER2_USINGZ STREQUAL "OFF"))
   if (MSVC)
     target_compile_options(Clipper2Z PRIVATE /W4 /WX)
   else()
-    target_compile_options(Clipper2Z PRIVATE -Wall -Wextra -Wpedantic -Werror -Wno-c++20-compat -Wsign-conversion)
+    target_compile_options(Clipper2Z PRIVATE -Wall -Wextra -Wpedantic -Werror)
     target_link_libraries(Clipper2Z PUBLIC -lm)
   endif()
 endif()
@@ -130,9 +135,6 @@ if(CLIPPER2_UTILS OR CLIPPER2_TESTS OR CLIPPER2_EXAMPLES)
     add_library(Clipper2utils STATIC ${CLIPPER2_UTILS_INC} ${CLIPPER2_UTILS_SRC})
 
     target_link_libraries(Clipper2utils PUBLIC Clipper2)
-    target_include_directories(Clipper2utils
-      PUBLIC Utils
-    )
   endif()
 
   if (NOT (CLIPPER2_USINGZ STREQUAL "OFF"))
@@ -140,9 +142,6 @@ if(CLIPPER2_UTILS OR CLIPPER2_TESTS OR CLIPPER2_EXAMPLES)
     add_library(Clipper2Zutils STATIC ${CLIPPER2_UTILS_INC} ${CLIPPER2_UTILS_SRC})
 
     target_link_libraries(Clipper2Zutils PUBLIC Clipper2Z)
-    target_include_directories(Clipper2Zutils
-      PUBLIC Utils
-    )
   endif()
 
   set_target_properties(${CLIPPER2_UTILS} PROPERTIES FOLDER Libraries)
@@ -151,6 +150,25 @@ if(CLIPPER2_UTILS OR CLIPPER2_TESTS OR CLIPPER2_EXAMPLES)
       target_compile_options(${lib} PRIVATE -Wno-unused-variable -Wno-unused-function)
     endforeach()
   endif()
+
+  # install utils/zutils module
+  foreach(lib ${CLIPPER2_UTILS})
+    set_target_properties(${lib} PROPERTIES
+          PUBLIC_HEADER "${CLIPPER2_UTILS_INC}"
+    )
+    target_include_directories(${lib}
+      PUBLIC
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/Utils>
+        $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}/clipper2/Utils>
+    )
+#    install(TARGETS ${lib}
+#            EXPORT  Clipper2-targets
+#            PUBLIC_HEADER DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/clipper2/Utils
+#            ARCHIVE       DESTINATION ${CMAKE_INSTALL_LIBDIR}
+#            LIBRARY       DESTINATION ${CMAKE_INSTALL_LIBDIR}
+#            RUNTIME       DESTINATION ${CMAKE_INSTALL_BINDIR})
+  endforeach()
+
 endif()
 
 if(CLIPPER2_EXAMPLES)

@@ -144,8 +144,9 @@ function TrimCollinear(const p: TPath64;
 function TrimCollinear(const path: TPathD;
   precision: integer; isOpenPath: Boolean = false): TPathD; overload;
 
-function PointInPolygon(const pt: TPoint64; const polygon: TPath64):
-  TPointInPolygonResult;
+function PointInPolygon(const pt: TPoint64;
+  const polygon: TPath64): TPointInPolygonResult;
+function Path2ContainsPath1(const path1, path2: TPath64): Boolean; overload;
 
 function SimplifyPath(const path: TPath64;
   shapeTolerance: double; isClosedPath: Boolean = true): TPath64; overload;
@@ -815,6 +816,12 @@ function PointInPolygon(const pt: TPoint64;
   const polygon: TPath64): TPointInPolygonResult;
 begin
   Result := Clipper.Core.PointInPolygon(pt, polygon);
+end;
+//------------------------------------------------------------------------------
+
+function Path2ContainsPath1(const path1, path2: TPath64): Boolean;
+begin
+  Result := Clipper.Core.Path2ContainsPath1(path1, path2);
 end;
 //------------------------------------------------------------------------------
 

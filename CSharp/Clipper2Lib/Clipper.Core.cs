@@ -565,19 +565,19 @@ namespace Clipper2Lib
       return x > 1 ? 1 : 0;
     }
 
-    public struct MultiplyUInt64Result
+    public struct UInt128Struct
     {
       public ulong lo64;
       public ulong hi64;
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static MultiplyUInt64Result MultiplyUInt64(ulong a, ulong b) // #834,#835
+    public static UInt128Struct MultiplyUInt64(ulong a, ulong b) // #834,#835
     {
       ulong x1 = (a & 0xFFFFFFFF) * (b & 0xFFFFFFFF);
       ulong x2 = (a >> 32) * (b & 0xFFFFFFFF) + (x1 >> 32);
       ulong x3 = (a & 0xFFFFFFFF) * (b >> 32) + (x2 & 0xFFFFFFFF);
-      MultiplyUInt64Result result; 
+      UInt128Struct result; 
       result.lo64 = (x3 & 0xFFFFFFFF) << 32 | (x1 & 0xFFFFFFFF);
       result.hi64 = (a >> 32) * (b >> 32) + (x2 >> 32) + (x3 >> 32);
       return result;
@@ -592,8 +592,8 @@ namespace Clipper2Lib
       ulong absC = (ulong) Math.Abs(c);
       ulong absD = (ulong) Math.Abs(d);
 
-      MultiplyUInt64Result mul_ab = MultiplyUInt64(absA, absB);
-      MultiplyUInt64Result mul_cd = MultiplyUInt64(absC, absD);
+      UInt128Struct mul_ab = MultiplyUInt64(absA, absB);
+      UInt128Struct mul_cd = MultiplyUInt64(absC, absD);
 
       // nb: it's important to differentiate 0 values here from other values
       int sign_ab = TriSign(a) * TriSign(b);
@@ -688,6 +688,21 @@ namespace Clipper2Lib
       // ensure NOT collinear
       return (res1 != 0 || res2 != 0 || res3 != 0 || res4 != 0);
     }
+
+    public static Rect64 GetBounds(Path64 path)
+    {
+      if (path.Count == 0) return new Rect64();
+      Rect64 result = Clipper.InvalidRect64;
+      foreach (Point64 pt in path)
+      {
+        if (pt.X < result.left) result.left = pt.X;
+        if (pt.X > result.right) result.right = pt.X;
+        if (pt.Y < result.top) result.top = pt.Y;
+        if (pt.Y > result.bottom) result.bottom = pt.Y;
+      }
+      return result;
+    }
+
     public static Point64 GetClosestPtOnSegment(Point64 offPt,
     Point64 seg1, Point64 seg2)
     {
@@ -775,6 +790,32 @@ namespace Clipper2Lib
 
       return val == 0 ? PointInPolygonResult.IsOutside : PointInPolygonResult.IsInside;
     }
+
+    public static bool Path2ContainsPath1(Path64 path1, Path64 path2)
+    {
+      // we need to make some accommodation for rounding errors
+      // so we won't jump if the first vertex is found outside
+      PointInPolygonResult pip = PointInPolygonResult.IsOn;
+      foreach (Point64 pt in path1)
+      {
+        switch (PointInPolygon(pt, path2))
+        {
+          case PointInPolygonResult.IsOutside:
+            if (pip == PointInPolygonResult.IsOutside) return false;
+            pip = PointInPolygonResult.IsOutside;
+            break;
+          case PointInPolygonResult.IsInside:
+            if (pip == PointInPolygonResult.IsInside) return true;
+            pip = PointInPolygonResult.IsInside;
+            break;
+          default: break;
+        }
+      }
+      // since path1's location is still equivocal, check its midpoint
+      Point64 mp = GetBounds(path1).MidPoint();
+      return InternalClipper.PointInPolygon(mp, path2) != PointInPolygonResult.IsOutside;
+    }
+
 
   } // InternalClipper
 

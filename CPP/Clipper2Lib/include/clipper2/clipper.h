@@ -351,6 +351,29 @@ namespace Clipper2Lib {
 #endif
     }
 
+    inline size_t GetNext(size_t current, size_t high,
+      const std::vector<bool>& flags)
+    {
+      ++current;
+      while (current <= high && flags[current]) ++current;
+      if (current <= high) return current;
+      current = 0;
+      while (flags[current]) ++current;
+      return current;
+    }
+
+    inline size_t GetPrior(size_t current, size_t high,
+      const std::vector<bool>& flags)
+    {
+      if (current == 0) current = high;
+      else --current;
+      while (current > 0 && flags[current]) --current;
+      if (!flags[current]) return current;
+      current = high;
+      while (flags[current]) --current;
+      return current;
+    }
+
   } // end details namespace
 
   inline std::ostream& operator<< (std::ostream& os, const PolyTree64& pp)
@@ -611,29 +634,6 @@ namespace Clipper2Lib {
     return result;
   }
 
-  inline size_t GetNext(size_t current, size_t high,
-    const std::vector<bool>& flags)
-  {
-    ++current;
-    while (current <= high && flags[current]) ++current;
-    if (current <= high) return current;
-    current = 0;
-    while (flags[current]) ++current;
-    return current;
-  }
-
-  inline size_t GetPrior(size_t current, size_t high,
-    const std::vector<bool>& flags)
-  {
-    if (current == 0) current = high;
-    else --current;
-    while (current > 0 && flags[current]) --current;
-    if (!flags[current]) return current;
-    current = high;
-    while (flags[current]) --current;
-    return current;
-  }
-
   template <typename T>
   inline Path<T> SimplifyPath(const Path<T> &path,
     double epsilon, bool isClosedPath = true)
@@ -665,13 +665,13 @@ namespace Clipper2Lib {
         start = curr;
         do
         {
-          curr = GetNext(curr, high, flags);
+          curr = details::GetNext(curr, high, flags);
         } while (curr != start && distSqr[curr] > epsSqr);
         if (curr == start) break;
       }
 
-      prior = GetPrior(curr, high, flags);
-      next = GetNext(curr, high, flags);
+      prior = details::GetPrior(curr, high, flags);
+      next = details::GetNext(curr, high, flags);
       if (next == prior) break;
 
       // flag for removal the smaller of adjacent 'distances'
@@ -680,14 +680,14 @@ namespace Clipper2Lib {
         prior2 = prior;
         prior = curr;
         curr = next;
-        next = GetNext(next, high, flags);
+        next = details::GetNext(next, high, flags);
       }
       else
-        prior2 = GetPrior(prior, high, flags);
+        prior2 = details::GetPrior(prior, high, flags);
 
       flags[curr] = true;
       curr = next;
-      next = GetNext(next, high, flags);
+      next = details::GetNext(next, high, flags);
 
       if (isClosedPath || ((curr != high) && (curr != 0)))
         distSqr[curr] = PerpendicDistFromLineSqrd(path[curr], path[prior], path[next]);
@@ -710,6 +710,35 @@ namespace Clipper2Lib {
     for (const auto& path : paths)
       result.emplace_back(std::move(SimplifyPath(path, epsilon, isClosedPath)));
     return result;
+  }
+
+ 
+  template <typename T>
+  inline bool Path2ContainsPath1(const Path<T>& path1, const Path<T>& path2)
+  {
+    // precondition: paths must not intersect, except for
+    // transient (and presumed 'micro') path intersections 
+    PointInPolygonResult pip = PointInPolygonResult::IsOn;
+    for (const Point<T>& pt : path1)
+    {
+      switch (PointInPolygon(pt, path2))
+      {
+      case PointInPolygonResult::IsOutside: 
+        if (pip == PointInPolygonResult::IsOutside) return false; 
+        pip = PointInPolygonResult::IsOutside; 
+        break;
+      case PointInPolygonResult::IsInside:
+        if (pip == PointInPolygonResult::IsInside) return true;
+        pip = PointInPolygonResult::IsInside;
+        break;
+      default: 
+        break;
+      }
+    }
+    if (pip != PointInPolygonResult::IsInside) return false;
+    // result is likely true but check midpoint
+    Point<T> mp1 = GetBounds(path1).MidPoint();
+    return PointInPolygon(mp1, path2) == PointInPolygonResult::IsInside;
   }
 
   template <typename T>

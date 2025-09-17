@@ -1,6 +1,6 @@
 ﻿/*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  9 February 2025                                                 *
+* Date      :  15 June 2025                                                    *
 * Website   :  https://www.angusj.com                                          *
 * Copyright :  Angus Johnson 2010-2025                                         *
 * Purpose   :  This is the main polygon clipping module                        *
@@ -1820,8 +1820,9 @@ namespace Clipper2Lib
         ae.prevInSEL = ae.prevInAEL;
         ae.nextInSEL = ae.nextInAEL;
         ae.jump = ae.nextInSEL;
-        ae.curX = ae.joinWith == JoinWith.Left ? ae.prevInAEL!.curX : // this also avoids complications
-          TopX(ae, topY);
+        // it is safe to ignore 'joined' edges here because
+        // if necessary they will be split in IntersectEdges()
+        ae.curX = TopX(ae, topY);
         // NB don't update ae.curr.Y yet (see AddNewIntersectNode)
         ae = ae.nextInAEL;
       }
@@ -2668,27 +2669,26 @@ private void DoHorizontal(Active horz)
     {
       // we need to make some accommodation for rounding errors
       // so we won't jump if the first vertex is found outside
-      int outside_cnt = 0;
+      PointInPolygonResult pip = PointInPolygonResult.IsOn;
       OutPt op = op1;
       do
       {
-        PointInPolygonResult result = PointInOpPolygon(op.pt, op2);
-        switch (result)
+        switch (PointInOpPolygon(op.pt, op2))
         {
           case PointInPolygonResult.IsOutside:
-            ++outside_cnt;
+            if (pip == PointInPolygonResult.IsOutside) return false;
+            pip = PointInPolygonResult.IsOutside;
             break;
           case PointInPolygonResult.IsInside:
-            --outside_cnt;
+            if (pip == PointInPolygonResult.IsInside) return true;
+            pip = PointInPolygonResult.IsInside;
             break;
+          default: break;
         }
         op = op.next!;
-      } while (op != op1 && Math.Abs(outside_cnt) < 2);
-      if (Math.Abs(outside_cnt) > 1) return (outside_cnt < 0);
-      // since path1's location is still equivocal, check its midpoint
-      Point64 mp = GetBounds(GetCleanPath(op1)).MidPoint();
-      Path64 path2 = GetCleanPath(op2);
-      return InternalClipper.PointInPolygon(mp, path2) != PointInPolygonResult.IsOutside;
+      } while (op != op1);
+      // result is unclear, so try again using cleaned paths
+      return InternalClipper.Path2ContainsPath1(GetCleanPath(op1), GetCleanPath(op2)); // (#973)
     }
 
     private static void MoveSplits(OutRec fromOr, OutRec toOr)
@@ -2696,7 +2696,8 @@ private void DoHorizontal(Active horz)
       if (fromOr.splits == null) return;
       toOr.splits ??= new List<int>();
       foreach (int i in fromOr.splits)
-        toOr.splits.Add(i);
+        if (i != toOr.idx)
+          toOr.splits.Add(i);
       fromOr.splits = null;
     }
 
@@ -2915,22 +2916,35 @@ private void DoHorizontal(Active horz)
     private void FixSelfIntersects(OutRec outrec)
     {
       OutPt op2 = outrec.pts!;
-      // triangles can't self-intersect
-      if (op2.prev == op2.next!.next) return;
+      if (op2.prev == op2.next!.next)
+        return; // because triangles can't self-intersect
       for (; ; )
       {
-        if (InternalClipper.SegsIntersect(op2.prev.pt,
+        if (InternalClipper.SegsIntersect(op2!.prev.pt,
                 op2.pt, op2.next!.pt, op2.next.next!.pt))
         {
-          DoSplitOp(outrec, op2);
-          if (outrec.pts == null) return;
-          op2 = outrec.pts;
-          // triangles can't self-intersect
-          if (op2.prev == op2.next!.next) break;
-          continue;
+          if (InternalClipper.SegsIntersect(op2.prev.pt,
+                  op2.pt, op2.next.next!.pt, op2.next.next.next!.pt))
+          {
+            // adjacent intersections (ie a micro self-intersection)
+            op2 = DuplicateOp(op2, false);
+            op2.pt = op2.next!.next!.next!.pt;
+            op2 = op2.next;
+          }
+          else
+          {
+            if (op2 == outrec.pts || op2.next == outrec.pts)
+              outrec.pts = outrec.pts.prev;
+            DoSplitOp(outrec, op2);
+            if (outrec.pts == null) return;
+            op2 = outrec.pts;
+            // triangles can't self-intersect
+            if (op2.prev == op2.next!.next) break;
+            continue;
+          }
         }
 
-        op2 = op2.next;
+        op2 = op2.next!;
         if (op2 == outrec.pts) break;
       }
     }
@@ -3005,21 +3019,6 @@ private void DoHorizontal(Active horz)
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static Rect64 GetBounds(Path64 path)
-	  {
-		  if (path.Count == 0) return new Rect64();
-      Rect64 result = Clipper.InvalidRect64;
-		  foreach (Point64 pt in path)
-		  {
-			  if (pt.X < result.left) result.left = pt.X;
-			  if (pt.X > result.right) result.right = pt.X;
-			  if (pt.Y < result.top) result.top = pt.Y;
-			  if (pt.Y > result.bottom) result.bottom = pt.Y;
-		  }
-		  return result;
-	  }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private bool CheckBounds(OutRec outrec)
     {
       if (outrec.pts == null) return false;
@@ -3028,7 +3027,7 @@ private void DoHorizontal(Active horz)
       if (outrec.pts == null ||
         !BuildPath(outrec.pts, ReverseSolution, false, outrec.path))
           return false;
-      outrec.bounds = GetBounds(outrec.path);
+      outrec.bounds = InternalClipper.GetBounds(outrec.path);
       return true;
     }
 
@@ -3042,11 +3041,16 @@ private void DoHorizontal(Active horz)
         split = GetRealOutRec(split);
         if (split == null || split == outrec || split.recursiveSplit == outrec) continue;
         split.recursiveSplit = outrec; //#599
+        
         if (split.splits != null && CheckSplitOwner(outrec, split.splits)) return true;
-        if (!IsValidOwner(outrec, split) ||
-            !CheckBounds(split) ||
+
+        if (!CheckBounds(split) ||
             !split.bounds.Contains(outrec.bounds) ||
             !Path1InsidePath2(outrec.pts!, split.pts!)) continue;
+
+        if (!IsValidOwner(outrec, split)) // split is owned by outrec (#957)
+          split.owner = outrec.owner;
+
         outrec.owner = split; //found in split
         return true;
       }
