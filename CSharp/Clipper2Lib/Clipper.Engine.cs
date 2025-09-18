@@ -41,7 +41,7 @@ namespace Clipper2Lib
 
   internal class Vertex
   {
-    public readonly Point64 pt;
+    public Point64 pt;
     public Vertex? next;
     public Vertex? prev;
     public VertexFlags flags;
@@ -233,7 +233,7 @@ namespace Clipper2Lib
     }
 
     internal static void AddPathsToVertexList(Paths64 paths, PathType polytype, bool isOpen,
-      List<LocalMinima> minimaList, List<Vertex> vertexList)
+      List<LocalMinima> minimaList, VertexPoolList vertexList)
     {
       int totalVertCnt = 0;
       foreach (Path64 path in paths) totalVertCnt += path.Count;
@@ -246,14 +246,12 @@ namespace Clipper2Lib
         {
           if (v0 == null)
           {
-            v0 = new Vertex(pt, VertexFlags.None, null);
-            vertexList.Add(v0);
+            v0 = vertexList.Add(pt, VertexFlags.None, null);
             prev_v = v0;
           }
           else if (prev_v!.pt != pt) // ie skips duplicates
           {
-            curr_v = new Vertex(pt, VertexFlags.None, prev_v);
-            vertexList.Add(curr_v);
+            curr_v = vertexList.Add(pt, VertexFlags.None, prev_v);
             prev_v.next = curr_v;
             prev_v = curr_v;
           }
@@ -329,11 +327,11 @@ namespace Clipper2Lib
   public class ReuseableDataContainer64
   {
     internal readonly List<LocalMinima> _minimaList;
-    internal readonly List<Vertex> _vertexList;
+    internal readonly VertexPoolList _vertexList;
     public ReuseableDataContainer64()
     {
       _minimaList = new List<LocalMinima>();
-      _vertexList = new List<Vertex>();
+      _vertexList = new VertexPoolList();
     }
     public void Clear()
     {
@@ -355,7 +353,7 @@ namespace Clipper2Lib
     private Active? _sel;
     private readonly List<LocalMinima> _minimaList;
     private readonly List<IntersectNode> _intersectList;
-    private readonly List<Vertex> _vertexList;
+    private readonly VertexPoolList _vertexList;
     private readonly List<OutRec> _outrecList;
     private readonly List<long> _scanlineList;
     private readonly List<HorzSegment> _horzSegList;
@@ -380,7 +378,7 @@ namespace Clipper2Lib
     {
       _minimaList = new List<LocalMinima>();
       _intersectList = new List<IntersectNode>();
-      _vertexList = new List<Vertex>();
+      _vertexList = new VertexPoolList();
       _outrecList = new List<OutRec>();
       _scanlineList = new List<long>();
       _horzSegList = new List<HorzSegment>();
