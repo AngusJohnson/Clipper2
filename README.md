@@ -54,3 +54,38 @@ The <b>Clipper2</b> library performs **intersection**, **union**, **difference**
 | **Kotlin** | https://github.com/Monkey-Maestro/clipper2-kotlin |
 | **golang** | https://github.com/epit3d/goclipper2 |
 | **Lua** | https://github.com/Ark223/Clipper2-Lua |
+
+<hr>
+
+### Installation
+
+#### Debian/Ubuntu Packages
+
+Clipper2 can be built and installed as Debian packages:
+
+```bash
+# Build the packages
+dpkg-buildpackage -us -uc
+
+# Install the packages
+sudo dpkg -i ../libclipper2-1_*.deb ../libclipper2-dev_*.deb
+```
+
+**Available packages:**
+- `libclipper2-1` - Runtime shared library
+- `libclipper2-dev` - Development headers and CMake integration
+
+**Using in your project:**
+
+With CMake:
+```cmake
+find_package(Clipper2 REQUIRED)
+target_link_libraries(your_target Clipper2::Clipper2)
+```
+
+With pkg-config:
+```bash
+g++ -o myapp myapp.cpp $(pkg-config --cflags --libs Clipper2)
+```
+
+Both Clipper2 and Clipper2Z (with Z-coordinate support) libraries are included.

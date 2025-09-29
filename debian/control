@@ -1,0 +1,42 @@
+Source: clipper2
+Section: libs
+Priority: optional
+Maintainer: Debian Science Maintainers <debian-science-maintainers@lists.alioth.debian.org>
+Build-Depends: debhelper-compat (= 13),
+               cmake (>= 3.15),
+               pkg-config
+Standards-Version: 4.6.2
+Homepage: https://github.com/AngusJohnson/Clipper2
+Vcs-Git: https://github.com/AngusJohnson/Clipper2.git
+Vcs-Browser: https://github.com/AngusJohnson/Clipper2
+Rules-Requires-Root: no
+
+Package: libclipper2-1
+Architecture: any
+Multi-Arch: same
+Depends: ${shlibs:Depends}, ${misc:Depends}
+Description: polygon clipping and offsetting library
+ Clipper2 is a polygon clipping and offsetting library that performs
+ intersection, union, difference and XOR boolean operations on both simple
+ and complex polygons. It also performs polygon offsetting.
+ .
+ This is a major update of the original Clipper library, providing better
+ performance and additional features while maintaining API compatibility.
+ .
+ This package contains the shared library.
+
+Package: libclipper2-dev
+Section: libdevel
+Architecture: any
+Multi-Arch: same
+Depends: libclipper2-1 (= ${binary:Version}), ${misc:Depends}
+Description: polygon clipping and offsetting library - development files
+ Clipper2 is a polygon clipping and offsetting library that performs
+ intersection, union, difference and XOR boolean operations on both simple
+ and complex polygons. It also performs polygon offsetting.
+ .
+ This is a major update of the original Clipper library, providing better
+ performance and additional features while maintaining API compatibility.
+ .
+ This package contains the header files and static libraries needed for
+ development with Clipper2.

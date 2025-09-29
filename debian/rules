@@ -1,0 +1,25 @@
+#!/usr/bin/make -f
+
+export DEB_BUILD_MAINT_OPTIONS = hardening=+all
+export DEB_CFLAGS_MAINT_APPEND  = -Wall -pedantic
+export DEB_LDFLAGS_MAINT_APPEND = -Wl,--as-needed
+
+%:
+	dh $@
+
+override_dh_auto_configure:
+	dh_auto_configure --sourcedir=CPP -- \
+		-DCMAKE_BUILD_TYPE=Release \
+		-DBUILD_SHARED_LIBS=ON \
+		-DCLIPPER2_EXAMPLES=OFF \
+		-DCLIPPER2_TESTS=OFF \
+		-DCLIPPER2_UTILS=OFF
+
+override_dh_auto_build:
+	dh_auto_build --sourcedir=CPP
+
+override_dh_auto_test:
+	dh_auto_test --sourcedir=CPP
+
+override_dh_auto_install:
+	dh_auto_install --sourcedir=CPP

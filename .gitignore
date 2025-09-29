@@ -1,1 +1,32 @@
 .*
+
+# Debian packaging generated files
+obj-*/
+*.deb
+*.dsc
+*.changes
+*.buildinfo
+*.ddeb
+*.tar.xz
+*.tar.gz
+*.tar.bz2
+
+# CMake build files
+build/
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+Makefile
+*.cmake
+!CMakeLists.txt
+!*.cmake.in
+
+# Generated debian files (keep source packaging files)
+debian/tmp/
+debian/.debhelper/
+debian/debhelper-build-stamp
+debian/files
+debian/*-dbgsym/
+debian/*.debhelper.log
+debian/*.substvars
+debian/libclipper2-*/
