@@ -22,5 +22,6 @@
     <Compile Include="..\Clipper2Lib\Clipper.Core.cs" Link="Clipper.Core.cs" />
     <Compile Include="..\Clipper2Lib\Clipper.RectClip.cs" Link="Clipper.RectClip.cs" />
     <Compile Include="..\Clipper2Lib\Clipper.Minkowski.cs" Link="Clipper.Minkowski.cs" />
+    <Compile Include="..\Clipper2Lib\PooledList.cs" Link="PooledList.cs" />
   </ItemGroup>
 </Project>
