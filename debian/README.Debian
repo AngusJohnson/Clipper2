@@ -1,0 +1,68 @@
+clipper2 for Debian
+==================
+
+This package provides the Clipper2 polygon clipping and offsetting library.
+
+The package is split into two components:
+- libclipper2-1: Contains the shared library for runtime use
+- libclipper2-dev: Contains headers, static libraries, and development files
+
+Building from source:
+--------------------
+
+To build the Debian packages from source:
+
+    dpkg-buildpackage -us -uc
+
+Or using debuild:
+
+    debuild -us -uc
+
+The build will create both the runtime and development packages.
+
+Using the packages:
+------------------
+
+After installation, you can use the library in your projects:
+
+CMake integration:
+    find_package(Clipper2 REQUIRED)
+    target_link_libraries(your_target Clipper2::Clipper2)
+
+    # For Z-coordinate support:
+    target_link_libraries(your_target Clipper2::Clipper2Z)
+
+pkg-config:
+    g++ -o myapp myapp.cpp $(pkg-config --cflags --libs Clipper2)
+
+    # For Z-coordinate support:
+    g++ -o myapp myapp.cpp $(pkg-config --cflags --libs Clipper2Z)
+
+Manual linking:
+    g++ -o myapp myapp.cpp -lClipper2
+
+Package contents:
+----------------
+
+libclipper2-1 contains:
+- /usr/lib/*/libClipper2.so.1.5.4 (standard library)
+- /usr/lib/*/libClipper2Z.so.1.5.4 (Z-coordinate variant)
+- Proper symlinks for version management
+
+libclipper2-dev contains:
+- /usr/include/clipper2/*.h (header files)
+- /usr/lib/*/cmake/clipper2/ (CMake configuration)
+- /usr/lib/*/pkgconfig/*.pc (pkg-config files)
+- Development symlinks
+
+Library features:
+----------------
+
+The library supports:
+- Boolean operations: intersection, union, difference, and XOR
+- Polygon offsetting
+- Complex and simple polygon handling
+- High performance C++ implementation
+- Optional Z-coordinate support (via Clipper2Z variant)
+
+ -- Debian Science Maintainers <debian-science-maintainers@lists.alioth.debian.org>

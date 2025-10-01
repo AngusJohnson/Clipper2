@@ -1,0 +1,7 @@
+clipper2 (1.5.4-1) unstable; urgency=medium
+
+  * Initial Debian packaging
+  * New upstream version 1.5.4
+  * Package provides shared library and development files
+
+ -- Debian Science Maintainers <debian-science-maintainers@lists.alioth.debian.org>  Sun, 29 Sep 2024 19:30:00 +0000
