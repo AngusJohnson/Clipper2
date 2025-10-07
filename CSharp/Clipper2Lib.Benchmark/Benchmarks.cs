@@ -3,7 +3,11 @@ using BenchmarkDotNet.Attributes;
 using BenchmarkDotNet.Configs;
 using BenchmarkDotNet.Jobs;
 
+#if USINGZ
+namespace Clipper2ZLib.Benchmark
+#else
 namespace Clipper2Lib.Benchmark
+#endif
 {
   public class FastConfig : ManualConfig
     {
