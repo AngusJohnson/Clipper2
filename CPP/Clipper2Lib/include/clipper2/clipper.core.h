@@ -1,6 +1,6 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  24 March 2025                                                   *
+* Date      :  7 October 2025                                                  *
 * Website   :  https://www.angusj.com                                          *
 * Copyright :  Angus Johnson 2010-2025                                         *
 * Purpose   :  Core Clipper Library structures and functions                   *
@@ -708,9 +708,10 @@ namespace Clipper2Lib
     {
       return lo == other.lo && hi == other.hi;
     };
+
   };
 
-  inline UInt128Struct Multiply(uint64_t a, uint64_t b) // #834, #835
+  inline UInt128Struct MultiplyUInt64(uint64_t a, uint64_t b) // #834, #835
   {
     // note to self - lamba expressions follow
     const auto lo = [](uint64_t x) { return x & 0xFFFFFFFF; };
@@ -719,10 +720,7 @@ namespace Clipper2Lib
     const uint64_t x1 = lo(a) * lo(b);
     const uint64_t x2 = hi(a) * lo(b) + hi(x1);
     const uint64_t x3 = lo(a) * hi(b) + lo(x2);
-    const uint64_t lobits = lo(x3) << 32 | lo(x1);
-    const uint64_t hibits = hi(a) * hi(b) + hi(x2) + hi(x3);
-
-    return { lobits, hibits };
+    return { uint64_t(lo(x3) << 32 | lo(x1)), uint64_t(hi(a) * hi(b) + hi(x2) + hi(x3)) };
   }
 
   // returns true if (and only if) a * b == c * d
@@ -739,8 +737,8 @@ namespace Clipper2Lib
     const auto abs_c = static_cast<uint64_t>(std::abs(c));
     const auto abs_d = static_cast<uint64_t>(std::abs(d));
 
-    const auto ab = Multiply(abs_a, abs_b);
-    const auto cd = Multiply(abs_c, abs_d);
+    const auto ab = MultiplyUInt64(abs_a, abs_b);
+    const auto cd = MultiplyUInt64(abs_c, abs_d);
 
     // nb: it's important to differentiate 0 values here from other values
     const auto sign_ab = TriSign(a) * TriSign(b);
@@ -765,14 +763,8 @@ namespace Clipper2Lib
     else if (ab < cd) return -1;
     else return 0;
 #else
-    // nb: unsigned values needed for calculating carry into 'hi'
-    const auto abs_a = static_cast<uint64_t>(std::abs(a));
-    const auto abs_b = static_cast<uint64_t>(std::abs(b));
-    const auto abs_c = static_cast<uint64_t>(std::abs(c));
-    const auto abs_d = static_cast<uint64_t>(std::abs(d));
-
-    const auto ab = Multiply(abs_a, abs_b);
-    const auto cd = Multiply(abs_c, abs_d);
+    const auto ab = MultiplyUInt64(std::abs(a), std::abs(b));
+    const auto cd = MultiplyUInt64(std::abs(c), std::abs(d));
 
     const auto sign_ab = TriSign(a) * TriSign(b);
     const auto sign_cd = TriSign(c) * TriSign(d);
@@ -1005,19 +997,19 @@ namespace Clipper2Lib
   {
     if (inclusive)
     {
-      double res1 = CrossProduct(seg1a, seg2a, seg2b);
-      double res2 = CrossProduct(seg1b, seg2a, seg2b);
+      int res1 = CrossProductSign(seg1a, seg2a, seg2b);
+      int res2 = CrossProductSign(seg1b, seg2a, seg2b);
       if (res1 * res2 > 0) return false;
-      double res3 = CrossProduct(seg2a, seg1a, seg1b);
-      double res4 = CrossProduct(seg2b, seg1a, seg1b);
+      int res3 = CrossProductSign(seg2a, seg1a, seg1b);
+      int res4 = CrossProductSign(seg2b, seg1a, seg1b);
       if (res3 * res4 > 0) return false;
       return (res1 || res2 || res3 || res4); // ensures not collinear
     }
     else {
-      return (GetSign(CrossProduct(seg1a, seg2a, seg2b)) *
-        GetSign(CrossProduct(seg1b, seg2a, seg2b)) < 0) &&
-        (GetSign(CrossProduct(seg2a, seg1a, seg1b)) *
-          GetSign(CrossProduct(seg2b, seg1a, seg1b)) < 0);
+      return (CrossProductSign(seg1a, seg2a, seg2b) *
+        CrossProductSign(seg1b, seg2a, seg2b) < 0) &&
+        (CrossProductSign(seg2a, seg1a, seg1b) *
+        CrossProductSign(seg2b, seg1a, seg1b) < 0);
     }
   }
 
@@ -1105,7 +1097,7 @@ namespace Clipper2Lib
         val = 1 - val; // toggle val
       else
       {
-        double d = CrossProduct(*prev, *curr, pt);
+        int d = CrossProductSign(*prev, *curr, pt);
         if (d == 0) return PointInPolygonResult::IsOn;
         if ((d < 0) == is_above) val = 1 - val;
       }
@@ -1119,7 +1111,7 @@ namespace Clipper2Lib
       if (curr == cend) curr = cbegin;
       if (curr == cbegin) prev = cend - 1;
       else prev = curr - 1;
-      double d = CrossProduct(*prev, *curr, pt);
+      int d = CrossProductSign(*prev, *curr, pt);
       if (d == 0) return PointInPolygonResult::IsOn;
       if ((d < 0) == is_above) val = 1 - val;
     }

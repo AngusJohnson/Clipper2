@@ -2,9 +2,9 @@ unit Clipper.RectClip;
 
 (*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  5 July 2024                                                     *
+* Date      :  7 October 2025                                                  *
 * Website   :  https://www.angusj.com                                          *
-* Copyright :  Angus Johnson 2010-2024                                         *
+* Copyright :  Angus Johnson 2010-2025                                         *
 * Purpose   :  FAST rectangular clipping                                       *
 * License   :  https://www.boost.org/LICENSE_1_0.txt                           *
 *******************************************************************************)
@@ -124,10 +124,10 @@ end;
 function GetSegmentIntersectPt2(p1: TPoint64;
 p2: TPoint64; p3: TPoint64; p4: TPoint64; out ip: TPoint64): Boolean;
 var
-  res1, res2, res3, res4: double;
+  res1, res2, res3, res4: integer;
 begin
-  res1 := CrossProduct(p1, p3, p4);
-  res2 := CrossProduct(p2, p3, p4);
+  res1 := CrossProductSign(p1, p3, p4);
+  res2 := CrossProductSign(p2, p3, p4);
   if (res1 = 0) then
   begin
     ip := p1;
@@ -160,8 +160,8 @@ begin
     Exit;
   end;
 
-  res3 := CrossProduct(p3, p1, p2);
-  res4 := CrossProduct(p4, p1, p2);
+  res3 := CrossProductSign(p3, p1, p2);
+  res4 := CrossProductSign(p4, p1, p2);
   if (res3 = 0) then
   begin
     ip := p3;
@@ -292,7 +292,7 @@ function IsClockwise(prev, curr: TLocation;
   {$IFDEF INLINING} inline; {$ENDIF}
 begin
   Result := Iif(AreOpposites(prev, curr),
-    CrossProduct(prevPt, rectMidPt, currPt) < 0,
+    CrossProductSign(prevPt, rectMidPt, currPt) < 0,
     HeadingClockwise(prev, curr));
 end;
 //------------------------------------------------------------------------------
@@ -340,7 +340,7 @@ begin
   if Assigned(op.edge) then Exit;
   op.edge := @edge;
   len := Length(edge);
-  SetLength(edge, len+1);
+  SetLength(edge, len + 1);
   edge[len] := op;
 end;
 //------------------------------------------------------------------------------
@@ -618,7 +618,7 @@ var
   path: TPath64;
 begin
   result := nil;
-  len:= Length(paths);
+  len := Length(paths);
   for i := 0 to len -1 do
   begin
     path := paths[i];
@@ -637,7 +637,7 @@ begin
     ExecuteInternal(path);
     CheckEdges;
     for j := 0 to 3 do
-      TidyEdgePair(j, fEdges[j*2], fEdges[j*2 +1]);
+      TidyEdgePair(j, fEdges[j * 2], fEdges[j * 2 + 1]);
 
     for j := 0 to fResults.Count -1 do
       AppendPath(Result, GetPath(j));
@@ -822,7 +822,7 @@ begin
         begin
           if startLocsCW then j := i else j := 3 - i;
           Add(fRectPath[j]);
-          AddToEdge(fEdges[j*2], fResults[0]);
+          AddToEdge(fEdges[j * 2], fResults[0]);
         end;
       end;
     end;
@@ -896,9 +896,9 @@ begin
           if combinedSet and (1 shl j) <> 0 then
           begin
             if IsHeadingClockwise(op2.prev.pt, op2.pt, j) then
-              AddToEdge(fEdges[j*2], op2)
+              AddToEdge(fEdges[j * 2], op2)
             else
-              AddToEdge(fEdges[j*2+1], op2);
+              AddToEdge(fEdges[j * 2 + 1], op2);
           end;
       end;
       edgeSet1 := edgeSet2;
@@ -1134,7 +1134,7 @@ var
 begin
   result := nil;
 
-  len:= Length(paths);
+  len := Length(paths);
   for i := 0 to len -1 do
   begin
     pathrec := GetBounds(paths[i]);

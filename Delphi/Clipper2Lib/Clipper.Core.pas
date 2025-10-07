@@ -2,7 +2,7 @@ unit Clipper.Core;
 
 (*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  10 May 2025                                                     *
+* Date      :  7 October 2025                                                  *
 * Website   :  https://www.angusj.com                                          *
 * Copyright :  Angus Johnson 2010-2024                                         *
 * Purpose   :  Core Clipper Library module                                     *
@@ -125,6 +125,8 @@ type
     fCapacity : integer;
     fList     : TPointerList;
     fSorted   : Boolean;
+    procedure SetCapacity(value: integer);
+    procedure UnsafeReplaceItem(index: integer; value: Pointer);
   protected
     function UnsafeGet(idx: integer): Pointer; // no range checking
     procedure UnsafeSet(idx: integer; val: Pointer);
@@ -134,13 +136,22 @@ type
     destructor Destroy; override;
     procedure Clear; virtual;
     function Add(item: Pointer): integer;
+    procedure Insert(index: integer; item: Pointer);
     procedure DeleteLast;
     procedure Swap(idx1, idx2: integer);
     procedure Sort(Compare: TListSortCompareFunc);
-    procedure Resize(count: integer);
+    procedure Resize(newSize: integer);
+    property Capacity: integer read fCapacity write SetCapacity;
     property Count: integer read fCount;
     property Sorted: Boolean read fSorted;
-    property Item[idx: integer]: Pointer read UnsafeGet; default;
+    property Item[idx: integer]: Pointer
+      read UnsafeGet write UnsafeReplaceItem; default;
+  end;
+
+  TStackEx = class(TListEx)
+  public
+    procedure Push(obj: Pointer);
+    function Pop(out obj: Pointer): Boolean;
   end;
 
   TClipType = (ctNoClip, ctIntersection, ctUnion, ctDifference, ctXor);
@@ -162,16 +173,17 @@ function IsPositive(const path: TPathD): Boolean; overload;
 
 function IsCollinear(const pt1, sharedPt, pt2: TPoint64): Boolean;
 
-function CrossProduct(const pt1, pt2, pt3: TPoint64): double; overload;
-  {$IFDEF INLINING} inline; {$ENDIF}
-function CrossProduct(const pt1, pt2, pt3: TPointD): double; overload;
-  {$IFDEF INLINING} inline; {$ENDIF}
 function CrossProduct(const vec1, vec2: TPointD): double; overload;
   {$IFDEF INLINING} inline; {$ENDIF}
-function CrossProduct(vec1x, vec1y, vec2x, vec2y: double): double; overload;
+function CrossProduct(const pt1, pt2, pt3: TPoint64): double; overload;
   {$IFDEF INLINING} inline; {$ENDIF}
+function CrossProductIsZero(const pt1, pt2, pt3: TPoint64): Boolean;
+  {$IFDEF INLINING} inline; {$ENDIF}
+function CrossProductSign(const pt1, pt2, pt3: TPoint64): integer;
 
-function DotProduct(const pt1, pt2, pt3: TPoint64): double;
+function DotProduct(const vec1, vec2: TPointD): double; overload;
+  {$IFDEF INLINING} inline; {$ENDIF}
+function DotProduct(const pt1, pt2, pt3: TPoint64): double; overload;
   {$IFDEF INLINING} inline; {$ENDIF}
 
 function DistanceSqr(const pt1, pt2: TPoint64): double; overload;
@@ -376,7 +388,7 @@ const
 implementation
 
 resourcestring
-  rsClipper_PrecisonErr = 'The decimal rounding value is invalid';
+  rsClipper_PrecisionErr = 'The decimal rounding value is invalid';
 
 //------------------------------------------------------------------------------
 // TRect64 methods ...
@@ -486,7 +498,7 @@ end;
 
 function TRectD.GetMidPoint: TPointD;
 begin
-  result := PointD((Left + Right) *0.5, (Top + Bottom) *0.5);
+  result := PointD((Left + Right) * 0.5, (Top + Bottom) * 0.5);
 end;
 //------------------------------------------------------------------------------
 
@@ -557,13 +569,41 @@ begin
   begin
     if fCapacity = 0 then
       fCapacity := 16 else
-      fCapacity := fCapacity *2;
+      fCapacity := fCapacity * 2;
     SetLength(fList, fCapacity);
   end;
   fList[fCount] := item;
   Result := fCount;
   inc(fCount);
   fSorted := false;
+end;
+//------------------------------------------------------------------------------
+
+procedure TListEx.UnsafeReplaceItem(index: integer; value: Pointer);
+begin
+  fList[index] := value;
+end;
+//------------------------------------------------------------------------------
+
+procedure TListEx.Insert(index: integer; item: Pointer);
+begin
+  if fCount = fCapacity then
+  begin
+    if fCapacity = 0 then
+      fCapacity := 16 else
+      fCapacity := fCapacity * 2;
+    SetLength(fList, fCapacity);
+  end;
+  if index = fCount then
+  begin
+    fList[fCount] := item;
+    fSorted := false;
+  end else
+  begin
+    Move(fList[index], fList[index +1], (fCount - index) * SizeOf(Pointer));
+    fList[index] := item;
+  end;
+  inc(fCount);
 end;
 //------------------------------------------------------------------------------
 
@@ -634,12 +674,19 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-procedure TListEx.Resize(count: integer);
+procedure TListEx.Resize(newSize: integer);
 begin
+  SetCapacity(newSize);
+  fCount := newSize;
+end;
+//------------------------------------------------------------------------------
+
+procedure TListEx.SetCapacity(value: integer);
+begin
+  if value < fCount then Exit;
   if (fCapacity = 0) then fCapacity := 16;
-  while count > fCapacity do fCapacity := fCapacity * 2;
+  while value > fCapacity do fCapacity := fCapacity * 2;
   SetLength(fList, fCapacity);
-  fCount := count;
 end;
 //------------------------------------------------------------------------------
 
@@ -671,6 +718,27 @@ begin
   fList[idx1] := fList[idx2];
   fList[idx2] := p;
   fSorted := false;
+end;
+
+//------------------------------------------------------------------------------
+// TStackEx
+//------------------------------------------------------------------------------
+
+procedure TStackEx.Push(obj: Pointer);
+begin
+  Add(obj);
+end;
+//------------------------------------------------------------------------------
+
+function TStackEx.Pop(out obj: Pointer): Boolean;
+var
+  cnt: integer;
+begin
+  cnt := Count;
+  Result := cnt > 0;
+  if not Result then Exit;
+  obj := Item[cnt -1];
+  UnsafeDelete(cnt -1);
 end;
 
 //------------------------------------------------------------------------------
@@ -708,7 +776,7 @@ end;
 procedure CheckPrecisionRange(var precision: integer);
 begin
   if (precision < -MaxDecimalPrecision) or (precision > MaxDecimalPrecision) then
-      Raise EClipper2LibException(rsClipper_PrecisonErr);
+      Raise EClipper2LibException(rsClipper_PrecisionErr);
 end;
 //------------------------------------------------------------------------------
 
@@ -1216,7 +1284,7 @@ var
   i, highI: Integer;
 begin
   highI := high(path);
-  SetLength(Result, highI +1);
+  SetLength(Result, highI + 1);
   for i := 0 to highI do
     Result[i] := path[highI - i];
 end;
@@ -1227,7 +1295,7 @@ var
   i, highI: Integer;
 begin
   highI := high(path);
-  SetLength(Result, highI +1);
+  SetLength(Result, highI + 1);
   for i := 0 to highI do
     Result[i] := path[highI - i];
 end;
@@ -1242,7 +1310,7 @@ begin
   for i := 0 to i -1 do
   begin
     highJ := high(paths[i]);
-    SetLength(Result[i], highJ+1);
+    SetLength(Result[i], highJ + 1);
     for j := 0 to highJ do
       Result[i][j] := paths[i][highJ - j];
   end;
@@ -1255,10 +1323,10 @@ var
 begin
   i := length(paths);
   SetLength(Result, i);
-  for i := 0 to i -1 do
+  for i := 0 to i - 1 do
   begin
     highJ := high(paths[i]);
-    SetLength(Result[i], highJ+1);
+    SetLength(Result[i], highJ + 1);
     for j := 0 to highJ do
       Result[i][j] := paths[i][highJ - j];
   end;
@@ -1277,8 +1345,8 @@ begin
   if shift = 0 then Exit;
   if shift < 0 then shift := len + shift;
   diff := len - shift;
-  Move(path[shift], Result[0], diff *SizeOf(TPoint64));
-  Move(path[0], Result[diff], shift *SizeOf(TPoint64));
+  Move(path[shift], Result[0], diff * SizeOf(TPoint64));
+  Move(path[0], Result[diff], shift * SizeOf(TPoint64));
 end;
 //------------------------------------------------------------------------------
 
@@ -1294,8 +1362,8 @@ begin
   if shift = 0 then Exit;
   if shift < 0 then shift := len + shift;
   diff := len - shift;
-  Move(path[shift], Result[0], diff *SizeOf(TPointD));
-  Move(path[0], Result[diff], shift *SizeOf(TPointD));
+  Move(path[shift], Result[0], diff * SizeOf(TPointD));
+  Move(path[0], Result[diff], shift * SizeOf(TPointD));
 end;
 //------------------------------------------------------------------------------
 
@@ -1884,22 +1952,28 @@ function TriSign(val: Int64): integer; // returns 0, 1 or -1
 {$IFDEF INLINING} inline; {$ENDIF}
 begin
   if (val < 0) then Result := -1
-  else if (val > 1) then Result := 1
+  else if (val > 0) then Result := 1
   else Result := 0;
 end;
 //------------------------------------------------------------------------------
 
 type
-  TMultiplyUInt64Result = record
-    lo64: UInt64;
-    hi64 : UInt64;
+  TUInt128 = record
+    lo64  : UInt64;
+    hi64  : UInt64;
   end;
 
-function MultiplyUInt64(a, b: UInt64): TMultiplyUInt64Result; // #834, #835
+function MultiplyUInt64(a, b: UInt64): TUInt128; // #834, #835
 {$IFDEF INLINING} inline; {$ENDIF}
 var
   x1, x2, x3: UInt64;
 begin
+  if (a = 0) or (b = 0) then
+  begin
+    Result.lo64 := 0;
+    Result.hi64 := 0;
+    Exit;
+  end;
   x1 := (a and $FFFFFFFF) * (b and $FFFFFFFF);
   x2 := (a shr 32) * (b and $FFFFFFFF) + (x1 shr 32);
   x3 := (a and $FFFFFFFF) * (b shr 32) + (x2 and $FFFFFFFF);
@@ -1908,59 +1982,24 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-function ProductsAreEqual(a, b, c, d: Int64): Boolean;
-var
-  absA,absB,absC,absD: UInt64;
-  absAB, absCD       : TMultiplyUInt64Result;
-  signAB, signCD     : integer;
+function Int128Add(const Int1, Int2: TUInt128): TUInt128;
+{$IFDEF INLINING} inline; {$ENDIF}
 begin
-  // nb: unsigned values will be needed for CalcOverflowCarry()
-  absA := UInt64(Abs(a));
-  absB := UInt64(Abs(b));
-  absC := UInt64(Abs(c));
-  absD := UInt64(Abs(d));
-
-  absAB := MultiplyUInt64(absA, absB);
-  absCD := MultiplyUInt64(absC, absD);
-
-  // nb: it's important to differentiate 0 values here from other values
-  signAB := TriSign(a) * TriSign(b);
-  signCD := TriSign(c) * TriSign(d);
-
-  Result := (absAB.lo64 = absCD.lo64) and
-    (absAB.hi64 = absCD.hi64) and (signAB = signCD);
+  Result.Lo64 := Int1.Lo64 + Int2.Lo64;
+  Result.Hi64 := Int1.Hi64 + Int2.Hi64;
+  if Result.Lo64 < Int1.Lo64 then Inc(Result.Hi64);
 end;
 //------------------------------------------------------------------------------
 
-function IsCollinear(const pt1, sharedPt, pt2: TPoint64): Boolean;
-var
-  a,b,c,d: Int64;
+function Int128Sub(const Int1, Int2: TUInt128): TUInt128;
+{$IFDEF INLINING} inline; {$ENDIF}
 begin
-  a := sharedPt.X - pt1.X;
-  b := pt2.Y - sharedPt.Y;
-  c := sharedPt.Y - pt1.Y;
-  d := pt2.X - sharedPt.X;
-  // When checking for collinearity with very large coordinate values
-  // then ProductsAreEqual is more accurate than using CrossProduct.
-  Result := ProductsAreEqual(a, b, c, d);
+  Result.Lo64 := Int1.Lo64 - Int2.Lo64;
+  Result.Hi64 := Int1.Hi64 - Int2.Hi64;
+  if Result.Lo64 > Int1.Lo64 then Dec(Result.Hi64);
 end;
 //------------------------------------------------------------------------------
-
-function CrossProduct(const pt1, pt2, pt3: TPoint64): double;
-begin
-  result := CrossProduct(
-    pt2.X - pt1.X, pt2.Y - pt1.Y,
-    pt3.X - pt2.X, pt3.Y - pt2.Y);
-end;
-//------------------------------------------------------------------------------
-
-function CrossProduct(const pt1, pt2, pt3: TPointD): double;
-begin
-  result := CrossProduct(
-    pt2.X - pt1.X, pt2.Y - pt1.Y,
-    pt3.X - pt2.X, pt3.Y - pt2.Y);
-end;
-//------------------------------------------------------------------------------
+{$OVERFLOWCHECKS ON}
 
 function CrossProduct(const vec1, vec2: TPointD): double;
 begin
@@ -1968,21 +2007,108 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-function CrossProduct(vec1x, vec1y, vec2x, vec2y: double): double;
+function CrossProduct(const pt1, pt2, pt3: TPoint64): double;
+var
+  a,b,c,d : double;
 begin
-  result := (vec1x * vec2y - vec1y * vec2x);
+  a := pt2.X - pt1.X;
+  b := pt2.Y - pt1.Y;
+  c := pt3.X - pt2.X;
+  d := pt3.Y - pt2.Y;
+  Result := a * d - b * c;
+end;
+//------------------------------------------------------------------------------
+
+function DotProduct(const vec1, vec2: TPointD): double;
+begin
+  result := (vec1.X * vec2.X + vec1.Y * vec2.Y);
 end;
 //------------------------------------------------------------------------------
 
 function DotProduct(const pt1, pt2, pt3: TPoint64): double;
 var
-  x1,x2,y1,y2: double; // avoids potential int overflow
+  a,b,c,d : double;
 begin
-  x1 := pt2.X - pt1.X;
-  y1 := pt2.Y - pt1.Y;
-  x2 := pt3.X - pt2.X;
-  y2 := pt3.Y - pt2.Y;
-  result := (x1 * x2 + y1 * y2);
+  a := pt2.X - pt1.X;
+  b := pt2.Y - pt1.Y;
+  c := pt3.X - pt2.X;
+  d := pt3.Y - pt2.Y;
+  Result := a * c + b * d;
+end;
+//------------------------------------------------------------------------------
+
+function ProductsAreEqual(a, b, c, d: Int64): Boolean;
+{$IFDEF INLINING} inline; {$ENDIF}
+var
+  ab, cd: TUInt128;
+  signAB, signCD: integer;
+begin
+  // Returns true when a * b == c * d
+  signAB := TriSign(a) * TriSign(b);
+  signCD := TriSign(c) * TriSign(d);
+  if (signAB <> signCD) then
+    Result := false
+  else
+  begin
+    ab := MultiplyUInt64(Abs(a), Abs(b));
+    cd := MultiplyUInt64(Abs(c), Abs(d));
+    Result := (ab.lo64 = cd.lo64) and (ab.hi64 = cd.hi64);
+  end;
+end;
+//------------------------------------------------------------------------------
+
+function CrossProductIsZero(const pt1, pt2, pt3: TPoint64): Boolean;
+var
+  a,b,c,d : Int64;
+begin
+  a := pt2.X - pt1.X;
+  b := pt2.Y - pt1.Y;
+  c := pt3.X - pt2.X;
+  d := pt3.Y - pt2.Y;
+  Result := ProductsAreEqual(a,d, b,c);
+end;
+//------------------------------------------------------------------------------
+
+function CrossProductSign(const pt1, pt2, pt3: TPoint64): integer;
+var
+  a,b,c,d : Int64;
+  signAB, signCD: integer;
+  ab, cd: TUInt128;
+begin
+  a := pt2.X - pt1.X;
+  b := pt3.Y - pt2.Y;
+  c := pt2.Y - pt1.Y;
+  d := pt3.X - pt2.X;
+
+  ab := MultiplyUInt64(Abs(a), Abs(b));
+  cd := MultiplyUInt64(Abs(c), Abs(d));
+  signAB := TriSign(a) * TriSign(b);
+  signCD := TriSign(c) * TriSign(d);
+
+  if signAB = signCD then
+  begin
+    if (ab.hi64 = cd.hi64) then
+    begin
+      if (ab.lo64 = cd.lo64) then
+      begin
+        Result := 0;
+        Exit;
+      end;
+      if (ab.lo64 > cd.lo64)  then Result := 1
+      else Result := -1;
+      if (signAB > 0) then Result := -Result;
+    end
+    else if (ab.hi64 > cd.hi64) then Result := 1
+    else Result := -1;
+  end
+  else if (signAB > signCD) then Result := 1
+  else Result := -1;
+end;
+//------------------------------------------------------------------------------
+
+function IsCollinear(const pt1, sharedPt, pt2: TPoint64): Boolean;
+begin
+  Result := CrossProductIsZero(pt1, sharedPt, pt2);
 end;
 //------------------------------------------------------------------------------
 
@@ -2044,20 +2170,20 @@ begin
   Result := nil;
   len := Length(path);
   while (len > 2) and
-   (IsCollinear(path[len-2], path[len-1], path[0])) do dec(len);
+   (IsCollinear(path[len-2], path[len - 1], path[0])) do dec(len);
   SetLength(Result, len);
   if (len < 2) then Exit;
   prev := path[len -1];
   j := 0;
   for i := 0 to len -2 do
   begin
-    if IsCollinear(prev, path[i], path[i+1]) then Continue;
+    if IsCollinear(prev, path[i], path[i + 1]) then Continue;
     Result[j] := path[i];
     inc(j);
     prev := path[i];
   end;
-  Result[j] := path[len -1];
-  SetLength(Result, j+1);
+  Result[j] := path[len - 1];
+  SetLength(Result, j + 1);
 end;
 //------------------------------------------------------------------------------
 
@@ -2072,27 +2198,24 @@ end;
 function SegmentsIntersect(const s1a, s1b, s2a, s2b: TPoint64;
   inclusive: Boolean): boolean;
 var
-  res1, res2, res3, res4: double;
+  res1, res2, res3, res4: integer;
 begin
   if inclusive then
   begin
     //result can include segments that only touch
     Result := false;
-    res1 := CrossProduct(s1a, s2a, s2b);
-    res2 := CrossProduct(s1b, s2a, s2b);
+    res1 := CrossProductSign(s1a, s2a, s2b);
+    res2 := CrossProductSign(s1b, s2a, s2b);
     if (res1 * res2 > 0) then Exit;
-    res3 := CrossProduct(s2a, s1a, s1b);
-    res4 := CrossProduct(s2b, s1a, s1b);
+    res3 := CrossProductSign(s2a, s1a, s1b);
+    res4 := CrossProductSign(s2b, s1a, s1b);
     if (res3 * res4 > 0) then Exit;
     Result := (res1 <> 0) or (res2 <> 0) or
       (res3 <> 0) or (res4 <> 0); // ensures not collinear
   end else
-  begin
-    result := (GetSign(CrossProduct(s1a, s2a, s2b)) *
-      GetSign(CrossProduct(s1b, s2a, s2b)) < 0) and
-      (GetSign(CrossProduct(s2a, s1a, s1b)) *
-      GetSign(CrossProduct(s2b, s1a, s1b)) < 0);
-  end;
+    result :=
+      ((CrossProductSign(s1a, s2a, s2b) * CrossProductSign(s1b, s2a, s2b)) < 0) and
+      ((CrossProductSign(s2a, s1a, s1b) * CrossProductSign(s2b, s1a, s1b)) < 0);
 end;
 //------------------------------------------------------------------------------
 
@@ -2126,7 +2249,7 @@ function PointInPolygon(const pt: TPoint64;
 var
   len, val: Integer;
   isAbove, startingAbove: Boolean;
-  d: Double; // avoids integer overflow
+  d: integer;
   curr, prev, cbegin, cend, first: PPoint64;
 begin
   result := pipOutside;
@@ -2185,7 +2308,7 @@ begin
       val := 1 - val // toggle val
     else
     begin
-      d := CrossProduct(prev^, curr^, pt);
+      d := CrossProductSign(prev^, curr^, pt);
       if d = 0 then Exit; // ie point on path
       if (d < 0) = isAbove then val := 1 - val;
     end;
@@ -2202,7 +2325,7 @@ begin
       prev := cend else
       prev := curr;
     dec(prev);
-    d := CrossProduct(prev^, curr^, pt);
+    d := CrossProductSign(prev^, curr^, pt);
     if d = 0 then Exit; // ie point on path
     if (d < 0) = isAbove then val := 1 - val;
   end;

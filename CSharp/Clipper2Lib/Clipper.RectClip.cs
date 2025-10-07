@@ -1,8 +1,8 @@
 ﻿/*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  10 October 2024                                                 *
+* Date      :  7 October 2025                                                  *
 * Website   :  https://www.angusj.com                                          *
-* Copyright :  Angus Johnson 2010-2024                                         *
+* Copyright :  Angus Johnson 2010-2025                                         *
 * Purpose   :  FAST rectangular clipping                                       *
 * License   :  https://www.boost.org/LICENSE_1_0.txt                           *
 *******************************************************************************/
@@ -112,7 +112,7 @@ namespace Clipper2Lib
       Point64 prevPt, Point64 currPt, Point64 rectMidPoint)
     {
       if (AreOpposites(prev, curr))
-        return InternalClipper.CrossProduct(prevPt, rectMidPoint, currPt) < 0;
+        return InternalClipper.CrossProductSign(prevPt, rectMidPoint, currPt) < 0;
       return HeadingClockwise(prev, curr);
     }
 
@@ -278,8 +278,8 @@ namespace Clipper2Lib
     private static bool GetSegmentIntersection(Point64 p1,
     Point64 p2, Point64 p3, Point64 p4, out Point64 ip)
     {
-      double res1 = InternalClipper.CrossProduct(p1, p3, p4);
-      double res2 = InternalClipper.CrossProduct(p2, p3, p4);
+      int res1 = InternalClipper.CrossProductSign(p1, p3, p4);
+      int res2 = InternalClipper.CrossProductSign(p2, p3, p4);
       if (res1 == 0)
       {
         ip = p1;
@@ -303,8 +303,8 @@ namespace Clipper2Lib
         return false;
       }
 
-      double res3 = InternalClipper.CrossProduct(p3, p1, p2);
-      double res4 = InternalClipper.CrossProduct(p4, p1, p2);
+      int res3 = InternalClipper.CrossProductSign(p3, p1, p2);
+      int res4 = InternalClipper.CrossProductSign(p4, p1, p2);
       if (res3 == 0)
       {
         ip = p3;
