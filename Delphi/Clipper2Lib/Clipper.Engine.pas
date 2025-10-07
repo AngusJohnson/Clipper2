@@ -2,7 +2,7 @@ unit Clipper.Engine;
 
 (*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  15 June 2025                                                    *
+* Date      :  7 October 2025                                                  *
 * Website   :  https://www.angusj.com                                          *
 * Copyright :  Angus Johnson 2010-2025                                         *
 * Purpose   :  This is the main polygon clipping module                        *
@@ -690,7 +690,7 @@ function TopX(e: PActive; const currentY: Int64): Int64; overload;
 begin
   if (currentY = e.top.Y) or (e.top.X = e.bot.X) then Result := e.top.X
   else if (currentY = e.bot.Y) then Result := e.bot.X
-  else Result := e.bot.X + Round(e.dx*(currentY - e.bot.Y));
+  else Result := e.bot.X + Round(e.dx * (currentY - e.bot.Y));
 end;
 //------------------------------------------------------------------------------
 
@@ -874,7 +874,7 @@ var
   val: Integer;
   op2: POutPt;
   isAbove, startingAbove: Boolean;
-  d: double; // avoids integer overflow
+  d: integer;
 begin
   result := pipOutside;
   if (op = op.next) or (op.prev = op.next) then Exit;
@@ -918,7 +918,7 @@ begin
       val := 1 - val // toggle val
     else
     begin
-      d := CrossProduct(op2.prev.pt, op2.pt, pt);
+      d := CrossProductSign(op2.prev.pt, op2.pt, pt);
       if d = 0 then Exit; // ie point on path
       if (d < 0) = isAbove then val := 1 - val;
     end;
@@ -928,7 +928,7 @@ begin
 
   if (isAbove <> startingAbove) then
   begin
-    d := CrossProduct(op2.prev.pt, op2.pt, pt);
+    d := CrossProductSign(op2.prev.pt, op2.pt, pt);
     if d = 0 then Exit; // ie point on path
     if (d < 0) = isAbove then val := 1 - val;
   end;
@@ -1154,7 +1154,7 @@ begin
     if reverse then op := op.prev else op := op.next;
   end;
 
-  setLength(path, j+1);
+  setLength(path, j + 1);
   if isOpen then
     Result := (j > 0) else
     Result := (j > 1);
@@ -1285,7 +1285,7 @@ begin
   d4 := (pt1.x - pt2.x);
   d5 := (pt2.y + pt3.y);
   d6 := (pt2.x - pt3.x);
-  result := d1 * d2 + d3 *d4 + d5 *d6;
+  result := d1 * d2 + d3 * d4 + d5 * d6;
 end;
 //------------------------------------------------------------------------------
 
@@ -1794,7 +1794,7 @@ function IsValidAelOrder(resident, newcomer: PActive): Boolean;
 var
   botY: Int64;
   newcomerIsLeft: Boolean;
-  d: double;
+  d: integer;
 begin
   if (newcomer.currX <> resident.currX) then
   begin
@@ -1803,7 +1803,7 @@ begin
   end;
 
   // get the turning direction  a1.top, a2.bot, a2.top
-  d := CrossProduct(resident.top, newcomer.bot, newcomer.top);
+  d := CrossProductSign(resident.top, newcomer.bot, newcomer.top);
   if d <> 0 then
   begin
     Result := d < 0;
@@ -1815,14 +1815,14 @@ begin
   if not IsMaxima(resident) and
     (resident.top.Y > newcomer.top.Y) then
   begin
-    Result := CrossProduct(newcomer.bot,
+    Result := CrossProductSign(newcomer.bot,
       resident.top, NextVertex(resident).pt) <= 0;
     Exit;
   end
   else if not IsMaxima(newcomer) and
     (newcomer.top.Y > resident.top.Y) then
   begin
-    Result := CrossProduct(newcomer.bot,
+    Result := CrossProductSign(newcomer.bot,
       newcomer.top, NextVertex(newcomer).pt) >= 0;
     Exit;
   end;
@@ -1841,7 +1841,7 @@ begin
       Result := true
   else
     // otherwise compare turning direction of the alternate bound
-    Result := (CrossProduct(PrevPrevVertex(resident).pt,
+    Result := (CrossProductSign(PrevPrevVertex(resident).pt,
       newcomer.bot, PrevPrevVertex(newcomer).pt) > 0) = newcomerIsLeft;
 end;
 //------------------------------------------------------------------------------
@@ -3015,10 +3015,10 @@ begin
   FHorzSegList.Sort(HorzSegListSort);
 
   // find overlaps
-  for i := 0 to FHorzSegList.Count -2 do
+  for i := 0 to FHorzSegList.Count - 2 do
   begin
     hs1 := FHorzSegList.UnsafeGet(i);
-    for j := i+1 to FHorzSegList.Count -1 do
+    for j := i+1 to FHorzSegList.Count - 1 do
     begin
       hs2 := FHorzSegList.UnsafeGet(j);
 
@@ -4075,7 +4075,7 @@ begin
   inherited Create;
   CheckPrecisionRange(precision);
   FScale := Math.Power(10, precision);
-  FInvScale := 1/FScale;
+  FInvScale := 1 / FScale;
 end;
 //------------------------------------------------------------------------------
 
@@ -4242,7 +4242,7 @@ begin
   Result := TPolyPathD.Create;
   Result.Parent := self;
   TPolyPathD(Result).fScale := fScale;
-  TPolyPathD(Result).FPath := ScalePathD(path, 1/FScale);
+  TPolyPathD(Result).FPath := ScalePathD(path, 1 / FScale);
   ChildList.Add(Result);
 end;
 //------------------------------------------------------------------------------

@@ -1,6 +1,6 @@
 ﻿/*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  15 June 2025                                                    *
+* Date      :  7 October 2025                                                  *
 * Website   :  https://www.angusj.com                                          *
 * Copyright :  Angus Johnson 2010-2025                                         *
 * Purpose   :  This is the main polygon clipping module                        *
@@ -1073,7 +1073,7 @@ namespace Clipper2Lib
         return newcomer.curX > resident.curX;
 
       // get the turning direction  a1.top, a2.bot, a2.top
-      double d = InternalClipper.CrossProduct(resident.top, newcomer.bot, newcomer.top);
+      int d = InternalClipper.CrossProductSign(resident.top, newcomer.bot, newcomer.top);
       if (d != 0) return (d < 0);
 
       // edges must be collinear to get here
@@ -1082,13 +1082,13 @@ namespace Clipper2Lib
       // the direction they're about to turn
       if (!IsMaxima(resident) && (resident.top.Y > newcomer.top.Y))
       {
-        return InternalClipper.CrossProduct(newcomer.bot,
+        return InternalClipper.CrossProductSign(newcomer.bot,
           resident.top, NextVertex(resident).pt) <= 0;
       }
 
       if (!IsMaxima(newcomer) && (newcomer.top.Y > resident.top.Y))
       {
-        return InternalClipper.CrossProduct(newcomer.bot,
+        return InternalClipper.CrossProductSign(newcomer.bot,
           newcomer.top, NextVertex(newcomer).pt) >= 0;
       }
 
@@ -1103,7 +1103,7 @@ namespace Clipper2Lib
       if (InternalClipper.IsCollinear(PrevPrevVertex(resident).pt,
             resident.bot, resident.top)) return true;
       // compare turning direction of the alternate bound
-      return (InternalClipper.CrossProduct(PrevPrevVertex(resident).pt,
+      return (InternalClipper.CrossProductSign(PrevPrevVertex(resident).pt,
         newcomer.bot, PrevPrevVertex(newcomer).pt) > 0) == newcomerIsLeft;
     }
 
@@ -2646,7 +2646,7 @@ private void DoHorizontal(Active horz)
             val = 1 - val; // toggle val
           else
           {
-            double d = InternalClipper.CrossProduct(op2.prev.pt, op2.pt, pt);
+            int d = InternalClipper.CrossProductSign(op2.prev.pt, op2.pt, pt);
             if (d == 0) return PointInPolygonResult.IsOn;
             if ((d < 0) == isAbove) val = 1 - val;
           } 
@@ -2657,7 +2657,7 @@ private void DoHorizontal(Active horz)
 
       if (isAbove == startingAbove) return val == 0 ? PointInPolygonResult.IsOutside : PointInPolygonResult.IsInside;
       {
-        double d = InternalClipper.CrossProduct(op2.prev.pt, op2.pt, pt);
+        int d = InternalClipper.CrossProductSign(op2.prev.pt, op2.pt, pt);
         if (d == 0) return PointInPolygonResult.IsOn;
         if ((d < 0) == isAbove) val = 1 - val;
       }

@@ -1,6 +1,6 @@
 ﻿/*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  22 January 2025                                                 *
+* Date      :  7 October 2025                                                  *
 * Website   :  https://www.angusj.com                                          *
 * Copyright :  Angus Johnson 2010-2025                                         *
 * Purpose   :  Core structures and functions for the Clipper Library           *
@@ -536,6 +536,31 @@ namespace Clipper2Lib
               (double) (pt2.Y - pt1.Y) * (pt3.X - pt2.X));
     }
 
+    public static int CrossProductSign(Point64 pt1, Point64 pt2, Point64 pt3)
+    {
+      long a = pt2.X - pt1.X;
+      long b = pt3.Y - pt2.Y;
+      long c = pt2.Y - pt1.Y;
+      long d = pt3.X - pt2.X;
+      UInt128Struct ab = MultiplyUInt64((ulong) Math.Abs(a), (ulong) Math.Abs(b));
+      UInt128Struct cd = MultiplyUInt64((ulong) Math.Abs(c), (ulong) Math.Abs(d));
+      var signAB = TriSign(a) * TriSign(b);
+      var signCD = TriSign(c) * TriSign(d);
+
+      if (signAB == signCD)
+      {
+        int result;
+        if (ab.hi64 == cd.hi64)
+        {
+          if (ab.lo64 == cd.lo64) return 0;
+          result = (ab.lo64 > cd.lo64) ? 1 : -1;
+        }
+        else result = (ab.hi64 > cd.hi64) ? 1 : -1;
+        return (signAB > 0) ? result : -result;
+      }
+      return (signAB > signCD) ? 1 : -1;
+    }
+
 #if USINGZ
     public static Path64 SetZ(Path64 path, long Z)
     {
@@ -561,8 +586,7 @@ namespace Clipper2Lib
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static int TriSign(long x) // returns 0, 1 or -1
     {
-      if (x < 0) return -1;
-      return x > 1 ? 1 : 0;
+      return (x < 0) ? -1 : (x > 0) ? 1 : 0;
     }
 
     public struct UInt128Struct
@@ -675,15 +699,15 @@ namespace Clipper2Lib
       Point64 seg1b, Point64 seg2a, Point64 seg2b, bool inclusive = false)
     {
       if (!inclusive)
-        return (CrossProduct(seg1a, seg2a, seg2b) *
-                 CrossProduct(seg1b, seg2a, seg2b) < 0) &&
-               (CrossProduct(seg2a, seg1a, seg1b) *
-                 CrossProduct(seg2b, seg1a, seg1b) < 0);
-      double res1 = CrossProduct(seg1a, seg2a, seg2b);
-      double res2 = CrossProduct(seg1b, seg2a, seg2b);
+        return (CrossProductSign(seg1a, seg2a, seg2b) *
+                 CrossProductSign(seg1b, seg2a, seg2b) < 0) &&
+               (CrossProductSign(seg2a, seg1a, seg1b) *
+                 CrossProductSign(seg2b, seg1a, seg1b) < 0);
+      int res1 = CrossProductSign(seg1a, seg2a, seg2b);
+      int res2 = CrossProductSign(seg1b, seg2a, seg2b);
       if (res1 * res2 > 0) return false;
-      double res3 = CrossProduct(seg2a, seg1a, seg1b);
-      double res4 = CrossProduct(seg2b, seg1a, seg1b);
+      int res3 = CrossProductSign(seg2a, seg1a, seg1b);
+      int res4 = CrossProductSign(seg2b, seg1a, seg1b);
       if (res3 * res4 > 0) return false;
       // ensure NOT collinear
       return (res1 != 0 || res2 != 0 || res3 != 0 || res4 != 0);
@@ -727,7 +751,6 @@ namespace Clipper2Lib
       while (start < len && polygon[start].Y == pt.Y) start++;
       if (start == len) return PointInPolygonResult.IsOutside;
 
-      double d;
       bool isAbove = polygon[start].Y < pt.Y, startingAbove = isAbove;
       int val = 0, i = start + 1, end = len;
       while (true)
@@ -774,20 +797,22 @@ namespace Clipper2Lib
         }
         else
         {
-          d = CrossProduct(prev, curr, pt);
-          if (d == 0) return PointInPolygonResult.IsOn;
-          if ((d < 0) == isAbove) val = 1 - val;
+          int cps2 = CrossProductSign(prev, curr, pt);
+          if (cps2 == 0) return PointInPolygonResult.IsOn;
+          if ((cps2 < 0) == isAbove) val = 1 - val;
         }
         isAbove = !isAbove;
         i++;
       }
 
       if (isAbove == startingAbove) return val == 0 ? PointInPolygonResult.IsOutside : PointInPolygonResult.IsInside;
-      if (i == len) i = 0;  
-      d = i == 0 ? CrossProduct(polygon[len - 1], polygon[0], pt) : CrossProduct(polygon[i - 1], polygon[i], pt);
-      if (d == 0) return PointInPolygonResult.IsOn;
-      if ((d < 0) == isAbove) val = 1 - val;
+      if (i == len) i = 0;
+      int cps = (i == 0) ?
+        CrossProductSign(polygon[len - 1], polygon[0], pt) :
+        CrossProductSign(polygon[i - 1], polygon[i], pt);
 
+      if (cps == 0) return PointInPolygonResult.IsOn;
+      if ((cps < 0) == isAbove) val = 1 - val;
       return val == 0 ? PointInPolygonResult.IsOutside : PointInPolygonResult.IsInside;
     }
 
