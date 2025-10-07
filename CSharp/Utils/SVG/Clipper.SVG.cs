@@ -11,7 +11,11 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 
+#if USINGZ
+namespace Clipper2ZLib
+#else
 namespace Clipper2Lib
+#endif
 {
   public class SvgWriter
   {

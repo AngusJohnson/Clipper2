@@ -2,7 +2,7 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 // USINGZ compiler directive should have been set in project properties
 
-namespace Clipper2Lib.UnitTests
+namespace Clipper2ZLib.UnitTests
 {
 
   [TestClass]
