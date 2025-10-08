@@ -10,7 +10,11 @@ using System;
 using System.IO;
 using System.Diagnostics;
 
+#if USINGZ
+namespace Clipper2ZLib
+#else
 namespace Clipper2Lib
+#endif
 {
 
   public static class ClipperFileIO

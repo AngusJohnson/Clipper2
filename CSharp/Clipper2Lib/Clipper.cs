@@ -16,7 +16,11 @@ using System;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 
+#if USINGZ
+namespace Clipper2ZLib
+#else
 namespace Clipper2Lib
+#endif
 {
 
   // PRE-COMPILER CONDITIONAL ...

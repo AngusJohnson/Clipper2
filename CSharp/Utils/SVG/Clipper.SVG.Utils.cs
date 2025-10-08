@@ -8,7 +8,11 @@
 
 using System.IO;
 
+#if USINGZ
+namespace Clipper2ZLib
+#else
 namespace Clipper2Lib
+#endif
 {
   public static class SvgUtils
   {

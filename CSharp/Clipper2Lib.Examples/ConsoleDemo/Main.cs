@@ -8,7 +8,11 @@
 
 using System.Reflection;
 using System.IO;
+#if USINGZ
+using Clipper2ZLib;
+#else
 using Clipper2Lib;
+#endif
 using System;
 
 namespace ClipperDemo1
