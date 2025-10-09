@@ -2,7 +2,7 @@ unit Clipper.Core;
 
 (*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  7 October 2025                                                  *
+* Date      :  10 October 2025                                                 *
 * Website   :  https://www.angusj.com                                          *
 * Copyright :  Angus Johnson 2010-2024                                         *
 * Purpose   :  Core Clipper Library module                                     *
@@ -185,6 +185,7 @@ function DotProduct(const vec1, vec2: TPointD): double; overload;
   {$IFDEF INLINING} inline; {$ENDIF}
 function DotProduct(const pt1, pt2, pt3: TPoint64): double; overload;
   {$IFDEF INLINING} inline; {$ENDIF}
+function DotProductSign(const pt1, pt2, pt3: TPoint64): integer;
 
 function DistanceSqr(const pt1, pt2: TPoint64): double; overload;
   {$IFDEF INLINING} inline; {$ENDIF}
@@ -1968,35 +1969,20 @@ function MultiplyUInt64(a, b: UInt64): TUInt128; // #834, #835
 var
   x1, x2, x3: UInt64;
 begin
-  if (a = 0) or (b = 0) then
-  begin
-    Result.lo64 := 0;
-    Result.hi64 := 0;
-    Exit;
-  end;
   x1 := (a and $FFFFFFFF) * (b and $FFFFFFFF);
   x2 := (a shr 32) * (b and $FFFFFFFF) + (x1 shr 32);
   x3 := (a and $FFFFFFFF) * (b shr 32) + (x2 and $FFFFFFFF);
   Result.lo64 := ((x3 and $FFFFFFFF) shl 32) or (x1 and $FFFFFFFF);
-  Result.hi64 := hi(a shr 32) * (b shr 32) + (x2 shr 32) + (x3 shr 32);
+  Result.hi64 := (a shr 32) * (b shr 32) + (x2 shr 32) + (x3 shr 32);
 end;
 //------------------------------------------------------------------------------
 
-function Int128Add(const Int1, Int2: TUInt128): TUInt128;
+function Int128GreaterThan(const Int1, Int2: TUInt128): Boolean;
 {$IFDEF INLINING} inline; {$ENDIF}
 begin
-  Result.Lo64 := Int1.Lo64 + Int2.Lo64;
-  Result.Hi64 := Int1.Hi64 + Int2.Hi64;
-  if Result.Lo64 < Int1.Lo64 then Inc(Result.Hi64);
-end;
-//------------------------------------------------------------------------------
-
-function Int128Sub(const Int1, Int2: TUInt128): TUInt128;
-{$IFDEF INLINING} inline; {$ENDIF}
-begin
-  Result.Lo64 := Int1.Lo64 - Int2.Lo64;
-  Result.Hi64 := Int1.Hi64 - Int2.Hi64;
-  if Result.Lo64 > Int1.Lo64 then Dec(Result.Hi64);
+  if Int1.Hi64 <> Int2.Hi64 then
+    Result := Int1.Hi64 > Int2.Hi64 else
+    Result := Int1.Lo64 > Int2.Lo64;
 end;
 //------------------------------------------------------------------------------
 {$OVERFLOWCHECKS ON}
@@ -2034,6 +2020,34 @@ begin
   c := pt3.X - pt2.X;
   d := pt3.Y - pt2.Y;
   Result := a * c + b * d;
+end;
+//------------------------------------------------------------------------------
+
+function DotProductSign(const pt1, pt2, pt3: TPoint64): integer;
+var
+  a,b,c,d : Int64;
+  signAB, signCD: integer;
+  ab, cd: TUInt128;
+begin
+  a := pt2.X - pt1.X;
+  b := pt3.X - pt2.X;
+  c := pt2.Y - pt1.Y;
+  d := pt3.Y - pt2.Y;
+
+  signAB := TriSign(a) * TriSign(b);
+  signCD := TriSign(c) * TriSign(d);
+
+  if signAB = signCD then
+  begin
+    Result := signAB;
+  end else
+  begin
+    ab := MultiplyUInt64(Abs(a), Abs(b));
+    cd := MultiplyUInt64(Abs(c), Abs(d));
+    if Int128GreaterThan(ab, cd) then
+      Result := signAB else
+      Result := signCD;
+  end;
 end;
 //------------------------------------------------------------------------------
 
