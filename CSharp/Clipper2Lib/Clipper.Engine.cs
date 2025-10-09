@@ -145,6 +145,7 @@ namespace Clipper2Lib
   internal class OutRec
   {
     public int idx;
+    public int outPtCount;
     public OutRec? owner;
     public Active? frontEdge;
     public Active? backEdge;
@@ -355,13 +356,15 @@ namespace Clipper2Lib
     private FillRule _fillrule;
     private Active? _actives;
     private Active? _sel;
+    private Stack<Active> _freeActives;
     private readonly List<LocalMinima> _minimaList;
     private readonly List<IntersectNode> _intersectList;
     private readonly VertexPoolList _vertexList;
-    private readonly List<OutRec> _outrecList;
+    private readonly OutRecPoolList _outrecList;
     private readonly List<long> _scanlineList;
     private readonly List<HorzSegment> _horzSegList;
-    private readonly List<HorzJoin> _horzJoinList;
+    private readonly HorzJoinPoolList _horzJoinList;
+    private readonly OutPtPoolList _outPtPool;
     private int _currentLocMin;
     private long _currentBotY;
     private bool _isSortedMinimaList;
@@ -383,10 +386,12 @@ namespace Clipper2Lib
       _minimaList = new List<LocalMinima>();
       _intersectList = new List<IntersectNode>();
       _vertexList = new VertexPoolList();
-      _outrecList = new List<OutRec>();
+      _outrecList = new OutRecPoolList();
       _scanlineList = new List<long>();
       _horzSegList = new List<HorzSegment>();
-      _horzJoinList = new List<HorzJoin>();
+      _horzJoinList = new HorzJoinPoolList();
+      _outPtPool = new OutPtPoolList();
+      _freeActives = new Stack<Active>();
       PreserveCollinear = true;
     }
 
@@ -760,6 +765,8 @@ namespace Clipper2Lib
       _outrecList.Clear();
       _horzSegList.Clear();
       _horzJoinList.Clear();
+      _outPtPool.Clear();
+      _freeActives.Clear();
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -1164,16 +1171,14 @@ namespace Clipper2Lib
         }
         else
         {
-          leftBound = new Active
-          {
-            bot = localMinima.vertex.pt,
-            curX = localMinima.vertex.pt.X,
-            windDx = -1,
-            vertexTop = localMinima.vertex.prev,
-            top = localMinima.vertex.prev!.pt,
-            outrec = null,
-            localMin = localMinima
-          };
+          leftBound = NewActive();
+          leftBound.bot = localMinima.vertex.pt;
+          leftBound.curX = localMinima.vertex.pt.X;
+          leftBound.windDx = -1;
+          leftBound.vertexTop = localMinima.vertex.prev;
+          leftBound.top = localMinima.vertex.prev!.pt;
+          leftBound.outrec = null;
+          leftBound.localMin = localMinima;
           SetDx(leftBound);
         }
 
@@ -1184,16 +1189,14 @@ namespace Clipper2Lib
         }
         else
         {
-          rightBound = new Active
-          {
-            bot = localMinima.vertex.pt,
-            curX = localMinima.vertex.pt.X,
-            windDx = 1,
-            vertexTop = localMinima.vertex.next, // i.e. ascending
-            top = localMinima.vertex.next!.pt,
-            outrec = null,
-            localMin = localMinima
-          };
+          rightBound = NewActive();
+          rightBound.bot = localMinima.vertex.pt;
+          rightBound.curX = localMinima.vertex.pt.X;
+          rightBound.windDx = 1;
+          rightBound.vertexTop = localMinima.vertex.next; // i.e. ascending
+          rightBound.top = localMinima.vertex.next!.pt;
+          rightBound.outrec = null;
+          rightBound.localMin = localMinima;
           SetDx(rightBound);
         }
 
@@ -1333,7 +1336,7 @@ namespace Clipper2Lib
         }
       }
 
-      OutPt op = new OutPt(pt, outrec);
+      OutPt op = _outPtPool.Add(pt, outrec);
       outrec.pts = op;
       return op;
     }
@@ -1427,6 +1430,7 @@ namespace Clipper2Lib
       ae2.outrec.frontEdge = null;
       ae2.outrec.backEdge = null;
       ae2.outrec.pts = null;
+      ae1.outrec.outPtCount += ae2.outrec.outPtCount;
       SetOwner(ae2.outrec, ae1.outrec);
 
       if (IsOpenEnd(ae1))
@@ -1441,7 +1445,7 @@ namespace Clipper2Lib
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static OutPt AddOutPt(Active ae, Point64 pt)
+    private OutPt AddOutPt(Active ae, Point64 pt)
     {
 
       // Outrec.OutPts: a circular doubly-linked-list of POutPt where ...
@@ -1459,7 +1463,7 @@ namespace Clipper2Lib
           return opBack;
       }
 
-      OutPt newOp = new OutPt(pt, outrec);
+      OutPt newOp = _outPtPool.Add(pt, outrec);
       opBack.prev = newOp;
       newOp.prev = opFront;
       newOp.next = opBack;
@@ -1471,11 +1475,9 @@ namespace Clipper2Lib
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private OutRec NewOutRec()
     {
-      OutRec result = new OutRec
-      {
-        idx = _outrecList.Count
-      };
-      _outrecList.Add(result);
+      int idx = _outrecList.Count;
+      OutRec result = _outrecList.Add();
+      result.idx = idx;
       return result;
     }
 
@@ -1496,7 +1498,7 @@ namespace Clipper2Lib
       }
 
       ae.outrec = outrec;
-      OutPt op = new OutPt(pt, outrec);
+      OutPt op = _outPtPool.Add(pt, outrec);
       outrec.pts = op;
       return op;
     }
@@ -1812,6 +1814,45 @@ namespace Clipper2Lib
         _actives = next;
       if (next != null) next.prevInAEL = prev;
       // delete &ae;
+      PoolDeletedActive(ae);
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private void PoolDeletedActive(Active ae)
+    {
+      //clear refs to allow GC
+      ae.bot = new Point64();
+      ae.top = new Point64();
+      ae.dx = 0.0;
+      ae.windCount = 0;
+      ae.windCount2 = 0;
+      ae.outrec = null;
+      ae.prevInAEL = null;
+      ae.nextInAEL = null;
+      ae.prevInSEL = null;
+      ae.nextInSEL = null;
+      ae.jump = null;
+      ae.vertexTop = null;
+      ae.localMin = new LocalMinima();
+      ae.isLeftBound = false;
+      ae.joinWith = JoinWith.None;
+      _freeActives.Push(ae);
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private Active NewActive()
+    {
+      Active ae;
+      if (_freeActives.Count == 0)
+      {        
+        ae = new Active();
+      }
+      else
+      {
+        //recycle active from free list
+        ae = _freeActives.Pop();
+      }
+      return ae;
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -2497,9 +2538,9 @@ private void DoHorizontal(Active horz)
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static OutPt DuplicateOp(OutPt op, bool insert_after)
+    private OutPt DuplicateOp(OutPt op, bool insert_after)
     {
-      OutPt result = new OutPt(op.pt, op.outrec);
+      OutPt result = _outPtPool.Add(op.pt, op.outrec);
       if (insert_after)
       {
         result.next = op.next;
@@ -2556,10 +2597,9 @@ private void DoHorizontal(Active horz)
             while (hs2.leftOp.prev.pt.Y == curr_y &&
               hs2.leftOp.prev.pt.X <= hs1.leftOp.pt.X)
               (hs2).leftOp = (hs2).leftOp.prev;
-            HorzJoin join = new HorzJoin(
+            HorzJoin join = _horzJoinList.Add(
               DuplicateOp((hs1).leftOp, true),
               DuplicateOp((hs2).leftOp, false));
-            _horzJoinList.Add(join);
           }
           else
           {
@@ -2569,10 +2609,9 @@ private void DoHorizontal(Active horz)
             while (hs2.leftOp.next!.pt.Y == curr_y &&
               hs2.leftOp.next.pt.X <= (hs1).leftOp.pt.X)
               hs2.leftOp = (hs2).leftOp.next;
-            HorzJoin join = new HorzJoin(
+            HorzJoin join = _horzJoinList.Add(
               DuplicateOp((hs2).leftOp, true),
               DuplicateOp((hs1).leftOp, false));
-            _horzJoinList.Add(join);
           }
         }
       } 
@@ -2879,7 +2918,9 @@ private void DoHorizontal(Active horz)
       }
       else
       {
-        OutPt newOp2 = new OutPt(ip, outrec) { prev = prevOp, next = nextNextOp };        
+        OutPt newOp2 = _outPtPool.Add(ip, outrec);
+        newOp2.prev = prevOp;
+        newOp2.next = nextNextOp;
         nextNextOp.prev = newOp2;
         prevOp.next = newOp2;
       }
@@ -2897,7 +2938,9 @@ private void DoHorizontal(Active horz)
       splitOp.outrec = newOutRec;
       splitOp.next.outrec = newOutRec;
 
-      OutPt newOp = new OutPt(ip, newOutRec) { prev = splitOp.next, next = splitOp };
+      OutPt newOp = _outPtPool.Add(ip, newOutRec);
+      newOp.prev = splitOp.next;
+      newOp.next = splitOp;
       newOutRec.pts = newOp;
       splitOp.prev = newOp;
       splitOp.next.next = newOp;
@@ -3004,7 +3047,7 @@ private void DoHorizontal(Active horz)
         OutRec outrec = _outrecList[i++];
         if (outrec.pts == null) continue;
 
-        Path64 path = new Path64();
+        Path64 path = new Path64(outrec.outPtCount);
         if (outrec.isOpen)
         {
           if (BuildPath(outrec.pts, ReverseSolution, true, path))
@@ -3104,7 +3147,7 @@ private void DoHorizontal(Active horz)
 
         if (outrec.isOpen)
         {
-          Path64 open_path = new Path64();
+          Path64 open_path = new Path64(outrec.outPtCount);
           if (BuildPath(outrec.pts, ReverseSolution, true, open_path))
             solutionOpen.Add(open_path);
           continue;
