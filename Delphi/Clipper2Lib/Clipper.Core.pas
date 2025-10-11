@@ -2110,7 +2110,7 @@ begin
       end;
       if (ab.lo64 > cd.lo64)  then Result := 1
       else Result := -1;
-      if (signAB > 0) then Result := -Result;
+      if (signAB < 0) then Result := -Result;
     end
     else if (ab.hi64 > cd.hi64) then Result := 1
     else Result := -1;
@@ -2212,24 +2212,48 @@ end;
 function SegmentsIntersect(const s1a, s1b, s2a, s2b: TPoint64;
   inclusive: Boolean): boolean;
 var
-  res1, res2, res3, res4: integer;
+  dx1,dy1, dx2,dy2, t, cp: double;
 begin
-  if inclusive then
+  dy1 := (s1b.y - s1a.y);
+  dx1 := (s1b.x - s1a.x);
+  dy2 := (s2b.y - s2a.y);
+  dx2 := (s2b.x - s2a.x);
+  cp  := dy1 * dx2 - dy2 * dx1;
+  if cp = 0 then
+    Result := false
+  else if inclusive then
   begin
-    //result can include segments that only touch
-    Result := false;
-    res1 := CrossProductSign(s1a, s2a, s2b);
-    res2 := CrossProductSign(s1b, s2a, s2b);
-    if (res1 * res2 > 0) then Exit;
-    res3 := CrossProductSign(s2a, s1a, s1b);
-    res4 := CrossProductSign(s2b, s1a, s1b);
-    if (res3 * res4 > 0) then Exit;
-    Result := (res1 <> 0) or (res2 <> 0) or
-      (res3 <> 0) or (res4 <> 0); // ensures not collinear
+    //result **includes** segments that touch at an end point
+    t := ((s1a.x-s2a.x) * dy2 - (s1a.y-s2a.y) * dx2);
+    if (t = 0) then Result := true
+    else if (t > 0) then
+      Result := (cp > 0) and (t <= cp)
+    else
+      Result := (cp < 0) and (t >= cp);
+    if not Result then Exit;
+    t := ((s1a.x-s2a.x) * dy1 - (s1a.y-s2a.y) * dx1);
+    if (t = 0) then Result := true
+    else if (t > 0) then
+      Result := (cp > 0) and (t <= cp)
+    else
+      Result := (cp < 0) and (t >= cp);
   end else
-    result :=
-      ((CrossProductSign(s1a, s2a, s2b) * CrossProductSign(s1b, s2a, s2b)) < 0) and
-      ((CrossProductSign(s2a, s1a, s1b) * CrossProductSign(s2b, s1a, s1b)) < 0);
+  begin
+    //result **excludes** segments that touch at an end point
+    t := ((s1a.x-s2a.x) * dy2 - (s1a.y-s2a.y) * dx2);
+    if (t = 0) then Result := false
+    else if (t > 0) then
+      Result := (cp > 0) and (t < cp)
+    else
+      Result := (cp < 0) and (t > cp);
+    if not Result then Exit;
+    t := ((s1a.x-s2a.x) * dy1 - (s1a.y-s2a.y) * dx1) / cp;
+    if (t = 0) then Result := false
+    else if (t > 0) then
+      Result := (cp > 0) and (t < cp)
+    else
+      Result := (cp < 0) and (t > cp);
+  end;
 end;
 //------------------------------------------------------------------------------
 

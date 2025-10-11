@@ -1,6 +1,6 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  7 October 2025                                                  *
+* Date      :  11 October 2025                                                 *
 * Website   :  https://www.angusj.com                                          *
 * Copyright :  Angus Johnson 2010-2025                                         *
 * Purpose   :  Core Clipper Library structures and functions                   *
@@ -995,21 +995,44 @@ namespace Clipper2Lib
   inline bool SegmentsIntersect(const Point64& seg1a, const Point64& seg1b,
     const Point64& seg2a, const Point64& seg2b, bool inclusive = false)
   {
+    double dy1 = static_cast<double>(seg1b.y - seg1a.y);
+    double dx1 = static_cast<double>(seg1b.x - seg1a.x);
+    double dy2 = static_cast<double>(seg2b.y - seg2a.y);
+    double dx2 = static_cast<double>(seg2b.x - seg2a.x);
+    double cp = dy1 * dx2 - dy2 * dx1;
+    if (cp == 0) return false; // ie parallel segments
+
     if (inclusive)
     {
-      int res1 = CrossProductSign(seg1a, seg2a, seg2b);
-      int res2 = CrossProductSign(seg1b, seg2a, seg2b);
-      if (res1 * res2 > 0) return false;
-      int res3 = CrossProductSign(seg2a, seg1a, seg1b);
-      int res4 = CrossProductSign(seg2b, seg1a, seg1b);
-      if (res3 * res4 > 0) return false;
-      return (res1 || res2 || res3 || res4); // ensures not collinear
+      //result **includes** segments that touch at an end point
+      double t = ((seg1a.x - seg2a.x) * dy2 - (seg1a.y - seg2a.y) * dx2);
+      if (t == 0) return true;
+      if (t > 0)
+      {
+        if (cp < 0 || t > cp) return false;
+      }
+      else if (cp > 0 || t < cp) return false; // false when t more neg. than cp
+
+      t = ((seg1a.x - seg2a.x) * dy1 - (seg1a.y - seg2a.y) * dx1);
+      if (t == 0) return true;
+      if (t > 0)  return (cp > 0 && t <= cp);
+      else return (cp < 0 && t >= cp);        // true when t less neg. than cp
     }
-    else {
-      return (CrossProductSign(seg1a, seg2a, seg2b) *
-        CrossProductSign(seg1b, seg2a, seg2b) < 0) &&
-        (CrossProductSign(seg2a, seg1a, seg1b) *
-        CrossProductSign(seg2b, seg1a, seg1b) < 0);
+    else 
+    {
+      //result **excludes** segments that touch at an end point
+      double t = ((seg1a.x - seg2a.x) * dy2 - (seg1a.y - seg2a.y) * dx2);
+      if (t == 0) return false;
+      if (t > 0)
+      {
+        if (cp < 0 || t >= cp) return false;
+      }
+      else if (cp > 0 || t <= cp ) return false; // false when t more neg. than cp
+
+      t = ((seg1a.x - seg2a.x) * dy1 - (seg1a.y - seg2a.y) * dx1);
+      if (t == 0) return false;
+      if (t > 0)  return (cp > 0 && t < cp);
+      else return (cp < 0 && t > cp); // true when t less neg. than cp
     }
   }
 
