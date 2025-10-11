@@ -1,6 +1,6 @@
 ﻿/*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  11 October 2025                                                 *
+* Date      :  12 October 2025                                                 *
 * Website   :  https://www.angusj.com                                          *
 * Copyright :  Angus Johnson 2010-2025                                         *
 * Purpose   :  Core structures and functions for the Clipper Library           *
@@ -669,6 +669,9 @@ namespace Clipper2Lib
       return (long)Math.Round(val, MidpointRounding.AwayFromZero);
     }
 
+    // GetLineIntersectPt - a 'true' result is non-parallel. The 'ip' will also
+    // be constrained to seg1. However, it's possible that 'ip' won't be inside
+    // seg2, even when 'ip' hasn't been constrained (ie 'ip' is inside seg1).
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static bool GetLineIntersectPt(Point64 ln1a,

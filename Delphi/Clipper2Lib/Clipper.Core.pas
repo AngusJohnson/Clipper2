@@ -2,7 +2,7 @@ unit Clipper.Core;
 
 (*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  11 October 2025                                                 *
+* Date      :  12 October 2025                                                 *
 * Website   :  https://www.angusj.com                                          *
 * Copyright :  Angus Johnson 2010-2024                                         *
 * Purpose   :  Core Clipper Library module                                     *
@@ -334,6 +334,9 @@ procedure AppendPaths(var paths: TPathsD; const extra: TPathsD); overload;
 
 function ArrayOfPathsToPaths(const ap: TArrayOfPaths): TPaths64;
 
+// GetLineIntersectPt - a 'true' result is non-parallel. The 'ip' will also
+// be constrained to seg1. However, it's possible that 'ip' won't be inside
+// seg2, even when 'ip' hasn't been constrained (ie 'ip' is inside seg1).
 function GetLineIntersectPt(const ln1a, ln1b, ln2a, ln2b: TPoint64;
   out ip: TPoint64): Boolean; overload;
 function GetLineIntersectPt(const ln1a, ln1b, ln2a, ln2b: TPointD;

@@ -1,6 +1,6 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  11 October 2025                                                 *
+* Date      :  12 October 2025                                                 *
 * Website   :  https://www.angusj.com                                          *
 * Copyright :  Angus Johnson 2010-2025                                         *
 * Purpose   :  Core Clipper Library structures and functions                   *
@@ -884,6 +884,10 @@ namespace Clipper2Lib
     return Area<T>(poly) >= 0;
   }
 
+  // GetLineIntersectPt - a 'true' result is non-parallel. The 'ip' will also
+  // be constrained to seg1. However, it's possible that 'ip' won't be inside
+  // seg2, even when 'ip' hasn't been constrained (ie 'ip' is inside seg1).
+
 #if CLIPPER2_HI_PRECISION
   // caution: this will compromise performance
   // https://github.com/AngusJohnson/Clipper2/issues/317#issuecomment-1314023253
@@ -891,7 +895,7 @@ namespace Clipper2Lib
   #define CC_MIN(x,y) ((x)>(y)?(y):(x))
   #define CC_MAX(x,y) ((x)<(y)?(y):(x))
   template<typename T>
-  inline bool GetSegmentIntersectPt(const Point<T>& ln1a, const Point<T>& ln1b,
+  inline bool GetLineIntersectPt(const Point<T>& ln1a, const Point<T>& ln1b,
     const Point<T>& ln2a, const Point<T>& ln2b, Point<T>& ip)
   {
     double ln1dy = static_cast<double>(ln1b.y - ln1a.y);
@@ -937,6 +941,9 @@ namespace Clipper2Lib
       ip.x = originx + static_cast<T>(hitx);
       ip.y = originy + static_cast<T>(hity);
     }
+#ifdef USINGZ
+    ip.z = 0;
+#endif
     return true;
 }
 #else
@@ -959,7 +966,10 @@ namespace Clipper2Lib
     {
       ip.x = static_cast<T>(ln1a.x + t * dx1);
       ip.y = static_cast<T>(ln1a.y + t * dy1);
-  }
+#ifdef USINGZ
+      ip.z = 0;
+#endif
+    }
     return true;
   }
 #endif
