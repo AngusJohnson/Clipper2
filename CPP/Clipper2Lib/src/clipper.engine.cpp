@@ -1,6 +1,6 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  15 June 2025                                                    *
+* Date      :  11 October 2025                                                 *
 * Website   :  https://www.angusj.com                                          *
 * Copyright :  Angus Johnson 2010-2025                                         *
 * Purpose   :  This is the main polygon clipping module                        *
@@ -1568,7 +1568,7 @@ namespace Clipper2Lib {
     outrec->pts = prevOp;
 
     Point64 ip;
-    GetSegmentIntersectPt(prevOp->pt, splitOp->pt,
+    GetLineIntersectPt(prevOp->pt, splitOp->pt,
       splitOp->next->pt, nextNextOp->pt, ip);
 
 #ifdef USINGZ
@@ -2356,7 +2356,7 @@ namespace Clipper2Lib {
   void ClipperBase::AddNewIntersectNode(Active& e1, Active& e2, int64_t top_y)
   {
     Point64 ip;
-    if (!GetSegmentIntersectPt(e1.bot, e1.top, e2.bot, e2.top, ip))
+    if (!GetLineIntersectPt(e1.bot, e1.top, e2.bot, e2.top, ip))
       ip = Point64(e1.curr_x, top_y); //parallel edges
 
     //rounding errors can occasionally place the calculated intersection

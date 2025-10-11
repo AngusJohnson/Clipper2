@@ -1,6 +1,6 @@
 ﻿/*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  7 October 2025                                                  *
+* Date      :  11 October 2025                                                 *
 * Website   :  https://www.angusj.com                                          *
 * Copyright :  Angus Johnson 2010-2025                                         *
 * Purpose   :  This is the main polygon clipping module                        *
@@ -1917,7 +1917,7 @@ namespace Clipper2Lib
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private void AddNewIntersectNode(Active ae1, Active ae2, long topY)
     {
-      if (!InternalClipper.GetSegmentIntersectPt(
+      if (!InternalClipper.GetLineIntersectPt(
         ae1.bot, ae1.top, ae2.bot, ae2.top, out Point64 ip))
           ip = new Point64(ae1.curX, topY);
 
@@ -2889,7 +2889,7 @@ private void DoHorizontal(Active horz)
       OutPt nextNextOp = splitOp.next!.next!;
       outrec.pts = prevOp;
 
-      InternalClipper.GetSegmentIntersectPt(
+      InternalClipper.GetLineIntersectPt(
           prevOp.pt, splitOp.pt, splitOp.next.pt, nextNextOp.pt, out Point64 ip);
 
 #if USINGZ

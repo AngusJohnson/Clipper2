@@ -941,7 +941,7 @@ namespace Clipper2Lib
 }
 #else
   template<typename T>
-  inline bool GetSegmentIntersectPt(const Point<T>& ln1a, const Point<T>& ln1b,
+  inline bool GetLineIntersectPt(const Point<T>& ln1a, const Point<T>& ln1b,
     const Point<T>& ln2a, const Point<T>& ln2b, Point<T>& ip)
   {
     // https://en.wikipedia.org/wiki/Line%E2%80%93line_intersection

@@ -2,7 +2,7 @@ unit Clipper.Core;
 
 (*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  10 October 2025                                                 *
+* Date      :  11 October 2025                                                 *
 * Website   :  https://www.angusj.com                                          *
 * Copyright :  Angus Johnson 2010-2024                                         *
 * Purpose   :  Core Clipper Library module                                     *
@@ -334,8 +334,10 @@ procedure AppendPaths(var paths: TPathsD; const extra: TPathsD); overload;
 
 function ArrayOfPathsToPaths(const ap: TArrayOfPaths): TPaths64;
 
-function GetSegmentIntersectPt(const ln1a, ln1b, ln2a, ln2b: TPoint64;
-  out ip: TPoint64): Boolean;
+function GetLineIntersectPt(const ln1a, ln1b, ln2a, ln2b: TPoint64;
+  out ip: TPoint64): Boolean; overload;
+function GetLineIntersectPt(const ln1a, ln1b, ln2a, ln2b: TPointD;
+  out ip: TPointD): Boolean; overload;
 
 function PointInPolygon(const pt: TPoint64; const polygon: TPath64): TPointInPolygonResult;
 function Path2ContainsPath1(const path1, path2: TPath64): Boolean;
@@ -2147,18 +2149,18 @@ end;
 
 function PerpendicDistFromLineSqrd(const pt, linePt1, linePt2: TPoint64): double;
 var
-  a,b,c: double;
+  a,b,c,d: double;
 begin
   // perpendicular distance of point (x0,y0) = (a*x0 + b*y0 + C)/Sqrt(a*a + b*b)
-  // where ax + by +c = 0 is the equation of the line
+  // where ax + by +c = 0 is the equation of a line
   // see https://en.wikipedia.org/wiki/Distance_from_a_point_to_a_line
-	a := (linePt1.Y - linePt2.Y);
-	b := (linePt2.X - linePt1.X);
-	c := a * linePt1.X + b * linePt1.Y;
-	c := a * pt.x + b * pt.y - c;
-   if (a = 0) and (b = 0) then
+  a := pt.x - linePt1.x;
+  b := pt.y - linePt1.y;
+  c := linePt2.x - linePt1.x;
+  d := linePt2.y - linePt1.y;
+  if (c = 0) and (d = 0) then
     Result := 0 else
-	  Result := (c * c) / (a * a + b * b);
+    Result := Sqr(a * d - c * b) / (c * c + d * d);
 end;
 //---------------------------------------------------------------------------
 
@@ -2247,7 +2249,7 @@ begin
     else
       Result := (cp < 0) and (t > cp);
     if not Result then Exit;
-    t := ((s1a.x-s2a.x) * dy1 - (s1a.y-s2a.y) * dx1) / cp;
+    t := ((s1a.x-s2a.x) * dy1 - (s1a.y-s2a.y) * dx1);
     if (t = 0) then Result := false
     else if (t > 0) then
       Result := (cp > 0) and (t < cp)
@@ -2257,7 +2259,7 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-function GetSegmentIntersectPt(const ln1a, ln1b, ln2a, ln2b: TPoint64;
+function GetLineIntersectPt(const ln1a, ln1b, ln2a, ln2b: TPoint64;
   out ip: TPoint64): Boolean;
 var
   dx1,dy1, dx2,dy2, t, cp: double;
@@ -2272,12 +2274,41 @@ begin
   if not Result then Exit;
   t := ((ln1a.x-ln2a.x) * dy2 - (ln1a.y-ln2a.y) * dx2) / cp;
   if t <= 0.0 then ip := ln1a
-  else if t >= 1.0 then ip := ln1b;
-  ip.X :=  Trunc(ln1a.X + t * dx1);
-  ip.Y :=  Trunc(ln1a.Y + t * dy1);
+  else if t >= 1.0 then ip := ln1b
+  else
+  begin
+    ip.X :=  Trunc(ln1a.X + t * dx1);
+    ip.Y :=  Trunc(ln1a.Y + t * dy1);
 {$IFDEF USINGZ}
-  ip.Z := 0;
+    ip.Z := 0;
 {$ENDIF}
+  end;
+end;
+//------------------------------------------------------------------------------
+
+function GetLineIntersectPt(const ln1a, ln1b, ln2a, ln2b: TPointD;
+  out ip: TPointD): Boolean;
+var
+  dx1,dy1, dx2,dy2, t, cp: double;
+begin
+  dy1 := (ln1b.y - ln1a.y);
+  dx1 := (ln1b.x - ln1a.x);
+  dy2 := (ln2b.y - ln2a.y);
+  dx2 := (ln2b.x - ln2a.x);
+  cp  := dy1 * dx2 - dy2 * dx1;
+  Result := (cp <> 0.0);
+  if not Result then Exit;
+  t := ((ln1a.x-ln2a.x) * dy2 - (ln1a.y-ln2a.y) * dx2) / cp;
+  if t <= 0.0 then ip := ln1a
+  else if t >= 1.0 then ip := ln1b
+  else
+  begin
+    ip.X :=  Trunc(ln1a.X + t * dx1);
+    ip.Y :=  Trunc(ln1a.Y + t * dy1);
+{$IFDEF USINGZ}
+    ip.Z := 0;
+{$ENDIF}
+  end;
 end;
 //------------------------------------------------------------------------------
 

@@ -1,6 +1,6 @@
 ﻿/*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  7 October 2025                                                  *
+* Date      :  11 October 2025                                                 *
 * Website   :  https://www.angusj.com                                          *
 * Copyright :  Angus Johnson 2010-2025                                         *
 * Purpose   :  Path Offset (Inflate/Shrink)                                    *
@@ -328,35 +328,6 @@ namespace Clipper2Lib
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static PointD IntersectPoint(PointD pt1a, PointD pt1b, PointD pt2a, PointD pt2b)
-    {
-      if (InternalClipper.IsAlmostZero(pt1a.x - pt1b.x)) //vertical
-      {
-        if (InternalClipper.IsAlmostZero(pt2a.x - pt2b.x)) return new PointD(0, 0);
-        double m2 = (pt2b.y - pt2a.y) / (pt2b.x - pt2a.x);
-        double b2 = pt2a.y - m2 * pt2a.x;
-        return new PointD(pt1a.x, m2* pt1a.x + b2);
-      }
-
-      if (InternalClipper.IsAlmostZero(pt2a.x - pt2b.x)) //vertical
-      {
-        double m1 = (pt1b.y - pt1a.y) / (pt1b.x - pt1a.x);
-        double b1 = pt1a.y - m1 * pt1a.x;
-        return new PointD(pt2a.x, m1* pt2a.x + b1);
-      }
-      else
-      {
-        double m1 = (pt1b.y - pt1a.y) / (pt1b.x - pt1a.x);
-        double b1 = pt1a.y - m1 * pt1a.x;
-        double m2 = (pt2b.y - pt2a.y) / (pt2b.x - pt2a.x);
-        double b2 = pt2a.y - m2 * pt2a.x;
-        if (InternalClipper.IsAlmostZero(m1 - m2)) return new PointD(0, 0);
-        double x = (b2 - b1) / (m1 - m2);
-        return new PointD(x, m1 * x + b1);
-      }
-    }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private Point64 GetPerpendic(Point64 pt, PointD norm)
     {
 #if USINGZ
@@ -456,7 +427,7 @@ namespace Clipper2Lib
         PointD pt4 = new PointD(
           pt3.x + vec.x * _groupDelta,
           pt3.y + vec.y * _groupDelta);
-        PointD pt = IntersectPoint(pt1, pt2, pt3, pt4);
+        InternalClipper.GetLineIntersectPt(pt1, pt2, pt3, pt4, out PointD pt);
 #if USINGZ
         pt.z = ptQ.z;
 #endif    
@@ -467,7 +438,7 @@ namespace Clipper2Lib
       else
       {
         PointD pt4 = GetPerpendicD(path[j], _normals[k]);
-        PointD pt = IntersectPoint(pt1, pt2, pt3, pt4);
+        InternalClipper.GetLineIntersectPt(pt1, pt2, pt3, pt4, out PointD pt);
 #if USINGZ
         pt.z = ptQ.z;
 #endif

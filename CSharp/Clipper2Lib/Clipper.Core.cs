@@ -671,7 +671,7 @@ namespace Clipper2Lib
 
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static bool GetSegmentIntersectPt(Point64 ln1a,
+    public static bool GetLineIntersectPt(Point64 ln1a,
       Point64 ln1b, Point64 ln2a, Point64 ln2b, out Point64 ip)
     {
       double dy1 = (ln1b.Y - ln1a.Y);
@@ -688,10 +688,41 @@ namespace Clipper2Lib
       double t = ((ln1a.X - ln2a.X) * dy2 - (ln1a.Y - ln2a.Y) * dx2) / det;
       if (t <= 0.0) ip = ln1a;
       else if (t >= 1.0) ip = ln1b;
-      else {
+      else
+      {
         // avoid using constructor (and rounding too) as they affect performance //664
         ip.X = (long) (ln1a.X + t * dx1);
         ip.Y = (long) (ln1a.Y + t * dy1);
+#if USINGZ
+        ip.Z = 0;
+#endif
+      }
+      return true;
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static bool GetLineIntersectPt(PointD ln1a,
+      PointD ln1b, PointD ln2a, PointD ln2b, out PointD ip)
+    {
+      double dy1 = (ln1b.y - ln1a.y);
+      double dx1 = (ln1b.x - ln1a.x);
+      double dy2 = (ln2b.y - ln2a.y);
+      double dx2 = (ln2b.x - ln2a.x);
+      double det = dy1 * dx2 - dy2 * dx1;
+      if (det == 0.0)
+      {
+        ip = new PointD();
+        return false;
+      }
+
+      double t = ((ln1a.x - ln2a.x) * dy2 - (ln1a.y - ln2a.y) * dx2) / det;
+      if (t <= 0.0) ip = ln1a;
+      else if (t >= 1.0) ip = ln1b;
+      else
+      {
+        // avoid using constructor (and rounding too) as they affect performance //664
+        ip.x = (ln1a.x + t * dx1);
+        ip.y = (ln1a.y + t * dy1);
 #if USINGZ
         ip.Z = 0;
 #endif

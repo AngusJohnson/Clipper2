@@ -160,13 +160,6 @@ const arc_const = 0.002; // <-- 1/500
 //  Miscellaneous offset support functions
 //------------------------------------------------------------------------------
 
-function DotProduct(const vec1, vec2: TPointD): double;
-  {$IFDEF INLINING} inline; {$ENDIF}
-begin
-  result := vec1.X * vec2.X + vec1.Y * vec2.Y;
-end;
-//------------------------------------------------------------------------------
-
 function ValueAlmostZero(val: double; epsilon: double = 0.001): Boolean;
   {$IFDEF INLINE} inline; {$ENDIF}
 begin
@@ -763,39 +756,6 @@ end;
 //------------------------------------------------------------------------------
 {$ENDIF}
 
-function IntersectPoint(const ln1a, ln1b, ln2a, ln2b: TPointD): TPointD;
-var
-  m1,b1,m2,b2: double;
-begin
-  result := NullPointD;
-  //see https://paulbourke.net/geometry/pointlineplane/#i2l
-  if (ln1B.X = ln1A.X) then
-  begin
-    if (ln2B.X = ln2A.X) then exit; //parallel lines
-    m2 := (ln2B.Y - ln2A.Y)/(ln2B.X - ln2A.X);
-    b2 := ln2A.Y - m2 * ln2A.X;
-    Result.X := ln1A.X;
-    Result.Y := m2*ln1A.X + b2;
-  end
-  else if (ln2B.X = ln2A.X) then
-  begin
-    m1 := (ln1B.Y - ln1A.Y)/(ln1B.X - ln1A.X);
-    b1 := ln1A.Y - m1 * ln1A.X;
-    Result.X := ln2A.X;
-    Result.Y := m1*ln2A.X + b1;
-  end else
-  begin
-    m1 := (ln1B.Y - ln1A.Y)/(ln1B.X - ln1A.X);
-    b1 := ln1A.Y - m1 * ln1A.X;
-    m2 := (ln2B.Y - ln2A.Y)/(ln2B.X - ln2A.X);
-    b2 := ln2A.Y - m2 * ln2A.X;
-    if m1 = m2 then exit; //parallel lines
-    Result.X := (b2 - b1)/(m1 - m2);
-    Result.Y := m1 * Result.X + b1;
-  end;
-end;
-//------------------------------------------------------------------------------
-
 function ReflectPoint(const pt, pivot: TPointD): TPointD;
 begin
   Result.X := pivot.X + (pivot.X - pt.X);
@@ -884,7 +844,7 @@ begin
     pt4.X := pt3.X + vec.X * fGroupDelta;
     pt4.Y := pt3.Y + vec.Y * fGroupDelta;
     // get the intersection point
-    pt := IntersectPoint(pt1, pt2, pt3, pt4);
+    GetLineIntersectPt(pt1, pt2, pt3, pt4, pt);
 {$IFDEF USINGZ}
     with ReflectPoint(pt, ptQ) do AddPoint(X, Y, Z);
     AddPoint(pt.X, pt.Y, pt.Z);
@@ -896,7 +856,7 @@ begin
   begin
     pt4 := GetPerpendicD(fInPath[j], fNorms[k], fGroupDelta);
     // get the intersection point
-    pt := IntersectPoint(pt1, pt2, pt3, pt4);
+    GetLineIntersectPt(pt1, pt2, pt3, pt4, pt);
 {$IFDEF USINGZ}
     AddPoint(pt.X, pt.Y, ptQ.Z);
     //get the second intersect point through reflecion

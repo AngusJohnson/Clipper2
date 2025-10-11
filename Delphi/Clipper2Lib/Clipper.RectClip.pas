@@ -2,7 +2,7 @@ unit Clipper.RectClip;
 
 (*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  7 October 2025                                                  *
+* Date      :  11 October 2025                                                 *
 * Website   :  https://www.angusj.com                                          *
 * Copyright :  Angus Johnson 2010-2025                                         *
 * Purpose   :  FAST rectangular clipping                                       *
@@ -189,7 +189,7 @@ begin
   end
   else
     // segments must intersect to get here
-    Result := GetSegmentIntersectPt(p1, p2, p3, p4, ip);
+    Result := GetLineIntersectPt(p1, p2, p3, p4, ip);
 end;
 //------------------------------------------------------------------------------
 

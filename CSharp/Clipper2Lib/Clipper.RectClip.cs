@@ -1,6 +1,6 @@
 ﻿/*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  7 October 2025                                                  *
+* Date      :  11 October 2025                                                 *
 * Website   :  https://www.angusj.com                                          *
 * Copyright :  Angus Johnson 2010-2025                                         *
 * Purpose   :  FAST rectangular clipping                                       *
@@ -330,7 +330,7 @@ namespace Clipper2Lib
       }
 
       // segments must intersect to get here
-      return InternalClipper.GetSegmentIntersectPt(p1, p2, p3, p4, out ip);
+      return InternalClipper.GetLineIntersectPt(p1, p2, p3, p4, out ip);
     }
   
 
