@@ -27,9 +27,9 @@ namespace Clipper2Lib {
 	};
 
 	template <class T, class U>
-	bool operator==(const Allocator <T>&, const Allocator <U>&) { return true; }
+	bool operator==(const Allocator<T>& a, const Allocator<U>& b) { return a.userp == b.userp; }
 	template <class T, class U>
-	bool operator!=(const Allocator <T>&, const Allocator <U>&) { return false; }
+	bool operator!=(const Allocator<T>& a, const Allocator<U>& b) { return !(a == b); }
 
 #else
 
