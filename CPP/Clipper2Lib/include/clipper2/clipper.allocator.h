@@ -19,7 +19,7 @@ namespace Clipper2Lib {
 		Allocator() : userp(clipper2_allocator_userp) {}
 
 		template<class U>
-		constexpr Allocator(const Allocator <U>&) noexcept {}
+		Allocator(const Allocator<U>& a) noexcept : userp(a.userp) {}
 
 		void *userp = NULL;
 		T* allocate(std::size_t n) { return (T*)clipper2_malloc(userp, n * sizeof(T)); }
