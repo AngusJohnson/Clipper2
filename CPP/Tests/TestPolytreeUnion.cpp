@@ -49,3 +49,31 @@ TEST(Clipper2Tests, TestPolytreeUnion2) { // #987
   ASSERT_EQ(solution.Count(), 1);
   EXPECT_EQ(solution[0]->Count(), 1);
 }
+
+TEST(Clipper2Tests, TestPolytreeUnion3)
+{
+  Paths64 subject;
+  subject.push_back(MakePath({
+	-120927680, 590077597,
+	-120919386, 590077307,
+	-120919432, 590077309,
+	-120919451, 590077309,
+	-120919455, 590077310,
+	-120099297, 590048669,
+	-120928004, 590077608,
+	-120902794, 590076728,
+	-120919444, 590077309,
+	-120919450, 590077309,
+	-120919842, 590077323,
+	-120922852, 590077428,
+	-120902452, 590076716,
+	-120902455, 590076716,
+	-120912590, 590077070,
+	11914491, 249689797
+      }));
+
+  Clipper64 clipper;
+  clipper.AddSubject(subject);
+  Clipper2Lib::PolyTree64 solution;
+  clipper.Execute(ClipType::Union, FillRule::EvenOdd, solution);
+}
