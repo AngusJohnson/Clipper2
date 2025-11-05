@@ -1,6 +1,6 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  11 October 2025                                                 *
+* Date      :  5 November 2025                                                 *
 * Website   :  https://www.angusj.com                                          *
 * Copyright :  Angus Johnson 2010-2025                                         *
 * Purpose   :  This is the main polygon clipping module                        *
@@ -2940,8 +2940,10 @@ namespace Clipper2Lib {
 
   bool ClipperBase::CheckSplitOwner(OutRec* outrec, OutRecList* splits)
   {
-    for (auto split : *splits)
+    // nb: use indexing (not an iterator) in case 'splits' is modified inside this loop (#1029)
+    for (size_t idx = 0; idx < splits->size(); ++idx)
     {
+      OutRec* split = (*splits)[idx]; 
       if (!split->pts && split->splits &&
         CheckSplitOwner(outrec, split->splits)) return true; //#942
       split = GetRealOutRec(split);

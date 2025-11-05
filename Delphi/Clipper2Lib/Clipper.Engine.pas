@@ -2,7 +2,7 @@ unit Clipper.Engine;
 
 (*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  11 October 2025                                                 *
+* Date      :  5 November 2025                                                 *
 * Website   :  https://www.angusj.com                                          *
 * Copyright :  Angus Johnson 2010-2025                                         *
 * Purpose   :  This is the main polygon clipping module                        *
@@ -3747,9 +3747,12 @@ begin
   // returns true if a valid owner is found in splits
   // (and also assigns it to outrec.owner)
   Result := true;
-  for i := 0 to High(splits) do
+  // nb: use indexing (not an iterator) in case 'splits' is modified inside
+  // this loop, and also accommodate the length of splits changing (#1029)
+  i := 0;
+  while (i < Length(splits)) do
   begin
-    split := splits[i];
+    split := splits[i]; inc(i);
     if not Assigned(split.pts) and Assigned(split.splits) and
       CheckSplitOwner(outrec, split.splits) then Exit; // Result := true (#942)
 

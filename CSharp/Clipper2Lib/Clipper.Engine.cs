@@ -1,6 +1,6 @@
 ﻿/*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  11 October 2025                                                 *
+* Date      :  5 November 2025                                                 *
 * Website   :  https://www.angusj.com                                          *
 * Copyright :  Angus Johnson 2010-2025                                         *
 * Purpose   :  This is the main polygon clipping module                        *
@@ -3080,9 +3080,10 @@ private void DoHorizontal(Active horz)
 
     private bool CheckSplitOwner(OutRec outrec, List<int>? splits)
     {
-      foreach (int i in splits!)
+      // nb: use indexing (not an iterator) in case 'splits' is modified inside this loop (#1029)
+      for (int i = 0; i < splits!.Count; i++)
       {
-        OutRec? split = _outrecList[i];
+        OutRec? split = _outrecList[splits[i]];
         if (split.pts == null && split.splits != null &&
           CheckSplitOwner(outrec, split.splits)) return true; //#942
         split = GetRealOutRec(split);
