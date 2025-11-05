@@ -49,8 +49,9 @@ The <b>Clipper2</b> library performs **intersection**, **union**, **difference**
 ### Ports to other languages
 | lang. | link |
 | ------ | ------ |
-| **WASM** | https://github.com/ErikSom/Clipper2-WASM/ |
 | **Java** | https://github.com/micycle1/Clipper2-java/ |
+| **TypeScript** | https://github.com/countertype/clipper2-ts |
 | **Kotlin** | https://github.com/Monkey-Maestro/clipper2-kotlin |
 | **golang** | https://github.com/epit3d/goclipper2 |
 | **Lua** | https://github.com/Ark223/Clipper2-Lua |
+| **WASM** | https://github.com/ErikSom/Clipper2-WASM/ |
