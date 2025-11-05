@@ -2940,9 +2940,10 @@ namespace Clipper2Lib {
 
   bool ClipperBase::CheckSplitOwner(OutRec* outrec, OutRecList* splits)
   {
-    for (auto split : *splits)
+    for (size_t idx = 0; idx < splits->size(); ++idx)
     {
-      if (!split->pts && split->splits &&
+      auto split = (*splits)[idx];
+      if (split && !split->pts && split->splits &&
         CheckSplitOwner(outrec, split->splits)) return true; //#942
       split = GetRealOutRec(split);
       if (!split || split == outrec || split->recursive_split == outrec) continue;
