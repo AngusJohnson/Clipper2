@@ -160,6 +160,9 @@ type
 
   EClipper2LibException = class(Exception);
 
+function GetSign(const val: double): integer;
+  {$IFDEF INLINING} inline; {$ENDIF}
+
 function Area(const path: TPath64): Double; overload;
 function Area(const paths: TPaths64): Double; overload;
   {$IFDEF INLINING} inline; {$ENDIF}
@@ -2228,14 +2231,17 @@ begin
     Result := false
   else if inclusive then
   begin
-    //result **includes** segments that touch at an end point
+    //result **includes** segments that share an end point
     t := ((s1a.x-s2a.x) * dy2 - (s1a.y-s2a.y) * dx2);
+    //result is true if segments 'intersect' at a segment end-point
     if (t = 0) then Result := true
     else if (t > 0) then
       Result := (cp > 0) and (t <= cp)
     else
       Result := (cp < 0) and (t >= cp);
     if not Result then Exit;
+    // at this point a *line* may intersect a segment,
+    // but now let's make sure that *segment* intersect
     t := ((s1a.x-s2a.x) * dy1 - (s1a.y-s2a.y) * dx1);
     if (t = 0) then Result := true
     else if (t > 0) then
@@ -2244,14 +2250,17 @@ begin
       Result := (cp < 0) and (t >= cp);
   end else
   begin
-    //result **excludes** segments that touch at an end point
+    //result **excludes** segments that share an end point
     t := ((s1a.x-s2a.x) * dy2 - (s1a.y-s2a.y) * dx2);
+    //result is false if segments 'intersect' at an end-point
     if (t = 0) then Result := false
     else if (t > 0) then
       Result := (cp > 0) and (t < cp)
     else
       Result := (cp < 0) and (t > cp);
     if not Result then Exit;
+    // at this point a *line* may intersect a segment,
+    // but now let's make sure that *segment* intersect
     t := ((s1a.x-s2a.x) * dy1 - (s1a.y-s2a.y) * dx1);
     if (t = 0) then Result := false
     else if (t > 0) then
