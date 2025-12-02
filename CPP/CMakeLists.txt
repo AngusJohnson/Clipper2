@@ -19,6 +19,7 @@ option(CLIPPER2_EXAMPLES "Build examples" ON)
 option(CLIPPER2_TESTS "Build tests" ON)
 option(USE_EXTERNAL_GTEST "Use system-wide installed GoogleTest" OFF)
 option(USE_EXTERNAL_GBENCHMARK "Use the googlebenchmark" OFF)
+option(USE_MSVC_ADDRESS_SANITIZER "Enable sanitize address" off)
 option(BUILD_SHARED_LIBS "Build shared libs" OFF)
 set(CLIPPER2_USINGZ "ON" CACHE STRING "Build Clipper2Z, either \"ON\" or \"OFF\" or \"ONLY\"")
 # CLIPPER2_MAX_DECIMAL_PRECISION: maximum decimal precision when scaling PathsD to Paths64.
@@ -33,6 +34,29 @@ set(CLIPPER2_MAX_DECIMAL_PRECISION 8 CACHE STRING "Maximum decimal precision ran
 if (APPLE)
     set(CMAKE_SHARED_LIBRARY_SUFFIX ".dylib")
 endif ()
+
+if(WIN32)
+  if(USE_MSVC_ADDRESS_SANITIZER AND MSVC_VERSION GREATER_EQUAL 1927)
+    find_library(MSVC_CLANG_RT
+      NAMES
+        clang_rt.asan_dynamic-x86_64
+      REQUIRED
+      PATHS
+        "C:/Program Files/Microsoft Visual Studio/2022/Community/VC/Tools/MSVC/14.44.35207/lib/x64"
+        "C:/Program Files/Microsoft Visual Studio/2022/Community/VC/Tools/MSVC/14.35.32215/lib/x64"
+        "C:/Program Files (x86)/Microsoft Visual Studio/2019/Community/VC/Tools/MSVC/14.27.29110/lib/x64"
+    )
+    find_library(MSVC_CLANG_RT_THUNK
+      NAMES
+        clang_rt.asan_dynamic_runtime_thunk-x86_64
+      REQUIRED
+      PATHS
+        "C:/Program Files/Microsoft Visual Studio/2022/Community/VC/Tools/MSVC/14.44.35207/lib/x64"
+        "C:/Program Files/Microsoft Visual Studio/2022/Community/VC/Tools/MSVC/14.35.32215/lib/x64"
+        "C:/Program Files (x86)/Microsoft Visual Studio/2019/Community/VC/Tools/MSVC/14.27.29110/lib/x64"
+    )
+  endif()
+endif()
 
 include(GNUInstallDirs)
 set(CLIPPER2_INC_FOLDER ${PROJECT_SOURCE_DIR}/Clipper2Lib/include/clipper2)
@@ -77,6 +101,11 @@ if (NOT (CLIPPER2_USINGZ STREQUAL "ONLY"))
 
   if (MSVC)
     target_compile_options(Clipper2 PRIVATE /W4 /WX)
+    if (USE_MSVC_ADDRESS_SANITIZER)
+      target_compile_options(Clipper2 PRIVATE $<$<COMPILE_LANGUAGE:C>:/fsanitize=address>)
+      target_compile_options(Clipper2 PRIVATE $<$<COMPILE_LANGUAGE:CXX>:/fsanitize=address>)
+      target_link_libraries(Clipper2 PRIVATE ${MSVC_CLANG_RT} ${MSVC_CLANG_RT_THUNK})
+    endif()
   else()
     target_compile_options(Clipper2 PRIVATE -Wall -Wextra -Wpedantic -Werror)
     target_link_libraries(Clipper2 PUBLIC -lm)
@@ -102,6 +131,11 @@ if (NOT (CLIPPER2_USINGZ STREQUAL "OFF"))
 
   if (MSVC)
     target_compile_options(Clipper2Z PRIVATE /W4 /WX)
+    if (USE_MSVC_ADDRESS_SANITIZER)
+      target_compile_options(Clipper2Z PRIVATE $<$<COMPILE_LANGUAGE:C>:/fsanitize=address>)
+      target_compile_options(Clipper2Z PRIVATE $<$<COMPILE_LANGUAGE:CXX>:/fsanitize=address>)
+      target_link_libraries(Clipper2Z PRIVATE ${MSVC_CLANG_RT} ${MSVC_CLANG_RT_THUNK})
+    endif()
   else()
     target_compile_options(Clipper2Z PRIVATE -Wall -Wextra -Wpedantic -Werror)
     target_link_libraries(Clipper2Z PUBLIC -lm)
@@ -135,6 +169,13 @@ if(CLIPPER2_UTILS OR CLIPPER2_TESTS OR CLIPPER2_EXAMPLES)
     add_library(Clipper2utils STATIC ${CLIPPER2_UTILS_INC} ${CLIPPER2_UTILS_SRC})
 
     target_link_libraries(Clipper2utils PUBLIC Clipper2)
+    if(WIN32)
+      if (USE_MSVC_ADDRESS_SANITIZER)
+        target_compile_options(Clipper2utils PRIVATE $<$<COMPILE_LANGUAGE:C>:/fsanitize=address>)
+        target_compile_options(Clipper2utils PRIVATE $<$<COMPILE_LANGUAGE:CXX>:/fsanitize=address>)
+        target_link_libraries(Clipper2utils PRIVATE ${MSVC_CLANG_RT} ${MSVC_CLANG_RT_THUNK})
+      endif()
+    endif()
   endif()
 
   if (NOT (CLIPPER2_USINGZ STREQUAL "OFF"))
@@ -142,6 +183,13 @@ if(CLIPPER2_UTILS OR CLIPPER2_TESTS OR CLIPPER2_EXAMPLES)
     add_library(Clipper2Zutils STATIC ${CLIPPER2_UTILS_INC} ${CLIPPER2_UTILS_SRC})
 
     target_link_libraries(Clipper2Zutils PUBLIC Clipper2Z)
+    if(WIN32)
+      if (USE_MSVC_ADDRESS_SANITIZER)
+        target_compile_options(Clipper2Zutils PRIVATE $<$<COMPILE_LANGUAGE:C>:/fsanitize=address>)
+        target_compile_options(Clipper2Zutils PRIVATE $<$<COMPILE_LANGUAGE:CXX>:/fsanitize=address>)
+        target_link_libraries(Clipper2Zutils PRIVATE ${MSVC_CLANG_RT} ${MSVC_CLANG_RT_THUNK})
+      endif()
+    endif()
   endif()
 
   set_target_properties(${CLIPPER2_UTILS} PROPERTIES FOLDER Libraries)
@@ -193,6 +241,13 @@ if(CLIPPER2_EXAMPLES)
     foreach(ex ${EXAMPLES})
       add_executable(${ex} Examples/${ex}/${ex}.cpp)
       target_link_libraries(${ex} PRIVATE Clipper2 Clipper2utils)
+      if (WIN32)
+        if (USE_MSVC_ADDRESS_SANITIZER)
+          target_compile_options(${ex} PRIVATE $<$<COMPILE_LANGUAGE:C>:/fsanitize=address>)
+          target_compile_options(${ex} PRIVATE $<$<COMPILE_LANGUAGE:CXX>:/fsanitize=address>)
+          target_link_libraries(${ex} PRIVATE ${MSVC_CLANG_RT} ${MSVC_CLANG_RT_THUNK})
+        endif()
+      endif()
     endforeach()
 
     file(COPY Examples/Inflate/rabbit.svg DESTINATION ${CMAKE_BINARY_DIR} FILE_PERMISSIONS OWNER_READ GROUP_READ WORLD_READ )
@@ -204,6 +259,13 @@ if(CLIPPER2_EXAMPLES)
     foreach(ex ${EXAMPLESZ})
       add_executable(${ex} Examples/${ex}/${ex}.cpp)
       target_link_libraries(${ex} PRIVATE Clipper2Z Clipper2Zutils)
+      if (WIN32)
+        if (USE_MSVC_ADDRESS_SANITIZER)
+          target_compile_options(${ex} PRIVATE $<$<COMPILE_LANGUAGE:C>:/fsanitize=address>)
+          target_compile_options(${ex} PRIVATE $<$<COMPILE_LANGUAGE:CXX>:/fsanitize=address>)
+          target_link_libraries(${ex} PRIVATE ${MSVC_CLANG_RT} ${MSVC_CLANG_RT_THUNK})
+        endif()
+      endif()
     endforeach()
 
     list(APPEND ALL_EXAMPLES ${EXAMPLESZ})
@@ -236,6 +298,16 @@ else()
   endif()
   add_subdirectory("${PROJECT_SOURCE_DIR}/Tests/googletest/")
   set_target_properties(gtest gtest_main PROPERTIES FOLDER GTest)
+  if(WIN32)
+    if (USE_MSVC_ADDRESS_SANITIZER)
+      target_compile_options(gtest PRIVATE $<$<COMPILE_LANGUAGE:C>:/fsanitize=address>)
+      target_compile_options(gtest PRIVATE $<$<COMPILE_LANGUAGE:CXX>:/fsanitize=address>)
+      target_link_libraries(gtest PRIVATE ${MSVC_CLANG_RT} ${MSVC_CLANG_RT_THUNK})
+      target_compile_options(gtest_main PRIVATE $<$<COMPILE_LANGUAGE:C>:/fsanitize=address>)
+      target_compile_options(gtest_main PRIVATE $<$<COMPILE_LANGUAGE:CXX>:/fsanitize=address>)
+      target_link_libraries(gtest_main PRIVATE ${MSVC_CLANG_RT} ${MSVC_CLANG_RT_THUNK})
+    endif()
+  endif()
 endif()
 
   if(TARGET gtest AND TARGET gtest_main)
@@ -267,7 +339,14 @@ endif()
   if (NOT (CLIPPER2_USINGZ STREQUAL "ONLY"))
     list(APPEND CLIPPER2_TESTS "ClipperTests")
     add_executable(ClipperTests ${ClipperTests_SRC})
-    target_link_libraries(ClipperTests ${gtest_libs} Clipper2 Clipper2utils)
+    target_link_libraries(ClipperTests PUBLIC ${gtest_libs} Clipper2 Clipper2utils)
+    if (WIN32)
+      if (USE_MSVC_ADDRESS_SANITIZER)
+        target_compile_options(ClipperTests PRIVATE $<$<COMPILE_LANGUAGE:C>:/fsanitize=address>)
+        target_compile_options(ClipperTests PRIVATE $<$<COMPILE_LANGUAGE:CXX>:/fsanitize=address>)
+        target_link_libraries(ClipperTests PRIVATE ${MSVC_CLANG_RT} ${MSVC_CLANG_RT_THUNK})
+      endif()
+    endif()
 
     gtest_discover_tests(ClipperTests
       # set a working directory to your project root so that you can find test data via paths relative to the project root
@@ -279,8 +358,14 @@ endif()
   if (NOT (CLIPPER2_USINGZ STREQUAL "OFF"))
     list(APPEND CLIPPER2_TESTS "ClipperTestsZ")
     add_executable(ClipperTestsZ ${ClipperTests_SRC})
-    target_link_libraries(ClipperTestsZ ${gtest_libs} Clipper2Z Clipper2Zutils)
-
+    target_link_libraries(ClipperTestsZ PUBLIC ${gtest_libs} Clipper2Z Clipper2Zutils)
+    if (WIN32)
+      if (USE_MSVC_ADDRESS_SANITIZER)
+        target_compile_options(ClipperTestsZ PRIVATE $<$<COMPILE_LANGUAGE:C>:/fsanitize=address>)
+        target_compile_options(ClipperTestsZ PRIVATE $<$<COMPILE_LANGUAGE:CXX>:/fsanitize=address>)
+        target_link_libraries(ClipperTestsZ PRIVATE ${MSVC_CLANG_RT} ${MSVC_CLANG_RT_THUNK})
+      endif()
+    endif()
     gtest_discover_tests(ClipperTestsZ
       # set a working directory so your project root so that you can find test data via paths relative to the project root
       WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}/../Tests
