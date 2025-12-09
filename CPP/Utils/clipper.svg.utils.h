@@ -1,8 +1,8 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  16 June 2022                                                    *
+* Date      :  6 December 2025                                                 *
 * Website   :  https://www.angusj.com                                          *
-* Copyright :  Angus Johnson 2010-2022                                         *
+* Copyright :  Angus Johnson 2010-2025                                         *
 * License   :  https://www.boost.org/LICENSE_1_0.txt                           *
 *******************************************************************************/
 
@@ -29,6 +29,12 @@ namespace Clipper2Lib {
   static const unsigned clip_stroke_clr = 0xCCFFA07A;
   static const unsigned solution_brush_clr = 0x4466FF66;
 
+
+
+  inline int32_t RandomColor()
+  {
+    return rand() | (rand() << 15) | 0xFF000000;
+  }
 
   inline bool FileExists(const std::string& filename)
   {
@@ -100,9 +106,16 @@ namespace Clipper2Lib {
   }
 
 
-  inline void SvgAddSolution(SvgWriter& svg, const PathsD &path, FillRule fillrule, bool show_coords)
+  inline void SvgAddSolution(SvgWriter& svg, const PathsD& path, FillRule fillrule, bool show_coords)
   {
-    svg.AddPaths(path, false, fillrule, solution_brush_clr, 0xFF003300, 1.2, show_coords);
+    svg.AddPaths(path, false, fillrule, solution_brush_clr, 0x80666666, 1.0, show_coords);
+  }
+
+  // SvgAddRCSolution - random color for each individual polygon (eg when triangulating) 
+  inline void SvgAddRCSolution(SvgWriter& svg, const PathsD& paths, FillRule fillrule, bool show_coords)
+  {
+    for (auto path : paths)
+      svg.AddPath(path, false, fillrule, RandomColor(), 0xFF999999, 1.0, show_coords);
   }
 
 
@@ -112,6 +125,15 @@ namespace Clipper2Lib {
       false, fillrule, solution_brush_clr, 0xFF003300, 1.0, show_coords);
   }
 
+  // SvgAddRCSolution - random color for each individual polygon (eg when triangulating) 
+  inline void SvgAddRCSolution(SvgWriter& svg, const Paths64& paths, FillRule fillrule, bool show_coords)
+  {
+    for (auto path : paths)
+    {
+      svg.AddPath(TransformPath<double, int64_t>(path), 
+        false, fillrule, RandomColor(), 0xFF999999, 1.0, show_coords);
+    }
+  }
 
   inline void SvgAddOpenSolution(SvgWriter& svg, const PathsD& path, FillRule fillrule,
     bool show_coords, bool is_joined = false)

@@ -1,9 +1,9 @@
-unit Delaunay;
+unit Clipper.Triangulation;
 
 (*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  1 December 2025                                                 *
-* Release   :  ALPHA RELEASE - ie expect bugs :)                               *
+* Date      :  9 December 2025                                                 *
+* Release   :  BETA RELEASE                                                    *
 * Website   :  https://www.angusj.com                                          *
 * Copyright :  Angus Johnson 2010-2025                                         *
 * Purpose   :  Delaunay Triangulation                                          *
@@ -15,14 +15,18 @@ interface
 uses
   SysUtils, Math, Classes, Clipper, Clipper.Core;
 
-  function Triangulate(const paths: TPaths64;
-    useDelaunay: Boolean = true): TPaths64; overload;
+type
+  TTriangulateResult = (trSuccess, trFail, trNoPolygons, trPathsIntersect);
+
+  function Triangulate(const paths: TPaths64; out solution: TPaths64;
+    useDelaunay: Boolean = true): TTriangulateResult; overload;
   function Triangulate(const paths: TPathsD;
-    decPlaces: integer; delaunay: Boolean = true): TPathsD; overload;
+    decPlaces: integer; out solution: TPathsD;
+    useDelaunay: Boolean = true): TTriangulateResult; overload;
 
   // this function that also returns activeEdges is intended only for debugging
   function Triangulate(const paths: TPathsD; decPlaces: integer;
-    useDelaunay: Boolean; out activeEdges: TPathsD): TPathsD; overload;
+    out solution: TPathsD; out activeEdges: TPathsD; useDelaunay: Boolean): TTriangulateResult; overload;
 
 implementation
 
@@ -50,7 +54,6 @@ type
     kind      : TEdgeKind;
     triangleA : PTriangle;
     triangleB : PTriangle;
-    lenSqrd   : Double;
     isActive  : Boolean;
     nextE     : PEdge;  // next in "active edge array" (AEL)
     prevE     : PEdge;  // prev in "active edge array" (AEL)
@@ -77,28 +80,22 @@ type
 
   TDelaunay = class
   private
-    vertexArrays  : TVertexArrays;
-    looseVertices : TVertexArray;
-    triangles     : TListEx;
     vertexList    : TListEx;
-    fixedEdgeList : TListEx;
-    looseEdgeList   : TListEx;
+    edgeList      : TListEx;
+    triangleList  : TListEx;
     DelaunayPending : TEdgeStack;
     horzEdgeStack   : TEdgeStack; // used to delay horizontal edge processing
     locMinStack     : TVertexStack;
     fUseDelaunay    : Boolean;
     fActives        : PEdge;      // simple (unsorted) double-linked list
-    function ProcessVertArrayToNextLocMin(idx, len: integer;
-      const va: TVertexArray): integer;
     function FixupEdgeIntersects(edgeList: TListEx): Boolean;
     procedure RemoveIntersection(e1, e2: PEdge);
     procedure MergeDupOrCollinearVertices;
     function CreateInnerLocMinLooseEdge(vAbove: PVertex): PEdge;
-    function EdgeCompleted(edge: PEdge): Boolean;
     function HorizontalBetween(v1, v2: PVertex): PEdge;
     procedure DoTriangulateLeft(edge: PEdge; pivot: PVertex; minY: Int64);
     procedure DoTriangulateRight(edge: PEdge; pivot: PVertex; minY: Int64);
-    function FindEdgeBetween(vert1, vert2: PVertex; preferAscending: Boolean): PEdge;
+    function FindLinkingEdge(vert1, vert2: PVertex; preferAscending: Boolean): PEdge;
     function CreateEdge(v1, v2: PVertex; kind: TEdgeKind): PEdge;
     function CreateTriangle(e1, e2, e3: PEdge): PTriangle; // todo - as procedure???
     procedure ForceLegal(edge: PEdge);
@@ -112,7 +109,7 @@ type
     procedure Clear;
     procedure AddPath(const path: TPath64);
     procedure AddPaths(const paths: TPaths64);
-    function Triangulate: TPaths64;
+    function Triangulate(out solution: TPaths64): TTriangulateResult;
   end;
 
 //------------------------------------------------------------------------------
@@ -172,15 +169,29 @@ begin
 end;
 //------------------------------------------------------------------------------
 
+function LeftTurning(pt1, pt2, pt3: TPoint64): Boolean; inline; overload;
+begin
+  Result := CrossProductSign(pt1, pt2, pt3) < 0;
+end;
+//------------------------------------------------------------------------------
+
 function LeftTurning(p1, p2, p3: PVertex): Boolean; inline; overload;
 begin
   Result := CrossProductSign(p1.pt, p2.pt, p3.pt) < 0;
 end;
 //------------------------------------------------------------------------------
 
-function RightTurning(p1, p2, p3: PVertex): Boolean; inline; overload;
+function RightTurning(p1, p2, p3: PVertex): Boolean; inline;
 begin
   Result := CrossProductSign(p1.pt, p2.pt, p3.pt) > 0;
+end;
+//------------------------------------------------------------------------------
+
+function EdgeCompleted(edge: PEdge): Boolean;
+begin
+  if not Assigned(edge.triangleA) then Result := false
+  else if Assigned(edge.triangleB) then Result := true
+  else Result := edge.kind <> ekLoose;
 end;
 //------------------------------------------------------------------------------
 
@@ -366,7 +377,7 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-function FixedEdgeListSortFunc(item1, item2: Pointer): Integer;
+function EdgeListSortFunc(item1, item2: Pointer): Integer;
 var
   e1    : PEdge absolute item1;
   e2    : PEdge absolute item2;
@@ -383,25 +394,32 @@ var
 begin
   // Result > 0 indicates the correct order
   Result := v2.pt.Y - v1.pt.Y;        // primary sort - descending Y
-  if (Result <> 0) or (v1 = v2) then
-    Exit;
+  if (Result <> 0) or (v1 = v2) then Exit;
   Result := v1.pt.X - v2.pt.X;        // secondary sort - ascending X
 end;
 //------------------------------------------------------------------------------
 
-function GetVertex(idx, len: integer; const va: TVertexArray): PVertex; inline;
+function FindLocMinIdx(idx, len: integer; const p: TPath64): integer;
+var
+  i, n: integer;
 begin
-  Result := @va[idx mod len];
-end;
-//------------------------------------------------------------------------------
-
-function FindFirstLocMin(idx, len: integer; const va: TVertexArray): integer;
-begin
-  while GetVertex(idx +1, len, va).pt.Y <= GetVertex(idx, len, va).pt.Y do
-    idx := (idx + 1) mod len;
-  while GetVertex(idx +1, len, va).pt.Y >= GetVertex(idx, len, va).pt.Y do
-    idx := (idx + 1) mod len;
-  Result := idx;
+  Result := -1;
+  if (len < 3) then Exit;
+  i := idx;
+  n := (i + 1) mod len;
+  while (p[n].Y <= p[i].Y) do
+  begin
+    i := n;
+    n := (n + 1) mod len;
+    if (i = idx) then
+      Exit; // fails if the path is completely horizontal
+  end;
+  while (p[n].Y >= p[i].Y) do
+  begin
+    i := n;
+    n := (n + 1) mod len;
+  end;
+  Result := i;
 end;
 
 //------------------------------------------------------------------------------
@@ -429,13 +447,12 @@ end;
 constructor TDelaunay.Create(useDelaunay: Boolean);
 begin
   vertexList      := TListEx.Create;
-  fixedEdgeList   := TListEx.Create;
-  looseEdgeList   := TListEx.Create;
-  triangles       := TListEx.Create;
+  edgeList        := TListEx.Create;
+  triangleList    := TListEx.Create;
   DelaunayPending := TEdgeStack.Create;
   horzEdgeStack   := TEdgeStack.Create;
-  locMinStack   := TVertexStack.Create;
-  fUseDelaunay  := useDelaunay;
+  locMinStack     := TVertexStack.Create;
+  fUseDelaunay    := useDelaunay;
 end;
 //------------------------------------------------------------------------------
 
@@ -443,9 +460,8 @@ destructor TDelaunay.Destroy;
 begin
   Clear;
   vertexList.Free;
-  fixedEdgeList.Free;
-  looseEdgeList.Free;
-  triangles.Free;
+  edgeList.Free;
+  triangleList.Free;
   DelaunayPending.Free;
   horzEdgeStack.Free;
   locMinStack.Free;
@@ -457,22 +473,17 @@ procedure TDelaunay.Clear;
 var
   i: integer;
 begin
+  for i := 0 to vertexList.Count -1 do
+    Dispose(PVertex(vertexList[i]));
+  vertexList.Clear;
 
-  vertexArrays := nil;
-  looseVertices := nil;
-  vertexList.Clear; // vertex storage was in vertexArrays
+  for i := 0 to edgeList.Count -1 do
+    Dispose(PEdge(edgeList[i]));
+  edgeList.Clear;
 
-  for i := 0 to fixedEdgeList.Count -1 do
-    Dispose(PEdge(fixedEdgeList[i]));
-  fixedEdgeList.Clear;
-
-  for i := 0 to looseEdgeList.Count -1 do
-    Dispose(PEdge(looseEdgeList[i]));
-  looseEdgeList.Clear;
-
-  for i := 0 to triangles.Count -1 do
-    Dispose(PTriangle(triangles[i]));
-  triangles.Clear;
+  for i := 0 to triangleList.Count -1 do
+    Dispose(PTriangle(triangleList[i]));
+  triangleList.Clear;
   DelaunayPending.Clear;
   horzEdgeStack.Clear;
   locMinStack.Clear;
@@ -480,7 +491,7 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-function TDelaunay.FindEdgeBetween(vert1, vert2: PVertex;
+function TDelaunay.FindLinkingEdge(vert1, vert2: PVertex;
   preferAscending: Boolean): PEdge;
 var
   i: integer;
@@ -504,8 +515,6 @@ begin
   // ie: v1.pt.Y >= v2.pt.Y always
   New(Result);
   Result.isActive := false; // this ignored by loose edges
-  Result.lenSqrd := DistanceSqr(v1.pt, v2.pt);
-  Assert(Result.lenSqrd > 0);
 
   AddEdgeToVertex(v1, Result);
   AddEdgeToVertex(v2, Result);
@@ -518,11 +527,10 @@ begin
 
   if kind = ekLoose then
   begin
-    looseEdgeList.Add(Result);
     DelaunayPending.Push(Result);
     AddEdgeToActives(Result);
-  end else
-    fixedEdgeList.Add(Result);
+  end;
+  edgeList.Add(Result);
 
   if (v1.pt.Y = v2.pt.Y) then
   begin
@@ -669,7 +677,7 @@ var
   i: integer;
 begin
   new(Result);
-  triangles.Add(Result);
+  triangleList.Add(Result);
 
   Result.edges[0] := e1;
   Result.edges[1] := e2;
@@ -761,7 +769,6 @@ begin
     tmpE.vL := v else
     tmpE.vR := v;
   tmpE.vT := v;
-  tmpE.lenSqrd := DistanceSqr(tmpE.vB.pt, tmpE.vT.pt);
   len := Length(v.edges);
   SetLength(v.edges, len + 1);
   v.edges[len] := tmpE;
@@ -821,7 +828,6 @@ procedure TDelaunay.MergeDupOrCollinearVertices;
     if longEdge.vL = oldT then
       longEdge.vL := newT else
       longEdge.vR := newT;
-    longEdge.lenSqrd := DistanceSqr(longEdge.vB.pt, longEdge.vT.pt);
     // add shortened longEdge to newT.edges
     len := Length(newT.edges);
     SetLength(newT.edges, len + 1);
@@ -836,13 +842,19 @@ var
   e1, e2: PEdge;
 begin
   if vertexList.Count < 2 then Exit;
-  pv := PVertex(vertexList[0]);
-  for i := 1 to vertexList.Count -1 do
-    if PointsEqual(PVertex(vertexList[i]).pt, pv.pt) then
-    begin
-      v := PVertex(vertexList[i]);
-      // merge v with pv ...
+  i := 0;
+  repeat
+    pv := PVertex(vertexList[i]);
+    inc(i);
+  until Assigned(pv.edges);
 
+  for i := i to vertexList.Count -1 do
+  begin
+    v := PVertex(vertexList[i]);
+    if not Assigned(v.edges) then Continue;
+    if PointsEqual(v.pt, pv.pt) then
+    begin
+      // merge v with pv ...
       if not pv.innerLM or not v.innerLM then
         pv.innerLM := false;
 
@@ -886,12 +898,13 @@ begin
               Break; // because only two edges can be collinear
             end;
           end;
-        end;
+      end;
     end else
     begin
       // current vertex 'v' is dissimilar to pv so update pv
-      pv := PVertex(vertexList[i]);
+      pv := v;
     end;
+  end;
 end;
 //------------------------------------------------------------------------------
 
@@ -990,14 +1003,6 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-function TDelaunay.EdgeCompleted(edge: PEdge): Boolean;
-begin
-  if not Assigned(edge.triangleA) then Result := false
-  else if Assigned(edge.triangleB) then Result := true
-  else Result := edge.kind <> ekLoose;
-end;
-//------------------------------------------------------------------------------
-
 function TDelaunay.HorizontalBetween(v1, v2: PVertex): PEdge;
 var
   l,r, y: Int64;
@@ -1083,7 +1088,7 @@ begin
     if IsRightEdge(eAlt) then Exit;
   end;
 
-  eX := FindEdgeBetween(vAlt, v, (vAlt.pt.Y < v.pt.Y));
+  eX := FindLinkingEdge(vAlt, v, (vAlt.pt.Y < v.pt.Y));
   if not Assigned(eX) then
   begin
     // be very careful creating loose horizontals at minY
@@ -1155,7 +1160,7 @@ begin
     if IsLeftEdge(eAlt) then Exit;
   end;
 
-  eX := FindEdgeBetween(vAlt, v, (vAlt.pt.Y > v.pt.Y));
+  eX := FindLinkingEdge(vAlt, v, (vAlt.pt.Y > v.pt.Y));
   if not Assigned(eX) then
   begin
     // be very careful creating loose horizontals at minY
@@ -1169,7 +1174,7 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-function TDelaunay.Triangulate: TPaths64;
+function TDelaunay.Triangulate(out solution: TPaths64): TTriangulateResult;
 var
   i, j    : integer;
   cps     : integer;
@@ -1177,33 +1182,32 @@ var
   p, lm   : PVertex;
   e       : PEdge;
 begin
-  Result := nil;
-  //TODO - return the solution as a var parameter and change
-  // the function result to an integer error flag (0 = success)
-
-  triangles.Clear;
-  DelaunayPending.Clear;
-  fActives := nil;
-  if vertexList.Count < 3 then Exit;
+  Result := TTriangulateResult.trSuccess;
+  if vertexList.Count < 3 then
+  begin
+    Result := TTriangulateResult.trNoPolygons;
+    Exit;
+  end;
 
   // fix up any micro edge intersections that will break triangulation.
   // This fix-up is the only reason these edges need to be sorted.
-  fixedEdgeList.Sort(FixedEdgeListSortFunc);
-  if not FixupEdgeIntersects(fixedEdgeList) then
-    Exit; //oops!
-
-  if not vertexList.Sorted then
+  edgeList.Sort(EdgeListSortFunc);
+  if not FixupEdgeIntersects(edgeList) then
   begin
-    vertexList.Sort(VertexListSortFunc);
-    MergeDupOrCollinearVertices;
+    Result := TTriangulateResult.trPathsIntersect;
+    Exit;
   end;
 
-  currY := PVertex(vertexList[0]).pt.Y;
+  vertexList.Sort(VertexListSortFunc);
+  MergeDupOrCollinearVertices;
+
   try
+    currY := PVertex(vertexList[0]).pt.Y;
     for j := 0 to vertexList.Count -1 do
     begin
       p := PVertex(vertexList[j]);
-      if not Assigned(p.edges) then Continue; // ie is a merged dup.
+      if not Assigned(p.edges) then
+        Continue; // ignore merged vertices
 
       if p.pt.Y <> currY then
       begin
@@ -1212,7 +1216,11 @@ begin
         while locMinStack.Pop(lm) do
         begin
           e := CreateInnerLocMinLooseEdge(lm);
-          Assert(Assigned(e));
+          if not Assigned(e) then
+          begin
+            Result := TTriangulateResult.trFail;
+            Break;
+          end;
           if IsHorizontal(e) then
           begin
             if e.vL = e.vB then
@@ -1229,6 +1237,7 @@ begin
           AddEdgeToActives(lm.edges[0]);
           AddEdgeToActives(lm.edges[1]);
         end;
+        if Result <> TTriangulateResult.trSuccess then Break;
 
         while horzEdgeStack.Pop(e) do
           if EdgeCompleted(e) then
@@ -1259,7 +1268,6 @@ begin
           Continue
         else if e.kind = ekLoose then
           Continue;
-
         if p = e.vB then
         begin
           if IsHorizontal(e) then
@@ -1283,163 +1291,168 @@ begin
     end;
 
   except
-    Exit; // ie don't create partial solutions
+    Result := TTriangulateResult.trFail;
+    Exit;
   end;
 
-  while horzEdgeStack.Pop(e) do
-    if not EdgeCompleted(e) and (e.vB = e.vL) then
-      DoTriangulateLeft(e, e.vB, currY);
+  if (Result = TTriangulateResult.trSuccess) then
+  begin
+    while horzEdgeStack.Pop(e) do
+      if not EdgeCompleted(e) and (e.vB = e.vL) then
+        DoTriangulateLeft(e, e.vB, currY);
 
-  if fUseDelaunay then
     // Convert triangles to Delaunay conforming
-    while DelaunayPending.Pop(e) do ForceLegal(e);
+    if fUseDelaunay then
+      while DelaunayPending.Pop(e) do ForceLegal(e);
+  end;
 
   j := 0;
-  SetLength(Result, triangles.Count);
-  for i := 0 to triangles.Count -1 do
-    with PTriangle(triangles[i])^ do
+  SetLength(solution, triangleList.Count);
+  for i := 0 to triangleList.Count -1 do
+    with PTriangle(triangleList[i])^ do
     begin
-      Result[j] := PathFromTriangle(PTriangle(triangles[i]));
-      cps := CrossProductSign(Result[j,0],Result[j,1],Result[j,2]);
+      solution[j] := PathFromTriangle(PTriangle(triangleList[i]));
+      cps := CrossProductSign(solution[j,0],solution[j,1],solution[j,2]);
       if cps = 0 then
         Continue  // skip any empty triangles
       else if cps < 0 then // ccw
-        Result[j] := ReversePath(Result[j]);
+        solution[j] := ReversePath(solution[j]);
       inc(j);
     end;
-  SetLength(Result, j);
+  SetLength(solution, j);
 end;
 //------------------------------------------------------------------------------
 
-function TDelaunay.ProcessVertArrayToNextLocMin(idx, len: integer;
-  const va: TVertexArray): integer;
-var
-  nextI, prevI  : integer;
-  v, nv, pv     : PVertex;
+function PrevIdx(idx, len: integer): integer; inline;
 begin
-  // precondition - 'idx' is the index of the previous locMin
-
   if idx = 0 then
-    prevI := len -1 else
-    prevI := idx -1;
-  nextI := (idx + 1) mod len;
-  v := @va[idx];
-  nv := @va[nextI];
-  pv := @va[prevI];
-  if LeftTurning(pv, v, nv) then
-    v.innerLM := true;
-  Assert(v.pt.Y <> nv.pt.Y);
-  CreateEdge(v, nv, ekAsc);
+    Result := len -1 else
+    Result := idx -1;
+end;
+//------------------------------------------------------------------------------
 
-  idx := nextI;
-  nextI := (idx + 1) mod len;
-  // ascend to next locMax
-  while va[nextI].pt.Y <= va[idx].pt.Y do
-  begin
-    CreateEdge(@va[idx], @va[nextI], ekAsc);
-    idx := nextI;
-    nextI := (idx + 1) mod len;
-  end;
-  // va[idx] is a locMax
-  CreateEdge(@va[nextI], @va[idx], ekDesc);
-  idx := nextI;
-  nextI := (idx + 1) mod len;
-
-  // descend to next locMin
-  while va[nextI].pt.Y >= va[idx].pt.Y do
-  begin
-    CreateEdge(@va[nextI], @va[idx], ekDesc);
-    idx := nextI;
-    nextI := (idx + 1) mod len;
-  end;
-  Result := idx;
+function NextIdx(idx, len: integer): integer; inline;
+begin
+  Result := (idx + 1) mod len;
 end;
 //------------------------------------------------------------------------------
 
 procedure TDelaunay.AddPath(const path: TPath64);
 
-var
-  oldPathCnt, oldVertCnt: integer;
-  va: TVertexArray;
-
-  procedure UndoAddPath;
+  function AddVertex(const pt: TPoint64): PVertex;
   begin
-    vertexList.Resize(oldVertCnt);
-    SetLength(vertexArrays, oldPathCnt);
+    new(Result);
+    Result.pt := pt;
+    Result.innerLM := false;
+    vertexList.Add(Result);
+  end;
+
+  function Vert(idx: integer): PVertex;
+  begin
+    Result := PVertex(VertexList[idx]);
   end;
 
 var
-  i, i0, pathLen: integer;
-  v, v0, vPrev: PVertex;
+  i, i0, len, iPrev, iNext: integer;
+  oldVertexListCnt: integer;
+  v, v0, vPrev, vPrevPrev: PVertex;
 begin
-  pathLen := Length(path);
-  while (pathLen > 2) and PointsEqual(path[0], path[pathLen -1]) do
-    dec(pathLen);
-  if pathLen < 3 then Exit;
+  oldVertexListCnt := vertexList.Count;
+  len := Length(path);
 
-  oldPathCnt := Length(vertexArrays);
-  oldVertCnt := vertexList.Count;
-  SetLength(vertexArrays, oldPathCnt +1);
-  SetLength(vertexArrays[oldPathCnt], pathLen);
+  // find the first locMin
+  i0 := FindLocMinIdx(0, len, path);
+  if i0 < 0 then Exit; // an invalid path
+  iPrev := PrevIdx(i0, len);
+  while PointsEqual(path[iPrev], path[i0]) do
+    iPrev := PrevIdx(iPrev, len);
+  iNext := NextIdx(i0, len);
 
-  // assign coords to each vertex object, and link up .next and .prev
-  va := vertexArrays[oldPathCnt];
-  v0 := @va[0];
-
-  vPrev := @va[pathLen -1]; // nb: must differ from va[0]
-  vPrev.pt := path[pathLen -1];
-  v := v0;
-  for i := 0 to pathLen -1 do
+  // it is possible for a locMin here to simply be a
+  // collinear spike that should be ignored, so ...
+  i := i0;
+  while CrossProductIsZero(path[iPrev], path[i], path[iNext]) do
   begin
-    v.pt      := path[i];
-    v.innerLM  := false;
+    i := FindLocMinIdx(i, len, path);
+    if i = i0 then Exit; // an entirely collinear path
 
-    // skip duplicates and collinears
-    if CrossProductIsZero(vPrev.pt,
-      v.pt, path[(i + 1) mod pathLen]) then
-        Continue;
-
-    vertexList.Add(v);
-    vPrev := v;
-    inc(v);
+    iPrev := PrevIdx(i, len);
+    while PointsEqual(path[iPrev], path[i]) do
+      iPrev := PrevIdx(iPrev, len);
+    iNext := NextIdx(i, len);
   end;
-  pathLen := vertexList.Count - oldVertCnt;
+
+  // we are now at the first legitimate locMin
+  v0 := AddVertex(path[i]);
+  if LeftTurning(path[iPrev], path[i], path[iNext]) then
+    v0.innerLM := true;
+  vPrev := v0;
+  i := iNext;
+  while true do
+  begin
+    // at a locMin here
+    iNext := NextIdx(i, len);
+
+    if CrossProductIsZero(vPrev.pt, path[i], path[iNext]) then
+    begin
+      i := iNext;
+      Continue;
+    end;
+
+    // ascend up next bound to LocMax
+    while (path[i].Y <= vPrev.pt.Y) do
+    begin
+      v := AddVertex(path[i]);
+      CreateEdge(vPrev, v, ekAsc);
+      vPrev := v;
+      i := iNext;
+      iNext := NextIdx(i, len);
+
+      while CrossProductIsZero(vPrev.pt, path[i], path[iNext]) do
+      begin
+        i := iNext;
+        iNext := NextIdx(i, len);
+      end;
+    end;
+
+    vPrevPrev := vPrev;
+    // Now at a locMax, so descend to next locMin
+    while (i <> i0) and (path[i].Y >= vPrev.pt.Y) do
+    begin
+      v := AddVertex(path[i]);
+      CreateEdge(v, vPrev, ekDesc);
+      vPrevPrev := vPrev;
+      vPrev := v;
+      i := iNext;
+      iNext := NextIdx(i, len);
+
+      while CrossProductIsZero(vPrev.pt, path[i], path[iNext]) do
+      begin
+        i := iNext;
+        iNext := NextIdx(i, len);
+      end;
+    end;
+
+    // now at the next locMin
+    if (i = i0) then break; // break while(true) loop
+    if LeftTurning(vPrevPrev.pt, vPrev.pt, path[i]) then
+      vPrev.innerLM := true;
+  end;
+  CreateEdge(v0, vPrev, ekDesc);
+
+  len := vertexList.Count - oldVertexListCnt;
+  i := oldVertexListCnt;
 
   // make sure we still have a valid (ie not almost non-zero area) path
-  if (pathLen < 3) or       // too few vertices,
-    ((pathLen = 3) and      // or just a very tiny triangle
-    ((DistanceSqr(va[0].pt, va[1].pt) <= 1) or
-     (DistanceSqr(va[1].pt, va[2].pt) <= 1) or
-     (DistanceSqr(va[2].pt, va[0].pt) <= 1))) then
+  if (len < 3) or       // too few vertices,
+    ((len = 3) and      // or just a very tiny triangle
+    ((DistanceSqr(Vert(i).pt, Vert(i+1).pt) <= 1) or
+     (DistanceSqr(Vert(i+1).pt, Vert(i+2).pt) <= 1) or
+     (DistanceSqr(Vert(i+2).pt, Vert(i).pt) <= 1))) then
   begin
-    UndoAddPath;
-    Exit;
-  end;
-
-  // CAUTION: DON'T RESIZE 'va' BECAUSE THAT WOULD BREAK ALL
-  // THE POINTERS IN VertexList, AS WELL AS vNext & vPrev!
-
-  //find first ascending bound
-  i := 1;
-  while (i < pathLen) and (va[i].pt.Y >= va[i -1].pt.Y) do inc(i);
-  if (i = pathLen) then
-  begin
-    dec(i);
-    if (va[0].pt.Y >= va[i].pt.Y) then
-    begin
-      // path must be completely horizontal (ie with no area).
-      UndoAddPath;
-      Exit;
-    end;
-  end;
-
-  // Assign vertex kinds (vkLocMin, vkAscend, vklocMax & vkDescend) ...
-  i0 := FindFirstLocMin(i, pathLen, va);
-  i := i0;
-  while True do
-  begin
-    i := ProcessVertArrayToNextLocMin(i, pathLen, va);
-    if i = i0 then break;
+    // flag the vertices added for this path as obsolete
+    for i := oldVertexListCnt to vertexList.Count -1 do
+      PVertex(vertexList[i]).edges := nil;
   end;
 end;
 //------------------------------------------------------------------------------
@@ -1455,22 +1468,23 @@ begin
   j := RoundUpNearestPower2(j);
   if vertexList.Capacity < j then
     vertexList.Capacity := j;
-  if fixedEdgeList.Capacity < j then
-    fixedEdgeList.Capacity := j;
+  if edgeList.Capacity < j then
+    edgeList.Capacity := j;
 
   for i := 0 to High(paths) do
     AddPath(paths[i]);
 end;
 //------------------------------------------------------------------------------
 
-function Triangulate(const paths: TPaths64; useDelaunay: Boolean = true): TPaths64;
+function Triangulate(const paths: TPaths64; out solution: TPaths64;
+    useDelaunay: Boolean = true): TTriangulateResult;
 var
   d: TDelaunay;
 begin
   d := TDelaunay.Create(useDelaunay);
   try
     d.AddPaths(paths);
-    Result := d.Triangulate;
+    Result := d.Triangulate(solution);
   finally
     d.Free;
   end;
@@ -1478,22 +1492,24 @@ end;
 //------------------------------------------------------------------------------
 
 function Triangulate(const paths: TPathsD;
-  decPlaces: integer; delaunay: Boolean = true): TPathsD;
+  decPlaces: integer; out solution: TPathsD;
+  useDelaunay: Boolean = true): TTriangulateResult; overload;
 var
   scale: double;
-  pp64: TPaths64;
+  pp64, sol64: TPaths64;
 begin
   if decPlaces <= 0 then scale := 1
   else if decPlaces > 8 then scale := Power(10, 8)
   else scale := Power(10, decPlaces);
   pp64 := ScalePaths(paths, scale);
-  pp64 := Triangulate(pp64, delaunay);
-  Result := ScalePathsD(pp64, 1/scale);
+  Result := Triangulate(pp64, sol64, useDelaunay);
+  if Result = TTriangulateResult.trSuccess then
+    solution := ScalePathsD(sol64, 1/scale);
 end;
 //------------------------------------------------------------------------------
 
 function Triangulate(const paths: TPathsD; decPlaces: integer;
-  useDelaunay: Boolean; out activeEdges: TPathsD): TPathsD;
+  out solution: TPathsD; out activeEdges: TPathsD; useDelaunay: Boolean): TTriangulateResult;
 var
   i: integer;
   d: TDelaunay;
@@ -1505,12 +1521,14 @@ begin
   else if decPlaces > 8 then scale := Power(10, 8)
   else scale := Power(10, decPlaces);
   pp64 := ScalePaths(paths, scale);
+  solution := nil;
 
   d := TDelaunay.Create(useDelaunay);
   try try
     d.AddPaths(pp64);
-    pp64 := d.Triangulate;
-    Result := ScalePathsD(pp64, 1/scale);
+    Result := d.Triangulate(pp64);
+    //if Result = trSuccess then
+      solution := ScalePathsD(pp64, 1/scale);
 
     a := d.fActives;
     i := CountActives(a);
@@ -1524,7 +1542,7 @@ begin
     end;
 
   except
-    Result := nil;
+    Result := trFail;
     activeEdges := nil;
   end;
   finally

@@ -17,13 +17,10 @@
 namespace Clipper2Lib {
 
   const char svg_xml_header_0[] =
-		  "<?xml version=\"1.0\" standalone=\"no\"?>\n"
-          "<!DOCTYPE svg PUBLIC \"-//W3C//DTD SVG 1.1//EN\"\n"
-          "\"http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd\">\n\n <svg width=\"";
+		  "<?xml version=\"1.0\" standalone=\"no\"?>\n<svg width=\"";
   const char svg_xml_header_1[] = "\" height=\"";
   const char svg_xml_header_2[] = "\" viewBox=\"0 0 ";
-  const char svg_xml_header_3[] = "\" version=\"1.1\" xmlns=\"http://www.w3.org/2000/svg\">\n\n";
-
+  const char svg_xml_header_3[] = "\" version=\"1.1\" xmlns=\"http://www.w3.org/2000/svg\">\n";
 
   const char svg_xml_0[] = "\"\n    style=\"fill:";
   const char svg_xml_1[] = "; fill-opacity:";
@@ -64,10 +61,17 @@ namespace Clipper2Lib {
   }
   //------------------------------------------------------------------------------
 
-  void SvgWriter::AddText(const std::string &text,
+  void SvgWriter::AddText(const std::string& text,
     unsigned font_color, unsigned font_size, double x, double y)
   {
-      text_infos.push_back(new TextInfo(text, "", font_color, 600, font_size, x, y));
+    text_infos.push_back(new TextInfo(text, "", font_color, 600, font_size, x, y));
+  }
+  //------------------------------------------------------------------------------
+
+  void SvgWriter::AddText(const std::string& text, const std::string& font_family,
+    unsigned font_color, unsigned font_size, double x, double y)
+  {
+    text_infos.push_back(new TextInfo(text, font_family, font_color, 600, font_size, x, y));
   }
   //------------------------------------------------------------------------------
 
@@ -140,6 +144,7 @@ namespace Clipper2Lib {
   bool SvgWriter::SaveToFile(const std::string &filename,
     int max_width, int max_height, int margin)
   {
+    // get the bounds of all path_infos
     RectD rec = InvalidRectD;
     for (const PathInfo* pi : path_infos)
       for (const PathD& path : pi->paths_)
@@ -172,9 +177,10 @@ namespace Clipper2Lib {
       max_height << "px" << svg_xml_header_2 <<
       max_width << " " <<
       max_height << svg_xml_header_3;
-    setlocale(LC_NUMERIC, "C");
+    setlocale(LC_NUMERIC, "C"); // decimal separator == '.' and no thousand separators
     file.precision(2);
 
+    // code block used to simulate POSITIVE or NEGATIVE filling rules
     for (PathInfo* pi : path_infos)
     {
       if (pi->is_open_path || GetAlphaAsFrac(pi->brush_color_) == 0 ||
@@ -207,6 +213,7 @@ namespace Clipper2Lib {
 
     for (PathInfo* pi : path_infos)
     {
+      // ignore filling (brushColor == 0) if POSITIVE or NEGATIVE filling
       unsigned brushColor =
         (pi->fillrule_ == FillRule::Positive || pi->fillrule_ == FillRule::Negative) ?
         0 : pi->brush_color_;

@@ -48,12 +48,14 @@ set(CLIPPER2_INC
   ${CLIPPER2_INC_FOLDER}/clipper.minkowski.h
   ${CLIPPER2_INC_FOLDER}/clipper.offset.h
   ${CLIPPER2_INC_FOLDER}/clipper.rectclip.h
+  ${CLIPPER2_INC_FOLDER}/clipper.triangulation.h
 )
 
 set(CLIPPER2_SRC
   Clipper2Lib/src/clipper.engine.cpp
   Clipper2Lib/src/clipper.offset.cpp
   Clipper2Lib/src/clipper.rectclip.cpp
+  Clipper2Lib/src/clipper.triangulation.cpp
 )
 
 set(CLIPPER2_LIBS "") # one or both of Clipper2/Clipper2Z
@@ -188,6 +190,7 @@ if(CLIPPER2_EXAMPLES)
       RectClipping
       SimpleClipping
       VariableOffset
+      Triangulation
     )
 
     foreach(ex ${EXAMPLES})
@@ -196,6 +199,8 @@ if(CLIPPER2_EXAMPLES)
     endforeach()
 
     file(COPY Examples/Inflate/rabbit.svg DESTINATION ${CMAKE_BINARY_DIR} FILE_PERMISSIONS OWNER_READ GROUP_READ WORLD_READ )
+    file(COPY Examples/Triangulation/TriSamples DESTINATION ${CMAKE_BINARY_DIR} FILE_PERMISSIONS OWNER_READ GROUP_READ WORLD_READ )
+
     list(APPEND ALL_EXAMPLES ${EXAMPLES})
   endif()
 
@@ -224,19 +229,20 @@ if(CLIPPER2_TESTS)
     set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
   endif()
   set(BUILD_GMOCK OFF)
-if(USE_EXTERNAL_GTEST)
-  find_package(GTest REQUIRED)
-else()
-  include(GoogleTest)
-  if(NOT EXISTS ${PROJECT_SOURCE_DIR}/Tests/googletest)
-    execute_process(
-      COMMAND "git" "clone" "https://github.com/google/googletest"
-      WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}/Tests
-    )
+  
+  if(USE_EXTERNAL_GTEST)
+    find_package(GTest REQUIRED)
+  else()
+    include(GoogleTest)
+    if(NOT EXISTS ${PROJECT_SOURCE_DIR}/Tests/googletest)
+      execute_process(
+        COMMAND "git" "clone" "https://github.com/google/googletest"
+        WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}/Tests
+      )
+    endif()
+    add_subdirectory("${PROJECT_SOURCE_DIR}/Tests/googletest/")
+    set_target_properties(gtest gtest_main PROPERTIES FOLDER GTest)
   endif()
-  add_subdirectory("${PROJECT_SOURCE_DIR}/Tests/googletest/")
-  set_target_properties(gtest gtest_main PROPERTIES FOLDER GTest)
-endif()
 
   if(TARGET gtest AND TARGET gtest_main)
     set(gtest_libs gtest gtest_main)

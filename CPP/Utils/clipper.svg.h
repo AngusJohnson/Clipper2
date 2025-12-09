@@ -90,7 +90,8 @@ namespace Clipper2Lib {
     void Clear();
     FillRule Fill_Rule() { return fill_rule_; }
     void SetCoordsStyle(const std::string &font_name, unsigned font_color, unsigned font_size);
-    void AddText(const std::string &text, unsigned font_color, unsigned font_size, double x, double y);
+    void AddText(const std::string& text, unsigned font_color, unsigned font_size, double x, double y);
+    void AddText(const std::string& text, const std::string& font_family, unsigned font_color, unsigned font_size, double x, double y);
     void AddPath(const Path64& path, bool is_open, FillRule fillrule,
       unsigned brush_color, unsigned pen_color, double pen_width, bool show_coords);
     void AddPath(const PathD& path, bool is_open, FillRule fillrule,

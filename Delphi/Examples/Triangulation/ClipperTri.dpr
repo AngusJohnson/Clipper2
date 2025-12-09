@@ -10,10 +10,11 @@ uses
   SysUtils,
   Classes,
   Math,
-  Clipper in 'Clipper.pas',
-  Clipper.Core in 'Clipper.Core.pas',
-  Clipper.SVG in 'Clipper.SVG.pas',
-  Delaunay in 'Delaunay.pas';
+  Clipper.Core in '..\..\Clipper2Lib\Clipper.Core.pas',
+  Clipper in '..\..\Clipper2Lib\Clipper.pas',
+  Clipper.Triangulation in '..\..\Clipper2Lib\Clipper.Triangulation.pas',
+  Clipper.SVG in '..\..\Utils\Clipper.SVG.pas';
+
 
 //------------------------------------------------------------------------------
 // GetPathsFromSvgFile() - gets paths from a *simple* SVG file
@@ -77,37 +78,14 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-function SkipBlanksAndComma(var c: PChar; endC: PChar): Boolean;
-begin
-  Result := SkipBlanks(c, endC);
-  if not Result or (c^ <> ',') then Exit;
-  inc(c);
-  Result := SkipBlanks(c, endC);
-end;
-//------------------------------------------------------------------------------
-
-function PeekNextChar(var c: PChar; endC: PChar): Char;
-begin
-  SkipBlanks(c, endC);
-  Result := c^;
-end;
-//------------------------------------------------------------------------------
-
-procedure SkipNextChar(var c: PChar);
-begin
-  inc(c);
-end;
-//------------------------------------------------------------------------------
-
 function GetPathsFromSvgFile(const svgFilename: string): TPathsD;
 var
   i: integer;
   svgText: string;
   x, y: double;
-  startC, endC: PChar;
+  c, endC: PChar;
   currCnt, currCap: integer;
   path: TPathD;
-  c: Char;
 
   procedure AddPoint(x,y: double);
   begin
@@ -147,32 +125,32 @@ begin
   i := Pos('path d="M', svgText);
   if i = 0 then Exit;
   inc(i, 9);
-  startC := @svgText[i];
-  endC := startC + Length(svgText) - i +1;
+  c := @svgText[i];
+  endC := c + Length(svgText) - i +1;
 
   currCnt := 0; currCap := 0;
-  ParseNum(startC, endC, false, x);
-  if not ParseNum(startC, endC, true, y) then Exit;
+  ParseNum(c, endC, false, x);
+  if not ParseNum(c, endC, true, y) then Exit;
   AddPoint(x, y);
-  while startC < endC do
+  while c < endC do
   begin
-    c := PeekNextChar(startC, endC);
-    if c = 'L' then SkipNextChar(startC)
-    else if c = 'Z' then
+    if not SkipBlanks(c, endC) then Break;
+    if c^ = 'L' then Inc(c)
+    else if c^ = 'Z' then
     begin
       AddPath;
-      SkipNextChar(startC);
+      Inc(c);
       // start next path
-      c := PeekNextChar(startC, endC);
-      if c <> 'M' then break;
-      SkipNextChar(startC);
-      ParseNum(startC, endC, false, x);
-      if not ParseNum(startC, endC, true, y) then break;
+      if not SkipBlanks(c, endC) then Break;
+      if c^ <> 'M' then break;
+      Inc(c);
+      if not ParseNum(c, endC, false, x) then break;
+      if not ParseNum(c, endC, true,  y) then break;
       AddPoint(x, y);
       Continue;
     end;
-    ParseNum(startC, endC, false, x);
-    if not ParseNum(startC, endC, true, y) then Break;
+    ParseNum(c, endC, false, x);
+    if not ParseNum(c, endC, true, y) then Break;
     AddPoint(x, y);
   end;
   AddPath;
@@ -182,79 +160,30 @@ end;
 // SavePathsAsSvg()
 //------------------------------------------------------------------------------
 
+function RandomColor: Cardinal; inline;
+begin
+  Result := Cardinal(Random($1000000)) or $FF000000;
+end;
+//------------------------------------------------------------------------------
+
 type
   TReplaceFile = (rfSkip, rfOverwrite);
-
-  THsl = packed record
-    hue  : byte;
-    sat  : byte;
-    lum  : byte;
-    alpha: byte;
-  end;
-
-  TARGB = packed record
-    case boolean of
-      false: (B: Byte; G: Byte; R: Byte; A: Byte);
-      true : (Color: Cardinal);
-  end;
-
-function HslToRgb(hslColor: THsl): Cardinal;
-var
-  rgba: TARGB absolute result;
-  hsl: THsl absolute hslColor;
-  c, x, m, a: Integer;
-begin
-  c := ((255 - abs(2 * hsl.lum - 255)) * hsl.sat) shr 8;
-  a := 252 - (hsl.hue mod 85) * 6;
-  x := (c * (255 - abs(a))) shr 8;
-  m := hsl.lum - c shr 1;
-  rgba.A := hsl.alpha;
-  case (hsl.hue * 6) shr 8 of
-    0: begin rgba.R := c + m; rgba.G := x + m; rgba.B := 0 + m; end;
-    1: begin rgba.R := x + m; rgba.G := c + m; rgba.B := 0 + m; end;
-    2: begin rgba.R := 0 + m; rgba.G := c + m; rgba.B := x + m; end;
-    3: begin rgba.R := 0 + m; rgba.G := x + m; rgba.B := c + m; end;
-    4: begin rgba.R := x + m; rgba.G := 0 + m; rgba.B := c + m; end;
-    5: begin rgba.R := c + m; rgba.G := 0 + m; rgba.B := x + m; end;
-  end;
-end;
-//------------------------------------------------------------------------------
-
-function RainbowColor(fraction: double; luminance, alpha: byte): Cardinal;
-var
-  hsl: THsl;
-begin
-  if (fraction < 0) or (fraction > 1) then
-    fraction := frac(fraction);
-
-  hsl.hue := Round(fraction * 255);
-  hsl.sat := 255;
-  hsl.lum := luminance;
-  hsl.alpha := alpha;
-  Result := HslToRgb(hsl);
-end;
-//------------------------------------------------------------------------------
 
 procedure SavePathsAsSvg(const svgFilename: string;
   const sub, sol: TPathsD; replace: TReplaceFile;
   showCoords: Boolean = false); overload;
 var
-  i,j: integer;
+  i: integer;
   svg: TSvgWriter;
 begin
   if (replace = rfSkip) and FileExists(svgFilename) then Exit;
   svg := TSvgWriter.Create(frNonZero, 'Verdana', 8);
-  svg.AddPaths(sub, false, $20000099, $80000033, 1.0, showCoords);
+  svg.AddPaths(sub, false, $20000000, $FF000000, 1.5, showCoords);
 
   Randomize;
   for i := 0 to High(sol) do
-  begin
-    j := Random(256);
-    svg.AddPath(sol[i], false, RainbowColor(j/256, 196, 255),
-      $80000000, 1.0, false);
-  end;
+    svg.AddPath(sol[i], false, RandomColor, $20000000, 1.0, false);
 
-  svg.AddPaths(sol, false, $20009900, $80003300, 1.0, false);
   svg.SaveToFile(svgFilename, 1100, 700, 50);
   svg.Free;
 end;
@@ -272,11 +201,13 @@ begin
   outFilename := '.\clipper2_tri.svg';
   if not FileExists(inFilename) then Exit;
   pp := GetPathsFromSvgFile(inFilename);
-  //WriteLn(PathsToString(pp, 0));
+  WriteLn(PathsToString(pp, 0));
 
-  sol := Triangulate(pp, 0, true);
-  SavePathsAsSvg(outFilename, pp, sol, rfOverwrite, false);
-  ShellExecute(0, nil, PChar(outFilename), nil, nil, 0);
+  if Triangulate(pp, 0, sol, true) = trSuccess then
+  begin
+    SavePathsAsSvg(outFilename, pp, sol, rfOverwrite, false);
+    ShellExecute(0, nil, PChar(outFilename), nil, nil, 0);
+  end;
 end.
 //------------------------------------------------------------------------------
 
