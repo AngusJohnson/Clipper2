@@ -1,6 +1,6 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  7 December 2025                                                 *
+* Date      :  10 December 2025                                                *
 * Release   :  BETA RELEASE                                                    *
 * Website   :  https://www.angusj.com                                          *
 * Copyright :  Angus Johnson 2010-2025                                         *
@@ -1145,7 +1145,7 @@ namespace Clipper2Lib
     allVertices.reserve(allVertices.capacity() + total_vertex_count);
     allEdges.reserve(allEdges.capacity() + total_vertex_count);
 
-    for each(const Path64 path in paths)
+    for (const Path64 path : paths)
       AddPath(path);
     return (allVertices.size() > 2);
   }
