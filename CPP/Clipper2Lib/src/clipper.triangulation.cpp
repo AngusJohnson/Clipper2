@@ -678,7 +678,7 @@ namespace Clipper2Lib
     if (!eBelow) return nullptr; // oops!!
 
     // get the best vertex from 'eBelow'
-    Vertex2* vBest = (eBelow->vT->pt.y <= yAbove) ? eBelow->vB : vBest = eBelow->vT;
+    Vertex2* vBest = (eBelow->vT->pt.y <= yAbove) ? eBelow->vB : eBelow->vT;
     int64_t xBest = vBest->pt.x;
     int64_t yBest = vBest->pt.y;
 
@@ -970,7 +970,7 @@ namespace Clipper2Lib
         // That's why this line is necessary (and why we can't use an iterator).
         // Also, it is safe to use a descending index into the array because
         // any additions don't need to be re-processed within this loop.
-        if (i >= v->edges.size()) continue;
+        if (i >= static_cast<int>(v->edges.size())) continue;
 
         Edge* e = v->edges[i];
         if (EdgeCompleted(e) || IsLooseEdge(*e)) continue;
@@ -1145,7 +1145,7 @@ namespace Clipper2Lib
     allVertices.reserve(allVertices.capacity() + total_vertex_count);
     allEdges.reserve(allEdges.capacity() + total_vertex_count);
 
-    for (const Path64 path : paths)
+    for (const Path64& path : paths)
       AddPath(path);
     return (allVertices.size() > 2);
   }
