@@ -705,7 +705,7 @@ namespace Clipper2Lib
         ip.x = (ln1a.x + t * dx1);
         ip.y = (ln1a.y + t * dy1);
 #if USINGZ
-        ip.Z = 0;
+        ip.z = 0;
 #endif
       }
       return true;
