@@ -1,12 +1,5 @@
 <svg width="1100px" height="700px" viewBox="0 0 1100 700" version="1.1" xmlns="http://www.w3.org/2000/svg">
   <path d="M 50 50 L 650 50 650 650 50 650 ZM 250 250 L 250 450 450 450 450 250 Z"
     style="fill:#000099; fill-opacity:0.13; fill-rule:nonzero; stroke:#000033; stroke-opacity:0.50; stroke-width:1.00;"/>
-
-  <path d="M 50 650 L 250 450 650 650 ZM 450 450 L 650 650 250 450 ZM 250 250 L 250 450 50 650 ZM 450 450 L 450 250 650 650 ZM 50 650 L 50 50 250 250 ZM 450 250 L 250 250 50 50 ZM 650 50 L 650 650 450 250 ZM 50 50 L 650 50 450 250 Z"
-    style="fill:#009900; fill-opacity:0.13; fill-rule:nonzero; stroke:#003300; stroke-opacity:0.50; stroke-width:1.00;"/>
-
-  <path d=""
-   style="fill:none; stroke:#AA0000; stroke-opacity:0.50; stroke-width:1.50; "/>
-
 </svg>
 

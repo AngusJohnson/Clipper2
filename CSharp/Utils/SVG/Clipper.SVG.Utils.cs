@@ -6,6 +6,7 @@
 * License   :  https://www.boost.org/LICENSE_1_0.txt                           *
 *******************************************************************************/
 
+using System;
 using System.IO;
 
 #if USINGZ
@@ -16,6 +17,13 @@ namespace Clipper2Lib
 {
   public static class SvgUtils
   {
+    static Random rc = new Random();
+
+    public static uint RandomColor()
+    {
+      return (uint) (rc.Next() | 0xBF000000);
+    }
+
     public static void AddCaption(SvgWriter svg, string caption, int x, int y)
     {
       svg.AddText(caption, x, y, 14);
@@ -80,7 +88,14 @@ namespace Clipper2Lib
     public static void AddSolution(SvgWriter svg, Paths64 paths,
       bool show_coords, bool is_closed = true, bool is_joined = true)
     {
-        svg.AddClosedPaths(paths, 0x4080ff9C, 0xFF003300, 1.5, show_coords);
+      svg.AddClosedPaths(paths, 0x4080ff9C, 0x80999999, 1.5, show_coords);
+    }
+
+    public static void AddRCSolution(SvgWriter svg, Paths64 paths,
+      bool show_coords, bool is_closed = true, bool is_joined = true)
+    {
+      foreach (Path64 path in paths)
+        svg.AddClosedPath(path, RandomColor(), 0x80999999, 1.0, show_coords);
     }
 
     public static void AddOpenSolution(SvgWriter svg, Paths64 paths, bool show_coords)
@@ -90,7 +105,13 @@ namespace Clipper2Lib
 
     public static void AddSolution(SvgWriter svg, PathsD paths, bool show_coords)
     {
-        svg.AddClosedPaths(paths, 0x4080ff9C, 0xFF003300, 1.5, show_coords);
+      svg.AddClosedPaths(paths, 0x4080ff9C, 0x80999999, 1.5, show_coords);
+    }
+
+    public static void AddRCSolution(SvgWriter svg, PathsD paths, bool show_coords)
+    {
+      foreach (PathD path in paths)
+        svg.AddClosedPath(path, RandomColor(), 0x80999999, 1.0, show_coords);
     }
 
     public static void AddOpenSolution(SvgWriter svg, PathsD paths, bool show_coords)

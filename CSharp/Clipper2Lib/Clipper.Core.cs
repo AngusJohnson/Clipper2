@@ -1,6 +1,6 @@
 ﻿/*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  12 October 2025                                                 *
+* Date      :  12 December 2025                                                *
 * Website   :  https://www.angusj.com                                          *
 * Copyright :  Angus Johnson 2010-2025                                         *
 * Purpose   :  Core structures and functions for the Clipper Library           *
@@ -433,11 +433,7 @@ namespace Clipper2Lib
     public Path64(IEnumerable<Point64> path) : base(path) { }
     public override string ToString()
     {
-      string s = "";
-      foreach (Point64 p in this)
-        s = s + p.ToString() + ", ";
-      if (s != "") s = s.Remove(s.Length - 2);
-      return s;
+      return string.Join(", ", this);
     }
   }
 
@@ -448,10 +444,7 @@ namespace Clipper2Lib
     public Paths64(IEnumerable<Path64> paths) : base(paths) { }
     public override string ToString()
     {
-      string s = "";
-      foreach (Path64 p in this)
-        s = s + p + "\n";
-      return s;
+      return string.Join(Environment.NewLine, this);
     }
   }
 
@@ -462,11 +455,7 @@ namespace Clipper2Lib
     public PathD(IEnumerable<PointD> path) : base(path) { }
     public string ToString(int precision = 2)
     {
-      string s = "";
-      foreach (PointD p in this)
-        s = s + p.ToString(precision) + ", ";
-      if (s != "") s = s.Remove(s.Length - 2);
-      return s;
+      return string.Join(", ", ConvertAll(x => x.ToString(precision)));
     }
   }
 
@@ -477,10 +466,7 @@ namespace Clipper2Lib
     public PathsD(IEnumerable<PathD> paths) : base(paths) { }
     public string ToString(int precision = 2)
     {
-      string s = "";
-      foreach (PathD p in this)
-        s = s + p.ToString(precision) + "\n";
-      return s;
+      return string.Join(Environment.NewLine, ConvertAll(x => x.ToString(precision)));
     }
   }
 
@@ -509,14 +495,6 @@ namespace Clipper2Lib
     NonZero,
     Positive,
     Negative
-  }
-
-  // PointInPolygon
-  internal enum PipResult
-  {
-    Inside,
-    Outside,
-    OnEdge
   }
 
   public static class InternalClipper
