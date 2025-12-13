@@ -1,6 +1,6 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  12 December 2025                                                *
+* Date      :  13 December 2025                                                *
 * Release   :  BETA RELEASE                                                    *
 * Website   :  https://www.angusj.com                                          *
 * Copyright :  Angus Johnson 2010-2025                                         *
@@ -82,6 +82,7 @@ namespace Clipper2Lib
     private readonly Stack<Vertex2> locMinStack = new Stack<Vertex2>();
     private readonly bool useDelaunay;
     private Edge? firstActive = null;
+    private Vertex2? lowermostVertex = null;
 
     public Delaunay(bool delaunay = true)
     {
@@ -126,7 +127,15 @@ namespace Clipper2Lib
 
       for (; ; )
       {
-        // at a locMin here
+        // vPrev is a locMin here
+        locMinStack.Push(vPrev);
+        // ? update lowermostVertex ...
+        if (lowermostVertex == null ||
+          vPrev.pt.Y > lowermostVertex.pt.Y ||
+          (vPrev.pt.Y == lowermostVertex.pt.Y &&
+          vPrev.pt.X < lowermostVertex.pt.X))
+            lowermostVertex = vPrev;
+
         iNext = Next(i, len);
         if (InternalClipper.CrossProductSign(vPrev.pt, path[i], path[iNext]) == 0)
         {
@@ -215,7 +224,9 @@ namespace Clipper2Lib
       pendingDelaunayStack.Clear();
       horzEdgeStack.Clear();
       locMinStack.Clear();
+
       firstActive = null;
+      lowermostVertex = null;
     }
 
     private bool FixupEdgeIntersects()
@@ -753,6 +764,32 @@ namespace Clipper2Lib
       if (!AddPaths(paths))
       {
         return TriangulateResult.no_polygons;
+      }
+
+      // if necessary fix path orientation because the algorithm 
+      // expects clockwise outer paths and counter-clockwise inner paths
+      if (lowermostVertex!.innerLM)
+      {
+        // the orientation of added paths must be wrong, so
+        // 1. reverse innerLM flags ...
+        Vertex2 lm;
+        while (locMinStack.Count > 0)
+        {
+          lm = locMinStack.Pop();
+          lm.innerLM = !lm.innerLM;
+        }
+        // 2. swap edge kinds
+        foreach (Edge e in allEdges)
+          if (e.kind == EdgeKind.ascend)
+            e.kind = EdgeKind.descend;
+          else
+            e.kind = EdgeKind.ascend;
+      }
+      else
+      {
+        // path orientation is fine so ...
+        while (locMinStack.Count > 0)
+          locMinStack.Pop();
       }
 
       allEdges.Sort((a, b) => a.vL.pt.X.CompareTo(b.vL.pt.X));

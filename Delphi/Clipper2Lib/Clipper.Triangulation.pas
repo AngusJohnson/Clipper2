@@ -2,7 +2,7 @@ unit Clipper.Triangulation;
 
 (*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  9 December 2025                                                 *
+* Date      :  13 December 2025                                                *
 * Release   :  BETA RELEASE                                                    *
 * Website   :  https://www.angusj.com                                          *
 * Copyright :  Angus Johnson 2010-2025                                         *
@@ -80,14 +80,15 @@ type
 
   TDelaunay = class
   private
-    vertexList    : TListEx;
-    edgeList      : TListEx;
-    triangleList  : TListEx;
+    vertexList      : TListEx;
+    edgeList        : TListEx;
+    triangleList    : TListEx;
     DelaunayPending : TEdgeStack;
     horzEdgeStack   : TEdgeStack; // used to delay horizontal edge processing
     locMinStack     : TVertexStack;
     fUseDelaunay    : Boolean;
     fActives        : PEdge;      // simple (unsorted) double-linked list
+    lowestVertex    : PVertex;
     function FixupEdgeIntersects(edgeList: TListEx): Boolean;
     procedure RemoveIntersection(e1, e2: PEdge);
     procedure MergeDupOrCollinearVertices;
@@ -453,6 +454,7 @@ begin
   horzEdgeStack   := TEdgeStack.Create;
   locMinStack     := TVertexStack.Create;
   fUseDelaunay    := useDelaunay;
+  //lowestVertex    := nil;
 end;
 //------------------------------------------------------------------------------
 
@@ -1176,7 +1178,7 @@ end;
 
 function TDelaunay.Triangulate(out solution: TPaths64): TTriangulateResult;
 var
-  i, j    : integer;
+  i,j     : integer;
   cps     : integer;
   currY   : integer;
   p, lm   : PVertex;
@@ -1187,6 +1189,26 @@ begin
   begin
     Result := TTriangulateResult.trNoPolygons;
     Exit;
+  end;
+
+  // if necessary fix path orientation because the algorithm
+  // expects clockwise outer paths and counter-clockwise inner paths
+  if lowestvertex.innerLM then
+  begin
+    // the orientation of added paths must be wrong, so
+    // 1. reverse innerLM flags ...
+    while locMinStack.Pop(lm) do
+      lm.innerLM := not lm.innerLM;
+    // 2. swap edge kinds
+    for i := 0 to edgeList.Count -1 do
+      with PEdge(edgeList[i])^ do
+        if kind = ekAsc then
+          kind := ekDesc else
+          kind := ekAsc;
+  end else
+  begin
+    // path orientation is fine so ...
+    locMinStack.Clear;
   end;
 
   // fix up any micro edge intersections that will break triangulation.
@@ -1256,18 +1278,15 @@ begin
       for i := High(p.edges) downto 0 do
       begin
 
-        // the following line may look superfluous, but p.edges may be
-        // altered (with additions and or deletions) during this 'for' loop.
-        // That's why this line is necessary (and why we can't use an iterator).
-        // Also, it is safe to use a descending index into the array because
-        // any additions don't need to be re-processed within this loop.
+        // The following line may look superfluous, but within this loop
+        // p.edges may be altered with additions and or deletions.
+        // Also, we need to use a *descending* index which is safe because
+        // any additions will be loose edges which are ignored here.
         if i > High(p.edges) then Continue;
 
         e := p.edges[i];
-        if EdgeCompleted(e) then
-          Continue
-        else if e.kind = ekLoose then
-          Continue;
+        if EdgeCompleted(e) or IsLooseEdge(e) then Continue;
+
         if p = e.vB then
         begin
           if IsHorizontal(e) then
@@ -1386,13 +1405,20 @@ begin
   v0 := AddVertex(path[i]);
   if LeftTurning(path[iPrev], path[i], path[iNext]) then
     v0.innerLM := true;
+
   vPrev := v0;
   i := iNext;
   while true do
   begin
-    // at a locMin here
-    iNext := NextIdx(i, len);
+    // vPrev is a locMin here
+    locMinStack.Push(vPrev);
+    if not Assigned(lowestVertex) or
+      (vPrev.pt.Y > lowestVertex.pt.Y) or
+      ((vPrev.pt.Y = lowestVertex.pt.Y) and
+      (vPrev.pt.X < lowestVertex.pt.X)) then
+        lowestVertex := vPrev;
 
+    iNext := NextIdx(i, len);
     if CrossProductIsZero(vPrev.pt, path[i], path[iNext]) then
     begin
       i := iNext;

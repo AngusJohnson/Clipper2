@@ -1,6 +1,11 @@
+//#define _CRTDBG_MAP_ALLOC
+//#include <stdlib.h>
+//#include <crtdbg.h>
+
 #include <cstdlib>
 #include <string>
 #include <chrono> 
+#include <cstdint>
 
 #include "clipper2/clipper.h"
 #include "../../Utils/clipper.svg.utils.h"
@@ -102,7 +107,7 @@ PathsD GetPathsFromSvgFile(const string  svgFilename)
       {
         if (!SkipBlanks(it, eos)) break;
         if (*it == 'L') ++it; // skip L
-        else if (*it == 'Z') break; // end of current path
+        else if (*it == 'M' || *it == 'Z') break; // end of current path
         stop = !GetValue(it, eos, true, x) || !GetValue(it, eos, true, y);
         if (stop) break;
         p.push_back(PointD(x, y));
@@ -160,17 +165,15 @@ static string TriangulateResultAsString(TriangulateResult tr)
   }
 }
 
-enum class Test { random, clipper, single_test, range_test};
-
-void DisplaySvg(const string filename, const PathsD& sub, const PathsD& sol, bool multicolor)
+void DisplaySolution(const string filename, const PathsD& sol, bool multicolor)
 {
   SvgWriter svg;
-  SvgAddSubject(svg, sub, FillRule::NonZero);
+  //SvgAddSubject(svg, sub, FillRule::NonZero);
   if (multicolor)
     SvgAddRCSolution(svg, sol, FillRule::NonZero, false);
   else
     SvgAddSolution(svg, sol, FillRule::NonZero, false);
-  SvgSaveToFile(svg, filename, 600, 600, 0);
+  SvgSaveToFile(svg, filename, 400, 400, 0);
   System(filename);
 }
 
@@ -178,10 +181,12 @@ void DisplaySvg(const string filename, const PathsD& sub, const PathsD& sol, boo
 // main 
 ///////////////////////////////////////////////////////////////////////////////
 
+enum class Test { single_test, range_test, random, sample_1, sample_2};
+
 int main()
 {  
   //////////////////////////////////////////////////////////////////////
-  Test t = Test::range_test;  // Test::clipper; //  Test::single_test; // 
+  Test t = Test::sample_1; // Test::single_test; // Test::range_test;  // Test::clipper; //  
   int minRange = 44, maxRange = 52;
   bool doDelaunay = true;
   bool multicolor = true;
@@ -197,10 +202,12 @@ int main()
 
     case Test::single_test:
     {
-      PathsD subject = GetPathsFromSvgFile(folder + "Test" + to_string(maxRange) + ".svg");
+      string filename = "Test" + to_string(maxRange) + ".svg";
+      if (!FileExists(folder + filename)) break;
+      PathsD subject = GetPathsFromSvgFile(folder + filename), sol;
       //std::cout << subject << endl;
-      tr = Triangulate(subject, 0, sol, doDelaunay);
-      DisplaySvg(".\\test.svg", subject, sol, multicolor);
+      Triangulate(subject, 0, sol, doDelaunay);
+      DisplaySolution(filename, sol, multicolor);
       break;
     }
 
@@ -218,7 +225,7 @@ int main()
           case TriangulateResult::fail:
           {
             std::cout << i << " " << TriangulateResultAsString(tr) << endl;
-            DisplaySvg(filename, subject, sol, multicolor);
+            DisplaySolution(filename, sol, multicolor);
             break; // break inner case
           }
           default: break;
@@ -235,23 +242,39 @@ int main()
       subject = Union(subject, FillRule::NonZero);
       std::cout << subject << endl;
       tr = Triangulate(subject, 0, sol, doDelaunay);
-      DisplaySvg(".\\test.svg", subject, sol, multicolor);
+      DisplaySolution(".\\random.svg", sol, multicolor);
       break;
     }
 
-    case Test::clipper:
+    case Test::sample_1:
     {
-      PathsD subject = GetPathsFromSvgFile(folder + "Clipper2.svg");
-      //std::cout << subject << endl;
-      tr = Triangulate(subject, 0, sol, true);
-      DisplaySvg(".\\test.svg", subject, sol, multicolor);
+      subject = GetPathsFromSvgFile(folder + "coral3.svg");
+      Triangulate(subject, 0, sol, true);
+      DisplaySolution(".\\coral3t.svg", sol, multicolor);
       break;
     }
 
+    case Test::sample_2:
+    {
+      PathsD subject = { MakePathD({
+        44.1,114.0, 11.9,114.0, 13.9,72.9, 0.0,59.9, 0.0,53.2, 12.2,41.0, 16.8,41.0, 10.1,37.2, 8.0,19.9,
+        11.3,6.7, 20.0,1.9, 20.0,0.0, 34.6,0.0, 44.9,6.8, 48.0,29.1, 45.7,37.3, 39.2,41.0, 43.8,41.0,
+        56.0,53.2, 56.0,59.9, 42.0,72.9
+        }) };      
+      Triangulate(subject, 0, sol, true);
+      DisplaySolution(".\\sample2.svg", sol, multicolor);
+      break;
+    }
   }
+
   //#ifdef _DEBUG
-  std::string s;
+  PathD* p = new PathD();
+  if (_CrtDumpMemoryLeaks())
+    std::cout << "Memory leak detected!" << std::endl;
+
   std::cout << "Press Enter to continue" << std::endl;
+
+  std::string s;
   std::getline(std::cin, s);
   //#endif
   return 0;

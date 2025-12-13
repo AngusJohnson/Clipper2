@@ -22,9 +22,25 @@ uses
 
 const
   space = #32;
+  comma = ',';
   decPoint = '.';
 
-function ParseNum(var c: PChar; endC: PChar; skipComma: Boolean; out val: double): Boolean;
+function SkipOptionalComma(var c: PChar; endC: PChar): Boolean;
+begin
+  while (c < endC) and (c^ <= space) do inc(c);
+  if (c^ = comma) then inc(c);
+  Result := (c < endC);
+end;
+//------------------------------------------------------------------------------
+
+function SkipBlanks(var c: PChar; endC: PChar): Boolean;
+begin
+  while (c < endC) and (c^ <= space) do inc(c);
+  Result := (c < endC);
+end;
+//------------------------------------------------------------------------------
+
+function ParseNum(var c: PChar; endC: PChar; out val: double): Boolean;
 var
   decPos: integer;
   isNeg: Boolean;
@@ -32,12 +48,7 @@ var
 begin
   Result := false;
 
-  //skip white space +/- single comma
-  if skipComma then
-  begin
-    while (c < endC) and (c^ <= space) do inc(c);
-    if (c^ = ',') then inc(c);
-  end;
+  //skip white space
   while (c < endC) and (c^ <= space) do inc(c);
   if (c = endC) then Exit;
 
@@ -68,13 +79,6 @@ begin
 
   if decPos > 0 then val := val * Power(10, -decPos);
   if isNeg then val := -val;
-end;
-//------------------------------------------------------------------------------
-
-function SkipBlanks(var c: PChar; endC: PChar): Boolean;
-begin
-  while (c < endC) and (c^ <= space) do inc(c);
-  Result := (c < endC);
 end;
 //------------------------------------------------------------------------------
 
@@ -129,28 +133,38 @@ begin
   endC := c + Length(svgText) - i +1;
 
   currCnt := 0; currCap := 0;
-  ParseNum(c, endC, false, x);
-  if not ParseNum(c, endC, true, y) then Exit;
+  ParseNum(c, endC, x);
+  SkipOptionalComma(c, endC);
+  if not ParseNum(c, endC, y) then Exit;
+  SkipOptionalComma(c, endC);
   AddPoint(x, y);
   while c < endC do
   begin
     if not SkipBlanks(c, endC) then Break;
     if c^ = 'L' then Inc(c)
-    else if c^ = 'Z' then
+    else if (c^ = 'Z') or (c^ = 'M') then
     begin
       AddPath;
-      Inc(c);
-      // start next path
-      if not SkipBlanks(c, endC) then Break;
-      if c^ <> 'M' then break;
-      Inc(c);
-      if not ParseNum(c, endC, false, x) then break;
-      if not ParseNum(c, endC, true,  y) then break;
+      if (c^ = 'Z') then
+      begin
+        Inc(c);
+        // start next path
+        if not SkipBlanks(c, endC) then Break;
+      end;
+      if c^ = 'M' then
+      begin
+        Inc(c);
+        if not ParseNum(c, endC, x) then break;
+        SkipOptionalComma(c, endC);
+        if not ParseNum(c, endC, y) then break;
+      end;
       AddPoint(x, y);
       Continue;
     end;
-    ParseNum(c, endC, false, x);
-    if not ParseNum(c, endC, true, y) then Break;
+    ParseNum(c, endC, x);
+    SkipOptionalComma(c, endC);
+    if not ParseNum(c, endC, y) then Break;
+    SkipOptionalComma(c, endC);
     AddPoint(x, y);
   end;
   AddPath;
@@ -196,12 +210,15 @@ var
   sol : TPathsD;
   pp: TPathsD;
   inFilename, outFilename: string;
+const
+  svgFolder = '..\..\..\CPP\Examples\Triangulation\TriSamples\';
 begin
-  inFilename := '.\clipper2.svg';
-  outFilename := '.\clipper2_tri.svg';
+  inFilename := svgFolder + 'coral3.svg';
   if not FileExists(inFilename) then Exit;
+  outFilename := 'coral3t.svg';
   pp := GetPathsFromSvgFile(inFilename);
-  WriteLn(PathsToString(pp, 0));
+  pp := ReversePaths(pp);
+  //WriteLn(PathsToString(pp, 0));
 
   if Triangulate(pp, 0, sol, true) = trSuccess then
   begin

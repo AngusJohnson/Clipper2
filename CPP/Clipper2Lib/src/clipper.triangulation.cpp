@@ -1,10 +1,10 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  10 December 2025                                                *
+* Date      :  13 December 2025                                                *
 * Release   :  BETA RELEASE                                                    *
 * Website   :  https://www.angusj.com                                          *
 * Copyright :  Angus Johnson 2010-2025                                         *
-* Purpose   :  Delaunay Triangulation                                          *
+* Purpose   :  Constrained Delaunay Triangulation                              *
 * License   :  https://www.boost.org/LICENSE_1_0.txt                           *
 *******************************************************************************/
 
@@ -71,8 +71,9 @@ namespace Clipper2Lib
     std::stack<Edge*>         pendingDelaunayStack;
     std::stack<Edge*>         horzEdgeStack;
     std::stack<Vertex2*>      locMinStack;
-    bool                      useDelaunay;
-    Edge* firstActive = nullptr;
+    bool                      useDelaunay = true;
+    Vertex2*                  lowermostVertex = nullptr;
+    Edge*                     firstActive = nullptr;
     void AddPath(const Path64& path);
     bool AddPaths(const Paths64& paths);
     void CleanUp();
@@ -91,6 +92,7 @@ namespace Clipper2Lib
     void ForceLegal(Edge* edge);
   public:
     explicit Delaunay(bool delaunay = true) : useDelaunay(delaunay) {};
+    ~Delaunay() { CleanUp(); };
     Paths64 Execute(const Paths64& paths, TriangulateResult& triResult);
   };
 
@@ -335,7 +337,7 @@ namespace Clipper2Lib
     }
     return IntersectKind::none;
   }
-
+  
   /////////////////////////////////////////////////////////////////////////////
   // Delaunay class definitions
   /////////////////////////////////////////////////////////////////////////////
@@ -346,7 +348,12 @@ namespace Clipper2Lib
     allVertices.resize(0);
     for (auto e : allEdges) delete e;
     allEdges.resize(0);
-  }
+    for (auto t : allTriangles) delete t;
+    allTriangles.resize(0);
+
+    firstActive = nullptr;
+    lowermostVertex = nullptr;
+   }
 
   void Delaunay::ForceLegal(Edge* edge)
   {
@@ -897,6 +904,33 @@ namespace Clipper2Lib
       return Paths64(); // oops!
     }
 
+    // if necessary fix path orientation because the algorithm 
+    // expects clockwise outer paths and counter-clockwise inner paths
+    if (lowermostVertex->innerLM)
+    {
+      // the orientation of added paths must be wrong, so
+      // 1. reverse innerLM flags ...
+      Vertex2* lm;
+      while (!locMinStack.empty())
+      {
+        lm = locMinStack.top();
+        lm->innerLM = !lm->innerLM;
+        locMinStack.pop();
+      }
+      // 2. swap edge kinds
+      for (Edge* e : allEdges)
+        if (e->kind == EdgeKind::ascend)
+          e->kind = EdgeKind::descend;
+        else
+          e->kind = EdgeKind::ascend;
+    }
+    else
+    {
+      // path orientation is fine so ...
+      while (!locMinStack.empty())
+        locMinStack.pop();
+    }
+
     std::sort(allEdges.begin(), allEdges.end(), EdgeListSort);
     if (!FixupEdgeIntersects())
     { 
@@ -965,11 +999,11 @@ namespace Clipper2Lib
 
       for (int i = static_cast<int>(v->edges.size()) - 1; i >= 0; --i)
       {
-        // the following line may look superfluous, but p.edges may be
-        // altered (with additions and or deletions) during this 'for' loop.
-        // That's why this line is necessary (and why we can't use an iterator).
-        // Also, it is safe to use a descending index into the array because
-        // any additions don't need to be re-processed within this loop.
+        // the following line may look superfluous, but within this loop  
+        // v->edges may be altered with additions and or deletions. 
+        // So this line *is* necessary (and why we can't use an iterator).
+        // Also, we need to use a *descending* index which is safe because
+        // any additions will be loose edges which are ignored here.
         if (i >= static_cast<int>(v->edges.size())) continue;
 
         Edge* e = v->edges[i];
@@ -1073,7 +1107,15 @@ namespace Clipper2Lib
 
     for (;;)
     {
-      // at a locMin here
+      // vPrev is a locMin here
+      locMinStack.push(vPrev);
+      // ? update lowermostVertex ...
+      if (!lowermostVertex ||
+        vPrev->pt.y > lowermostVertex->pt.y ||
+        (vPrev->pt.y == lowermostVertex->pt.y &&
+        vPrev->pt.x < lowermostVertex->pt.x)) 
+          lowermostVertex = vPrev;
+
       iNext = Next(i, len);
       if (CrossProductSign(vPrev->pt, path[i], path[iNext]) == 0)
       {
