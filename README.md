@@ -1,16 +1,16 @@
 # Clipper2
-### A Polygon <a href="https://en.wikipedia.org/wiki/Clipping_(computer_graphics)">Clipping</a> and <a href="https://en.wikipedia.org/wiki/Parallel_curve">Offsetting</a> library (in C++, C# &amp; Delphi)<br>
+### A Polygon <a href="https://en.wikipedia.org/wiki/Clipping_(computer_graphics)">Clipping</a>, <a href="https://en.wikipedia.org/wiki/Parallel_curve">Offsetting</a> and <a href="https://en.wikipedia.org/wiki/Delaunay_triangulation">Triangulation</a> library (in C++, C# &amp; Delphi)<br>
 [![GitHub Actions C++ status](https://github.com/AngusJohnson/Clipper2/actions/workflows/actions_cpp.yml/badge.svg)](https://github.com/AngusJohnson/Clipper2/actions/workflows/actions_cpp.yml)&nbsp;[![C#](https://github.com/AngusJohnson/Clipper2/actions/workflows/actions_csharp.yml/badge.svg)](https://github.com/AngusJohnson/Clipper2/actions/workflows/actions_csharp.yml)&nbsp;[![License](https://img.shields.io/badge/License-Boost_1.0-lightblue.svg)](https://www.boost.org/LICENSE_1_0.txt)
 [![Nuget](https://img.shields.io/nuget/v/Clipper2?color=green)](https://www.nuget.org/packages/Clipper2)
 [![documentation](https://user-images.githubusercontent.com/5280692/187832279-b2a43890-da80-4888-95fe-793f092be372.svg)](https://www.angusj.com/clipper2/Docs/Overview.htm)
 
-The <b>Clipper2</b> library performs **intersection**, **union**, **difference** and **XOR** boolean operations on both simple and complex polygons. It also performs polygon offsetting. This is a major update of my original <a href="https://sourceforge.net/projects/polyclipping/"><b>Clipper</b></a> library that was written over 10 years ago. That library I'm now calling <b>Clipper1</b>, and while it still works very well, Clipper2 is [better](https://www.angusj.com/clipper2/Docs/Changes.htm) in just about every way.
+The <b>Clipper2</b> library performs **intersection**, **union**, **difference** and **XOR** boolean operations on both simple and complex polygons. It also performs polygon offsetting, and Constrained Delaunay Triangulation. This is a major update of my original <a href="https://sourceforge.net/projects/polyclipping/"><b>Clipper</b></a> library that was written over 10 years ago. That library I'm now calling <b>Clipper1</b>, and while it still works very well, Clipper2 is [better](https://www.angusj.com/clipper2/Docs/Changes.htm) in just about every way.
 
 ### Compilers
 <b>Clipper2</b> can be compiled using either C++, or C#, or Delphi Pascal. The library can also be accessed from other programming languages by dynamically linking to exported functions in the [C++ compiled Clipper2 library](https://github.com/AngusJohnson/Clipper2/tree/main/DLL). (Since the C++ compiled code is [measurably](https://www.angusj.com/clipper2/Docs/Changes.htm) faster, C# and Delphi developers may also prefer this approach in applications where the library's performance is critical.) 
 | Lang. | Requirements |
 | --- | --- |
-| [**C++:**](https://github.com/AngusJohnson/Clipper2/tree/main/CPP) | Requires C++17 (could be modified to C++11 with relatively minor changes), **or**| 
+| [**C++:**](https://github.com/AngusJohnson/Clipper2/tree/main/CPP) | Requires C++17, **or**| 
 | [**C#:**](https://github.com/AngusJohnson/Clipper2/tree/main/CSharp) | The library uses Standard Library 2.0 but the sample code uses .NET6, **or**| 
 | [**Delphi:**](https://github.com/AngusJohnson/Clipper2/tree/main/Delphi) | Compiles with any version of Delphi from version 7 to current.| 
 
@@ -21,6 +21,7 @@ The <b>Clipper2</b> library performs **intersection**, **union**, **difference**
 
 ### Examples
 
+**Clipping**
 <pre>
       //C++
       Paths64 subject, clip, solution;
@@ -44,6 +45,30 @@ The <b>Clipper2</b> library performs **intersection**, **union**, **difference**
         solution := Intersect( subject, clip, frNonZero);</pre>
 ![clipperB](https://user-images.githubusercontent.com/5280692/178123810-1719a1f5-25c3-4a9e-b419-e575ff056272.svg)
 
+**Constrained Delaunay Triangulation**
+<pre> //C++
+      Paths64 subject, solution;
+      subject = GetPathsFromSvgFile("coral3.svg");
+      Triangulate(subject, 0, solution, doDelaunay);
+      DisplaySvg("coral3t.svg", solution, useMulticolor);</pre>
+
+<pre> //C#
+      string TestFile = "coral3.svg";
+      srcFile = svgFolder + TestFile;
+      subject = GetPathsFromSvgFile(srcFile);
+      if (Clipper.Triangulate(subject, 0, out solution) == TriangulateResult.success) 
+        Display(solution, tmpFolder + TestFile);</pre>
+
+<pre> //Delphi
+      svgFilename := testSvgFolder + 'coral3.svg';
+      pp := GetPathsFromSvgFile(svgFilename);
+      Triangulate(pp, 0, sol, true);
+      SavePathsAsSvg('.\coral3t.svg', sol);
+      ShellExecute(0, nil, '.\coral3t.svg', nil, nil, 0);</pre>
+            
+![coral3](https://github.com/user-attachments/assets/78e88382-f772-442b-a09c-c14d8906fb21)
+![coral3t](https://github.com/user-attachments/assets/c329ef2a-4833-4092-8415-145400fba8b0)
+      
 <hr>
 
 ### Ports to other languages
