@@ -1,7 +1,3 @@
-//#define _CRTDBG_MAP_ALLOC
-//#include <stdlib.h>
-//#include <crtdbg.h>
-
 #include <cstdlib>
 #include <string>
 #include <chrono> 
@@ -269,11 +265,7 @@ int main()
 
   //#ifdef _DEBUG
   PathD* p = new PathD();
-  if (_CrtDumpMemoryLeaks())
-    std::cout << "Memory leak detected!" << std::endl;
-
   std::cout << "Press Enter to continue" << std::endl;
-
   std::string s;
   std::getline(std::cin, s);
   //#endif
