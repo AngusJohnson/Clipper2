@@ -45,26 +45,16 @@ The <b>Clipper2</b> library performs **intersection**, **union**, **difference**
         solution := Intersect( subject, clip, frNonZero);</pre>
 ![clipperB](https://user-images.githubusercontent.com/5280692/178123810-1719a1f5-25c3-4a9e-b419-e575ff056272.svg)
 
-**Constrained Delaunay Triangulation**
-<pre> //C++
-      Paths64 subject, solution;
-      subject = GetPathsFromSvgFile("coral3.svg");
-      Triangulate(subject, 0, solution, doDelaunay);
-      DisplaySvg("coral3t.svg", solution, useMulticolor);</pre>
+**Constrained Delaunay Triangulation**<br>
 
-<pre> //C#
-      string TestFile = "coral3.svg";
-      srcFile = svgFolder + TestFile;
-      subject = GetPathsFromSvgFile(srcFile);
-      if (Clipper.Triangulate(subject, 0, out solution) == TriangulateResult.success) 
-        Display(solution, tmpFolder + TestFile);</pre>
+**C++**
+https://github.com/AngusJohnson/Clipper2/blob/01bacc053aa335478b713ad988e7acbb5ac6a0c4/CPP/Examples/Triangulation/Triangulation.cpp#L247-L249
 
-<pre> //Delphi
-      svgFilename := testSvgFolder + 'coral3.svg';
-      pp := GetPathsFromSvgFile(svgFilename);
-      Triangulate(pp, 0, sol, true);
-      SavePathsAsSvg('.\coral3t.svg', sol);
-      ShellExecute(0, nil, '.\coral3t.svg', nil, nil, 0);</pre>
+**C#**
+https://github.com/AngusJohnson/Clipper2/blob/01bacc053aa335478b713ad988e7acbb5ac6a0c4/CSharp/Clipper2Lib.Examples/Triangulation/Main.cs#L257-L261
+
+**Delphi**
+https://github.com/AngusJohnson/Clipper2/blob/01bacc053aa335478b713ad988e7acbb5ac6a0c4/Delphi/Examples/Triangulation/ClipperTri.dpr#L219-L227
             
 ![coral3](https://github.com/user-attachments/assets/78e88382-f772-442b-a09c-c14d8906fb21)
 ![coral3t](https://github.com/user-attachments/assets/c329ef2a-4833-4092-8415-145400fba8b0)
