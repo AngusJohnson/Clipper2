@@ -10,6 +10,7 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
+using System.Threading.Tasks;
 
 #if USINGZ
 namespace Clipper2ZLib
@@ -161,7 +162,7 @@ namespace Clipper2Lib
         brushColor, penColor, penWidth, showCoords, false));
     }
 
-    public void AddOpenPath(Path64 path,  uint penColor, 
+    public void AddOpenPath(Path64 path, uint penColor,
       double penWidth, bool showCoords = false)
     {
       Paths64 tmp = new Paths64();
@@ -169,7 +170,7 @@ namespace Clipper2Lib
       AddOpenPaths(tmp, penColor, penWidth, showCoords);
     }
 
-    public void AddOpenPath(PathD path, uint penColor, 
+    public void AddOpenPath(PathD path, uint penColor,
       double penWidth, bool showCoords = false)
     {
       PathsD tmp = new PathsD();
@@ -185,7 +186,7 @@ namespace Clipper2Lib
         0x0, penColor, penWidth, showCoords, true));
     }
 
-    public void AddOpenPaths(PathsD paths, uint penColor, 
+    public void AddOpenPaths(PathsD paths, uint penColor,
       double penWidth, bool showCoords = false)
     {
       if (paths.Count == 0) return;
@@ -224,11 +225,26 @@ namespace Clipper2Lib
       return ((float) (clr >> 24) / 255);
     }
 
-    public bool SaveToFile(string filename, int maxWidth = 0, int maxHeight = 0, int margin = -1)
+    /// <summary>
+    /// Save SVG to file.
+    /// </summary>
+    /// <param name="filename">The path of file.</param>
+    /// <param name="maxWidth">MaxWidth.</param>
+    /// <param name="maxHeight">MaxHeight.</param>
+    /// <param name="margin">Margin.</param>
+    /// <exception cref="ArgumentNullException"></exception>
+    /// <exception cref="Exception"></exception>
+    public void SaveToFile(
+      string filename,
+      int maxWidth = 0,
+      int maxHeight = 0,
+      int margin = 20)
     {
-      if (margin < 0) margin = 20;
+      if (string.IsNullOrEmpty(filename))
+        throw new ArgumentNullException(nameof(filename), "Filename can't be null or empty");
+      if (margin < 0) throw new ArgumentOutOfRangeException(nameof(margin), "Margin should larger than zero");
       RectD bounds = GetBounds();
-      if (bounds.IsEmpty()) return false;
+      if (bounds.IsEmpty()) throw new Exception("UnBound");
 
       double scale = 1.0;
       if (maxWidth > 0 && maxHeight > 0)
@@ -239,15 +255,7 @@ namespace Clipper2Lib
       long offsetX = margin - (long) (bounds.left * scale);
       long offsetY = margin - (long) (bounds.top * scale);
 
-      StreamWriter writer;
-      try
-      {
-        writer = new StreamWriter(filename);
-      }
-      catch
-      {
-        return false;
-      }
+      using StreamWriter writer = new StreamWriter(filename);
 
       if (maxWidth <= 0 || maxHeight <= 0)
         writer.Write(svg_header, (bounds.right - bounds.left) + margin * 2,
@@ -285,7 +293,7 @@ namespace Clipper2Lib
 
         if (!pi.ShowCoords) continue;
         {
-          writer.Write("<g font-family=\"{0}\" font-size=\"{1}\" fill=\"{2}\">\n", 
+          writer.Write("<g font-family=\"{0}\" font-size=\"{1}\" fill=\"{2}\">\n",
             coordStyle.FontName, coordStyle.FontSize, ColorToHtml(coordStyle.FontColor));
           foreach (PathD path in pi.paths)
           {
@@ -295,7 +303,7 @@ namespace Clipper2Lib
               writer.Write("<text x=\"{0:f2}\" y=\"{1:f2}\">{2:f2},{3:f2},{4}</text>\n", 
                 (pt.x * scale + offsetX), (pt.y * scale + offsetY), pt.x, pt.y, pt.z);
 #else
-              writer.Write("<text x=\"{0:f2}\" y=\"{1:f2}\">{2:f2},{3:f2}</text>\n", 
+              writer.Write("<text x=\"{0:f2}\" y=\"{1:f2}\">{2:f2},{3:f2}</text>\n",
                 (pt.x * scale + offsetX), (pt.y * scale + offsetY), pt.x, pt.y);
 #endif
             }
@@ -307,15 +315,136 @@ namespace Clipper2Lib
       foreach (TextInfo captionInfo in textInfos)
       {
         writer.Write("<g font-family=\"Verdana\" font-style=\"normal\" " +
-                     "font-weight=\"normal\" font-size=\"{0}\" fill=\"{1}\">\n", 
+                     "font-weight=\"normal\" font-size=\"{0}\" fill=\"{1}\">\n",
                      captionInfo.fontSize, ColorToHtml(captionInfo.fontColor));
-        writer.Write("<text x=\"{0:f2}\" y=\"{1:f2}\">{2}</text>\n</g>\n", 
+        writer.Write("<text x=\"{0:f2}\" y=\"{1:f2}\">{2}</text>\n</g>\n",
           captionInfo.posX * scale + offsetX, captionInfo.posY * scale + offsetY, captionInfo.text);
       }
 
       writer.Write("</svg>\n");
-      writer.Close();
-      return true;
+    }
+
+    /// <summary>
+    /// Save SVG to file asynchronously.
+    /// </summary>
+    /// <param name="filename">The path of file.</param>
+    /// <param name="maxWidth">MaxWidth.</param>
+    /// <param name="maxHeight">MaxHeight.</param>
+    /// <param name="margin">Margin.</param>
+    /// <exception cref="ArgumentNullException"></exception>
+    /// <exception cref="Exception"></exception>
+    public async Task SaveToFileAsync(
+      string filename,
+      int maxWidth = 0,
+      int maxHeight = 0,
+      int margin = 20)
+    {
+      if (string.IsNullOrEmpty(filename))
+        throw new ArgumentNullException(nameof(filename), "Filename can't be null or empty");
+      if (margin < 0) throw new ArgumentOutOfRangeException(nameof(margin), "Margin should larger than zero");
+      RectD bounds = GetBounds();
+      if (bounds.IsEmpty()) throw new Exception("UnBound");
+
+      double scale = 1.0;
+      if (maxWidth > 0 && maxHeight > 0)
+        scale = Math.Min(
+           (maxWidth - margin * 2) / bounds.Width,
+            (maxHeight - margin * 2) / bounds.Height);
+
+      long offsetX = margin - (long) (bounds.left * scale);
+      long offsetY = margin - (long) (bounds.top * scale);
+
+      using StreamWriter writer = new StreamWriter(filename);
+
+      if (maxWidth <= 0 || maxHeight <= 0)
+        await writer.WriteAsync(string.Format(
+          NumberFormatInfo.InvariantInfo,
+          svg_header,
+          (bounds.right - bounds.left) + margin * 2,
+          (bounds.bottom - bounds.top) + margin * 2));
+      else
+        await writer.WriteAsync(string.Format(svg_header, maxWidth, maxHeight));
+
+      foreach (PolyInfo pi in PolyInfoList)
+      {
+        await writer.WriteAsync(" <path d=\"");
+        foreach (PathD path in pi.paths)
+        {
+          if (path.Count < 2) continue;
+          if (!pi.IsOpen && path.Count < 3) continue;
+          await writer.WriteAsync(string.Format(NumberFormatInfo.InvariantInfo, " M {0:f2} {1:f2}",
+              (path[0].x * scale + offsetX),
+              (path[0].y * scale + offsetY)));
+          for (int j = 1; j < path.Count; j++)
+          {
+            await writer.WriteAsync(string.Format(NumberFormatInfo.InvariantInfo, " L {0:f2} {1:f2}",
+            (path[j].x * scale + offsetX),
+            (path[j].y * scale + offsetY)));
+          }
+          if (!pi.IsOpen) await writer.WriteAsync(" z");
+        }
+
+        if (!pi.IsOpen)
+          await writer.WriteAsync(string.Format(NumberFormatInfo.InvariantInfo, svg_path_format,
+              ColorToHtml(pi.BrushClr), GetAlpha(pi.BrushClr),
+              (FillRule == FillRule.EvenOdd ? "evenodd" : "nonzero"),
+              ColorToHtml(pi.PenClr), GetAlpha(pi.PenClr), pi.PenWidth));
+        else
+          await writer.WriteAsync(string.Format(NumberFormatInfo.InvariantInfo, svg_path_format2,
+              ColorToHtml(pi.PenClr), GetAlpha(pi.PenClr), pi.PenWidth));
+
+        if (!pi.ShowCoords) continue;
+        {
+          await writer.WriteAsync(string.Format(
+            NumberFormatInfo.InvariantInfo,
+            "<g font-family=\"{0}\" font-size=\"{1}\" fill=\"{2}\">\n",
+            coordStyle.FontName,
+            coordStyle.FontSize,
+            ColorToHtml(coordStyle.FontColor)));
+          foreach (PathD path in pi.paths)
+          {
+            foreach (PointD pt in path)
+            {
+#if USINGZ
+              await writer.WriteAsync(string.Format(
+                "<text x=\"{0:f2}\" y=\"{1:f2}\">{2:f2},{3:f2},{4}</text>\n",
+                (pt.x * scale + offsetX), 
+                (pt.y * scale + offsetY), 
+                pt.x, 
+                pt.y, 
+                pt.z));
+#else
+              await writer.WriteAsync(string.Format(
+                NumberFormatInfo.InvariantInfo,
+                "<text x=\"{0:f2}\" y=\"{1:f2}\">{2:f2},{3:f2}</text>\n",
+                (pt.x * scale + offsetX), 
+                (pt.y * scale + offsetY), 
+                pt.x, 
+                pt.y));
+#endif
+            }
+          }
+          await writer.WriteAsync("</g>\n\n");
+        }
+      }
+
+      foreach (TextInfo captionInfo in textInfos)
+      {
+        await writer.WriteAsync(string.Format(
+          NumberFormatInfo.InvariantInfo, 
+          "<g font-family=\"Verdana\" font-style=\"normal\" " +
+          "font-weight=\"normal\" font-size=\"{0}\" fill=\"{1}\">\n",
+          captionInfo.fontSize, 
+          ColorToHtml(captionInfo.fontColor)));
+        await writer.WriteAsync(string.Format(
+          NumberFormatInfo.InvariantInfo,
+          "<text x=\"{0:f2}\" y=\"{1:f2}\">{2}</text>\n</g>\n",
+          captionInfo.posX * scale + offsetX, 
+          captionInfo.posY * scale + offsetY, 
+          captionInfo.text));
+      }
+
+      await writer.WriteAsync("</svg>\n");
     }
   }
 
