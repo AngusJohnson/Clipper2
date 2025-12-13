@@ -17,10 +17,9 @@ namespace Clipper2Lib
 {
   public static class SvgUtils
   {
-    static Random rc = new Random();
-
     public static uint RandomColor()
     {
+      Random rc = new Random();
       return (uint) (rc.Next() | 0xBF000000);
     }
 
