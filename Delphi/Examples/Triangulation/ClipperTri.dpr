@@ -217,9 +217,6 @@ begin
   if not FileExists(inFilename) then Exit;
   outFilename := 'coral3t.svg';
   pp := GetPathsFromSvgFile(inFilename);
-  pp := ReversePaths(pp);
-  //WriteLn(PathsToString(pp, 0));
-
   if Triangulate(pp, 0, sol, true) = trSuccess then
   begin
     SavePathsAsSvg(outFilename, pp, sol, rfOverwrite, false);
