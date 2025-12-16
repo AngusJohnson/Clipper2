@@ -22,40 +22,60 @@ The <b>Clipper2</b> library performs **intersection**, **union**, **difference**
 ### Examples
 
 **Clipping**
-<pre>
-      //C++
-      Paths64 subject, clip, solution;
-      subject.push_back(MakePath({100, 50, 10, 79, 65, 2, 65, 98, 10, 21}));
-      clip.push_back(MakePath({98, 63, 4, 68, 77, 8, 52, 100, 19, 12}));
-      solution = Intersect(subject, clip, FillRule::NonZero);</pre>
-<pre>      //C#
-      Paths64 subj = new Paths64();
-      Paths64 clip = new Paths64();
-      subj.Add(Clipper.MakePath(new int[] { 100, 50, 10, 79, 65, 2, 65, 98, 10, 21 }));
-      clip.Add(Clipper.MakePath(new int[] { 98, 63, 4, 68, 77, 8, 52, 100, 19, 12 }));
-      Paths64 solution = Clipper.Intersect(subj, clip, FillRule.NonZero);</pre>
-<pre>      //Delphi
-      var 
-        subject, clip, solution: TPaths64;
-      begin
-        SetLength(subject, 1);
-        subject[0] := MakePath([100, 50, 10, 79, 65, 2, 65, 98, 10, 21]);
-        SetLength(clip, 1);
-        clip[0] := MakePath([98, 63, 4, 68, 77, 8, 52, 100, 19, 12]);
-        solution := Intersect( subject, clip, frNonZero);</pre>
+
+<details open>
+  <summary><b>C++</b></summary>
+https://github.com/AngusJohnson/Clipper2/blob/fa7add77364eb3877dd1b8caf9b3cbd5486347f6/CPP/Examples/SimpleClipping/SimpleClipping.cpp#L29-L34
+</details>
+
+<details>
+  <summary><b>C#</b></summary>
+https://github.com/AngusJohnson/Clipper2/blob/fa7add77364eb3877dd1b8caf9b3cbd5486347f6/CSharp/Clipper2Lib.Examples/ConsoleDemo/Main.cs#L112-L116
+</details>
+ 
+<details>
+  <summary><b>Delphi</b></summary>
+https://github.com/AngusJohnson/Clipper2/blob/fa7add77364eb3877dd1b8caf9b3cbd5486347f6/Delphi/Examples/Example1/Example1.dpr#L21-L26
+</details>
+
 ![clipperB](https://user-images.githubusercontent.com/5280692/178123810-1719a1f5-25c3-4a9e-b419-e575ff056272.svg)
+
+**Inflating (aka Offsetting)**
+
+<details open>
+  <summary><b>C++</b></summary>
+https://github.com/AngusJohnson/Clipper2/blob/fa7add77364eb3877dd1b8caf9b3cbd5486347f6/CPP/Examples/Inflate/Inflate.cpp#L36-L47
+</details>
+
+<details>
+  <summary><b>C#</b></summary>
+https://github.com/AngusJohnson/Clipper2/blob/fa7add77364eb3877dd1b8caf9b3cbd5486347f6/CSharp/Clipper2Lib.Examples/InflateDemo/Main.cs#L89-L100
+</details>
+ 
+<details>
+  <summary><b>Delphi</b></summary>
+https://github.com/AngusJohnson/Clipper2/blob/fa7add77364eb3877dd1b8caf9b3cbd5486347f6/Delphi/Examples/Example2/Example2.dpr#L20-L31
+</details>
+
+![rabbit_offset](https://github.com/user-attachments/assets/ca05688e-293f-4596-86ab-df529694e778)
 
 **Constrained Delaunay Triangulation**<br>
 
-**C++**
-https://github.com/AngusJohnson/Clipper2/blob/01bacc053aa335478b713ad988e7acbb5ac6a0c4/CPP/Examples/Triangulation/Triangulation.cpp#L247-L249
+<details open>
+  <summary><b>C++</b></summary>
+https://github.com/AngusJohnson/Clipper2/blob/fa7add77364eb3877dd1b8caf9b3cbd5486347f6/CPP/Examples/Triangulation/Triangulation.cpp#L135-L138
+</details>
 
-**C#**
-https://github.com/AngusJohnson/Clipper2/blob/01bacc053aa335478b713ad988e7acbb5ac6a0c4/CSharp/Clipper2Lib.Examples/Triangulation/Main.cs#L257-L261
+<details>
+  <summary><b>C#</b></summary>
+https://github.com/AngusJohnson/Clipper2/blob/fa7add77364eb3877dd1b8caf9b3cbd5486347f6/CSharp/Clipper2Lib.Examples/Triangulation/Main.cs#L110-L115
+</details>
+ 
+<details>
+  <summary><b>Delphi</b></summary>
+https://github.com/AngusJohnson/Clipper2/blob/fa7add77364eb3877dd1b8caf9b3cbd5486347f6/Delphi/Examples/Triangulation/ClipperTri.dpr#L28-L33
+</details>
 
-**Delphi**
-https://github.com/AngusJohnson/Clipper2/blob/0a9f445f0562695f516cd6efd1567d824b25c93d/Delphi/Examples/Triangulation/ClipperTri.dpr#L216-L224
-            
 ![coral3](https://github.com/user-attachments/assets/78e88382-f772-442b-a09c-c14d8906fb21)
 ![coral3t](https://github.com/user-attachments/assets/c329ef2a-4833-4092-8415-145400fba8b0)
       
