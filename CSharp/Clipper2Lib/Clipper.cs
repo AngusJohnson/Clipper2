@@ -1,6 +1,6 @@
 ﻿/*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  5 March 2025                                                    *
+* Date      :  14 December 2025                                                *
 * Website   :  https://www.angusj.com                                          *
 * Copyright :  Angus Johnson 2010-2025                                         *
 * Purpose   :  This module contains simple functions that will likely cover    *
@@ -1256,9 +1256,11 @@ namespace Clipper2Lib
 
       Delaunay d = new Delaunay(useDelaunay);
       TriangulateResult result = d.Execute(pp64, out Paths64 sol64);
-
-      solution = Clipper.ScalePathsD(sol64, 1.0 / scale);
-      return TriangulateResult.success;
+      if (result == TriangulateResult.success)
+        solution = Clipper.ScalePathsD(sol64, 1.0 / scale);
+      else
+        solution = new PathsD();
+      return result;
     }
 
   } // Clipper

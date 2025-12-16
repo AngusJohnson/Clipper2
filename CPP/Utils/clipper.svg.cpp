@@ -16,6 +16,10 @@
 
 namespace Clipper2Lib {
 
+  //------------------------------------------------------------------------------
+  // SvgWriter
+  //------------------------------------------------------------------------------
+
   const char svg_xml_header_0[] =
 		  "<?xml version=\"1.0\" standalone=\"no\"?>\n<svg width=\"";
   const char svg_xml_header_1[] = "\" height=\"";
@@ -279,6 +283,7 @@ namespace Clipper2Lib {
   }
 
   //------------------------------------------------------------------------------
+  // SvgReader
   //------------------------------------------------------------------------------
 
   bool SkipBlanks(std::string::const_iterator& si,
@@ -288,6 +293,16 @@ namespace Clipper2Lib {
     return si != se;
   }
   //------------------------------------------------------------------------------
+
+    bool SkipOptionalComma(std::string::const_iterator& si,
+      const std::string::const_iterator se)
+  {
+    while (si != se && *si <= ' ') ++si;
+    if (si != se && *si == ',') ++si;
+    return si != se;
+  }
+  //------------------------------------------------------------------------------
+
 
   bool GetNum(std::string::const_iterator& si,
     const std::string::const_iterator se, double& value)
@@ -323,129 +338,56 @@ namespace Clipper2Lib {
   }
   //------------------------------------------------------------------------------
 
-  bool GetCommand(std::string::const_iterator& si,
-    char& command, bool& is_relative)
+
+  SvgReader::SvgReader(const std::string& filename)
   {
-    if (*si >= 'a' && *si <= 'z')
+    if (!std::filesystem::exists(filename)) return;
+    std::ifstream file(filename);
+    if (!file.good()) return;
+    std::stringstream xml_buff;
+    xml_buff << file.rdbuf();
+    file.close();
+
+    const std::string xml = xml_buff.str();
+    size_t i = xml.find("d=\"M");
+    if (i == std::string::npos) return;
+    std::string::const_iterator it = xml.cbegin() + (i + 4), itEnd = xml.cend();
+    if (!SkipBlanks(it, itEnd)) return;
+    PathD p;
+    PointD m, pt;
+    GetNum(it, itEnd, m.x);
+    SkipOptionalComma(it, itEnd);
+    if (!GetNum(it, itEnd, m.y)) return;
+    p.push_back(m);
+    while (SkipBlanks(it, itEnd))
     {
-      is_relative = true;
-      command = toupper(*si);
-    }
-    else if (*si >= 'A' && *si <= 'Z')
-    {
-      command = *si;
-      is_relative = false;
-    }
-    else return false; //ie leave command and is_relative unchanged!
-    ++si; //only increment the offset with a valid command
-    return true;
-  }
-  //------------------------------------------------------------------------------
-
-  inline bool Find(const std::string& text,
-    std::string::const_iterator& start, const std::string::const_iterator& end)
-  {
-    start = std::search(start, end, text.cbegin(), text.cend());
-    return start != end;
-  }
-  //------------------------------------------------------------------------------
-
-  bool SvgReader::LoadPath(std::string::const_iterator& p,
-    const std::string::const_iterator& pe)
-  {
-    if (!Find("d=\"", p, pe)) return false;
-    p += 3;
-    if (!SkipBlanks(p, pe)) return false;
-    char command;
-    bool is_relative;
-    int vals_needed = 2;
-    //nb: M == absolute move, m == relative move
-    if (!GetCommand(p, command, is_relative) || command != 'M') return false;
-    double vals[2] { 0, 0 };
-    double x = 0, y = 0;
-    ++p;
-    if (!GetNum(p, pe, x) || !GetNum(p, pe, y)) return false;
-    PathsD ppp;
-    PathD pp;
-    pp.push_back(PointD(x, y));
-    while (SkipBlanks(p, pe))
-    {
-      if (GetCommand(p, command, is_relative))
+      if (*it == 'L') ++it;
+      if (*it == 'M' || *it == 'Z')
       {
-        switch (command) {
-        case 'L':
-        case 'M': {vals_needed = 2;  break; }
-        case 'H':
-        case 'V': {vals_needed = 1;  break; }
-        case 'Z': {
-            if (pp.size() > 2) ppp.push_back(pp);
-            pp.clear();
-            vals_needed = 0;
-            break;
+        if (p.size() > 2) paths.push_back(p);
+        p.resize(0);
+        if (*it == 'Z')
+        {
+          ++it;
+          if (!SkipBlanks(it, itEnd)) break;
         }
-        default: vals_needed = -1;
+        if (*it == 'M')
+        {
+          ++it;
+          if (!GetNum(it, itEnd, pt.x)) break;
+          SkipOptionalComma(it, itEnd);
+          if (!GetNum(it, itEnd, pt.y)) break;
         }
-        if (vals_needed < 0) break; //oops!
+        p.push_back(pt);
+        continue;
       }
-      else
-      {
-        for (int i = 0; i < vals_needed; ++i)
-            if (!GetNum(p, pe, vals[i])) vals_needed = -1;
-        if (vals_needed <= 0) break; //oops!
-        switch (vals_needed) {
-          case 1:
-          {
-              if (command == 'V') y = (is_relative ? y + vals[0] : vals[0]);
-              else x = (is_relative ? x + vals[0] : vals[0]);
-              break;
-          }
-          case 2:
-          {
-              x = (is_relative ? x + vals[0] : vals[0]);
-              y = (is_relative ? y + vals[1] : vals[1]);
-              break;
-          }
-          default: break;
-        }
-        pp.push_back(PointD(x, y));
-      }
+      GetNum(it, itEnd, pt.x);
+      SkipOptionalComma(it, itEnd);
+      if (!GetNum(it, itEnd, pt.y)) break;
+      p.push_back(pt);
+      SkipOptionalComma(it, itEnd);
     }
-    if (pp.size() > 3) ppp.push_back(pp);
-    //todo - fix fillrule
-    path_infos.push_back(new PathInfo(ppp, false, FillRule::EvenOdd, 0, 0xFF000000, 1, false));
-    return  (ppp.size() > 0);
-  }
-
-  bool SvgReader::LoadFromFile(const std::string &filename)
-  {
-      Clear();
-      std::ifstream file(filename);
-      if (!file.good()) return false;
-
-      std::stringstream xml_buff;
-      xml_buff << file.rdbuf();
-      file.close();
-      xml = xml_buff.str();
-      std::string::const_iterator p = xml.cbegin(), q, xml_end = xml.cend();
-
-      while (Find("<path", p, xml_end))
-      {
-        p += 6;
-        q = p;
-        if (!Find("/>", p, xml_end)) break;
-        LoadPath(q, p);
-        p += 2;
-      }
-      return path_infos.size() > 0;
-  }
-
-  PathsD SvgReader::GetPaths()
-  {
-    PathsD result;
-      for (size_t i = 0; i < path_infos.size(); ++i)
-          for (size_t j = 0; j < path_infos[i]->paths_.size(); ++j)
-              result.push_back(path_infos[i]->paths_[j]);
-      return result;
+    if (p.size() > 2) paths.push_back(p);
   }
 
 } //namespace

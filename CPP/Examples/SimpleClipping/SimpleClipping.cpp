@@ -2,62 +2,35 @@
 #include <string>
 
 #include "clipper2/clipper.h"
+#include "clipper2/clipper.core.h"
+#include "../../Utils/clipper.svg.h"
 #include "../../Utils/clipper.svg.utils.h"
 
 using namespace Clipper2Lib;
 
-void DoSimpleTest(bool show_solution_coords = false);
-Path64 MakeRandomPoly(int width, int height, unsigned vertCnt);
-void System(const std::string &filename);
-
-int main()
-{  
-  DoSimpleTest();    
-}
-
-inline Path64 MakeStar(const Point64& center, int radius, int points)
+static void DisplayAsSvgImage(const std::string& caption, FillRule fillrule,
+  const Paths64& subject, const Paths64& clip, const Paths64& solution)
 {
-  if (!(points % 2)) --points;
-  if (points < 5) points = 5;
-  Path64 tmp = Ellipse<int64_t>(center, radius, radius, points);
-  Path64 result;
-  result.reserve(points);
-  result.push_back(tmp[0]);
-  for (int i = points - 1, j = i / 2; j;)
-  {
-    result.push_back(tmp[j--]);
-    result.push_back(tmp[i--]);
-  }
-  return result;
-}
-
-
-void DoSimpleTest(bool show_solution_coords)
-{
-  Paths64 tmp, solution;
-  FillRule fr = FillRule::NonZero;
-
-  Paths64 subject, clip;
-  subject.push_back(MakeStar(Point64(225, 225), 220, 9));
-  clip.push_back(Ellipse<int64_t>(Point64(225,225), 150, 150));  
-  
-  //Intersect both shapes and then 'inflate' result -10 (ie deflate)
-  solution = Intersect(subject, clip, fr);
-  solution = InflatePaths(solution, -10, JoinType::Round, EndType::Polygon);
-
+  const std::string filename = caption + ".SVG";
   SvgWriter svg;
-  SvgAddSubject(svg, subject, fr);
-  SvgAddClip(svg, clip, fr);
-  SvgAddSolution(svg, solution, fr, false);
-  SvgSaveToFile(svg, "solution.svg", 450, 450, 10);
-  System("solution.svg");
-}
-
-void System(const std::string &filename)
-{
+  SvgAddSubject(svg, subject, fillrule);
+  SvgAddClip(svg, clip, fillrule);
+  SvgAddSolution(svg, solution, fillrule, false);
+  SvgSaveToFile(svg, filename, 400, 400, 10);
 #ifdef _WIN32
   system(filename.c_str());
 #else
   system(("firefox " + filename).c_str());
 #endif
 }
+
+int main()
+{  
+  // intersect a star and another modestly rotated star
+  Paths64 subject, clip, solution;
+  subject.push_back({ MakePath({200,100, 20,158, 130,4, 130,196, 20,42}) });
+  clip.push_back({ MakePath({196,126, 8,136, 154,16, 104,200, 38,24}) });
+  solution = Intersect(subject, clip, FillRule::NonZero);
+  DisplayAsSvgImage("Intersect Paths", FillRule::NonZero, subject, clip, solution);
+}
+

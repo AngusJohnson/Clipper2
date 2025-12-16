@@ -1,8 +1,8 @@
 ﻿/*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  16 September 2022                                               *
+* Date      :  16 December 2025                                                *
 * Website   :  https://www.angusj.com                                          *
-* Copyright :  Angus Johnson 2010-2022                                         *
+* Copyright :  Angus Johnson 2010-2025                                         *
 * License   :  https://www.boost.org/LICENSE_1_0.txt                           *
 *******************************************************************************/
 
@@ -17,7 +17,7 @@ namespace Clipper2Lib
 {
   public static class SvgUtils
   {
-    static Random rc = new Random();
+    private static readonly Random rc = new Random();
 
     public static uint RandomColor()
     {
@@ -31,14 +31,12 @@ namespace Clipper2Lib
 
     public static void AddSubject(SvgWriter svg, Path64 path)
     {
-      Paths64 paths = new Paths64();
-      paths.Add(path);
+      Paths64 paths = new Paths64 { path };
       svg.AddClosedPaths(paths, 0x1800009C, 0xAAB3B3DA, 0.8);
     }
     public static void AddSubject(SvgWriter svg, PathD path)
     {
-      PathsD paths = new PathsD();
-      paths.Add(path);
+      PathsD paths = new PathsD { path };
       svg.AddClosedPaths(paths, 0x1800009C, 0xAAB3B3DA, 0.8);
     }
 
@@ -48,7 +46,7 @@ namespace Clipper2Lib
     }
     public static void AddOpenSubject(SvgWriter svg, Paths64 paths)
     {
-        svg.AddOpenPaths(paths, 0xAAB3B3DA, 0.8);
+        svg.AddOpenPaths(paths, 0xAAB3B3DA, 1.0);
     }
 
     public static void AddSubject(SvgWriter svg, PathsD paths)
@@ -63,15 +61,13 @@ namespace Clipper2Lib
 
     public static void AddClip(SvgWriter svg, Path64 path)
     {
-      Paths64 paths = new Paths64();
-      paths.Add(path);
+      Paths64 paths = new Paths64 { path };
       svg.AddClosedPaths(paths, 0x129C0000, 0xCCFFA07A, 0.8);
     }
 
     public static void AddClip(SvgWriter svg, PathD path)
     {
-      PathsD paths = new PathsD();
-      paths.Add(path);
+      PathsD paths = new PathsD { path };
       svg.AddClosedPaths(paths, 0x129C0000, 0xCCFFA07A, 0.8);
     }
 
@@ -85,14 +81,12 @@ namespace Clipper2Lib
       svg.AddClosedPaths(paths, 0x129C0000, 0xCCFFA07A, 0.8);
     }
 
-    public static void AddSolution(SvgWriter svg, Paths64 paths,
-      bool show_coords, bool is_closed = true, bool is_joined = true)
+    public static void AddSolution(SvgWriter svg, Paths64 paths, bool show_coords)
     {
       svg.AddClosedPaths(paths, 0x4080ff9C, 0x80999999, 1.5, show_coords);
     }
 
-    public static void AddRCSolution(SvgWriter svg, Paths64 paths,
-      bool show_coords, bool is_closed = true, bool is_joined = true)
+    public static void AddRCSolution(SvgWriter svg, Paths64 paths, bool show_coords)
     {
       foreach (Path64 path in paths)
         svg.AddClosedPath(path, RandomColor(), 0x80999999, 1.0, show_coords);

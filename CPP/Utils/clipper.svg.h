@@ -9,32 +9,34 @@
 #ifndef svglib_h
 #define svglib_h
 
-#include <cstdlib>
+#include <cmath>
+#include <filesystem>
 #include <string>
 #include "clipper2/clipper.h"
 
 namespace Clipper2Lib {
 
-    class PathInfo {
-    private:
-        PathsD paths_;
-        bool is_open_path;
-        FillRule fillrule_;
-        unsigned brush_color_;
-        unsigned pen_color_;
-        double pen_width_;
-        bool show_coords_;
+  class PathInfo {
+  private:
+    PathsD paths_;
+    bool is_open_path;
+    FillRule fillrule_;
+    unsigned brush_color_;
+    unsigned pen_color_;
+    double pen_width_;
+    bool show_coords_;
 
-    public:
-        PathInfo(const PathsD& paths, bool is_open, FillRule fillrule,
-            unsigned brush_clr, unsigned pen_clr, double pen_width, bool show_coords) :
-            paths_(paths), is_open_path(is_open), fillrule_(fillrule),
-            brush_color_(brush_clr), pen_color_(pen_clr),
-            pen_width_(pen_width), show_coords_(show_coords) {};
-        friend class SvgWriter;
-        friend class SvgReader;
+  public:
+    PathInfo(const PathsD& paths, bool is_open, FillRule fillrule,
+      unsigned brush_clr, unsigned pen_clr, double pen_width, bool show_coords) :
+      paths_(paths), is_open_path(is_open), fillrule_(fillrule),
+      brush_color_(brush_clr), pen_color_(pen_clr),
+      pen_width_(pen_width), show_coords_(show_coords) {
     };
-    typedef std::vector< PathInfo* > PathInfoList;
+    friend class SvgWriter;
+    friend class SvgReader;
+  };
+  typedef std::vector< PathInfo* > PathInfoList;
 
   //---------------------------------------------------------------------------
   // SvgWriter
@@ -51,30 +53,31 @@ namespace Clipper2Lib {
 
     class TextInfo {
     public:
-        std::string text;
-        std::string font_name;
-        unsigned font_color = 0xFF000000;
-        unsigned font_weight = 600;
-        unsigned font_size = 11;
-        double x = 0;
-        double y = 0;
+      std::string text;
+      std::string font_name;
+      unsigned font_color = 0xFF000000;
+      unsigned font_weight = 600;
+      unsigned font_size = 11;
+      double x = 0;
+      double y = 0;
 
-        TextInfo(const std::string &txt, const std::string &fnt_name, unsigned color,
-            unsigned weight, unsigned size, double coord_x, double coord_y) :
-            text(txt), font_name(fnt_name), font_color(color), font_weight(weight), font_size(size),
-            x(coord_x), y(coord_y) {};
-        friend class SvgWriter;
+      TextInfo(const std::string& txt, const std::string& fnt_name, unsigned color,
+        unsigned weight, unsigned size, double coord_x, double coord_y) :
+        text(txt), font_name(fnt_name), font_color(color), font_weight(weight), font_size(size),
+        x(coord_x), y(coord_y) {
+      };
+      friend class SvgWriter;
     };
 
     typedef std::vector< TextInfo* > TextInfoList;
 
   private:
-      double scale_;
-      FillRule fill_rule_;
-      CoordsStyle coords_style;
-      TextInfoList text_infos;
-      PathInfoList path_infos;
-      void DrawCircle(std::ofstream& file, double x, double y, double radius);
+    double scale_;
+    FillRule fill_rule_;
+    CoordsStyle coords_style;
+    TextInfoList text_infos;
+    PathInfoList path_infos;
+    void DrawCircle(std::ofstream& file, double x, double y, double radius);
   public:
     explicit SvgWriter(int precision = 0)
     {
@@ -88,8 +91,8 @@ namespace Clipper2Lib {
     ~SvgWriter() { Clear(); };
 
     void Clear();
-    FillRule Fill_Rule() { return fill_rule_; }
-    void SetCoordsStyle(const std::string &font_name, unsigned font_color, unsigned font_size);
+    const FillRule Fill_Rule() { return fill_rule_; }
+    void SetCoordsStyle(const std::string& font_name, unsigned font_color, unsigned font_size);
     void AddText(const std::string& text, unsigned font_color, unsigned font_size, double x, double y);
     void AddText(const std::string& text, const std::string& font_family, unsigned font_color, unsigned font_size, double x, double y);
     void AddPath(const Path64& path, bool is_open, FillRule fillrule,
@@ -100,7 +103,7 @@ namespace Clipper2Lib {
       unsigned brush_color, unsigned pen_color, double pen_width, bool show_coords);
     void AddPaths(const Paths64& paths, bool is_open, FillRule fillrule,
       unsigned brush_color, unsigned pen_color, double pen_width, bool show_coords);
-    bool SaveToFile(const std::string &filename, int max_width, int max_height, int margin);
+    bool SaveToFile(const std::string& filename, int max_width, int max_height, int margin);
   };
 
   //---------------------------------------------------------------------------
@@ -109,17 +112,11 @@ namespace Clipper2Lib {
 
   class SvgReader
   {
-  private:
-      PathInfoList path_infos;
-      bool LoadPath(std::string::const_iterator& p,
-        const std::string::const_iterator& pe);
   public:
-      std::string xml;
-      bool LoadFromFile(const std::string &filename);
-      void Clear() { path_infos.clear(); };
-      PathsD GetPaths();
+    PathsD paths;
+    SvgReader(const std::string& filename);
   };
 
-}
+};
 
 #endif //svglib_h

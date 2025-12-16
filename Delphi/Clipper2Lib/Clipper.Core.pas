@@ -2,7 +2,7 @@ unit Clipper.Core;
 
 (*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  12 October 2025                                                 *
+* Date      :  15 December 2025                                                *
 * Website   :  https://www.angusj.com                                          *
 * Copyright :  Angus Johnson 2010-2024                                         *
 * Purpose   :  Core Clipper Library module                                     *
@@ -181,7 +181,6 @@ function CrossProduct(const vec1, vec2: TPointD): double; overload;
 function CrossProduct(const pt1, pt2, pt3: TPoint64): double; overload;
   {$IFDEF INLINING} inline; {$ENDIF}
 function CrossProductIsZero(const pt1, pt2, pt3: TPoint64): Boolean;
-  {$IFDEF INLINING} inline; {$ENDIF}
 function CrossProductSign(const pt1, pt2, pt3: TPoint64): integer;
 
 function DotProduct(const vec1, vec2: TPointD): double; overload;

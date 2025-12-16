@@ -3,38 +3,205 @@ unit ClipMisc;
 interface
 
 uses
-  SysUtils, Types, Classes, Math, Clipper, Clipper.Core;
-
-function PathToString(const path: TPath64): string;
+  SysUtils, Classes, Windows, Math, ShellAPI, Clipper.Core;
 
 function ScaleAndOffset(const paths: TPathsD; scale: single; offset: Clipper.Core.TPointD): TPathsD;
 
 function MakeRandomPath(maxWidth, maxHeight, count: Integer;
   margin: Integer = 0): TPath64; overload;
+
 function MakeRandomPathD(maxWidth, maxHeight, count: Integer;
   margin: Integer = 10): TPathD;
-
-function Ellipse(const rec: TRect64; steps: integer = 0;
-    reverse_orientation: Boolean = false): TPath64; overload;
-function Ellipse(const rec: TRectD; steps: integer = 0;
-    reverse_orientation: Boolean = false): TPathD; overload;
 
 function MakeNPointedStar(const rec: TRect64;
   points: integer = 5): TPath64; overload;
 
 function PointInPath(const pt: TPointD; const path: TPathD): Boolean;
 
+procedure DisplayAsSvg(const caption: string;
+  fillRule: TFillRule; const subj, clip, sol: TPaths64;
+  hideCaption: Boolean = false); overload;
+
+procedure DisplayAsSvg(const caption: string;
+  fillRule: TFillRule; const subj, clip, sol: TPathsD;
+  hideCaption: Boolean = false); overload;
+
+procedure DisplayAsSvg_Open(const caption: string;
+  fillRule: TFillRule; isJoined: Boolean;
+  const openSub, clip, sol: TPaths64; solIsOpen: Boolean;
+  hideCaption: Boolean = false); overload;
+
+procedure DisplayAsSvg_Open(const caption: string;
+  fillRule: TFillRule; isJoined: Boolean;
+  const openSub, clip, sol: TPathsD; solIsOpen: Boolean;
+  hideCaption: Boolean = false); overload;
+
+procedure DisplayAsSvg_MultiColor(const caption: string;
+  fillRule: TFillRule; const subj, sol: TPathsD);
+
 implementation
 
-function PathToString(const path: TPath64): string;
+uses
+  Clipper, Clipper.SVG;
+
+//------------------------------------------------------------------------------
+//------------------------------------------------------------------------------
+
+procedure DisplayAsSvg(const caption: string;
+  fillRule: TFillRule; const subj, clip, sol: TPaths64;
+  hideCaption: Boolean = false);
+var
+  filename: string;
+  r: TRect64;
+begin
+  ForceDirectories('.\SVG');
+  filename := format('.\SVG\%s.SVG',[caption]);
+  with TSvgWriter.Create(fillRule) do
+  try
+    if Assigned(subj) then
+      AddPaths(subj, false, $1000BBFF, $800099FF, 0.8);
+    if Assigned(clip) then
+      AddPaths(clip, false, $12F99F00, $80FF9900, 0.8);
+    if Assigned(sol) then
+      AddPaths(sol, false, $2000FF00, $FF006600, 0.8);
+    r := GetBounds(sol);
+    if not hideCaption then
+      AddText(caption, r.Left + 20, r.Top + 20);
+    SaveToFile(filename);
+  finally
+    free;
+  end;
+  ShellExecute(0, 'open', PChar(filename), nil, nil, SW_SHOW);
+end;
+//------------------------------------------------------------------------------
+
+procedure DisplayAsSvg(const caption: string;
+  fillRule: TFillRule; const subj, clip, sol: TPathsD;
+  hideCaption: Boolean = false);
+var
+  filename: string;
+  r: TRectD;
+begin
+  ForceDirectories('.\SVG');
+  filename := format('.\SVG\%s.SVG',[caption]);
+  with TSvgWriter.Create(fillRule) do
+  try
+    if Assigned(subj) then
+      AddPaths(subj, false, $1000BBFF, $800099FF, 0.8);
+    if Assigned(clip) then
+      AddPaths(clip, false, $12F99F00, $80FF9900, 0.8);
+    if Assigned(sol) then
+      AddPaths(sol, false, $2000FF00, $FF006600, 0.8);
+    r := GetBounds(sol);
+    if not hideCaption then
+      AddText(caption, Round(r.Left) + 20, Round(r.Top) + 20);
+    SaveToFile(filename);
+  finally
+    free;
+  end;
+  ShellExecute(0, 'open', PChar(filename), nil, nil, SW_SHOW);
+end;
+//------------------------------------------------------------------------------
+
+procedure DisplayAsSvg_Open(const caption: string;
+  fillRule: TFillRule; isJoined: Boolean;
+  const openSub, clip, sol: TPaths64; solIsOpen: Boolean;
+  hideCaption: Boolean = false);
+var
+  filename: string;
+  r: TRect64;
+begin
+  ForceDirectories('.\SVG');
+  filename := format('.\SVG\%s.SVG',[caption]);
+  with TSvgWriter.Create(fillRule) do
+  try
+    if Assigned(openSub) then
+      AddPaths(openSub, not isJoined, $0, $800099FF, 0.8);
+    if Assigned(clip) then
+      AddPaths(clip, false, $12F99F00, $80FF9900, 0.8);
+    if Assigned(sol) then
+    begin
+      if solIsOpen then
+        AddPaths(sol, false, $0, $FF006600, 1.5) else
+        AddPaths(sol, false, $2000FF00, $FF006600, 1.0);
+    end;
+    r := GetBounds(sol);
+    if not hideCaption then
+      AddText(caption, r.Left + 20, r.Top + 20);
+    SaveToFile(filename);
+  finally
+    free;
+  end;
+  ShellExecute(0, 'open', PChar(filename), nil, nil, SW_SHOW);
+end;
+//------------------------------------------------------------------------------
+
+procedure DisplayAsSvg_Open(const caption: string;
+  fillRule: TFillRule; isJoined: Boolean;
+  const openSub, clip, sol: TPathsD; solIsOpen: Boolean;
+  hideCaption: Boolean);
+var
+  filename: string;
+  r: TRectD;
+begin
+  ForceDirectories('.\SVG');
+  filename := format('.\SVG\%s.SVG',[caption]);
+  with TSvgWriter.Create(fillRule) do
+  try
+    if Assigned(openSub) then
+      AddPaths(openSub, not isJoined, $0, $800099FF, 0.8);
+    if Assigned(clip) then
+      AddPaths(clip, false, $12F99F00, $80FF9900, 0.8);
+    if Assigned(sol) then
+    begin
+      if solIsOpen then
+        AddPaths(sol, false, $0, $FF006600, 1.5) else
+        AddPaths(sol, false, $2000FF00, $FF006600, 1.0);
+    end;
+    r := GetBounds(sol);
+    if not hideCaption then
+      AddText(caption, Round(r.Left) + 20, Round(r.Top) + 20);
+    SaveToFile(filename);
+  finally
+    free;
+  end;
+  ShellExecute(0, 'open', PChar(filename), nil, nil, SW_SHOW);
+end;
+//------------------------------------------------------------------------------
+
+function RandomColor: Cardinal; inline;
+begin
+  Result := Cardinal(Random($1000000)) or $FF000000;
+end;
+//------------------------------------------------------------------------------
+
+procedure DisplayAsSvg_MultiColor(const caption: string;
+  fillRule: TFillRule; const subj, sol: TPathsD);
 var
   i: integer;
+  filename: string;
 begin
-  Result := '';
-  for i := 0 to high(path) do
-    Result := Result + format('%d,%d ',[path[i].X,path[i].Y]);
-  Result := Result + #13#10;
+  ForceDirectories('.\SVG');
+  filename := format('.\SVG\%s.SVG',[caption]);
+  with TSvgWriter.Create(fillRule) do
+  try
+    if Assigned(subj) then
+      AddPaths(subj, false, $1000BBFF, $800099FF, 0.8);
+    if Assigned(sol) then
+    begin
+      Randomize;
+      for i := 0 to High(sol) do
+        AddPath(sol[i], false, RandomColor, $20000000, 1.0, false);
+    end;
+    SaveToFile(filename);
+  finally
+    free;
+  end;
+  ShellExecute(0, 'open', PChar(filename), nil, nil, SW_SHOW);
 end;
+
+//------------------------------------------------------------------------------
+//------------------------------------------------------------------------------
 
 function ScaleAndOffset(const paths: TPathsD; scale: single; offset: Clipper.Core.TPointD): TPathsD;
 var
@@ -78,63 +245,6 @@ var
 begin
   tmp := MakeRandomPath(maxWidth, maxHeight, count, margin);
   Result := PathD(tmp);
-end;
-//------------------------------------------------------------------------------
-
-procedure GetSinCos(angle: double; out sinA, cosA: double);
-{$IFDEF INLINE} inline; {$ENDIF}
-{$IFNDEF FPC}
-var s, c: extended;
-{$ENDIF}
-begin
-{$IFDEF FPC}
-  Math.SinCos(angle, sinA, cosA);
-{$ELSE}
-  Math.SinCos(angle, s, c);
-  sinA := s; cosA := c;
-{$ENDIF}
-end;
-//------------------------------------------------------------------------------
-
-function Ellipse(const rec: TRect64; steps: integer;
-  reverse_orientation: Boolean): TPath64;
-var
-  tmp: TPathD;
-begin
-  tmp := Ellipse(RectD(rec), steps, reverse_orientation);
-  Result := Path64(tmp);
-end;
-//------------------------------------------------------------------------------
-
-function Ellipse(const rec: TRectD; steps: integer;
-  reverse_orientation: Boolean): TPathD;
-var
-  i: Integer;
-  sinA, cosA: double;
-  centre, radius, delta: TPointD;
-begin
-  result := nil;
-  if rec.IsEmpty then Exit;
-  with rec do
-  begin
-    centre := PointD((Left+Right) * 0.5, (Top+Bottom)  * 0.5);
-    radius := PointD(Width * 0.5, Height  * 0.5);
-  end;
-  if steps < 4 then
-    steps := Max(4, Round(Pi * Sqrt(rec.width + rec.height)));
-  if reverse_orientation then
-    GetSinCos(-2 * Pi / Steps, sinA, cosA) else
-    GetSinCos(2 * Pi / Steps, sinA, cosA);
-  delta.x := cosA; delta.y := sinA;
-  SetLength(Result, Steps);
-  Result[0] := PointD(centre.X + radius.X, centre.Y);
-  for i := 1 to steps -1 do
-  begin
-    Result[i] := PointD(centre.X + radius.X * delta.x,
-      centre.Y + radius.y * delta.y);
-    delta :=  PointD(delta.X * cosA - delta.Y * sinA,
-      delta.Y * cosA + delta.X * sinA);
-  end;
 end;
 //------------------------------------------------------------------------------
 

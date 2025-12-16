@@ -1,8 +1,8 @@
 ﻿/*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  24 September 2023                                               *
+* Date      :  16 December 2025                                                *
 * Website   :  https://www.angusj.com                                          *
-* Copyright :  Angus Johnson 2010-2023                                         *
+* Copyright :  Angus Johnson 2010-2025                                         *
 * License   :  https://www.boost.org/LICENSE_1_0.txt                           *
 *******************************************************************************/
 
@@ -14,7 +14,7 @@ using Clipper2ZLib;
 using Clipper2Lib;
 #endif
 
-namespace ClipperDemo1
+namespace InflateDemo
 {
 
   public static class Application
@@ -22,8 +22,8 @@ namespace ClipperDemo1
 
     public static void Main()
     {
-      DoSimpleShapes();
       DoRabbit();
+      DoSimpleShapes();      
       DoVariableOffset();
     }
 
@@ -75,51 +75,30 @@ namespace ClipperDemo1
       ClipperFileIO.OpenFileWithDefaultApp(filename);
     }
 
-    public static void DoRabbit()
+    public static void DisplaySolutionAsSvg(string filename, PathsD solution)
     {
-      PathsD pd = LoadPathsFromResource("InflateDemo.rabbit.bin");
-
-      PathsD solution = new (pd);
-      while (pd.Count > 0)
-      {
-        // and don't forget to scale the delta offset
-        pd = Clipper.InflatePaths(pd, -2.5, JoinType.Round, EndType.Polygon);
-        // SimplifyPaths - is not essential but it not only 
-        // speeds up the loop but it also tidies the result
-        pd = Clipper.SimplifyPaths(pd, 0.25);
-        solution.AddRange(pd);
-      }
-
-      const string filename = "../../../rabbit.svg";
-      SvgWriter svg = new ();
+      SvgWriter svg = new();
       SvgUtils.AddSolution(svg, solution, false);
       SvgUtils.SaveToFile(svg, filename, FillRule.EvenOdd, 450, 720, 10);
       ClipperFileIO.OpenFileWithDefaultApp(filename);
     }
 
-    public static PathsD LoadPathsFromResource(string resourceName)
+    public static void DoRabbit()
     {
-      using Stream stream = Assembly.GetExecutingAssembly().
-        GetManifestResourceStream(resourceName);
-      if (stream == null) return new PathsD();
-      using BinaryReader reader = new (stream);
-      int len = reader.ReadInt32();
-      PathsD result = new (len);
-      for (int i = 0; i < len; i++)
+      if (!File.Exists("..\\..\\..\\rabbit.svg")) return;
+      SvgReader sr = new("..\\..\\..\\rabbit.svg");
+      PathsD pp  = sr.Paths;
+      PathsD solution = new (pp);
+      while (pp.Count > 0)
       {
-        int len2 = reader.ReadInt32();
-        PathD p = new (len2);
-        for (int j = 0; j < len2; j++)
-        {
-          long X = reader.ReadInt64();
-          long Y = reader.ReadInt64();
-          p.Add(new PointD(X, Y));
-        }
-        result.Add(p);
+        pp = Clipper.InflatePaths(pp, -5, JoinType.Round, EndType.Polygon);
+        // SimplifyPaths - is recommended here as it removes tiny 
+        // offsetting artefacts and speeds up this while loop
+        pp = Clipper.SimplifyPaths(pp, 0.25);
+        solution.AddRange(pp);
       }
-      return result;
+      DisplaySolutionAsSvg("..\\..\\..\\rabbit_inflate.svg", solution);
     }
-
     public static void DoVariableOffset()
     {
       Paths64 p = new() { Clipper.MakePath(new int[] { 0,50, 20,50, 40,50, 60,50, 80,50, 100,50 }) };

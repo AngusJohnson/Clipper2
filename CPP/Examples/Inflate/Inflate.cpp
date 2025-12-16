@@ -7,17 +7,44 @@
 using namespace std;
 using namespace Clipper2Lib;
 
-void DoRabbit();
-void DoSimpleShapes();
-void System(const std::string& filename);
-
-
-int main(int argc, char* argv[])
+void System(const std::string& filename)
 {
+#ifdef _WIN32
+  system(filename.c_str());
+#else
+  system(("firefox " + filename).c_str());
+#endif
+}
 
-  DoSimpleShapes();
-  DoRabbit();
-  //std::getchar();
+static void DisplayAsSvgImage(const std::string& caption, FillRule fillrule,
+  const PathsD* subject, const PathsD* clip, const PathsD* solution)
+{
+  const std::string filename = caption + ".SVG";
+  SvgWriter svg;
+  if (subject)
+    SvgAddSubject(svg, *subject, fillrule);
+  if (clip)
+    SvgAddClip(svg, *clip, fillrule);
+  if (solution)
+      SvgAddSolution(svg, *solution, fillrule, false);
+  SvgSaveToFile(svg, filename, 400, 400, 10);
+  System(filename);
+}
+
+void DoRabbit()
+{
+  SvgReader svg_reader("./rabbit.svg");
+  PathsD p = svg_reader.paths;
+  PathsD solution(p);
+  while (p.size())
+  {
+    p = InflatePaths(p, -5, JoinType::Round, EndType::Polygon);
+    // SimplifyPaths is not essential but is **highly recommended**
+    // because it speeds up the loop by removing tiny artefacts
+    p = SimplifyPaths(p, 0.25);
+    copy(p.begin(), p.end(), back_inserter(solution));
+  }
+  DisplayAsSvgImage("rabbit_offset", FillRule::EvenOdd, nullptr, nullptr, &solution);
 }
 
 void DoSimpleShapes()
@@ -99,39 +126,9 @@ void DoSimpleShapes()
   System(filename);
 }
 
-void DoRabbit()
+int main(int argc, char* argv[])
 {
-  SvgReader svg_reader;
-  svg_reader.LoadFromFile("./rabbit.svg");
-  PathsD p = svg_reader.GetPaths();
-
-  JoinType jt = JoinType::Round;
-  PathsD solution(p);
-
-  while (p.size())
-  {
-    // nb: don't forget to scale the delta offset too!
-    p = InflatePaths(p, -2.5, jt, EndType::Polygon);
-    // SimplifyPaths (or RamerDouglasPeucker) is not 
-    // essential but is highly recommended because it 
-    // speeds up the loop and also tidies up the result
-    p = SimplifyPaths(p, 0.25); // preferred over RDP()
-    solution.reserve(solution.size() + p.size());
-    copy(p.begin(), p.end(), back_inserter(solution));
-  }
-
-  FillRule fr = FillRule::EvenOdd;
-  SvgWriter svg;
-  SvgAddSolution(svg, solution, fr, false);
-  SvgSaveToFile(svg, "solution_off2.svg", 450, 720, 0);
-  System("solution_off2.svg");
+  DoSimpleShapes();
+  DoRabbit();
 }
 
-void System(const std::string& filename)
-{
-#ifdef _WIN32
-  system(filename.c_str());
-#else
-  system(("firefox " + filename).c_str());
-#endif
-}
