@@ -63,7 +63,12 @@ namespace ClipperDemo1
       return true;
     }
 
-      public static void DoRandomPoly(bool loadPrevious = false)
+    public static uint RandomColor(Random rc)
+    {
+      return (uint) (rc.Next() | 0xBF000000);
+    }
+
+    public static void DoRandomPoly(bool loadPrevious = false)
     {
       Random rand = new();
       Paths64 sub = new Paths64(), clp = new Paths64(), sol;
@@ -97,11 +102,10 @@ namespace ClipperDemo1
         double cumFrac = frac;
         foreach (Path64 path in sol)
         {
-          Colors.Color32 c = Colors.Rainbow(cumFrac, 64);
+          uint c = RandomColor(rand); 
           cumFrac += frac;
-          Colors.Color32 c2 = new Colors.Color32(
-            (c.color & 0xFFFFFF) | 0x20000000);
-          svg.AddClosedPath(path, c2.color, c.color, 1.2);
+          uint c2 = (c & 0xFFFFFF) | 0x20000000;
+          svg.AddClosedPath(path, c2, c, 1.2);
         }
       }
       svg.SaveToFile("../../../rectclip.svg", 800, 600, 20);
