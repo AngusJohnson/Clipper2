@@ -136,12 +136,12 @@ namespace Clipper2Lib
     return e.vB->pt.y == e.vT->pt.y;
   }
 
-  inline bool LeftTurning(const Point64& p1, const Point64& p2, const Point64& p3)
+  static bool LeftTurning(const Point64& p1, const Point64& p2, const Point64& p3)
   {
     return CrossProductSign(p1, p2, p3) < 0;
   }
 
-  inline bool RightTurning(const Point64& p1, const Point64& p2, const Point64& p3)
+  static bool RightTurning(const Point64& p1, const Point64& p2, const Point64& p3)
   {
     return CrossProductSign(p1, p2, p3) > 0;
   }
@@ -216,12 +216,12 @@ namespace Clipper2Lib
     return true;
   }
 
-  inline size_t Prev(size_t& idx, size_t len)
+  static size_t Prev(size_t& idx, size_t len)
   {
     if (idx == 0) return len - 1; else return idx - 1;
   }
 
-  inline size_t Next(size_t& idx, size_t len)
+  static size_t Next(size_t& idx, size_t len)
   {
     return (idx + 1) % len;
   }
@@ -372,10 +372,8 @@ namespace Clipper2Lib
     // triangleA and one from triangleB) that touch edge.vL.
     // And edgesB will contain the two edges that touch edge.vR.
     
-    Edge* edgesA[3], * edgesB[3];
-    edgesA[0] = nullptr; // unused
-    edgesB[0] = nullptr; // unused
-
+    Edge* edgesA[3] = { nullptr, nullptr, nullptr };
+    Edge* edgesB[3] = { nullptr, nullptr, nullptr };
     for (int i = 0; i < 3; ++i)
     {
       if (edge->triA->edges[i] == edge) continue;
@@ -436,6 +434,7 @@ namespace Clipper2Lib
     for (int i = 1; i < 3; ++i)
     {
       edge->triA->edges[i] = edgesA[i];
+      if (!edgesA[i]) throw "oops"; // stops compiler warnings 
       if (IsLooseEdge(*edgesA[i]))
         pendingDelaunayStack.push(edgesA[i]);
       // since each edge has its own triangleA and triangleB, we have to be careful
@@ -453,6 +452,7 @@ namespace Clipper2Lib
     for (int i = 1; i < 3; ++i)
     {
       edge->triB->edges[i] = edgesB[i];
+      if (!edgesB[i]) throw "oops"; // stops compiler warnings 
       if (IsLooseEdge(*edgesB[i]))
         pendingDelaunayStack.push(edgesB[i]);
       // since each edge has its own triangleA and triangleB, we have to be careful
@@ -1069,7 +1069,7 @@ namespace Clipper2Lib
     return res;
   }
 
-  inline double DistSqr(const Point64& pt1, const Point64& pt2)
+  static double DistSqr(const Point64& pt1, const Point64& pt2)
   {
     return Sqr(pt1.x - pt2.x) + Sqr(pt1.y - pt2.y);
   }

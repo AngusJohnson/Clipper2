@@ -1,12 +1,13 @@
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Clipper2Lib;
 
-namespace Clipper2Lib.UnitTests
+namespace Tests1.Tests
 {
 
   [TestClass]
   public class TestPolytree
   {
-    private void PolyPathContainsPoint(PolyPath64 pp, Point64 pt, ref int counter)
+    private static void PolyPathContainsPoint(PolyPath64 pp, Point64 pt, ref int counter)
     {
       if (Clipper.PointInPolygon(pt, pp.Polygon!) != PointInPolygonResult.IsOutside)
       {
@@ -19,7 +20,7 @@ namespace Clipper2Lib.UnitTests
       } 
     }
 
-    private bool PolytreeContainsPoint(PolyTree64 pp, Point64 pt)
+    private static bool PolytreeContainsPoint(PolyTree64 pp, Point64 pt)
     {
       int counter = 0;
       for (int i = 0; i < pp.Count; i++)
@@ -31,7 +32,7 @@ namespace Clipper2Lib.UnitTests
       return counter != 0;
     }
 
-  private bool PolyPathFullyContainsChildren(PolyPath64 pp)
+  private static bool PolyPathFullyContainsChildren(PolyPath64 pp)
     {
       foreach (PolyPath64 child in pp.Cast<PolyPath64>())
       {
@@ -44,7 +45,7 @@ namespace Clipper2Lib.UnitTests
       return true;
     }
 
-    private bool CheckPolytreeFullyContainsChildren(PolyTree64 polytree)
+    private static bool CheckPolytreeFullyContainsChildren(PolyTree64 polytree)
     {
       for (int i = 0; i < polytree.Count; i++)
       {
@@ -136,15 +137,16 @@ namespace Clipper2Lib.UnitTests
   [TestMethod]
     public void TestPolytree3()
     {
-      Paths64 subject = new();
-      subject.Add(Clipper.MakePath(new int[] {1588700, -8717600, 
-        1616200, -8474800, 1588700, -8474800 }));
-      subject.Add(Clipper.MakePath(new int[] { 13583800,-15601600, 
-        13582800,-15508500, 13555300,-15508500, 13555500,-15182200, 
-        13010900,-15185400 }));
-      subject.Add(Clipper.MakePath(new int[] { 956700, -3092300, 1152600, 
-        3147400, 25600, 3151700 }));
-      subject.Add(Clipper.MakePath(new int[] { 
+      Paths64 subject = new()
+      {
+        Clipper.MakePath(new int[] {1588700, -8717600,
+        1616200, -8474800, 1588700, -8474800 }),
+        Clipper.MakePath(new int[] { 13583800,-15601600,
+        13582800,-15508500, 13555300,-15508500, 13555500,-15182200,
+        13010900,-15185400 }),
+        Clipper.MakePath(new int[] { 956700, -3092300, 1152600,
+        3147400, 25600, 3151700 }),
+        Clipper.MakePath(new int[] {
         22575900,-16604000, 31286800,-12171900,
         31110200,4882800, 30996200,4826300, 30414400,5447400, 30260000,5391500,
         29662200,5805400, 28844500,5337900, 28435000,5789300, 27721400,5026400,
@@ -161,9 +163,10 @@ namespace Clipper2Lib.UnitTests
         22104900,-16142800, 13010900,-15603000, 13555500,-15182200,
         13555300,-15508500, 13582800,-15508500, 13583100,-15154700,
         1588700,-8822800, 1588700,-8379900, 1588700,-8474800, 1616200,-8474800,
-        1003900,-630100, 1253300,-12284500, 12983400,-16239900}));
-      subject.Add(Clipper.MakePath(new int[] { 198200, 12149800, 1010600, 12149800, 1011500, 11859600 }));
-      subject.Add(Clipper.MakePath(new int[] { 21996700, -7432000, 22096700, -7432000, 22096700, -7332000 }));
+        1003900,-630100, 1253300,-12284500, 12983400,-16239900}),
+        Clipper.MakePath(new int[] { 198200, 12149800, 1010600, 12149800, 1011500, 11859600 }),
+        Clipper.MakePath(new int[] { 21996700, -7432000, 22096700, -7432000, 22096700, -7332000 })
+      };
       PolyTree64 solutionTree = new();
 
       Clipper64 clipper = new();

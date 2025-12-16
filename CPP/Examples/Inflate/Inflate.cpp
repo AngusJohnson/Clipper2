@@ -1,6 +1,12 @@
 
 #include <cstdlib>
+#include <cstdint>
+#include <string>
+#include <algorithm>
+#include <iterator>
 #include "clipper2/clipper.h"
+#include "clipper2/clipper.core.h"
+#include "clipper2/clipper.offset.h"
 #include "../../Utils/clipper.svg.h"
 #include "../../Utils/clipper.svg.utils.h"
 
@@ -31,7 +37,7 @@ static void DisplayAsSvgImage(const std::string& caption, FillRule fillrule,
   System(filename);
 }
 
-void DoRabbit()
+static void DoRabbit()
 {
   SvgReader svg_reader("./rabbit.svg");
   PathsD p = svg_reader.paths;
@@ -47,7 +53,7 @@ void DoRabbit()
   DisplayAsSvgImage("rabbit_offset", FillRule::EvenOdd, nullptr, nullptr, &solution);
 }
 
-void DoSimpleShapes()
+static void DoSimpleShapes()
 {
   // OPEN_PATHS SVG:
 

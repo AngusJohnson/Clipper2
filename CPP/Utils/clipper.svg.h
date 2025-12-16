@@ -9,8 +9,6 @@
 #ifndef svglib_h
 #define svglib_h
 
-#include <cmath>
-#include <filesystem>
 #include <string>
 #include "clipper2/clipper.h"
 
@@ -91,7 +89,7 @@ namespace Clipper2Lib {
     ~SvgWriter() { Clear(); };
 
     void Clear();
-    const FillRule Fill_Rule() { return fill_rule_; }
+    FillRule Fill_Rule() const { return fill_rule_; }
     void SetCoordsStyle(const std::string& font_name, unsigned font_color, unsigned font_size);
     void AddText(const std::string& text, unsigned font_color, unsigned font_size, double x, double y);
     void AddText(const std::string& text, const std::string& font_family, unsigned font_color, unsigned font_size, double x, double y);

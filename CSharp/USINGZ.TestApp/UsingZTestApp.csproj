@@ -16,12 +16,12 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\USINGZ\Clipper2LibZ.csproj" />
+    <Compile Include="..\Utils\SVG\Clipper.SVG.cs" Link="Clipper.SVG.cs" />
+    <Compile Include="..\Utils\SVG\Clipper.SVG.Utils.cs" Link="Clipper.SVG.Utils.cs" />
   </ItemGroup>
 
   <ItemGroup>
-    <Compile Include="..\Utils\SVG\Clipper.SVG.cs" Link="Clipper.SVG.cs" />
-    <Compile Include="..\Utils\SVG\Clipper.SVG.Utils.cs" Link="Clipper.SVG.Utils.cs" />
+    <ProjectReference Include="..\USINGZ\Clipper2Lib_Z.csproj" />
   </ItemGroup>
   
 </Project>

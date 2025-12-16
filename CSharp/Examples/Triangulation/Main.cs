@@ -38,7 +38,7 @@ namespace TriangulationDemo
       const string tmpFolder = ".\\tmp";
       if (!Directory.Exists(tmpFolder)) Directory.CreateDirectory(tmpFolder);
       const string svgFolder = "..\\..\\..\\..\\..\\..\\CPP\\Examples\\Triangulation\\TriSamples\\";
-      PathsD subject, solution;
+      PathsD solution;
       string srcFile, dstFile;
       switch (test)
       { 
@@ -66,9 +66,9 @@ namespace TriangulationDemo
 
               SvgReader sr = new(srcFile);
               PathsD pp = sr.Paths;
-              TriangulateResult tr = Clipper.Triangulate(pp, 0, out solution);
+              TriangulateResult tr = Clipper.Triangulate(pp, 0, out PathsD sol);
               if (tr != TriangulateResult.success) break;
-              Display(solution, dstFile);
+              Display(sol, dstFile);
             }
             break;
           }
@@ -84,7 +84,7 @@ namespace TriangulationDemo
 
               SvgReader sr = new(srcFile);
               PathsD pp = sr.Paths;
-              TriangulateResult tr = Clipper.Triangulate(pp, 0, out solution);
+              TriangulateResult tr = Clipper.Triangulate(pp, 0, out _);
               switch (tr)
               {
                 case TriangulateResult.success:

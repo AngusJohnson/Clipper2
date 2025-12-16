@@ -15,7 +15,7 @@ using System.Xml.Linq;
 using System.Runtime.InteropServices;
 using System.Diagnostics;
 
-using Clipper2Lib;
+using Clipper2ZLib;
 
 namespace UsingZTestApp
 {

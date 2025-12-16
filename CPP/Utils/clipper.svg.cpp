@@ -6,7 +6,6 @@
 * License   :  https://www.boost.org/LICENSE_1_0.txt                           *
 *******************************************************************************/
 
-#include <cstdlib>
 #include <iomanip>
 #include <iostream>
 #include <fstream>
@@ -34,7 +33,7 @@ namespace Clipper2Lib {
   const char svg_xml_5[] = "; stroke-width:";
   const char svg_xml_6[] = ";\"/>\n";
 
-  inline std::string ColorToHtml(unsigned clr)
+  static std::string ColorToHtml(unsigned clr)
   {
     std::stringstream ss;
     ss << '#' << std::hex << std::setfill('0') << std::setw(6) << (clr & 0xFFFFFF);
@@ -42,7 +41,7 @@ namespace Clipper2Lib {
   }
   //------------------------------------------------------------------------------
 
-  inline float GetAlphaAsFrac(unsigned int clr)
+  static float GetAlphaAsFrac(unsigned int clr)
   {
     return ((float)(clr >> 24) / 255.0f);
   }
@@ -133,13 +132,13 @@ namespace Clipper2Lib {
   }
   //------------------------------------------------------------------------------
 
-  PathsD SimulateNegativeFill(const PathsD paths)
+  static PathsD SimulateNegativeFill(const PathsD paths)
   {
     return Union(paths, FillRule::Negative);
   }
   //------------------------------------------------------------------------------
 
-  PathsD SimulatePositiveFill(const PathsD paths)
+  static PathsD SimulatePositiveFill(const PathsD paths)
   {
     return Union(paths, FillRule::Positive);
   }
@@ -286,7 +285,7 @@ namespace Clipper2Lib {
   // SvgReader
   //------------------------------------------------------------------------------
 
-  bool SkipBlanks(std::string::const_iterator& si,
+  static bool SkipBlanks(std::string::const_iterator& si,
     const std::string::const_iterator se)
   {
     while (si != se && *si <= ' ') ++si;
@@ -294,7 +293,7 @@ namespace Clipper2Lib {
   }
   //------------------------------------------------------------------------------
 
-    bool SkipOptionalComma(std::string::const_iterator& si,
+  static bool SkipOptionalComma(std::string::const_iterator& si,
       const std::string::const_iterator se)
   {
     while (si != se && *si <= ' ') ++si;
@@ -304,7 +303,7 @@ namespace Clipper2Lib {
   //------------------------------------------------------------------------------
 
 
-  bool GetNum(std::string::const_iterator& si,
+    static bool GetNum(std::string::const_iterator& si,
     const std::string::const_iterator se, double& value)
   {
     while (si != se && *si <= ' ') ++si;
@@ -339,9 +338,16 @@ namespace Clipper2Lib {
   //------------------------------------------------------------------------------
 
 
+    static bool FileExists(const std::string& filename)
+  {
+    //return std::filesystem::exists(filename); // <filesystem> not available in Ubuntu (#990)
+    std::ifstream file(filename);
+    return file.good();
+  }
+
   SvgReader::SvgReader(const std::string& filename)
   {
-    if (!std::filesystem::exists(filename)) return;
+    if (!FileExists(filename)) return;
     std::ifstream file(filename);
     if (!file.good()) return;
     std::stringstream xml_buff;

@@ -1,9 +1,11 @@
 #include <cstdlib>
 #include <string>
-#include <chrono> 
-#include <cstdint>
+#include <ctime> 
+#include <iostream> 
 
 #include "clipper2/clipper.h"
+#include "clipper2/clipper.core.h"
+#include "../../Utils/clipper.svg.h"
 #include "../../Utils/clipper.svg.utils.h"
 #include "clipper2/clipper.triangulation.h"
 
@@ -20,7 +22,7 @@ void System(const std::string& filename)
 }
 
 
-inline PathD MakeRandomPoly(unsigned vertCnt, int width, int height)
+static PathD MakeRandomPoly(unsigned vertCnt, int width, int height)
 {
   PathD result;
   result.reserve(vertCnt);
@@ -29,7 +31,7 @@ inline PathD MakeRandomPoly(unsigned vertCnt, int width, int height)
   return result;
 }
 
-inline PathsD MakeRandomPolys(unsigned polyCount, unsigned vertCnt, int width, int height)
+static PathsD MakeRandomPolys(unsigned polyCount, unsigned vertCnt, int width, int height)
 {
   PathsD result;
   result.reserve(polyCount);
@@ -48,7 +50,7 @@ static string TriangulateResultAsString(TriangulateResult tr)
   }
 }
 
-void DisplaySolution(const string filename, const PathsD& sol, bool multicolor)
+static void DisplaySolution(const string filename, const PathsD& sol, bool multicolor)
 {
   SvgWriter svg;
   //SvgAddSubject(svg, sub, FillRule::NonZero);

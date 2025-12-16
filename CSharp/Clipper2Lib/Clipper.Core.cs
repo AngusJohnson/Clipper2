@@ -526,8 +526,8 @@ namespace Clipper2Lib
       long d = pt3.X - pt2.X;
       UInt128Struct ab = MultiplyUInt64((ulong) Math.Abs(a), (ulong) Math.Abs(b));
       UInt128Struct cd = MultiplyUInt64((ulong) Math.Abs(c), (ulong) Math.Abs(d));
-      var signAB = TriSign(a) * TriSign(b);
-      var signCD = TriSign(c) * TriSign(d);
+      int signAB = TriSign(a) * TriSign(b);
+      int signCD = TriSign(c) * TriSign(d);
 
       if (signAB == signCD)
       {
