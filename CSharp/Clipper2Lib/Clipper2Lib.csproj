@@ -13,7 +13,8 @@
     <Copyright>Copyright © 2010-2025</Copyright>
     <RepositoryType>git</RepositoryType>
     <RepositoryUrl>https://github.com/AngusJohnson/Clipper2</RepositoryUrl>
-    <PackageReleaseNotes>This release adds a new Triangulation module to the library.
+    <PackageReleaseNotes>Release ver. 2.0.0
+This release adds a new Triangulation module to the library.
 It also includes a number of bugfixes (see GitHub issues  #980 .. #1045)</PackageReleaseNotes>
     <Platforms>AnyCPU;x86</Platforms>
     <SignAssembly>true</SignAssembly>
@@ -44,6 +45,12 @@ It also includes a number of bugfixes (see GitHub issues  #980 .. #1045)</Packag
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x86'">
     <IsPublishable>False</IsPublishable>
   </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Remove="Nuget\**" />
+    <EmbeddedResource Remove="Nuget\**" />
+    <None Remove="Nuget\**" />
+  </ItemGroup>
 
   <ItemGroup>
     <None Include="..\NuGet\icon.png">
