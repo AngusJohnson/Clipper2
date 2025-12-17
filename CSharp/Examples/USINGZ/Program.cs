@@ -47,13 +47,14 @@ namespace UsingZTestApp
       Clipper.MakePathZ(new double[] { 100,50,1, 10,79,2, 65,2,3, 65,98,4, 10,21,5 })
     };
 
+      subject = Clipper.ScalePaths(subject, 3);
       ClipperD clipperD = new ();
       MyCallbacks cb = new ();
       clipperD.ZCallback = cb.MyCallbackD;
       clipperD.AddSubject(subject);
       clipperD.Execute(ClipType.Union, FillRule.NonZero, solution);
 
-      solution = Clipper.InflatePaths(solution, -3, JoinType.Miter, EndType.Polygon);
+      solution = Clipper.InflatePaths(solution, 12, JoinType.Miter, EndType.Polygon, 6);
       Console.WriteLine(solution.ToString(0));
 
       SvgWriter svg = new (FillRule.NonZero);
@@ -66,11 +67,12 @@ namespace UsingZTestApp
         if (solution[0][i].z < 0)
           ellipses.Add(Clipper.Ellipse(
             new PointD(solution[0][i].x, solution[0][i].y), 4));
-        svg.AddText(solution[0][i].z.ToString(), 
-          solution[0][i].x, solution[0][i].y, 12, 0xFF000000);
+        if (solution[0][i].z > 0)
+          svg.AddText(solution[0][i].z.ToString(), 
+            solution[0][i].x -11, solution[0][i].y + 10, 14, 0xFF000000);
       }
       svg.AddClosedPaths(ellipses, 0x20FF0000, 0xFFFF0000, 1);
-      svg.SaveToFile("usingz.svg", 300, 300);
+      svg.SaveToFile("usingz.svg", 500, 500, 50);
       OpenFileWithDefaultApp("usingz.svg");
     }
 

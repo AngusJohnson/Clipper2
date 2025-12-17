@@ -10,22 +10,54 @@
     <Title>Clipper2</Title>
     <PackageId>Clipper2</PackageId>
     <PackageProjectUrl>https://www.angusj.com/clipper2/Docs/Overview.htm</PackageProjectUrl>
-    <Copyright>Copyright © 2010-2023</Copyright>
+    <Copyright>Copyright © 2010-2025</Copyright>
     <RepositoryType>git</RepositoryType>
     <RepositoryUrl>https://github.com/AngusJohnson/Clipper2</RepositoryUrl>
-    <PackageReleaseNotes>Major revision to merging polygons in clipping solutions</PackageReleaseNotes>
+    <PackageReleaseNotes>This release adds a new Triangulation module to the library.
+It also includes a number of bugfixes (see GitHub issues  #980 .. #1045)</PackageReleaseNotes>
     <Platforms>AnyCPU;x86</Platforms>
     <SignAssembly>true</SignAssembly>
     <AssemblyOriginatorKeyFile>Clipper2.snk</AssemblyOriginatorKeyFile>
     <DelaySign>false</DelaySign>
+    <Version>2.0.0</Version>
+    <PackageLicenseFile>License.txt</PackageLicenseFile>
+    <PackageIcon>icon.png</PackageIcon>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <PackageTags>geometry polygon clipping inflate intersection union difference offsetting boolean-operations</PackageTags>
+    <NoWin32Manifest>true</NoWin32Manifest>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
     <DefineConstants>TRACE</DefineConstants>
+    <IsPublishable>False</IsPublishable>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x86'">
     <DefineConstants>TRACE</DefineConstants>
+    <IsPublishable>False</IsPublishable>
   </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
+    <IsPublishable>False</IsPublishable>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x86'">
+    <IsPublishable>False</IsPublishable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="..\NuGet\icon.png">
+      <Pack>True</Pack>
+      <PackagePath>\</PackagePath>
+    </None>
+    <None Include="..\NuGet\License.txt">
+      <Pack>True</Pack>
+      <PackagePath>\</PackagePath>
+    </None>
+    <None Include="..\NuGet\README.md">
+      <Pack>True</Pack>
+      <PackagePath>\</PackagePath>
+    </None>
+  </ItemGroup>
 
 </Project>

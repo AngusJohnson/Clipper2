@@ -95,8 +95,8 @@ namespace TriangulationDemo
                   failCount++;
                   break;
               }
-              if (tr == TriangulateResult.no_polygons || 
-                tr == TriangulateResult.paths_intersect)
+              if (tr == TriangulateResult.noPolygons || 
+                tr == TriangulateResult.pathsIntersect)
                   break;
               i++;
             }

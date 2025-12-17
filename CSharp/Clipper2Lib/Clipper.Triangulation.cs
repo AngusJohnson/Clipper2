@@ -11,15 +11,13 @@
 using System;
 using System.Collections.Generic;
 
+#if USINGZ
+namespace Clipper2ZLib
+#else
 namespace Clipper2Lib
+#endif
 {
-  public enum TriangulateResult
-  {
-      success,
-      fail,
-      no_polygons,
-      paths_intersect
-  }
+  public enum TriangulateResult { success, fail, noPolygons, pathsIntersect }
 
   // -------------------------------------------------------------------------
   // Internal triangulation helpers
@@ -763,7 +761,7 @@ namespace Clipper2Lib
 
       if (!AddPaths(paths))
       {
-        return TriangulateResult.no_polygons;
+        return TriangulateResult.noPolygons;
       }
 
       // if necessary fix path orientation because the algorithm 
@@ -797,7 +795,7 @@ namespace Clipper2Lib
       if (!FixupEdgeIntersects())
       {
         CleanUp();
-        return TriangulateResult.paths_intersect;
+        return TriangulateResult.pathsIntersect;
       }
 
       allVertices.Sort((a, b) =>
