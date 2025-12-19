@@ -1,10 +1,10 @@
- unit Clipper2DllSVG;
+ unit Clipper2Dll.SVG;
 
 (*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  12 August 2024                                                  *
+* Date      :  19 December 2025                                                *
 * Website   :  https://www.angusj.com                                          *
-* Copyright :  Angus Johnson 2010-2024                                         *
+* Copyright :  Angus Johnson 2010-2025                                         *
 * License   :  https://www.boost.org/LICENSE_1_0.txt                           *
 *******************************************************************************)
 
@@ -12,7 +12,7 @@ interface
 
 uses
   Windows, ShellApi,
-  Classes, SysUtils, Math, Clipper2DllCore;
+  Classes, SysUtils, Math, Clipper2Dll.Core;
 
 const
   black   = $FF000000;
@@ -136,6 +136,9 @@ type
   procedure AddOpenSubjects(svg: TSvgWriter; const paths: CPathsD); overload;
   procedure AddClips(svg: TSvgWriter; const paths: CPathsD; showCoords: Boolean = false); overload;
   procedure AddSolution(svg: TSvgWriter; const paths: CPathsD; showCoords: Boolean= false); overload;
+  // AddSolution_MultiColor - used for triangulated solutions
+  procedure AddSolution_MultiColor(svg: TSvgWriter; const paths: CPaths64); overload;
+  procedure AddSolution_MultiColor(svg: TSvgWriter; const paths: CPathsD); overload;
   procedure AddOpenSolution(svg: TSvgWriter; const paths: CPathsD); overload;
 
   procedure DisplaySVG(const sub, subo, clp, sol, solo: CPaths64;
@@ -144,7 +147,10 @@ type
   procedure DisplaySVG(const sub, subo, clp, sol, solo: CPathsD;
     const svgName: string; width: integer = displayWidth;
     height: integer = displayHeight; showCoords: Boolean = false); overload;
-
+  // DisplaySVG_MultiColor - used for triangulated solutions
+  procedure DisplaySVG_MultiColor(const sol: CPaths64;
+    const svgName: string; width: integer = displayWidth;
+    height: integer = displayHeight);
 
 implementation
 
@@ -348,7 +354,7 @@ begin
   for i := 0 to fPolyInfos.Count -1 do
     with PPolyInfo(fPolyInfos[i])^ do
     begin
-      bounds := Clipper2DllCore.GetBounds(paths);
+      bounds := Clipper2Dll.Core.GetBounds(paths);
       if not IsValidRectD(bounds) then Continue;
       if (bounds.left < Result.Left) then Result.Left := bounds.Left;
       if (bounds.right> Result.Right) then Result.Right := bounds.Right;
@@ -672,6 +678,64 @@ procedure AddOpenSolution(svg: TSvgWriter; const paths: CPathsD);
 begin
   svg.AddPaths(paths, true, $0, $FF006600, 1.5);
 end;
+//------------------------------------------------------------------------------
+
+function RandomColor: Cardinal;
+begin
+  Result := Cardinal(Random(MaxInt)) or $FF202020;
+end;
+//------------------------------------------------------------------------------
+
+procedure AddSolution_MultiColor(svg: TSvgWriter; const paths: CPathsD);
+var
+  j, len, sublen: integer;
+  tmp: CPathsD;
+begin
+  j := 2;
+  len := Round(paths[0]);
+  while (j < len) do
+  begin
+    subLen := Round(paths[j]) * 2;
+    GetMem(tmp, (subLen + 4) * sizeOf(double));
+    try
+      tmp[0] := subLen + 4;
+      tmp[1] := 1;
+      tmp[2] := paths[j];
+      tmp[3] := 0;
+      Move(paths[j+2], tmp[4],  sublen * sizeOf(double));
+      j := j + subLen + 2;
+      svg.AddPaths(tmp, true, RandomColor, $80808080, 0.8);
+    finally
+      FreeMem(tmp);
+    end;
+  end;
+end;
+//------------------------------------------------------------------------------
+
+procedure AddSolution_MultiColor(svg: TSvgWriter; const paths: CPaths64);
+var
+  j, len, sublen: integer;
+  tmp: CPaths64;
+begin
+  j := 2;
+  len := paths[0];
+  while (j < len) do
+  begin
+    subLen := paths[j] * 2;
+    GetMem(tmp, (subLen + 4) * sizeOf(Int64));
+    try
+      tmp[0] := subLen + 4;
+      tmp[1] := 1;
+      tmp[2] := paths[j];
+      tmp[3] := 0;
+      Move(paths[j+2], tmp[4],  sublen * sizeOf(Int64));
+      j := j + subLen + 2;
+      svg.AddPaths(tmp, false, RandomColor, $80808080, 0.8);
+    finally
+      FreeMem(tmp);
+    end;
+  end;
+end;
 
 //------------------------------------------------------------------------------
 //------------------------------------------------------------------------------
@@ -686,8 +750,10 @@ procedure DisplaySVG(const sub, subo, clp, sol, solo: CPathsD;
   const svgName: string; width: integer = displayWidth;
   height: integer = displayHeight; showCoords: Boolean = false);
 var
+{$IFDEF USINGZ}
   i,j, idx, pathsCnt, pathLen: integer;
   x,y,z: double;
+{$ENDIF}
   svg: TSvgWriter;
 begin
   svg := TSvgWriter.Create(TFillRule.frNonZero);
@@ -729,8 +795,10 @@ procedure DisplaySVG(const sub, subo, clp, sol, solo: CPaths64;
   const svgName: string; width: integer = displayWidth;
   height: integer = displayHeight; showCoords: Boolean = false);
 var
+{$IFDEF USINGZ}
   i,j, idx, pathsCnt, pathLen: integer;
   x,y,z: Int64;
+{$ENDIF}
   svg: TSvgWriter;
 begin
   svg := TSvgWriter.Create(frNonZero);
@@ -767,6 +835,23 @@ begin
   end;
 end;
 //------------------------------------------------------------------------------
+
+procedure DisplaySVG_MultiColor(const sol: CPaths64;
+  const svgName: string; width: integer = displayWidth;
+  height: integer = displayHeight);
+var
+  svg: TSvgWriter;
+begin
+  svg := TSvgWriter.Create(frNonZero);
+  try
+    AddSolution_MultiColor(svg, sol);
+    SaveSvg(svg, svgName, width, height);
+    ShowSvg(svgName);
+  finally
+    svg.Free;
+  end;
+end;
+
 //------------------------------------------------------------------------------
 
 

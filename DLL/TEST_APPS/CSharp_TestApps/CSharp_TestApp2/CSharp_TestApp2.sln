@@ -1,11 +1,11 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio Version 17
-VisualStudioVersion = 17.6.33801.468
+# Visual Studio Version 18
+VisualStudioVersion = 18.1.11304.174 d18.0
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CSharp_TestApp2", "CSharp_TestApp2.csproj", "{3D611FB4-7D15-4FD4-9EE4-D02E0D37F424}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Clipper2Lib", "..\..\..\..\CSharp\Clipper2Lib\Clipper2Lib.csproj", "{6170CB42-C763-4C12-A9E5-7D90E6953615}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Clipper2Lib", "..\..\..\..\CSharp\Clipper2Lib\Clipper2Lib.csproj", "{18A500B0-BBE9-46E4-306B-C4E6C0E627B8}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -27,18 +27,18 @@ Global
 		{3D611FB4-7D15-4FD4-9EE4-D02E0D37F424}.Release|x64.Build.0 = Release|x64
 		{3D611FB4-7D15-4FD4-9EE4-D02E0D37F424}.Release|x86.ActiveCfg = Release|x64
 		{3D611FB4-7D15-4FD4-9EE4-D02E0D37F424}.Release|x86.Build.0 = Release|x64
-		{6170CB42-C763-4C12-A9E5-7D90E6953615}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{6170CB42-C763-4C12-A9E5-7D90E6953615}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{6170CB42-C763-4C12-A9E5-7D90E6953615}.Debug|x64.ActiveCfg = Debug|Any CPU
-		{6170CB42-C763-4C12-A9E5-7D90E6953615}.Debug|x64.Build.0 = Debug|Any CPU
-		{6170CB42-C763-4C12-A9E5-7D90E6953615}.Debug|x86.ActiveCfg = Debug|x86
-		{6170CB42-C763-4C12-A9E5-7D90E6953615}.Debug|x86.Build.0 = Debug|x86
-		{6170CB42-C763-4C12-A9E5-7D90E6953615}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{6170CB42-C763-4C12-A9E5-7D90E6953615}.Release|Any CPU.Build.0 = Release|Any CPU
-		{6170CB42-C763-4C12-A9E5-7D90E6953615}.Release|x64.ActiveCfg = Release|Any CPU
-		{6170CB42-C763-4C12-A9E5-7D90E6953615}.Release|x64.Build.0 = Release|Any CPU
-		{6170CB42-C763-4C12-A9E5-7D90E6953615}.Release|x86.ActiveCfg = Release|x86
-		{6170CB42-C763-4C12-A9E5-7D90E6953615}.Release|x86.Build.0 = Release|x86
+		{18A500B0-BBE9-46E4-306B-C4E6C0E627B8}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{18A500B0-BBE9-46E4-306B-C4E6C0E627B8}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{18A500B0-BBE9-46E4-306B-C4E6C0E627B8}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{18A500B0-BBE9-46E4-306B-C4E6C0E627B8}.Debug|x64.Build.0 = Debug|Any CPU
+		{18A500B0-BBE9-46E4-306B-C4E6C0E627B8}.Debug|x86.ActiveCfg = Debug|x86
+		{18A500B0-BBE9-46E4-306B-C4E6C0E627B8}.Debug|x86.Build.0 = Debug|x86
+		{18A500B0-BBE9-46E4-306B-C4E6C0E627B8}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{18A500B0-BBE9-46E4-306B-C4E6C0E627B8}.Release|Any CPU.Build.0 = Release|Any CPU
+		{18A500B0-BBE9-46E4-306B-C4E6C0E627B8}.Release|x64.ActiveCfg = Release|Any CPU
+		{18A500B0-BBE9-46E4-306B-C4E6C0E627B8}.Release|x64.Build.0 = Release|Any CPU
+		{18A500B0-BBE9-46E4-306B-C4E6C0E627B8}.Release|x86.ActiveCfg = Release|x86
+		{18A500B0-BBE9-46E4-306B-C4E6C0E627B8}.Release|x86.Build.0 = Release|x86
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

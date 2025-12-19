@@ -9,7 +9,11 @@
 using System.Diagnostics;
 using static Clipper2Dll.Clipper2DllCore;
 using static Clipper2Dll.SvgWriterUtils;
+#if USINGZ
+using Clipper2ZLib;
+#else
 using Clipper2Lib;
+#endif
 
 namespace ClipperDllDemo
 {
@@ -115,8 +119,8 @@ namespace ClipperDllDemo
       Console.WriteLine($"Time using C# code       : {timeMsec} ms");
       //////////////////////////////////////////////////////////////////////
 
-      //Console.WriteLine("Press any key to exit ... ");
-      //Console.ReadKey();
+      Console.WriteLine("Press any key to exit ... ");
+      Console.ReadKey();
     }
 
   } //end Application

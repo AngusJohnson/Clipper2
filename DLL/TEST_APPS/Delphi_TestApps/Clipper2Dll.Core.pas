@@ -1,10 +1,10 @@
-unit Clipper2DllCore;
+unit Clipper2Dll.Core;
 
 (*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  12 August 2024                                                  *
+* Date      :  19 December 2025                                                *
 * Website   :  https://www.angusj.com                                          *
-* Copyright :  Angus Johnson 2010-2024                                         *
+* Copyright :  Angus Johnson 2010-2025                                         *
 * License   :  https://www.boost.org/LICENSE_1_0.txt                           *
 *******************************************************************************)
 
@@ -84,17 +84,19 @@ type
 {$ENDIF}
 
 const
+  dllPath = '..\';
+
 {$IFDEF WIN64}
   {$IFDEF USINGZ}
-  CLIPPER2_DLL = 'Clipper2_Z_64.dll';
+  CLIPPER2_DLL = dllPath + 'Clipper2_Z_64.dll';
   {$ELSE}
-  CLIPPER2_DLL = 'Clipper2_64.dll';
+  CLIPPER2_DLL = dllPath + 'Clipper2_64.dll';
   {$ENDIF}
 {$ELSE}
   {$IFDEF USINGZ}
-  CLIPPER2_DLL = 'Clipper2_Z_32.dll';
+  CLIPPER2_DLL = dllPath + 'Clipper2_Z_32.dll';
   {$ELSE}
-  CLIPPER2_DLL = 'Clipper2_32.dll';
+  CLIPPER2_DLL = dllPath + 'Clipper2_32.dll';
   {$ENDIF}
 {$ENDIF}
 
@@ -172,6 +174,13 @@ function RectClipLines64(const rect: TRect64;
 function RectClipLinesD(const rect: TRectD;
   const paths: CPathsD; precision: integer = 2): CPathsD; cdecl;
   external CLIPPER2_DLL name 'RectClipLinesD';
+
+function Triangulate64(const paths: CPaths64;
+  useDelaunay: Boolean = true): CPaths64; cdecl;
+  external CLIPPER2_DLL name 'Triangulate64';
+function TriangulateD(const paths: CPathsD;
+  useDelaunay: Boolean = true): CPathsD; cdecl;
+  external CLIPPER2_DLL name 'TriangulateD';
 
 {$IFDEF USINGZ}
 procedure SetZCallback64(zCallback64: TZCallback64_DLL); cdecl;
@@ -279,7 +288,7 @@ end;
 
 function MakeCPaths64(const coords: array of Int64): CPaths64;
 var
-  i, arrayLen, pathLen: integer;
+  arrayLen, pathLen: integer;
 begin
   pathLen := length(coords) div VERTEX_FIELD_CNT;
   arrayLen := length(coords) + 4;
@@ -295,7 +304,7 @@ end;
 
 function MakeCPathsD(const coords: array of double): CPathsD;
 var
-  i, arrayLen, pathLen: integer;
+  arrayLen, pathLen: integer;
 begin
   pathLen := length(coords) div VERTEX_FIELD_CNT;
   arrayLen := length(coords) + 4;

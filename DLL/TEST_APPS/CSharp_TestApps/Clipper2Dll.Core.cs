@@ -1,15 +1,12 @@
-﻿using System.Drawing;
-using System.Runtime.InteropServices;
-using static Clipper2Dll.Clipper2DllCore;
-
-using ztype = System.Int64;
-using Point64 = Clipper2Dll.Clipper2DllCore.Point<long>;
-using PointD = Clipper2Dll.Clipper2DllCore.Point<double>;
-using Rect64 = Clipper2Dll.Clipper2DllCore.Rect<long>;
-using RectD = Clipper2Dll.Clipper2DllCore.Rect<double>;
+﻿using System.Runtime.InteropServices;
 
 namespace Clipper2Dll
 {
+
+  using ztype = System.Int64;
+  using Point64 = Clipper2DllCore.Point<long>;
+  using PointD = Clipper2DllCore.Point<double>;
+  using RectD = Clipper2DllCore.Rect<double>;
 
   public static class Clipper2DllCore
   {
@@ -105,10 +102,12 @@ namespace Clipper2Dll
     // Clipper2 DLL - exported functions
     /////////////////////////////////////////////////////////////////////////
 
+    const string dllPath = @"..\..\..\..\..\";
+
 #if USINGZ
-    const string clipperDll = @"..\..\..\..\..\Clipper2_Z_64.dll";
+    const string clipperDll = dllPath + "Clipper2_Z_64.dll";
 #else
-    const string clipperDll = @"..\..\..\..\..\Clipper2_64.dll";
+    const string clipperDll = dllPath + "Clipper2_64.dll";
 #endif
 
     [DllImport(clipperDll, EntryPoint =
@@ -150,6 +149,13 @@ namespace Clipper2Dll
       out IntPtr solTree, out IntPtr openSol, Int32 precision,
       bool preserve_collinear, bool reverse_solution);
 
+    [DllImport(clipperDll, EntryPoint =
+      "Triangulate64", CallingConvention = CallingConvention.Cdecl)]
+    public static extern IntPtr Triangulate64(long[] subject, bool use_delaunay);
+
+    [DllImport(clipperDll, EntryPoint =
+      "TriangulateD", CallingConvention = CallingConvention.Cdecl)]
+    public static extern IntPtr TriangulateD(double[] subject, int decimal_places, bool use_delaunay);
 
 #if USINGZ    
     public delegate void DLLZCallback64(Point64 e1bot, Point64 e1top, Point64 e2bot, Point64 e2top, ref Point64 ip);

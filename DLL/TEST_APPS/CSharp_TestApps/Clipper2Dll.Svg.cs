@@ -1,5 +1,8 @@
-﻿using System.Diagnostics;
+﻿using System;
+using System.Diagnostics;
 using System.Globalization;
+using System.IO;
+using System.Reflection;
 using static Clipper2Dll.Clipper2DllCore;
 
 using RectD = Clipper2Dll.Clipper2DllCore.Rect<double>;
@@ -143,10 +146,11 @@ namespace Clipper2Dll
     public void AddClosedPath(double[] path, uint brushColor,
       uint penColor, double penWidth, bool showCoords = false)
     {
-      double[] tmp = new double[path.Length + 2];
-      path.CopyTo(tmp, 2);
-      tmp[0] = tmp.Length;
+      uint cnt = (uint)path[0];
+      double[] tmp = new double[ cnt * 2 + 2];
+      tmp[0] = cnt;
       tmp[1] = 1;
+      path.CopyTo(tmp, 2);
       AddClosedPaths(tmp, brushColor, penColor, penWidth, showCoords);
     }
 
@@ -383,6 +387,7 @@ namespace Clipper2Dll
 
 public static class SvgWriterUtils
   {
+    private static Random rc = new();
     public static void AddCaption(SvgWriter svg, string caption, int x, int y)
     {
       svg.AddText(caption, x, y, 14);
@@ -440,6 +445,25 @@ public static class SvgWriterUtils
       bool show_coords, bool is_closed = true, bool is_joined = true)
     {
       svg.AddClosedPaths(paths, 0x4080ff9C, 0xFF003300, 1.5, show_coords);
+    }
+
+    public static uint RandomColor()
+    {
+      return (uint)(rc.Next()) | 0xFF000000;
+    }
+  
+    public static void AddSolution_MultiColor(SvgWriter svg, long[] paths,
+      bool show_coords, bool is_closed = true, bool is_joined = true)
+    {
+      long j = 2, len = paths.Length;
+      while (j < len) 
+      {
+        long subLen = paths[j] * 2 + 2;
+        long[] tmp = new long[subLen];
+        Array.Copy(paths, j, tmp, 0, subLen);
+        j += subLen;
+        svg.AddClosedPath(tmp, RandomColor(), 0x80808080, 0.8, show_coords);
+      }
     }
 
     public static void AddOpenSolution(SvgWriter svg, long[] paths, bool show_coords)
