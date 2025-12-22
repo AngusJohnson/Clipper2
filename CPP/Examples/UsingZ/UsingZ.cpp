@@ -175,11 +175,11 @@ void Test2_Double()
   RectD r = GetBounds(subject);
   PointD mp = r.MidPoint();
   double d = (mp.y - r.top) / 255;
-  // for each point in subject set, 'z' as the distance fron 'mp' 
-  // relative to 'd' and then scale to 255
+  // for each point in subject, set its 'z' as a 
+  // relative distance fron 'mp' (scaled to 255)
   for (PathD& path : subject)
     for (PointD& pt : path)
-      pt.z = std::sqrt(DistanceSqr(pt, mp)) / d;
+      pt.z = Distance(pt, mp) / d;
   Triangulate(subject, 0, sol, true);
   DisplayAsSvg("coral3_t2.svg", nullptr, nullptr, &sol, true);
 }
