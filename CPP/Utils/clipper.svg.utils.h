@@ -10,8 +10,11 @@
 #define svgutillib_h
 
 #include <cstdlib>
+#include <cstdint>
+#include <cstdio>
 #include <string>
 #include "clipper2/clipper.h"
+#include "clipper2/clipper.core.h"
 #include "clipper.svg.h"
 #ifndef _WIN32
 #include <sys/types.h>
@@ -114,7 +117,7 @@ namespace Clipper2Lib {
   // SvgAddRCSolution - random color for each individual polygon (eg when triangulating) 
   inline void SvgAddRCSolution(SvgWriter& svg, const PathsD& paths, FillRule fillrule, bool show_coords)
   {
-    for (auto path : paths)
+    for (const PathD& path : paths)
       svg.AddPath(path, false, fillrule, RandomColor(), 0xFF999999, 1.0, show_coords);
   }
 
@@ -128,7 +131,7 @@ namespace Clipper2Lib {
   // SvgAddRCSolution - random color for each individual polygon (eg when triangulating) 
   inline void SvgAddRCSolution(SvgWriter& svg, const Paths64& paths, FillRule fillrule, bool show_coords)
   {
-    for (auto path : paths)
+    for (const Path64& path : paths)
     {
       svg.AddPath(TransformPath<double, int64_t>(path), 
         false, fillrule, RandomColor(), 0xFF999999, 1.0, show_coords);

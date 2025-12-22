@@ -1,6 +1,13 @@
 
 #include <cstdlib>
+#include <cstdint>
+#include <cmath>
+#include <string>
+#include <functional>
 #include "clipper2/clipper.h"
+#include "clipper2/clipper.core.h"
+#include "clipper2/clipper.engine.h"
+#include "clipper2/clipper.triangulation.h"
 #include "../../Utils/clipper.svg.h"
 #include "../../Utils/clipper.svg.utils.h"
 
@@ -9,8 +16,9 @@ using namespace Clipper2Lib;
 
 
 void System(const std::string &filename);
-void TestingZ_Int64();
-void TestingZ_Double();
+void Test1_64();
+void Test1_Double();
+void Test2_Double();
 
 // use the Z callback to flag intersections by setting z = 1;
 
@@ -34,11 +42,77 @@ public:
 
 int main(int argc, char* argv[])
 {
-  //TestingZ_Int64();
-  TestingZ_Double();
+  Test1_64();
+  Test1_Double();
+  Test2_Double();
 }
 
-void TestingZ_Int64()
+static uint32_t ByteToRainbowColor(uint8_t b)
+{
+  uint8_t b2;
+  switch (b / 43)
+  {
+    //0..42
+  case 0: b2 = (b - 0) * 6; return 0xFFFF0000 | (b2 << 8);    // 0xFFFF0000 -> 0xFFFFFF00 (red..yellow)
+    //43..85
+  case 1: b2 = (85 - b) * 6; return 0xFF00FF00 | (b2 << 16);  // 0xFFFFFF00 -> 0xFF00FF00 (yellow..lime)
+    //86..128
+  case 2: b2 = (b - 86) * 6; return 0xFF00FF00 | b2;          // 0xFF00FF00 -> 0xFF00FFFF (lime..aqua)
+    //129..171
+  case 3: b2 = (171 - b) * 6; return 0xFF0000FF | (b2 << 8);  // 0xFF00FFFF -> 0xFF0000FF (aqua..blue)  
+    //172..214
+  case 4: b2 = (b - 172) * 6; return 0xFF0000FF | (b2 << 16); // 0xFF0000FF -> 0xFFFF00FF (blue..fuschia)     
+    //215..255
+  default: b2 = (255 - b) * 6; return 0xFFFF0000 | b2;        // 0xFF0000FF -> 0xFFFF00FF (fuschia..red)     
+  }
+}
+
+static void DisplayAsSvg(const string& filename, 
+  const Paths64* subject, const Paths64* clip, const Paths64* solution)
+{
+  SvgWriter svg;
+  if (subject)
+    SvgAddSubject(svg, *subject, FillRule::NonZero);
+  if (clip)
+    SvgAddClip(svg, *clip, FillRule::NonZero);
+  if (solution)
+    SvgAddSolution(svg, *solution, FillRule::NonZero, false);
+  SvgSaveToFile(svg, filename, 320, 320, 0);
+  System(filename);
+}
+
+static void DisplayAsSvg(const string& filename, 
+  const PathsD* subject, const PathsD* clip, const PathsD* solution, bool multi_color = false)
+{
+  SvgWriter svg;
+  if (subject)
+    SvgAddSubject(svg, *subject, FillRule::NonZero);
+  if (clip)
+    SvgAddClip(svg, *clip, FillRule::NonZero);
+  if (solution)
+  {
+    if (multi_color)
+    {
+#ifdef USINGZ
+      for (const PathD& path : *solution)
+      {
+        // set color using the average 'z' for each triangle
+        uint8_t d = (path.size() == 3) ? (path[0].z + path[1].z + path[2].z) / 3.0 : 128;        
+        svg.AddPath(path, false, FillRule::NonZero, ByteToRainbowColor(d), 0x80808080, 0.8, false);
+      }
+#else
+      // just set a random color
+      SvgAddRCSolution(svg, *solution, FillRule::NonZero, false);
+#endif
+    }
+    else
+      SvgAddSolution(svg, *solution, FillRule::NonZero, false);
+  }
+  SvgSaveToFile(svg, filename, 320, 320, 0);
+  System(filename);
+}
+
+void Test1_64()
 {
 
   Paths64 subject, solution;
@@ -53,24 +127,21 @@ void TestingZ_Int64()
       std::placeholders::_4, std::placeholders::_5));
   c64.Execute(ClipType::Union, FillRule::NonZero, solution);
 
-  SvgWriter svg;
-  SvgAddSolution(svg, solution, FillRule::NonZero, false);
-  if (solution.size() > 0) {
+  Paths64 ellipses;
+  if (solution.size() > 0) 
+  {
     // draw circles around intersection points - flagged by z == 1
-    PathsD ellipses;
     double r = 3.0;
     for (const Point64& pt : solution[0])
       if (pt.z == 1)
       {
-        ellipses.push_back(Ellipse(RectD(pt.x - r, pt.y - r, pt.x + r, pt.y + r), 11));
+        ellipses.push_back(Ellipse(Rect64(pt.x - r, pt.y - r, pt.x + r, pt.y + r), 11));
       }
-    SvgAddClip(svg, ellipses, FillRule::NonZero);
   }
-  SvgSaveToFile(svg, "usingz_int64.svg", 800, 600, 20);
-  System("usingz_int64.svg");
+  DisplayAsSvg("TestingZ1_64.svg", &subject, &ellipses, &solution);
 }
 
-void TestingZ_Double()
+void Test1_Double()
 {
   PathsD subject, solution;
   MyClass mc;
@@ -84,22 +155,33 @@ void TestingZ_Double()
       std::placeholders::_4, std::placeholders::_5));
   c.Execute(ClipType::Union, FillRule::NonZero, solution);
 
-  SvgWriter svg;
-  SvgAddSubject(svg, subject, FillRule::NonZero);
-  if (solution.size() > 0) 
+  PathsD ellipses;
+  if (solution.size() > 0)
   {
     // draw circles around intersection points
-    PathsD ellipses;
     double r = 3.0;
     for (const PointD& pt : solution[0])
       if (pt.z == 1)
-        ellipses.push_back(Ellipse(RectD(pt.x - r, pt.y - r, 
+        ellipses.push_back(Ellipse(RectD(pt.x - r, pt.y - r,
           pt.x + r, pt.y + r), 11));
-
-    SvgAddSolution(svg, ellipses, FillRule::NonZero, false);
   }
-  SvgSaveToFile(svg, "usingz_double.svg", 320, 320, 0);
-  System("usingz_double.svg");
+  DisplayAsSvg("TestingZ1_D.svg", &subject, &ellipses, &solution, false);
+}
+
+void Test2_Double()
+{
+  SvgReader sr = SvgReader(".\\TriSamples\\coral3.svg");
+  PathsD subject = sr.paths, sol;
+  RectD r = GetBounds(subject);
+  PointD mp = r.MidPoint();
+  double d = (mp.y - r.top) / 255;
+  // for each point in subject set, 'z' as the distance fron 'mp' 
+  // relative to 'd' and then scale to 255
+  for (PathD& path : subject)
+    for (PointD& pt : path)
+      pt.z = std::sqrt(DistanceSqr(pt, mp)) / d;
+  Triangulate(subject, 0, sol, true);
+  DisplayAsSvg("coral3_t2.svg", nullptr, nullptr, &sol, true);
 }
 
 void System(const std::string &filename)
