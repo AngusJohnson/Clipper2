@@ -80,7 +80,14 @@ https://github.com/AngusJohnson/Clipper2/blob/fa7add77364eb3877dd1b8caf9b3cbd548
 
 ![coral3](https://github.com/user-attachments/assets/78e88382-f772-442b-a09c-c14d8906fb21)
 ![coral3t](https://github.com/user-attachments/assets/c329ef2a-4833-4092-8415-145400fba8b0)
-      
+
+<details open>
+  <summary><b>C++</b></summary>
+https://github.com/AngusJohnson/Clipper2/blob/2ad4894955e164be8d4c327e90ee8f3627252910/CPP/Examples/UsingZ/UsingZ.cpp#L173-L184
+</details>
+
+![coral3_t2](https://github.com/user-attachments/assets/fc1c8741-e033-4dc6-869a-c0d7da550cfa)
+
 <hr>
 
 ### Ports to other languages
