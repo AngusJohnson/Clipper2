@@ -46,7 +46,7 @@ TEST(Clipper2Tests, TestOffsets2) { // see #448 & #456
   Paths64 subject, solution;
   ClipperOffset c;
   subject.push_back(MakePath({ 50,50, 100,50, 100,150, 50,150, 0,100 }));
-  int err;
+  int err = 0;
   subject = ScalePaths<int64_t, int64_t>(subject, scale, err);
   c.AddPaths(subject, JoinType::Round, EndType::Polygon);
   c.ArcTolerance(arc_tol);
