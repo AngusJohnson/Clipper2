@@ -86,7 +86,7 @@ static void DoSimpleShapes()
   // POLYGON JOINTYPES SVG:
 
   // 1. triangle offset - with large miter
-  int err, scale = 100;
+  int err = 0, scale = 100;
   PathsD p, solution;
   p.push_back(MakePathD({ 30,150, 60,350, 0,350 }));
   solution.insert(solution.end(), p.begin(), p.end());

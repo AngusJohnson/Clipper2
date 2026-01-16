@@ -13,7 +13,7 @@ unit Clipper.Triangulation;
 interface
 
 uses
-  SysUtils, Math, Classes, Clipper, Clipper.Core;
+  SysUtils, Math, Classes, Clipper.Core;
 
 type
   TTriangulateResult = (trSuccess, trFail, trNoPolygons, trPathsIntersect);
@@ -24,11 +24,15 @@ type
     decPlaces: integer; out solution: TPathsD;
     useDelaunay: Boolean = true): TTriangulateResult; overload;
 
-  // this function that also returns activeEdges is intended only for debugging
-  function Triangulate(const paths: TPathsD; decPlaces: integer;
-    out solution: TPathsD; out activeEdges: TPathsD; useDelaunay: Boolean): TTriangulateResult; overload;
+  // these functions are intended only for debugging
+  function Triangulate(const paths: TPaths64; out solution, actives: TPaths64;
+    useDelaunay: Boolean = true): TTriangulateResult; overload;
+  function Triangulate(const paths: TPathsD; decPlaces: integer; out solution: TPathsD;
+    out activeEdges: TPathsD; useDelaunay: Boolean): TTriangulateResult; overload;
 
 implementation
+
+uses Clipper;
 
 type
   PVertex = ^TVertex;
@@ -98,7 +102,7 @@ type
     procedure DoTriangulateRight(edge: PEdge; pivot: PVertex; minY: Int64);
     function FindLinkingEdge(vert1, vert2: PVertex; preferAscending: Boolean): PEdge;
     function CreateEdge(v1, v2: PVertex; kind: TEdgeKind): PEdge;
-    function CreateTriangle(e1, e2, e3: PEdge): PTriangle; // todo - as procedure???
+    function CreateTriangle(e1, e2, e3: PEdge): PTriangle;
     procedure ForceLegal(edge: PEdge);
     procedure AddEdgeToActives(edge: PEdge);
     procedure RemoveEdgeFromActives(edge: PEdge);
@@ -238,6 +242,13 @@ function SegmentsIntersect(const s1a, s1b, s2a, s2b: TPoint64): TSegIntersectRes
 var
   dx1,dy1, dx2,dy2, t, cp: double;
 begin
+  Result := sirNone;
+
+  //ignore segments sharing an end-point
+  if PointsEqual(s1a, s2a) or
+    PointsEqual(s1a, s2b) or
+    PointsEqual(s1b, s2b) then Exit;
+
   dy1 := (s1b.y - s1a.y);
   dx1 := (s1b.x - s1a.x);
   dy2 := (s2b.y - s2a.y);
@@ -249,11 +260,9 @@ begin
     Exit;
   end;
 
-  Result := sirNone;
   t := ((s1a.x-s2a.x) * dy2 - (s1a.y-s2a.y) * dx2);
-  //ignore segments that 'intersect' at an end-point
-  if (t = 0) then Exit;
-  if (t > 0) then
+  // nb: testing for t == 0 is unreliable due to float imprecision
+  if (t >= 0) then
   begin
     if (cp < 0) or (t >= cp) then Exit;
   end else
@@ -264,8 +273,7 @@ begin
   // so far the *segment* 's1' intersects the *line* through 's2',
   // but now make sure it also intersects the *segment* 's2'
   t := ((s1a.x-s2a.x) * dy1 - (s1a.y-s2a.y) * dx1);
-  if (t = 0) then Exit;
-  if (t > 0) then
+  if (t >= 0) then
   begin
     if (cp > 0) and (t < cp) then
       Result := sirIntersect;
@@ -378,13 +386,22 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-function EdgeListSortFunc(item1, item2: Pointer): Integer;
+function GetSign(i: Int64): integer; inline;
+begin
+  if i > 0 then Result := 1
+  else if i < 0 then Result := -1
+  else Result := 0;
+end;
+//------------------------------------------------------------------------------
+
+// this sort is only needed prior to edge intersection detection
+function EdgeListSortFunc(item1, item2: Pointer): integer;
 var
   e1    : PEdge absolute item1;
   e2    : PEdge absolute item2;
 begin
   // sort edgeList to ascend on edge.vL.pt.X ...
-  Result := e1.vL.pt.X - e2.vL.pt.X;
+  Result := GetSign(e1.vL.pt.X - e2.vL.pt.X);
 end;
 //------------------------------------------------------------------------------
 
@@ -394,10 +411,25 @@ var
   v2    : PVertex absolute item2;
 begin
   // Result > 0 indicates the correct order
-  Result := v2.pt.Y - v1.pt.Y;        // primary sort - descending Y
+  // Primary sort is descending Y.
+  Result := GetSign(v2.pt.Y - v1.pt.Y);
   if (Result <> 0) or (v1 = v2) then Exit;
-  Result := v1.pt.X - v2.pt.X;        // secondary sort - ascending X
+  // sorting on X is necessary to ensure that duplicate vertices
+  // are detected and merged (see MergeDupOrCollinearVertices)
+  Result := GetSign(v1.pt.X - v2.pt.X);
 end;
+//------------------------------------------------------------------------------
+
+//function VertexXBetween(v: PVertex; x1, x2: Int64): Boolean;
+//begin
+//  if (x1 < x2) then
+//  begin
+//    Result := (v.pt.X > x1) and (v.pt.X < x2);
+//  end else
+//  begin
+//    Result := (v.pt.X > x2) and (v.pt.X < x1);
+//  end;
+//end;
 //------------------------------------------------------------------------------
 
 function FindLocMinIdx(idx, len: integer; const p: TPath64): integer;
@@ -929,9 +961,13 @@ begin
   bestD := -1.0;
   while Assigned(e) do
   begin
+    // ignore 'e' when vL is greater than xAbove or vR is less than xAbove
     if (e.vL.pt.X <= xAbove) and (e.vR.pt.X >= xAbove) and
-      (e.vB.pt.Y >= yAbove) and
-      (e.vB <> vAbove) and (e.vT <> vAbove) and
+
+      // the following line is needed unless inserting
+      // locMin edges into active edges is delayed ...
+      (e.vL <> vAbove) and (e.vR <> vAbove) and
+
       not LeftTurning(e.vL, vAbove, e.vR) then
     begin
       d := ShortestDistFromSegment(vAbove.pt, e.vL.pt, e.vR.pt);
@@ -1009,6 +1045,7 @@ function TDelaunay.HorizontalBetween(v1, v2: PVertex): PEdge;
 var
   l,r, y: Int64;
 begin
+  // ?? todo - keep a separate list of active horizontals (at current Y)
   Result := fActives;
   y := v1.pt.Y;
   if v1.pt.X > v2.pt.X then
@@ -1040,13 +1077,12 @@ var
   eAlt      : PEdge;
   cps       : integer;
 begin
-  // precondition - pivot must be one end of edge (Usually .vB)
-  Assert(not EdgeCompleted(edge));
-  vAlt := nil;
-  eAlt := nil;
+  // precondition - pivot will be .vB unless edge is horizontal
   if edge.vB = pivot then
     v := edge.vT else
     v := edge.vB;
+  vAlt := nil;
+  eAlt := nil;
 
   for i := 0 to High(pivot.edges) do
     if pivot.edges[i] <> edge then
@@ -1077,12 +1113,17 @@ begin
       eAlt := e;
     end;
 
-  if not Assigned(vAlt) or (vAlt.pt.Y < minY) then
-  begin
-    Exit;
-  end
+  if not Assigned(vAlt) or (vAlt.pt.Y < minY) then Exit;
+
+//  if (vAlt.pt.Y = v.pt.Y) then
+//  begin
+//    for i := 0 to locMinStack.Count -1 do
+//      if VertexXBetween(PVertex(locMinStack[i]),
+//        v.pt.X, vAlt.pt.X) then Exit;
+//  end;
+
   // Don't triangulate **across** fixed edges
-  else if vAlt.pt.Y < pivot.pt.Y then
+  if vAlt.pt.Y < pivot.pt.Y then
   begin
     if IsLeftEdge(eAlt) then Exit;
   end else if vAlt.pt.Y > pivot.pt.Y then
@@ -1113,14 +1154,12 @@ var
   e, eX     : PEdge;
   eAlt      : PEdge;
 begin
-  // precondition - pivot must be one end of edge (Usually .vB)
-  Assert(not EdgeCompleted(edge));
-  vAlt := nil;
-  eAlt := nil;
-
+  // precondition - pivot will be .vB unless edge is horizontal
   if edge.vB = pivot then
     v := edge.vT else
     v := edge.vB;
+  vAlt := nil;
+  eAlt := nil;
 
   for i := 0 to High(pivot.edges) do
     if pivot.edges[i] <> edge then
@@ -1151,10 +1190,17 @@ begin
       eAlt := e;
     end;
 
-  if not Assigned(vAlt) or (vAlt.pt.Y < minY) then Exit
+  if not Assigned(vAlt) or (vAlt.pt.Y < minY) then Exit;
+
+//  if (vAlt.pt.Y = v.pt.Y) then
+//  begin
+//    for i := 0 to locMinStack.Count -1 do
+//      if VertexXBetween(PVertex(locMinStack[i]),
+//        v.pt.X, vAlt.pt.X) then Exit;
+//  end;
 
   // Don't triangulate **across** fixed edges
-  else if vAlt.pt.Y < pivot.pt.Y then
+  if vAlt.pt.Y < pivot.pt.Y then
   begin
     if IsRightEdge(eAlt) then Exit;
   end else if vAlt.pt.Y > pivot.pt.Y then
@@ -1180,7 +1226,7 @@ function TDelaunay.Triangulate(out solution: TPaths64): TTriangulateResult;
 var
   i,j     : integer;
   cps     : integer;
-  currY   : integer;
+  currY   : Int64;
   p, lm   : PVertex;
   e       : PEdge;
 begin
@@ -1212,7 +1258,9 @@ begin
   end;
 
   // fix up any micro edge intersections that will break triangulation.
-  // This fix-up is the only reason these edges need to be sorted.
+  // This fix-up is the only reason these edges need to be sorted,
+  // and could be skipped if no intersections was guaranteed.
+
   edgeList.Sort(EdgeListSortFunc);
   if not FixupEdgeIntersects(edgeList) then
   begin
@@ -1255,9 +1303,6 @@ begin
               DoTriangulateRight(e, e.vB, currY);
           end;
 
-          // and because adding locMin edges to Actives was delayed ..
-          AddEdgeToActives(lm.edges[0]);
-          AddEdgeToActives(lm.edges[1]);
         end;
         if Result <> TTriangulateResult.trSuccess then Break;
 
@@ -1291,9 +1336,7 @@ begin
         begin
           if IsHorizontal(e) then
             horzEdgeStack.Push(e);
-          // delay adding locMin edges to actives
-          if not p.innerLM then
-            AddEdgeToActives(e);
+          AddEdgeToActives(e);
         end else
         begin
           if IsHorizontal(e) then
@@ -1305,8 +1348,8 @@ begin
         end;
       end;
 
-      if not p.innerLM then Continue;
-      locMinStack.Push(p);
+      if p.innerLM then
+        locMinStack.Push(p);
     end;
 
   except
@@ -1503,7 +1546,7 @@ end;
 //------------------------------------------------------------------------------
 
 function Triangulate(const paths: TPaths64; out solution: TPaths64;
-    useDelaunay: Boolean = true): TTriangulateResult;
+  useDelaunay: Boolean = true): TTriangulateResult;
 var
   d: TDelaunay;
 begin
@@ -1511,6 +1554,35 @@ begin
   try
     d.AddPaths(paths);
     Result := d.Triangulate(solution);
+  finally
+    d.Free;
+  end;
+end;
+//------------------------------------------------------------------------------
+
+function Triangulate(const paths: TPaths64;
+  out solution, actives: TPaths64;
+  useDelaunay: Boolean = true): TTriangulateResult;
+var
+  i: integer;
+  d: TDelaunay;
+  a: PEdge;
+begin
+  d := TDelaunay.Create(useDelaunay);
+  try
+    d.AddPaths(paths);
+    Result := d.Triangulate(solution);
+
+    a := d.fActives;
+    i := CountActives(a);
+    SetLength(actives, i);
+    for i := 0 to i -1 do
+    begin
+      SetLength(actives[i], 2);
+      actives[i][0] := a.vL.pt;
+      actives[i][1] := a.vR.pt;
+      a := a.nextE;
+    end;
   finally
     d.Free;
   end;
@@ -1528,7 +1600,7 @@ begin
   else if decPlaces > 8 then scale := Power(10, 8)
   else scale := Power(10, decPlaces);
   pp64 := ScalePaths(paths, scale);
-  Result := Triangulate(pp64, sol64, useDelaunay);
+  Result := Clipper.Triangulation.Triangulate(pp64, sol64, useDelaunay);
   if Result = TTriangulateResult.trSuccess then
     solution := ScalePathsD(sol64, 1/scale);
 end;

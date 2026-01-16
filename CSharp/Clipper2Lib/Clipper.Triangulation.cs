@@ -1110,6 +1110,9 @@ namespace Clipper2Lib
 
     private static IntersectKind SegsIntersect(Point64 s1a, Point64 s1b, Point64 s2a, Point64 s2b)
     {
+      //ignore segments sharing an end-point
+      if (s1a == s2a || s1a == s2b || s1b == s2b) return IntersectKind.none;
+
       double dy1 = (double) (s1b.Y - s1a.Y);
       double dx1 = (double) (s1b.X - s1a.X);
       double dy2 = (double) (s2b.Y - s2a.Y);
@@ -1120,9 +1123,7 @@ namespace Clipper2Lib
 
       double t = ((double) (s1a.X - s2a.X) * dy2 -
                   (double) (s1a.Y - s2a.Y) * dx2);
-
-      if (t == 0) return IntersectKind.none;
-      if (t > 0)
+      if (t >= 0)
       {
         if (cp < 0 || t >= cp) return IntersectKind.none;
       }
@@ -1133,9 +1134,7 @@ namespace Clipper2Lib
 
       t = ((double) (s1a.X - s2a.X) * dy1 -
            (double) (s1a.Y - s2a.Y) * dx1);
-
-      if (t == 0) return IntersectKind.none;
-      if (t > 0)
+      if (t >= 0)
       {
         if (cp > 0 && t < cp) return IntersectKind.intersect;
       }

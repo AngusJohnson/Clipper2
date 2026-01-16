@@ -1976,6 +1976,7 @@ function MultiplyUInt64(a, b: UInt64): TUInt128; // #834, #835
 var
   x1, x2, x3: UInt64;
 begin
+  // precondition: neither parameter has its highest bit set
   x1 := (a and $FFFFFFFF) * (b and $FFFFFFFF);
   x2 := (a shr 32) * (b and $FFFFFFFF) + (x1 shr 32);
   x3 := (a and $FFFFFFFF) * (b shr 32) + (x2 and $FFFFFFFF);
@@ -2117,10 +2118,10 @@ begin
       end;
       if (ab.lo64 > cd.lo64)  then Result := 1
       else Result := -1;
-      if (signAB < 0) then Result := -Result;
     end
     else if (ab.hi64 > cd.hi64) then Result := 1
     else Result := -1;
+    if (signAB < 0) then Result := -Result;
   end
   else if (signAB > signCD) then Result := 1
   else Result := -1;
