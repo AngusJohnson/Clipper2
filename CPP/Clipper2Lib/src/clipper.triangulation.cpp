@@ -1,9 +1,9 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  13 December 2025                                                *
+* Date      :  21 February 2026                                                *
 * Release   :  BETA RELEASE                                                    *
 * Website   :  https://www.angusj.com                                          *
-* Copyright :  Angus Johnson 2010-2025                                         *
+* Copyright :  Angus Johnson 2010-2026                                         *
 * Purpose   :  Constrained Delaunay Triangulation                              *
 * License   :  https://www.boost.org/LICENSE_1_0.txt                           *
 *******************************************************************************/
@@ -196,7 +196,7 @@ namespace Clipper2Lib
   static void RemoveEdgeFromVertex(Vertex2* vert, Edge* edge)
   {
     auto it = std::find(vert->edges.begin(), vert->edges.end(), edge);
-    if (it == vert->edges.end()) throw "oops!";
+    if (it == vert->edges.end()) DoError(undefined_error_i);
     vert->edges.erase(it);
   }
 
@@ -436,7 +436,7 @@ namespace Clipper2Lib
     for (int i = 1; i < 3; ++i)
     {
       edge->triA->edges[i] = edgesA[i];
-      if (!edgesA[i]) throw "oops"; // stops compiler warnings 
+      if (!edgesA[i]) DoError(undefined_error_i);
       if (IsLooseEdge(*edgesA[i]))
         pendingDelaunayStack.push(edgesA[i]);
       // since each edge has its own triangleA and triangleB, we have to be careful
@@ -447,14 +447,14 @@ namespace Clipper2Lib
         edgesA[i]->triA = edge->triA;
       else if (edgesA[i]->triB == edge->triB)
         edgesA[i]->triB = edge->triA;
-      else throw "oops";
+      else DoError(undefined_error_i);
     }
 
     edge->triB->edges[0] = edge;
     for (int i = 1; i < 3; ++i)
     {
       edge->triB->edges[i] = edgesB[i];
-      if (!edgesB[i]) throw "oops"; // stops compiler warnings 
+      if (!edgesB[i]) DoError(undefined_error_i);
       if (IsLooseEdge(*edgesB[i]))
         pendingDelaunayStack.push(edgesB[i]);
       // since each edge has its own triangleA and triangleB, we have to be careful
@@ -465,7 +465,7 @@ namespace Clipper2Lib
         edgesB[i]->triA = edge->triB;
       else if (edgesB[i]->triB == edge->triA)
         edgesB[i]->triB = edge->triB;
-      else throw "oops";
+      else DoError(undefined_error_i);
     }
 
   }

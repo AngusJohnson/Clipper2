@@ -2,9 +2,9 @@ unit Clipper.Engine;
 
 (*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  5 November 2025                                                 *
+* Date      :  21 February 2026                                                *
 * Website   :  https://www.angusj.com                                          *
-* Copyright :  Angus Johnson 2010-2025                                         *
+* Copyright :  Angus Johnson 2010-2026                                         *
 * Purpose   :  This is the main polygon clipping module                        *
 * License   :  https://www.boost.org/LICENSE_1_0.txt                           *
 *******************************************************************************)
@@ -1945,7 +1945,8 @@ begin
       begin
         if IsHeadingLeftHorz(rightB) then SwapActives(leftB, rightB);
       end
-      else if (leftB.dx < rightB.dx) then SwapActives(leftB, rightB);
+      else if (leftB.dx < rightB.dx) then
+        SwapActives(leftB, rightB);
       //so when leftB has windDx == 1, the polygon will be oriented
       //counter-clockwise in Cartesian coords (clockwise with inverted Y).
     end
@@ -1987,7 +1988,7 @@ begin
       begin
         rbn := rightB.nextInAEL;
         IntersectEdges(rightB, rbn, rightB.bot);
-        SwapPositionsInAEL(rightB, rightB.nextInAEL);
+        SwapPositionsInAEL(rightB, rbn);
       end;
 
       if IsHorizontal(rightB) then
@@ -2229,25 +2230,15 @@ begin
     if SegmentsIntersect(op2.prev.pt, op2.pt,
       op2.next.pt, op2.next.next.pt) then
     begin
-      if SegmentsIntersect(op2.prev.pt, op2.pt,
-        op2.next.next.pt, op2.next.next.next.pt) then
-      begin
-        // adjacent intersections (ie a micro self-intersection)
-        op2 := DuplicateOp(op2, false);
-        op2.pt := op2.next.next.next.pt;
-        op2 := op2.next;
-      end else
-      begin
-        if (op2 = outrec.pts) or (op2.next = outrec.pts) then
-          outrec.pts := outrec.pts.prev;
-        // split required
-        DoSplitOp(outrec, op2);
-        if not assigned(outrec.pts) then Break;
-        op2 := outrec.pts;
-        if (op2.prev = op2.next.next) then
-          Break; // because triangles can't self-intersect
-        Continue;
-      end;
+      // split required.
+      if (op2 = outrec.pts) or (op2.next = outrec.pts) then
+        outrec.pts := outrec.pts.prev;
+      DoSplitOp(outrec, op2);
+      if not assigned(outrec.pts) then Break;
+      op2 := outrec.pts;
+      if (op2.prev = op2.next.next) then
+        Break; // because triangles can't self-intersect
+      Continue;
     end else
       op2 := op2.next;
     if (op2 = outrec.pts) then Break;
@@ -2919,14 +2910,14 @@ function HorzontalsOverlap(const horz1a, horz1b, horz2a, horz2b: TPoint64): bool
 begin
   if horz1a.X < horz1b.X then
   begin
-    Result := Iif(horz2a.X < horz2b.X,
-      HorzOverlapWithLRSet(horz1a, horz1b, horz2a, horz2b),
-      HorzOverlapWithLRSet(horz1a, horz1b, horz2b, horz2a));
+    if (horz2a.X < horz2b.X) then
+      Result := HorzOverlapWithLRSet(horz1a, horz1b, horz2a, horz2b) else
+      Result := HorzOverlapWithLRSet(horz1a, horz1b, horz2b, horz2a);
   end else
   begin
-    Result := Iif(horz2a.X < horz2b.X,
-      HorzOverlapWithLRSet(horz1b, horz1a, horz2a, horz2b),
-      HorzOverlapWithLRSet(horz1b, horz1a, horz2b, horz2a));
+    if (horz2a.X < horz2b.X) then
+      Result := HorzOverlapWithLRSet(horz1b, horz1a, horz2a, horz2b) else
+      Result := HorzOverlapWithLRSet(horz1b, horz1a, horz2b, horz2a);
   end;
 end;
 //------------------------------------------------------------------------------
@@ -3188,7 +3179,9 @@ begin
     else
     begin
       ip.Y := Iif(ip.Y < topY, topY , fBotY);
-      ip.X := Iif(absDx1 < absDx2, TopX(e1, ip.Y), TopX(e2, ip.Y));
+      if absDx1 < absDx2 then
+        ip.X := TopX(e1, ip.Y) else
+        ip.X := TopX(e2, ip.Y);
     end;
   end;
   new(node);

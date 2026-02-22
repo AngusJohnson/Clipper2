@@ -1,8 +1,8 @@
 /*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  5 November 2025                                                 *
+* Date      :  21 February 2026                                                *
 * Website   :  https://www.angusj.com                                          *
-* Copyright :  Angus Johnson 2010-2025                                         *
+* Copyright :  Angus Johnson 2010-2026                                         *
 * Purpose   :  This is the main polygon clipping module                        *
 * License   :  https://www.boost.org/LICENSE_1_0.txt                           *
 *******************************************************************************/
@@ -617,7 +617,7 @@ namespace Clipper2Lib {
         {return a + path.size(); });
     if (total_vertex_count == 0) return;
 
-    Vertex* vertices = new Vertex[total_vertex_count], * v = vertices;
+    Vertex* allVertices = new Vertex[total_vertex_count], * v = allVertices;
     for (const Path64& path : paths)
     {
       //for each path create a circular double linked list of vertices
@@ -709,7 +709,7 @@ namespace Clipper2Lib {
       }
     } // end processing current path
 
-    vertexLists.emplace_back(vertices);
+    vertexLists.emplace_back(allVertices);
   }
 
   //------------------------------------------------------------------------------
@@ -1653,25 +1653,14 @@ namespace Clipper2Lib {
       if (SegmentsIntersect(op2->prev->pt,
         op2->pt, op2->next->pt, op2->next->next->pt))
       {
-        if (SegmentsIntersect(op2->prev->pt,
-          op2->pt, op2->next->next->pt, op2->next->next->next->pt))
-        {
-          // adjacent intersections (ie a micro self-intersections)
-          op2 = DuplicateOp(op2, false);
-          op2->pt = op2->next->next->next->pt;
-          op2 = op2->next;
-        }
-        else
-        {
-          if (op2 == outrec->pts || op2->next == outrec->pts)
-            outrec->pts = outrec->pts->prev;
-          DoSplitOp(outrec, op2);
-          if (!outrec->pts) break;
-          op2 = outrec->pts;
-          if (op2->prev == op2->next->next)
-            break; // again, because triangles can't self-intersect
-          continue;
-        }
+        if (op2 == outrec->pts || op2->next == outrec->pts)
+          outrec->pts = outrec->pts->prev;
+        DoSplitOp(outrec, op2);
+        if (!outrec->pts) break;
+        op2 = outrec->pts;
+        if (op2->prev == op2->next->next)
+          break; // again, because triangles can't self-intersect
+        continue;
       }
       else
         op2 = op2->next;

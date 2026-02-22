@@ -1,8 +1,8 @@
 ﻿/*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Date      :  5 November 2025                                                 *
+* Date      :  21 February 2026                                                *
 * Website   :  https://www.angusj.com                                          *
-* Copyright :  Angus Johnson 2010-2025                                         *
+* Copyright :  Angus Johnson 2010-2026                                         *
 * Purpose   :  This is the main polygon clipping module                        *
 * Thanks    :  Special thanks to Thong Nguyen, Guus Kuiper, Phil Stopford,     *
 *           :  and Daniel Gosnell for their invaluable assistance with C#.     *
@@ -2970,25 +2970,14 @@ private void DoHorizontal(Active horz)
         if (InternalClipper.SegsIntersect(op2!.prev.pt,
                 op2.pt, op2.next!.pt, op2.next.next!.pt))
         {
-          if (InternalClipper.SegsIntersect(op2.prev.pt,
-                  op2.pt, op2.next.next!.pt, op2.next.next.next!.pt))
-          {
-            // adjacent intersections (ie a micro self-intersection)
-            op2 = DuplicateOp(op2, false);
-            op2.pt = op2.next!.next!.next!.pt;
-            op2 = op2.next;
-          }
-          else
-          {
-            if (op2 == outrec.pts || op2.next == outrec.pts)
-              outrec.pts = outrec.pts.prev;
-            DoSplitOp(outrec, op2);
-            if (outrec.pts == null) return;
-            op2 = outrec.pts;
-            // triangles can't self-intersect
-            if (op2.prev == op2.next!.next) break;
-            continue;
-          }
+          if (op2 == outrec.pts || op2.next == outrec.pts)
+            outrec.pts = outrec.pts.prev;
+          DoSplitOp(outrec, op2);
+          if (outrec.pts == null) return;
+          op2 = outrec.pts;
+          // triangles can't self-intersect
+          if (op2.prev == op2.next!.next) break;
+          continue;
         }
 
         op2 = op2.next!;
