@@ -116,6 +116,40 @@ set_target_properties(${CLIPPER2_LIBS} PROPERTIES FOLDER Libraries
                                          PUBLIC_HEADER "${CLIPPER2_INC}"
 )
 
+if(EMSCRIPTEN)
+  option(CLIPPER2_WASM_ARCHIVE "Build as static .a archive for linking (e.g. with Odin) instead of standalone .wasm" ON)
+
+  if(CLIPPER2_WASM_ARCHIVE)
+    add_library(Clipper2WASM STATIC
+      Clipper2Lib/src/clipper.engine.cpp
+      Clipper2Lib/src/clipper.offset.cpp
+      Clipper2Lib/src/clipper.rectclip.cpp
+      Clipper2Lib/src/clipper.triangulation.cpp
+      Clipper2Lib/src/clipper.export.cpp
+    )
+    target_include_directories(Clipper2WASM PUBLIC
+      $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/Clipper2Lib/include>
+    )
+    target_compile_options(Clipper2WASM PRIVATE -O3)
+    set_target_properties(Clipper2WASM PROPERTIES OUTPUT_NAME "Clipper2")
+  else()
+    add_executable(Clipper2WASM
+      Clipper2Lib/src/clipper.export.cpp
+    )
+    target_link_libraries(Clipper2WASM PRIVATE Clipper2)
+    target_compile_options(Clipper2WASM PRIVATE -O3)
+    target_link_options(Clipper2WASM PRIVATE
+      -sALLOW_MEMORY_GROWTH=1
+      -sEXPORT_ES6=1
+      -sMODULARIZE=1
+    )
+    set_target_properties(Clipper2WASM PROPERTIES
+      OUTPUT_NAME "clipper2"
+      SUFFIX ".wasm"
+    )
+  endif()
+endif()
+
 if(CLIPPER2_UTILS OR CLIPPER2_TESTS OR CLIPPER2_EXAMPLES)
   set(CLIPPER2_UTILS_INC
     Utils/clipper.svg.h
