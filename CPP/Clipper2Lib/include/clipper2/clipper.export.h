@@ -167,6 +167,9 @@ inline T1 Reinterpret(T2 value) {
 
 #ifdef _WIN32
   #define EXTERN_DLL_EXPORT extern "C" __declspec(dllexport)
+#elif defined(__EMSCRIPTEN__)
+  #include <emscripten.h>
+  #define EXTERN_DLL_EXPORT extern "C" EMSCRIPTEN_KEEPALIVE
 #else
   #define EXTERN_DLL_EXPORT extern "C"
 #endif
