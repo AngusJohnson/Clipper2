@@ -117,7 +117,7 @@ set_target_properties(${CLIPPER2_LIBS} PROPERTIES FOLDER Libraries
 )
 
 if(EMSCRIPTEN)
-  option(CLIPPER2_WASM_ARCHIVE "Build as static .a archive for linking (e.g. with Odin) instead of standalone .wasm" ON)
+  option(CLIPPER2_WASM_ARCHIVE "Build as static .a archive for linking instead of standalone .wasm" ON)
 
   if(CLIPPER2_WASM_ARCHIVE)
     add_library(Clipper2WASM STATIC
