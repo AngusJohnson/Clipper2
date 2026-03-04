@@ -339,7 +339,7 @@ namespace Clipper2Lib {
 		explicit PolyPath64(PolyPath64* parent = nullptr) : PolyPath(parent) {}
 		explicit PolyPath64(PolyPath64* parent, const Path64& path) : PolyPath(parent) { polygon_ = path; }
 
-		~PolyPath64() {
+		~PolyPath64() override {
 			childs_.resize(0);
 		}
 
@@ -406,7 +406,7 @@ namespace Clipper2Lib {
 			polygon_ = path;
 		}
 
-		~PolyPathD() {
+		~PolyPathD() override {
 			childs_.resize(0);
 		}
 
