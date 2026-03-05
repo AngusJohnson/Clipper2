@@ -8,9 +8,9 @@ struct Hsl {
   uint8_t hue = 0;
   uint8_t sat = 0;
   uint8_t lum = 0;
-  Hsl() {};
+  Hsl() {}
   Hsl(uint8_t a, uint8_t h, uint8_t s, uint8_t l) :
-    alpha(a), hue(h), sat(s), lum(l) {};
+    alpha(a), hue(h), sat(s), lum(l) {}
 };
 
 union Color32 {
