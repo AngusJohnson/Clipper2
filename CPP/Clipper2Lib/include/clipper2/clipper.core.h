@@ -888,7 +888,7 @@ namespace Clipper2Lib
   // be constrained to seg1. However, it's possible that 'ip' won't be inside
   // seg2, even when 'ip' hasn't been constrained (ie 'ip' is inside seg1).
 
-#if CLIPPER2_HI_PRECISION
+#if defined(CLIPPER2_HI_PRECISION) && CLIPPER2_HI_PRECISION
   // caution: this will compromise performance
   // https://github.com/AngusJohnson/Clipper2/issues/317#issuecomment-1314023253
   // See also CPP/BenchMark/GetIntersectPtBenchmark.cpp
