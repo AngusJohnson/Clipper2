@@ -138,7 +138,7 @@ namespace Clipper2Lib
       }
     }
 
-    explicit Point() : x(0), y(0), z(0) {};
+    explicit Point() : x(0), y(0), z(0) {}
 
     template <typename T2>
     Point(const T2 x_, const T2 y_, const z_type z_ = 0)
@@ -190,7 +190,7 @@ namespace Clipper2Lib
       }
     }
 
-    explicit Point() : x(0), y(0) {};
+    explicit Point() : x(0), y(0) {}
 
     template <typename T2>
     Point(const T2 x_, const T2 y_) { Init(x_, y_); }
@@ -367,13 +367,13 @@ namespace Clipper2Lib
       bottom *= scale;
     }
 
-    bool IsEmpty() const { return bottom <= top || right <= left; };
+    bool IsEmpty() const { return bottom <= top || right <= left; }
 
     bool Intersects(const Rect<T>& rec) const
     {
       return ((std::max)(left, rec.left) <= (std::min)(right, rec.right)) &&
         ((std::max)(top, rec.top) <= (std::min)(bottom, rec.bottom));
-    };
+    }
 
     bool operator==(const Rect<T>& other) const {
       return left == other.left && right == other.right &&
@@ -707,7 +707,7 @@ namespace Clipper2Lib
     bool operator==(const UInt128Struct& other) const
     {
       return lo == other.lo && hi == other.hi;
-    };
+    }
 
   };
 

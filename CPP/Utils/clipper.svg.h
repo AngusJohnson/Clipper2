@@ -30,7 +30,7 @@ namespace Clipper2Lib {
       paths_(paths), is_open_path(is_open), fillrule_(fillrule),
       brush_color_(brush_clr), pen_color_(pen_clr),
       pen_width_(pen_width), show_coords_(show_coords) {
-    };
+    }
     friend class SvgWriter;
     friend class SvgReader;
   };
@@ -63,7 +63,7 @@ namespace Clipper2Lib {
         unsigned weight, unsigned size, double coord_x, double coord_y) :
         text(txt), font_name(fnt_name), font_color(color), font_weight(weight), font_size(size),
         x(coord_x), y(coord_y) {
-      };
+      }
       friend class SvgWriter;
     };
 
@@ -84,9 +84,9 @@ namespace Clipper2Lib {
       coords_style.font_color = 0xFF000000;
       coords_style.font_size = 11;
       scale_ = std::pow(10, precision);
-    };
+    }
 
-    ~SvgWriter() { Clear(); };
+    ~SvgWriter() { Clear(); }
 
     void Clear();
     FillRule Fill_Rule() const { return fill_rule_; }
