@@ -1119,11 +1119,13 @@ namespace Clipper2Lib
           lowermostVertex = vPrev;
 
       iNext = Next(i, len);
-      if (CrossProductSign(vPrev->pt, path[i], path[iNext]) == 0)
+      while (CrossProductSign(vPrev->pt, path[i], path[iNext]) == 0)
       {
         i = iNext;
-        continue;
+        if (i == i0) break;
+        iNext = Next(i, len);
       }
+      if (i == i0) break;
 
       // ascend up next bound to LocMax
       while (path[i].y <= vPrev->pt.y)
