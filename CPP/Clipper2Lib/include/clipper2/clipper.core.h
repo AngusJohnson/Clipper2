@@ -1130,9 +1130,18 @@ namespace Clipper2Lib
         val = 1 - val; // toggle val
       else
       {
-        int d = CrossProductSign(*prev, *curr, pt);
-        if (d == 0) return PointInPolygonResult::IsOn;
-        if ((d < 0) == is_above) val = 1 - val;
+        if constexpr (std::is_floating_point_v<T>)
+        {
+          double d = CrossProduct(*prev, *curr, pt);
+          if (d == 0) return PointInPolygonResult::IsOn;
+          if ((d < 0) == is_above) val = 1 - val;
+        }
+        else
+        {
+          int d = CrossProductSign(*prev, *curr, pt);
+          if (d == 0) return PointInPolygonResult::IsOn;
+          if ((d < 0) == is_above) val = 1 - val;
+        }
       }
       is_above = !is_above;
       ++curr;
@@ -1144,9 +1153,18 @@ namespace Clipper2Lib
       if (curr == cend) curr = cbegin;
       if (curr == cbegin) prev = cend - 1;
       else prev = curr - 1;
-      int d = CrossProductSign(*prev, *curr, pt);
-      if (d == 0) return PointInPolygonResult::IsOn;
-      if ((d < 0) == is_above) val = 1 - val;
+      if constexpr (std::is_floating_point_v<T>)
+      {
+        double d = CrossProduct(*prev, *curr, pt);
+        if (d == 0) return PointInPolygonResult::IsOn;
+        if ((d < 0) == is_above) val = 1 - val;
+      }
+      else
+      {
+        int d = CrossProductSign(*prev, *curr, pt);
+        if (d == 0) return PointInPolygonResult::IsOn;
+        if ((d < 0) == is_above) val = 1 - val;
+      }
     }
 
     return (val == 0) ?
