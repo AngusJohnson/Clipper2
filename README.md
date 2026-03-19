@@ -99,5 +99,6 @@ https://github.com/AngusJohnson/Clipper2/blob/2970649befb89af85e2132e5242a7d6926
 | **Kotlin** | https://github.com/Monkey-Maestro/clipper2-kotlin |
 | **Lua** | https://github.com/Ark223/Clipper2-Lua |
 | **Rust** | https://github.com/larsbrubaker/clipper2-rust |
+| **Swift** | https://github.com/zyunlongz/clipper2-swift |
 | **TypeScript** | https://github.com/countertype/clipper2-ts |
 | **WASM** | https://github.com/ErikSom/Clipper2-WASM/ |
