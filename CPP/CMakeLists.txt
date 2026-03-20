@@ -77,12 +77,19 @@ if (NOT (CLIPPER2_USINGZ STREQUAL "ONLY"))
       $<INSTALL_INTERFACE:include>
   )
 
-  if (MSVC)
+  # Configure the warning flags.
+  if (CMAKE_CXX_COMPILER_FRONTEND_VARIANT STREQUAL "MSVC")
     target_compile_options(Clipper2 PRIVATE /W4 /WX)
-  else()
+  elseif (CMAKE_CXX_COMPILER_FRONTEND_VARIANT STREQUAL "GNU")
     target_compile_options(Clipper2 PRIVATE -Wall -Wextra -Wpedantic -Werror)
+  else ()
+    message(AUTHOR_WARNING "Clipper2: cannot configure warnings for the unrecognized C++ compiler front end ${CMAKE_CXX_COMPILER_FRONTEND_VARIANT}")
+  endif ()
+
+  # On Windows, if using Microsoft's the standard library, there is no `m.lib`.
+  if (NOT WIN32 OR MINGW)
     target_link_libraries(Clipper2 PUBLIC -lm)
-  endif()
+  endif ()
 endif()
 
 # secondary Clipper2 library with USINGZ defined (if required)
@@ -102,12 +109,19 @@ if (NOT (CLIPPER2_USINGZ STREQUAL "OFF"))
       $<INSTALL_INTERFACE:include>
   )
 
-  if (MSVC)
-    target_compile_options(Clipper2Z PRIVATE /W4 /WX)
-  else()
-    target_compile_options(Clipper2Z PRIVATE -Wall -Wextra -Wpedantic -Werror)
-    target_link_libraries(Clipper2Z PUBLIC -lm)
-  endif()
+  # Configure the warning flags.
+  if (CMAKE_CXX_COMPILER_FRONTEND_VARIANT STREQUAL "MSVC")
+    target_compile_options(Clipper2 PRIVATE /W4 /WX)
+  elseif (CMAKE_CXX_COMPILER_FRONTEND_VARIANT STREQUAL "GNU")
+    target_compile_options(Clipper2 PRIVATE -Wall -Wextra -Wpedantic -Werror)
+  else ()
+    message(AUTHOR_WARNING "Clipper2: cannot configure warnings for the unrecognized C++ compiler front end ${CMAKE_CXX_COMPILER_FRONTEND_VARIANT}")
+  endif ()
+
+  # On Windows, if using Microsoft's the standard library, there is no `m.lib`.
+  if (NOT WIN32 OR MINGW)
+    target_link_libraries(Clipper2 PUBLIC -lm)
+  endif ()
 endif()
 
 set_target_properties(${CLIPPER2_LIBS} PROPERTIES FOLDER Libraries
