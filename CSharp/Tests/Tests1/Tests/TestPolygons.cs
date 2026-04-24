@@ -24,7 +24,7 @@ namespace Clipper2Lib.UnitTests
         Paths64 subj = new(), subj_open = new (), clip = new();
         Paths64 solution = new(), solution_open = new();
 
-        if (!ClipperFileIO.LoadTestNum("..\\..\\..\\..\\..\\..\\Tests\\Polygons.txt",
+        if (!ClipperFileIO.LoadTestNum("../../../../../../Tests/Polygons.txt",
           testNum, subj, subj_open, clip, out ClipType clipType, out FillRule fillrule, 
           out long storedArea, out int storedCount, out _))
         {          
