@@ -110,6 +110,7 @@ namespace Clipper2Lib
         outRec.isOpen = false;
         outRec.splits?.Clear();
         outRec.recursiveSplit = null;
+        outRec.pipIndex = null; // drop any stale index from a prior Execute
       }
       _size++;
       return outRec;
@@ -133,6 +134,7 @@ namespace Clipper2Lib
         active.pts = null;
         active.polypath = null;
         active.recursiveSplit = null;
+        active.pipIndex = null;
       }
     }
   }
