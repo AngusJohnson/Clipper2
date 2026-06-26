@@ -278,6 +278,7 @@ if(CLIPPER2_TESTS)
     Tests/TestRandomPaths.cpp
     Tests/TestRectClip.cpp
     Tests/TestSimplifyPath.cpp
+    Tests/TestStripeIndex.cpp
     Tests/TestTrimCollinear.cpp
     Tests/TestWindows.cpp
   )

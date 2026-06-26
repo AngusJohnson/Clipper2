@@ -65,6 +65,27 @@ namespace Clipper2Lib {
 		}
 	};
 
+	// Buckets a ring's edges into horizontal Y stripes so a PIP query only scans the
+	// stripe spanning pt.y (~O(sqrt n) vs O(n)). After KiCad's POLY_YSTRIPES_INDEX.
+	struct StripeIndex {
+		void BuildFromPath(const Path64& path);
+		void BuildFromRing(const OutPt* op);
+		PointInPolygonResult PointInPolygon(const Point64& pt) const;
+		size_t EdgeCount() const { return edges_.size(); }
+		bool Empty() const { return edges_.empty(); }
+
+	private:
+		struct StripeEdge { Point64 a; Point64 b; };
+		void Build(std::vector<StripeEdge>&& edges);
+		int YToStripe(int64_t y) const;
+
+		std::vector<StripeEdge> edges_;
+		std::vector<std::vector<int32_t>> stripes_;
+		int64_t y_min_ = 0;
+		int64_t stripe_height_ = 1;
+		int stripe_count_ = 1;
+	};
+
 	class PolyPath;
 	class PolyPath64;
 	class PolyPathD;
@@ -88,6 +109,8 @@ namespace Clipper2Lib {
 		Rect64 bounds = {};
 		Path64 path;
 		bool is_open = false;
+		// Lazily built during PolyTree nesting; only valid once pts is stable.
+		std::unique_ptr<StripeIndex> pip_index;
 
 		~OutRec() {
 			if (splits) delete splits;
@@ -261,6 +284,10 @@ namespace Clipper2Lib {
 		int error_code_ = 0;
 		bool has_open_paths_ = false;
 		bool succeeded_ = true;
+
+		// Ring edge count below which index build does not pay off; brute force instead.
+		// 64 is an empirical break-even.
+		size_t pip_index_threshold_ = 64;
 		OutRecList outrec_list_; //pointers in case list memory reallocated
 		bool ExecuteInternal(ClipType ct, FillRule ft, bool use_polytrees);
 		void CleanCollinear(OutRec* outrec);
@@ -281,6 +308,10 @@ namespace Clipper2Lib {
 		bool PreserveCollinear() const { return preserve_collinear_;}
 		void ReverseSolution(bool val) { reverse_solution_ = val; }
 		bool ReverseSolution() const { return reverse_solution_; }
+
+		// Testing knob. High forces brute-force nesting, low forces stripe indexing.
+		void PipIndexThreshold(size_t val) { pip_index_threshold_ = val; }
+		size_t PipIndexThreshold() const { return pip_index_threshold_; }
 		void Clear();
 		void AddReuseableData(const ReuseableDataContainer64& reuseable_data);
 #ifdef USINGZ
