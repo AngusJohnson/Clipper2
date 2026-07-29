@@ -242,7 +242,8 @@ type
     procedure IntersectEdges(e1, e2: PActive; pt: TPoint64);
     procedure DeleteEdges(var e: PActive);
     procedure DeleteFromAEL(e: PActive);
-    procedure AdjustCurrXAndCopyToSEL(topY: Int64);
+    procedure AdjustCurrXAndCopyToSEL(topY: Int64;
+      out isCurrXSorted: Boolean);
     procedure ConvertHorzSegsToJoins;
     procedure ProcessHorzJoins;
     procedure DoIntersections(const topY: Int64);
@@ -2823,12 +2824,17 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-procedure TClipperBase.AdjustCurrXAndCopyToSEL(topY: Int64);
+procedure TClipperBase.AdjustCurrXAndCopyToSEL(topY: Int64;
+  out isCurrXSorted: Boolean);
 var
   e: PActive;
+  prevX: Int64;
 begin
   FSel := FActives;
   e := FActives;
+  // detect whether projected edges retain their AEL order
+  isCurrXSorted := True;
+  prevX := Low(Int64);
   while Assigned(e) do
   begin
     e.prevInSEL := e.prevInAEL;
@@ -2837,6 +2843,8 @@ begin
     // it is safe to ignore 'joined' edges here because
     // if necessary they will be split in IntersectEdges()
     e.currX := TopX(e, topY);
+    if e.currX < prevX then isCurrXSorted := False;
+    prevX := e.currX;
     e := e.nextInAEL;
   end;
 end;
@@ -3215,13 +3223,17 @@ end;
 function TClipperBase.BuildIntersectList(const topY: Int64): Boolean;
 var
   e, base,prevBase,left,right, lend, rend: PActive;
+  isCurrXSorted: Boolean;
 begin
   result := false;
   if not Assigned(FActives) or not Assigned(FActives.nextInAEL) then Exit;
 
   // Calculate edge positions at the top of the current scanbeam, and from this
   // we will determine the intersections required to reach these new positions.
-  AdjustCurrXAndCopyToSEL(topY);
+  // When edges are already sorted on currX at the top of the scanbeam, no
+  // edges have crossed inside it, so there are no intersections to process.
+  AdjustCurrXAndCopyToSEL(topY, isCurrXSorted);
+  if isCurrXSorted then Exit;
 
   // Find all edge intersections in the current scanbeam using a stable merge
   // sort that ensures only adjacent edges are intersecting. Intersect info is

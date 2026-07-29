@@ -83,5 +83,44 @@ namespace Clipper2Lib.UnitTests
       } //bottom of num loop
 
     }
+
+    [TestMethod]
+    public void TestScanbeamWithSortedCurX()
+    {
+      // These active vertical edges retain their left-to-right order at the top
+      // of the scanbeam, so no intersection sorting is needed.
+      Paths64 subject = new()
+      {
+        Clipper.MakePath(new long[] { 0, 0, 10, 0, 10, 10, 0, 10 }),
+        Clipper.MakePath(new long[] { 20, 0, 30, 0, 30, 10, 20, 10 })
+      };
+
+      Paths64 solution = Clipper.Union(subject, FillRule.NonZero);
+
+      Assert.AreEqual(2, solution.Count);
+      Assert.AreEqual(200, Math.Abs(Clipper.Area(solution)));
+    }
+
+    [TestMethod]
+    public void TestScanbeamWithUnsortedCurX()
+    {
+      // The two diagonal edges exchange their left-to-right order inside the
+      // scanbeam. They must still be sorted and intersected at (5, 5).
+      Paths64 subject = new()
+      {
+        Clipper.MakePath(new long[] { 0, 0, 10, 10, 0, 10, 10, 0 })
+      };
+
+      Paths64 solution = Clipper.Union(subject, FillRule.EvenOdd);
+
+      Assert.AreEqual(2, solution.Count);
+      Assert.AreEqual(50, Math.Abs(Clipper.Area(solution)));
+      Point64 intersection = new(5, 5);
+      foreach (Path64 path in solution)
+      {
+        Assert.AreEqual(3, path.Count);
+        Assert.IsTrue(path.Contains(intersection));
+      }
+    }
   }
 }
