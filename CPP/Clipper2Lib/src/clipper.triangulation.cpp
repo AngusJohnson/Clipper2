@@ -412,11 +412,11 @@ namespace Clipper2Lib
       }
     }
 
-    // InCircleTest reqires edge.triangleA to be a valid triangle
+    // InCircleTest requires edge.triangleA to be a valid triangle
     // if IsEmptyTriangle(edge.triangleA) then Exit; // slower
     if (CrossProductSign(vertA->pt, edge->vL->pt, edge->vR->pt) == 0) return;
 
-    // ictResult - result sign is dependant on triangleA's orientation
+    // ictResult - result sign is dependent on triangleA's orientation
     double ictResult = InCircleTest(vertA->pt, edge->vL->pt, edge->vR->pt, vertB->pt);
     if (ictResult == 0 || // if on or out of circle then exit
       (RightTurning(vertA->pt, edge->vL->pt, edge->vR->pt) == (ictResult < 0))) return;
@@ -602,7 +602,7 @@ namespace Clipper2Lib
     else longE->vR = newT;
     // add shortened longEdge to newT.edges
     newT->edges.push_back(longE);
-    // and create a new edge betweem newV, oldT
+    // and create a new edge between newV, oldT
     CreateEdge(newT, oldT, longE->kind);
   }
 
@@ -868,7 +868,7 @@ namespace Clipper2Lib
 
   void Delaunay::AddEdgeToActives(Edge* edge)
   {
-    // nb: on occassions this method can get called twice for a given edge
+    // nb: on occasions this method can get called twice for a given edge
     // This is because, in the Triangulate() method where vertex 'edges'
     // arrays are being parsed, edges can can be removed from the array
     // which changes the index of following edges.

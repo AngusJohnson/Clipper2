@@ -17,7 +17,7 @@ const double floating_point_tolerance = 1e-12;
 // Clipper2 approximates arcs by using series of relatively short straight
 //line segments. And logically, shorter line segments will produce better arc
 // approximations. But very short segments can degrade performance, usually
-// with little or no discernable improvement in curve quality. Very short
+// with little or no discernible improvement in curve quality. Very short
 // segments can even detract from curve quality, due to the effects of integer
 // rounding. Since there isn't an optimal number of line segments for any given
 // arc radius (that perfectly balances curve approximation with performance),

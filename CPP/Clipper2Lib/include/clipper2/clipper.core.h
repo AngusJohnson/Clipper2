@@ -713,7 +713,7 @@ namespace Clipper2Lib
 
   inline UInt128Struct MultiplyUInt64(uint64_t a, uint64_t b) // #834, #835
   {
-    // note to self - lamba expressions follow
+    // note to self - lambda expressions follow
     const auto lo = [](uint64_t x) { return x & 0xFFFFFFFF; };
     const auto hi = [](uint64_t x) { return x >> 32; };
 
