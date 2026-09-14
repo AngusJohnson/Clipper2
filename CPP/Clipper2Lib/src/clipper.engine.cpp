@@ -385,6 +385,32 @@ namespace Clipper2Lib {
       static_cast<double>(pt2.y + pt3.y) * static_cast<double>(pt2.x - pt3.x));
   }
 
+  // returns true when the triangle's centroid has a non-zero winding number
+  // relative to the closed path at op (the centroid is kept in doubles so that
+  // it isn't rounded outside a very thin triangle)
+  inline bool TriangleInsidePath(const OutPt* op,
+    const Point64& pt1, const Point64& pt2, const Point64& pt3)
+  {
+    const double x = (static_cast<double>(pt1.x) + pt2.x + pt3.x) / 3;
+    const double y = (static_cast<double>(pt1.y) + pt2.y + pt3.y) / 3;
+    int winding = 0;
+    const OutPt* op2 = op;
+    do
+    {
+      const Point64& p = op2->pt;
+      const Point64& q = op2->next->pt;
+      const double cross = static_cast<double>(q.x - p.x) * (y - p.y) -
+        (x - p.x) * static_cast<double>(q.y - p.y);
+      if (p.y <= y)
+      {
+        if (q.y > y && cross > 0) ++winding;
+      }
+      else if (q.y <= y && cross < 0) --winding;
+      op2 = op2->next;
+    } while (op2 != op);
+    return winding != 0;
+  }
+
   void ReverseOutPts(OutPt* op)
   {
     if (!op) return;
@@ -1607,8 +1633,13 @@ namespace Clipper2Lib {
     // So the only way for these areas to have the same sign is if
     // the split triangle is larger than the path containing prevOp or
     // if there's more than one self-intersection.
+    // A smaller split of opposite orientation is usually a spurious twist and
+    // is discarded. However, when it lies inside the remaining path it is a
+    // hole that the remaining path already covers, and discarding it would
+    // fill that hole. So such a split is kept as a separate path.
     if (absArea2 >= 1 &&
-      (absArea2 > absArea1 || (area2 > 0) == (area1 > 0)))
+      (absArea2 > absArea1 || (area2 > 0) == (area1 > 0) ||
+        TriangleInsidePath(prevOp, ip, splitOp->pt, splitOp->next->pt)))
     {
       OutRec* newOr = NewOutRec();
       newOr->owner = outrec->owner;
