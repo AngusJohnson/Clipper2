@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <gtest/gtest.h>
 #include "clipper2/clipper.h"
 #include "ClipFileLoad.h"
@@ -107,6 +108,29 @@ TEST(Clipper2Tests, TestHorzSpikes) //#720
   c.AddSubject(paths);
   c.Execute(Clipper2Lib::ClipType::Union, Clipper2Lib::FillRule::NonZero, paths);
   EXPECT_GE(paths.size(), 1);
+}
+
+TEST(Clipper2Tests, TestIssue1111PreservesNearPancakeVertex)
+{
+  using namespace Clipper2Lib;
+  Path64 path = {
+    Point64(10000000, 3), Point64(0, 2), Point64(1000000, -3229328),
+    Point64(0, 0), Point64(-20000000, 3), Point64(-20000000, -70000000),
+    Point64(10000000, -70000000)
+  };
+
+  Clipper64 clipper;
+  clipper.AddSubject({ path });
+  Paths64 solution;
+  ASSERT_TRUE(clipper.Execute(ClipType::Union, FillRule::Positive, solution));
+
+  const bool contains_moving_vertex = std::any_of(solution.begin(), solution.end(),
+    [](const Path64& polygon)
+    {
+      return std::any_of(polygon.begin(), polygon.end(), [](const Point64& point)
+        { return point.x == 1000000 && point.y == -3229328; });
+    });
+  EXPECT_TRUE(contains_moving_vertex);
 }
 
 TEST(Clipper2Tests, TestCollinearOnMacOs) //#777

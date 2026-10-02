@@ -2839,7 +2839,7 @@ namespace Clipper2Lib {
 
     if (check_curr_x)
     {
-      if (PerpendicDistFromLineSqrd(pt, next->bot, next->top) > 0.35) return;
+      if (PerpendicDistFromLineSqrd(pt, next->bot, next->top) > 0.25) return;
     }
     else if (e.curr_x != next->curr_x) return;
     if (!IsCollinear(e.top, pt, next->top)) return;
