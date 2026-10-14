@@ -186,6 +186,24 @@ type
     next  : PScanLine;
   end;
 
+  // TObjectPool: allocates fixed size records from larger chunks of memory
+  // so they can all be released together (by Clear) instead of being
+  // allocated and disposed one at a time. The records mustn't contain any
+  // managed types (strings, dynamic arrays, interfaces etc).
+  TObjectPool = class
+  private
+    FItemSize : Integer;
+    FChunks   : TList;
+    FNext     : PAnsiChar;
+    FEnd      : PAnsiChar;
+    procedure AddChunk;
+  public
+    constructor Create(itemSize: Integer);
+    destructor Destroy; override;
+    function Alloc: Pointer; {$IFDEF INLINING} inline; {$ENDIF}
+    procedure Clear;
+  end;
+
   {$IFDEF USINGZ}
   TZCallback64 = procedure (const bot1, top1, bot2, top2: TPoint64;
     var intersectPt: TPoint64) of object;
@@ -209,6 +227,10 @@ type
     FHorzSegList        : THorzSegList;
     FHorzJoinList       : THorzJoinList;
     FVertexArrayList    : TList;
+    // all TOutPt and TActive records are owned by these
+    FOutPtPool          : TObjectPool;
+    FActivePool         : TObjectPool;
+    FFreeActives        : TList; // deleted actives, ready for reuse
     // FActives: see AEL above
     FActives            : PActive;
     // FSel: see SEL above.
@@ -242,6 +264,8 @@ type
     procedure IntersectEdges(e1, e2: PActive; pt: TPoint64);
     procedure DeleteEdges(var e: PActive);
     procedure DeleteFromAEL(e: PActive);
+    function  NewActive: PActive; {$IFDEF INLINING} inline; {$ENDIF}
+    procedure PoolDeletedActive(e: PActive); {$IFDEF INLINING} inline; {$ENDIF}
     procedure AdjustCurrXAndCopyToSEL(topY: Int64);
     procedure ConvertHorzSegsToJoins;
     procedure ProcessHorzJoins;
@@ -464,25 +488,10 @@ end;
 procedure TOutRecList.Clear;
 var
   i: integer;
-  por: POutRec;
-  op, tmpPp: POutPt;
 begin
+  // nb: the OutPts are owned by TClipperBase.FOutPtPool
   for i := 0 to Count -1 do
-  begin
-    por := UnsafeGet(i);
-    if Assigned(por.pts) then
-    begin
-      op := por.pts;
-      op.prev.next := nil;
-      while Assigned(op) do
-      begin
-        tmpPp := op;
-        op := op.next;
-        Dispose(tmpPp);
-      end;
-    end;
-    Dispose(por);
-  end;
+    Dispose(POutRec(UnsafeGet(i)));
   inherited;
 end;
 
@@ -576,11 +585,64 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-function NewOutPt(const pt: TPoint64;
+// TObjectPool methods ...
+//------------------------------------------------------------------------------
+
+constructor TObjectPool.Create(itemSize: Integer);
+begin
+  FItemSize := itemSize;
+  FChunks := TList.Create;
+end;
+//------------------------------------------------------------------------------
+
+destructor TObjectPool.Destroy;
+begin
+  Clear;
+  FChunks.Free;
+  inherited;
+end;
+//------------------------------------------------------------------------------
+
+procedure TObjectPool.AddChunk;
+var
+  n: Integer;
+begin
+  // chunks grow from 32 to 4096 records
+  if FChunks.Count < 7 then
+    n := 32 shl FChunks.Count else
+    n := 4096;
+  FChunks.Add(nil); // so a failed allocation can't leak
+  GetMem(FNext, n * FItemSize);
+  FChunks[FChunks.Count -1] := FNext;
+  FEnd := FNext + n * FItemSize;
+end;
+//------------------------------------------------------------------------------
+
+function TObjectPool.Alloc: Pointer;
+begin
+  if FNext = FEnd then AddChunk;
+  Result := FNext;
+  Inc(FNext, FItemSize);
+end;
+//------------------------------------------------------------------------------
+
+procedure TObjectPool.Clear;
+var
+  i: Integer;
+begin
+  for i := 0 to FChunks.Count -1 do
+    FreeMem(FChunks[i]);
+  FChunks.Clear;
+  FNext := nil;
+  FEnd := nil;
+end;
+//------------------------------------------------------------------------------
+
+function NewOutPt(pool: TObjectPool; const pt: TPoint64;
   outrec: POutRec; prev, next: POutPt): POutPt; overload;
  {$IFDEF INLINING} inline; {$ENDIF}
 begin
-  new(Result);
+  Result := pool.Alloc;
   Result.pt := pt;
   Result.next := next;
   Result.prev := prev;
@@ -589,10 +651,11 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-function NewOutPt(const pt: TPoint64; outrec: POutRec): POutPt; overload;
+function NewOutPt(pool: TObjectPool;
+  const pt: TPoint64; outrec: POutRec): POutPt; overload;
  {$IFDEF INLINING} inline; {$ENDIF}
 begin
-  new(Result);
+  Result := pool.Alloc;
   Result.pt := pt;
   Result.next := Result;
   Result.prev := Result;
@@ -601,10 +664,11 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-function DuplicateOp(op:POutPt; insertNext: Boolean): POutPt;
+function DuplicateOp(pool: TObjectPool;
+  op:POutPt; insertNext: Boolean): POutPt;
   {$IFDEF INLINING} inline; {$ENDIF}
 begin
-  new(Result);
+  Result := pool.Alloc;
   Result.pt := op.pt;
   Result.outrec := op.outrec;
   Result.horz := nil;
@@ -1168,7 +1232,6 @@ begin
     Result := op.next;
   op.prev.next := op.next;
   op.next.prev := op.prev;
-  Dispose(Op);
 end;
 //------------------------------------------------------------------------------
 
@@ -1384,6 +1447,9 @@ begin
   FVertexArrayList  := TList.Create;
   FHorzSegList      := THorzSegList.Create;
   FHorzJoinList     := THorzJoinList.Create;
+  FOutPtPool        := TObjectPool.Create(SizeOf(TOutPt));
+  FActivePool       := TObjectPool.Create(SizeOf(TActive));
+  FFreeActives      := TList.Create;
   FPreserveCollinear  := true;
   FReverseSolution    := false;
 end;
@@ -1398,6 +1464,9 @@ begin
   FHorzSegList.Free;
   FHorzJoinList.Free;
   FVertexArrayList.Free;
+  FOutPtPool.Free;
+  FActivePool.Free;
+  FFreeActives.Free;
   inherited;
 end;
 //------------------------------------------------------------------------------
@@ -1409,10 +1478,13 @@ begin
   try
     // in case of exceptions ...
     DeleteEdges(FActives);
+    FFreeActives.Clear;
+    FActivePool.Clear;
     while assigned(FScanLine) do PopScanLine(dummy);
     DisposeIntersectNodes;
     DisposeScanLineList;
     FOutRecList.Clear;
+    FOutPtPool.Clear;
     FHorzSegList.Clear;
     FHorzJoinList.Clear;
     Result := true;
@@ -1887,6 +1959,26 @@ begin
 end;
 //----------------------------------------------------------------------
 
+procedure TClipperBase.PoolDeletedActive(e: PActive);
+begin
+  FillChar(e^, SizeOf(TActive), 0);
+  FFreeActives.Add(e);
+end;
+//------------------------------------------------------------------------------
+
+function TClipperBase.NewActive: PActive;
+begin
+  if FFreeActives.Count = 0 then
+  begin
+    Result := FActivePool.Alloc;
+    Exit;
+  end;
+  // recycle an active from the free list
+  Result := FFreeActives[FFreeActives.Count -1];
+  FFreeActives.Delete(FFreeActives.Count -1);
+end;
+//------------------------------------------------------------------------------
+
 procedure TClipperBase.InsertLocalMinimaIntoAEL(const botY: Int64);
 var
   leftB, rightB, rbn: PActive;
@@ -1903,7 +1995,7 @@ begin
       leftB := nil;
     end else
     begin
-      new(leftB);
+      leftB := NewActive;
       FillChar(leftB^, sizeof(TActive), 0);
       leftB.locMin := locMin;
       leftB.outrec := nil;
@@ -1921,7 +2013,7 @@ begin
       rightB := nil;
     end else
     begin
-      new(rightB);
+      rightB := NewActive;
       FillChar(rightB^, sizeof(TActive), 0);
       rightB.locMin := locMin;
       rightB.outrec := nil;
@@ -2038,7 +2130,7 @@ begin
   newOr.owner := nil;
   e1.outrec := newOr;
   e2.outrec := newOr;
-  Result := NewOutPt(pt, newOr);
+  Result := NewOutPt(FOutPtPool, pt, newOr);
   newOr.pts := Result;
 
   if IsOpen(e1) then
@@ -2073,17 +2165,8 @@ end;
 //------------------------------------------------------------------------------
 
 procedure DisposeOutPts(outrec: POutRec); {$IFDEF INLINING} inline; {$ENDIF}
-var
-  op, tmpOp: POutPt;
 begin
-  op := outrec.pts;
-  op.prev.next := nil;
-  while Assigned(op) do
-  begin
-    tmpOp := op;
-    op := op.next;
-    Dispose(tmpOp);
-  end;
+  // the OutPts themselves are owned by TClipperBase.FOutPtPool
   outrec.pts := nil;
 end;
 //------------------------------------------------------------------------------
@@ -2179,7 +2262,7 @@ begin
     prevOp.next := nextNextOp;
   end else
   begin
-    newOp2 := NewOutPt(ip, outrec, prevOp, nextNextOp);
+    newOp2 := NewOutPt(FOutPtPool, ip, outrec, prevOp, nextNextOp);
     nextNextOp.prev := newOp2;
     prevOp.next := newOp2;
   end;
@@ -2192,18 +2275,14 @@ begin
 
   if (absArea2 < 1) or
     ((absArea2 < absArea1) and ((area2 > 0) <> (area1 > 0))) then
-  begin
-    Dispose(splitOp.next);
-    Dispose(splitOp);
-    Exit;
-  end;
+    Exit; // nb: splitOp and splitOp.next are owned by FOutPtPool
 
   newOutRec := FOutRecList.Add;
   newOutRec.owner := outrec.owner;
 
   splitOp.outrec := newOutRec;
   splitOp.next.outrec := newOutRec;
-  newOp := NewOutPt(ip, newOutRec, splitOp.next, splitOp);
+  newOp := NewOutPt(FOutPtPool, ip, newOutRec, splitOp.next, splitOp);
   splitOp.prev := newOp;
   splitOp.next.next := newOp;
   newOutRec.pts := newOp;
@@ -2459,7 +2538,7 @@ begin
     result := opBack;
   end else
   begin
-    Result := NewOutPt(pt, outrec, opFront, opBack);
+    Result := NewOutPt(FOutPtPool, pt, outrec, opFront, opBack);
     opBack.prev := Result;
     opFront.next := Result;
     if toFront then outrec.pts := Result;
@@ -2485,7 +2564,7 @@ begin
   end;
   e.outrec := newOr;
 
-  Result := NewOutPt(pt, newOr);
+  Result := NewOutPt(FOutPtPool, pt, newOr);
   newOr.pts := Result;
 end;
 //------------------------------------------------------------------------------
@@ -2796,15 +2875,9 @@ end;
 {$ENDIF}
 
 procedure TClipperBase.DeleteEdges(var e: PActive);
-var
-  e2: PActive;
 begin
-  while Assigned(e) do
-  begin
-    e2 := e;
-    e := e.nextInAEL;
-    Dispose(e2);
-  end;
+  // the edges themselves are owned by FActivePool
+  e := nil;
 end;
 //------------------------------------------------------------------------------
 
@@ -2819,7 +2892,7 @@ begin
   if Assigned(aelPrev) then aelPrev.nextInAEL := aelNext
   else FActives := aelNext;
   if Assigned(aelNext) then aelNext.prevInAEL := aelPrev;
-  Dispose(e);
+  PoolDeletedActive(e);
 end;
 //------------------------------------------------------------------------------
 
@@ -3027,8 +3100,8 @@ begin
           (hs2.leftOp.prev.pt.X <= hs1.leftOp.pt.X) do
             hs2.leftOp := hs2.leftOp.prev;
         FHorzJoinList.Add(
-          DuplicateOp(hs1.leftOp, true),
-          DuplicateOp(hs2.leftOp, false));
+          DuplicateOp(FOutPtPool, hs1.leftOp, true),
+          DuplicateOp(FOutPtPool, hs2.leftOp, false));
       end else
       begin
         while (hs1.leftOp.prev.pt.Y = currY) and
@@ -3038,8 +3111,8 @@ begin
           (hs2.leftOp.next.pt.X <= hs1.leftOp.pt.X) do
             hs2.leftOp := hs2.leftOp.next;
         FHorzJoinList.Add(
-          DuplicateOp(hs2.leftOp, true),
-          DuplicateOp(hs1.leftOp, false));
+          DuplicateOp(FOutPtPool, hs2.leftOp, true),
+          DuplicateOp(FOutPtPool, hs1.leftOp, false));
       end;
     end;
   end;

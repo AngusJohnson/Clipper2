@@ -275,9 +275,9 @@ namespace Clipper2Lib {
     return cnt;
   }
 
-  inline OutPt* DuplicateOp(OutPt* op, bool insert_after)
+  OutPt* ClipperBase::DuplicateOp(OutPt* op, bool insert_after)
   {
-    OutPt* result = new OutPt(op->pt, op->outrec);
+    OutPt* result = NewOutPt(op->pt, op->outrec);
     if (insert_after)
     {
       result->next = op->next;
@@ -300,21 +300,13 @@ namespace Clipper2Lib {
     OutPt* result = op->next;
     op->prev->next = op->next;
     op->next->prev = op->prev;
-    delete op;
     return result;
   }
 
 
   inline void DisposeOutPts(OutRec* outrec)
   {
-    OutPt* op = outrec->pts;
-    op->prev->next = nullptr;
-    while (op)
-    {
-      OutPt* tmp = op;
-      op = op->next;
-      delete tmp;
-    };
+    // the OutPt objects themselves are owned by ClipperBase::outpt_pool_
     outrec->pts = nullptr;
   }
 
@@ -754,17 +746,15 @@ namespace Clipper2Lib {
 
   void ClipperBase::DeleteEdges(Active*& e)
   {
-    while (e)
-    {
-      Active* e2 = e;
-      e = e->next_in_ael;
-      delete e2;
-    }
+    // the Active objects themselves are owned by ClipperBase::active_pool_
+    e = nullptr;
   }
 
   void ClipperBase::CleanUp()
   {
     DeleteEdges(actives_);
+    free_actives_.clear();
+    active_pool_.Clear();
     scanline_list_ = std::priority_queue<int64_t>();
     intersect_nodes_.clear();
     DisposeAllOutRecs();
@@ -886,6 +876,7 @@ namespace Clipper2Lib {
       delete outrec;
     }
     outrec_list_.resize(0);
+    outpt_pool_.Clear();
   }
 
   void ClipperBase::DisposeVerticesAndLocalMinima()
@@ -1210,7 +1201,7 @@ namespace Clipper2Lib {
       }
       else
       {
-        left_bound = new Active();
+        left_bound = NewActive();
         left_bound->bot = local_minima->vertex->pt;
         left_bound->curr_x = left_bound->bot.x;
         left_bound->wind_dx = -1;
@@ -1226,7 +1217,7 @@ namespace Clipper2Lib {
       }
       else
       {
-        right_bound = new Active();
+        right_bound = NewActive();
         right_bound->bot = local_minima->vertex->pt;
         right_bound->curr_x = right_bound->bot.x;
         right_bound->wind_dx = 1;
@@ -1371,7 +1362,7 @@ namespace Clipper2Lib {
       }
     }
 
-    OutPt* op = new OutPt(pt, outrec);
+    OutPt* op = NewOutPt(pt, outrec);
     outrec->pts = op;
     return op;
   }
@@ -1513,7 +1504,7 @@ namespace Clipper2Lib {
     else if (pt == op_back->pt)
       return op_back;
 
-    new_op = new OutPt(pt, outrec);
+    new_op = NewOutPt(pt, outrec);
     op_back->prev = new_op;
     new_op->prev = op_front;
     new_op->next = op_back;
@@ -1595,7 +1586,7 @@ namespace Clipper2Lib {
     }
     else
     {
-      OutPt* newOp2 = new OutPt(ip, prevOp->outrec);
+      OutPt* newOp2 = NewOutPt(ip, prevOp->outrec);
       newOp2->prev = prevOp;
       newOp2->next = nextNextOp;
       nextNextOp->prev = newOp2;
@@ -1615,7 +1606,7 @@ namespace Clipper2Lib {
 
       splitOp->outrec = newOr;
       splitOp->next->outrec = newOr;
-      OutPt* newOp = new OutPt(ip, newOr);
+      OutPt* newOp = NewOutPt(ip, newOr);
       newOp->prev = splitOp->next;
       newOp->next = splitOp;
       newOr->pts = newOp;
@@ -1636,11 +1627,8 @@ namespace Clipper2Lib {
         }
       }
     }
-    else
-    {
-      delete splitOp->next;
-      delete splitOp;
-    }
+    // otherwise splitOp and splitOp->next are simply dropped (they're
+    // owned by outpt_pool_)
   }
 
   void ClipperBase::FixSelfIntersects(OutRec* outrec)
@@ -1700,7 +1688,7 @@ namespace Clipper2Lib {
 
     e.outrec = outrec;
 
-    OutPt* op = new OutPt(pt, outrec);
+    OutPt* op = NewOutPt(pt, outrec);
     outrec->pts = op;
     return op;
   }
@@ -2095,7 +2083,22 @@ namespace Clipper2Lib {
     else
       actives_ = next;
     if (next) next->prev_in_ael = prev;
-    delete& e;
+    PoolDeletedActive(e);
+  }
+
+  inline void ClipperBase::PoolDeletedActive(Active& e)
+  {
+    e = Active();
+    free_actives_.push_back(&e);
+  }
+
+  inline Active* ClipperBase::NewActive()
+  {
+    if (free_actives_.empty()) return active_pool_.New();
+    // recycle an active from the free list
+    Active* result = free_actives_.back();
+    free_actives_.pop_back();
+    return result;
   }
 
 

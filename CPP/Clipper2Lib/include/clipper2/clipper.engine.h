@@ -14,8 +14,54 @@
 #include <queue>
 #include <functional>
 #include <memory>
+#include <new>
+#include <type_traits>
 
 namespace Clipper2Lib {
+
+	// Allocates objects from larger chunks of memory so that they can all be
+	// released together (by Clear) instead of being allocated and deleted
+	// one at a time. It's only used for trivially destructible types.
+	template <typename T>
+	class ObjectPool {
+	public:
+		ObjectPool() = default;
+		ObjectPool(const ObjectPool&) = delete;
+		ObjectPool& operator=(const ObjectPool&) = delete;
+		~ObjectPool() { Clear(); }
+
+		template <typename... Args>
+		T* New(Args&&... args)
+		{
+			if (next_ == end_) AddChunk();
+			return new (next_++) T(std::forward<Args>(args)...);
+		}
+
+		void Clear()
+		{
+			static_assert(std::is_trivially_destructible<T>::value,
+				"ObjectPool doesn't call destructors");
+			for (T* chunk : chunks_) ::operator delete(chunk);
+			chunks_.clear();
+			next_ = nullptr;
+			end_ = nullptr;
+		}
+
+	private:
+		std::vector<T*> chunks_;
+		T* next_ = nullptr;
+		T* end_ = nullptr;
+
+		void AddChunk()
+		{
+			// chunks grow from 32 to 4096 objects
+			size_t n = size_t(32) << (chunks_.size() < 7 ? chunks_.size() : 7);
+			chunks_.push_back(nullptr); // so a failed allocation can't leak
+			chunks_.back() = static_cast<T*>(::operator new(n * sizeof(T)));
+			next_ = chunks_.back();
+			end_ = next_ + n;
+		}
+	};
 
 	struct Scanline;
 	struct IntersectNode;
@@ -262,6 +308,14 @@ namespace Clipper2Lib {
 		bool has_open_paths_ = false;
 		bool succeeded_ = true;
 		OutRecList outrec_list_; //pointers in case list memory reallocated
+		// all OutPt and Active objects are owned by these and released in CleanUp
+		ObjectPool<OutPt> outpt_pool_;
+		ObjectPool<Active> active_pool_;
+		std::vector<Active*> free_actives_; // deleted actives, ready for reuse
+		OutPt* NewOutPt(const Point64& pt, OutRec* outrec) { return outpt_pool_.New(pt, outrec); }
+		inline Active* NewActive();
+		inline void PoolDeletedActive(Active& e);
+		OutPt* DuplicateOp(OutPt* op, bool insert_after);
 		bool ExecuteInternal(ClipType ct, FillRule ft, bool use_polytrees);
 		void CleanCollinear(OutRec* outrec);
 		bool CheckBounds(OutRec* outrec);
