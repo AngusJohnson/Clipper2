@@ -161,6 +161,8 @@ namespace Clipper2Lib {
 	};
 
 #ifdef USINGZ
+	// Z callbacks must not change the floating point rounding mode because
+	// edge positions rounded before a callback can be reused after it.
 	typedef std::function<void(const Point64& e1bot, const Point64& e1top,
 		const Point64& e2bot, const Point64& e2top, Point64& pt)> ZCallback64;
 
@@ -195,6 +197,9 @@ namespace Clipper2Lib {
 		FillRule fillrule_ = FillRule::EvenOdd;
 		FillRule fillpos = FillRule::Positive;
 		int64_t bot_y_ = 0;
+		// Every active edge's curr_x is already TopX(top_y). Set by DoIntersections
+		// and only valid for the DoTopOfScanbeam call that immediately follows it.
+		bool curr_x_at_top_ = false;
 		bool minima_list_sorted_ = false;
 		bool using_polytree_ = false;
 		Active* actives_ = nullptr;
@@ -226,7 +231,7 @@ namespace Clipper2Lib {
 		inline void UpdateEdgeIntoAEL(Active *e);
 		void IntersectEdges(Active &e1, Active &e2, const Point64& pt);
 		inline void DeleteFromAEL(Active &e);
-		inline void AdjustCurrXAndCopyToSEL(const int64_t top_y);
+		inline bool AdjustCurrXAndCopyToSEL(const int64_t top_y);
 		void DoIntersections(const int64_t top_y);
 		void AddNewIntersectNode(Active &e1, Active &e2, const int64_t top_y);
 		bool BuildIntersectList(const int64_t top_y);
