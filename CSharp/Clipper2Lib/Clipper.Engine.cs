@@ -789,10 +789,8 @@ namespace Clipper2Lib
         _isSortedMinimaList = true;
       }
 
-      _scanlineList.EnsureCapacity(_minimaList.Count);
-      for (int i = _minimaList.Count - 1; i >= 0; i--)
-        _scanlineList.Add(_minimaList[i].vertex.pt.Y);
-
+      // the local minima aren't added to _scanlineList since they're already
+      // sorted, instead PopScanline() merges them with _scanlineList
       _currentBotY = 0;
       _currentLocMin = 0;
       _actives = null;
@@ -812,15 +810,19 @@ namespace Clipper2Lib
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private bool PopScanline(out long y)
     {
+      // the next scanline is the larger of the next local minima's y (local
+      // minima are sorted by descending y) and the last _scanlineList y
+      bool hasLocMin = _currentLocMin < _minimaList.Count;
       int cnt = _scanlineList.Count - 1;
       if (cnt < 0)
       {
-        y = 0;
-        return false;
+        y = hasLocMin ? _minimaList[_currentLocMin].vertex.pt.Y : 0;
+        return hasLocMin;
       }
 
       y = _scanlineList[cnt];
-      _scanlineList.RemoveAt(cnt--);
+      if (hasLocMin && _minimaList[_currentLocMin].vertex.pt.Y > y)
+        y = _minimaList[_currentLocMin].vertex.pt.Y;
       while (cnt >= 0 && y == _scanlineList[cnt])
         _scanlineList.RemoveAt(cnt--);
       return true;
