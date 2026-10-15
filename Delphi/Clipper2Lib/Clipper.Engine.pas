@@ -231,6 +231,7 @@ type
     FOutPtPool          : TObjectPool;
     FActivePool         : TObjectPool;
     FFreeActives        : TList; // deleted actives, ready for reuse
+    FRecheckList        : TList; // used by CleanCollinear
     // FActives: see AEL above
     FActives            : PActive;
     // FSel: see SEL above.
@@ -1450,6 +1451,7 @@ begin
   FOutPtPool        := TObjectPool.Create(SizeOf(TOutPt));
   FActivePool       := TObjectPool.Create(SizeOf(TActive));
   FFreeActives      := TList.Create;
+  FRecheckList      := TList.Create;
   FPreserveCollinear  := true;
   FReverseSolution    := false;
 end;
@@ -1467,6 +1469,7 @@ begin
   FOutPtPool.Free;
   FActivePool.Free;
   FFreeActives.Free;
+  FRecheckList.Free;
   inherited;
 end;
 //------------------------------------------------------------------------------
@@ -2173,7 +2176,9 @@ end;
 
 procedure TClipperBase.CleanCollinear(outRec: POutRec);
 var
-  op2, startOp: POutPt;
+  op2, startOp, firstOp: POutPt;
+  isFirstLap, isFirstOp: Boolean;
+  recheckIdx: integer;
 begin
   outRec := GetRealOutRec(outRec);
   if not Assigned(outRec) or outRec.isOpen then Exit;
@@ -2183,8 +2188,18 @@ begin
     Exit;
   end;
 
+  // The first lap checks every vertex. Removing a vertex can only make its
+  // two neighbours removable. The next one is checked straight away, but
+  // the previous one would have to wait for another full lap of the path.
+  // So instead of doing more full laps, only those previous vertices are
+  // rechecked (in the same order that more full laps would reach them),
+  // which gives exactly the same result.
   startOp := outRec.pts;
   op2 := startOp;
+  firstOp := startOp;
+  isFirstLap := true;
+  FRecheckList.Clear;
+  recheckIdx := 0;
   while true do
   begin
     // trim if collinear AND one of
@@ -2198,17 +2213,36 @@ begin
       (DotProduct(op2.prev.pt, op2.pt, op2.next.pt) < 0)) then
     begin
       if op2 = outRec.pts then outRec.pts := op2.prev;
+      isFirstOp := isFirstLap and (op2 = firstOp);
+      if (FRecheckList.Count = 0) or
+        (FRecheckList[FRecheckList.Count -1] <> op2.prev) then
+          FRecheckList.Add(op2.prev);
       op2 := DisposeOutPt(op2);
       if not IsValidClosedPath(op2) then
       begin
         DisposeOutPts(outRec);
         Exit;
       end;
+      if isFirstOp then firstOp := op2
+      else if isFirstLap and (op2 = firstOp) then isFirstLap := false;
       startOp := op2;
       Continue;
     end;
-    op2 := op2.next;
-    if op2 = startOp then Break;
+    if isFirstLap then
+    begin
+      op2 := op2.next;
+      if op2 = startOp then Break;
+      if op2 <> firstOp then Continue;
+      isFirstLap := false;
+    end;
+    // skip to the next vertex that needs rechecking (ignoring any that
+    // have since been removed, ie whose next no longer links back to them)
+    while (recheckIdx < FRecheckList.Count) and
+      (POutPt(FRecheckList[recheckIdx]).next.prev <>
+        FRecheckList[recheckIdx]) do inc(recheckIdx);
+    if recheckIdx = FRecheckList.Count then Break;
+    op2 := FRecheckList[recheckIdx];
+    inc(recheckIdx);
   end;
   FixSelfIntersects(outRec);
 end;
