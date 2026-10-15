@@ -873,9 +873,10 @@ namespace Clipper2Lib {
     for (auto outrec : outrec_list_)
     {
       if (outrec->pts) DisposeOutPts(outrec);
-      delete outrec;
+      outrec->~OutRec(); // the memory itself is owned by outrec_pool_
     }
     outrec_list_.resize(0);
+    outrec_pool_.Clear();
     outpt_pool_.Clear();
   }
 
@@ -1473,7 +1474,7 @@ namespace Clipper2Lib {
 
   OutRec* ClipperBase::NewOutRec()
   {
-    OutRec* result = new OutRec();
+    OutRec* result = outrec_pool_.New();
     result->idx = outrec_list_.size();
     outrec_list_.emplace_back(result);
     result->pts = nullptr;

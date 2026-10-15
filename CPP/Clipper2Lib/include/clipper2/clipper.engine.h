@@ -15,13 +15,13 @@
 #include <functional>
 #include <memory>
 #include <new>
-#include <type_traits>
 
 namespace Clipper2Lib {
 
 	// Allocates objects from larger chunks of memory so that they can all be
 	// released together (by Clear) instead of being allocated and deleted
-	// one at a time. It's only used for trivially destructible types.
+	// one at a time. Clear doesn't call destructors, so any objects that need
+	// destroying must be destroyed by their owner first.
 	template <typename T>
 	class ObjectPool {
 	public:
@@ -39,8 +39,6 @@ namespace Clipper2Lib {
 
 		void Clear()
 		{
-			static_assert(std::is_trivially_destructible<T>::value,
-				"ObjectPool doesn't call destructors");
 			for (T* chunk : chunks_) ::operator delete(chunk);
 			chunks_.clear();
 			next_ = nullptr;
@@ -308,8 +306,10 @@ namespace Clipper2Lib {
 		bool has_open_paths_ = false;
 		bool succeeded_ = true;
 		OutRecList outrec_list_; //pointers in case list memory reallocated
-		// all OutPt and Active objects are owned by these and released in CleanUp
+		// all OutPt, OutRec and Active objects are owned by these and released
+		// in CleanUp
 		ObjectPool<OutPt> outpt_pool_;
+		ObjectPool<OutRec> outrec_pool_;
 		ObjectPool<Active> active_pool_;
 		std::vector<Active*> free_actives_; // deleted actives, ready for reuse
 		OutPt* NewOutPt(const Point64& pt, OutRec* outrec) { return outpt_pool_.New(pt, outrec); }
