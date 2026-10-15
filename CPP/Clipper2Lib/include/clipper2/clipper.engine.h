@@ -320,6 +320,7 @@ namespace Clipper2Lib {
 		ObjectPool<OutRec> outrec_pool_;
 		ObjectPool<Active> active_pool_;
 		std::vector<Active*> free_actives_; // deleted actives, ready for reuse
+		std::vector<OutPt*> recheck_list_; // used by CleanCollinear
 		OutPt* NewOutPt(const Point64& pt, OutRec* outrec) { return outpt_pool_.New(pt, outrec); }
 		inline Active* NewActive();
 		inline void PoolDeletedActive(Active& e);

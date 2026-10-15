@@ -1543,7 +1543,16 @@ namespace Clipper2Lib {
       return;
     }
 
-    OutPt* startOp = outrec->pts, * op2 = startOp;
+    // The first lap checks every vertex. Removing a vertex can only make its
+    // two neighbours removable. The next one is checked straight away, but
+    // the previous one would have to wait for another full lap of the path.
+    // So instead of doing more full laps, only those previous vertices are
+    // rechecked (in the same order that more full laps would reach them),
+    // which gives exactly the same result.
+    OutPt* startOp = outrec->pts, * op2 = startOp, * firstOp = startOp;
+    bool is_first_lap = true;
+    recheck_list_.clear();
+    size_t recheck_idx = 0;
     for (; ; )
     {
       //NB if preserveCollinear == true, then only remove 180 deg. spikes
@@ -1555,17 +1564,35 @@ namespace Clipper2Lib {
 
         if (op2 == outrec->pts) outrec->pts = op2->prev;
 
+        const bool is_first_op = is_first_lap && op2 == firstOp;
+        if (recheck_list_.empty() || recheck_list_.back() != op2->prev)
+          recheck_list_.push_back(op2->prev);
+
         op2 = DisposeOutPt(op2);
         if (!IsValidClosedPath(op2))
         {
           DisposeOutPts(outrec);
           return;
         }
+        if (is_first_op) firstOp = op2;
+        else if (is_first_lap && op2 == firstOp) is_first_lap = false;
         startOp = op2;
         continue;
       }
-      op2 = op2->next;
-      if (op2 == startOp) break;
+      if (is_first_lap)
+      {
+        op2 = op2->next;
+        if (op2 == startOp) break;
+        if (op2 != firstOp) continue;
+        is_first_lap = false;
+      }
+      // skip to the next vertex that needs rechecking (ignoring any that
+      // have since been removed, ie whose next no longer links back to them)
+      while (recheck_idx < recheck_list_.size() &&
+        recheck_list_[recheck_idx]->next->prev != recheck_list_[recheck_idx])
+        ++recheck_idx;
+      if (recheck_idx == recheck_list_.size()) break;
+      op2 = recheck_list_[recheck_idx++];
     }
     FixSelfIntersects(outrec);
   }
