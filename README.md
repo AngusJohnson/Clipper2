@@ -1,16 +1,14 @@
 # Clipper2
 
-### A Polygon <a href="https://en.wikipedia.org/wiki/Clipping_(computer_graphics)">Clipping</a>, <a href="https://en.wikipedia.org/wiki/Parallel_curve">Offsetting</a> and <a href="https://en.wikipedia.org/wiki/Constrained_Delaunay_triangulation">Triangulation</a> library (in C++, C# &amp; Delphi)<br>
+## <a href="https://github.com/AngusJohnson/Clipper2/discussions/1118">Why there haven’t been any updates in the last 6 months</a>
+<br>
+
+### A Polygon <a href="https://en.wikipedia.org/wiki/Clipping_(computer_graphics)">Clipping</a>, <a href="https://en.wikipedia.org/wiki/Parallel_curve">Offsetting</a> library (in C++, C# &amp; Delphi)<br>
 [![GitHub Actions C++ status](https://github.com/AngusJohnson/Clipper2/actions/workflows/actions_cpp.yml/badge.svg)](https://github.com/AngusJohnson/Clipper2/actions/workflows/actions_cpp.yml)&nbsp;[![C#](https://github.com/AngusJohnson/Clipper2/actions/workflows/actions_csharp.yml/badge.svg)](https://github.com/AngusJohnson/Clipper2/actions/workflows/actions_csharp.yml)&nbsp;[![License](https://img.shields.io/badge/License-Boost_1.0-lightblue.svg)](https://www.boost.org/LICENSE_1_0.txt)
 [![Nuget](https://img.shields.io/nuget/v/Clipper2?color=green)](https://www.nuget.org/packages/Clipper2)
 [![documentation](https://user-images.githubusercontent.com/5280692/187832279-b2a43890-da80-4888-95fe-793f092be372.svg)](https://www.angusj.com/clipper2/Docs/Overview.htm)
 
-The <b>Clipper2</b> library performs **intersection**, **union**, **difference** and **XOR** boolean operations on both simple and complex polygons. It also performs **polygon offsetting**, and **Constrained Delaunay Triangulation**. This is a major update of my original <a href="https://sourceforge.net/projects/polyclipping/"><b>Clipper</b></a> library that was written about 15 years ago. That library I'm now calling <b>Clipper1</b>, and while it still works very well, Clipper2 is just [better](https://www.angusj.com/clipper2/Docs/Changes.htm).
-
-```diff
-- CAUTION: The triangulation code is buggy and I regret releasing it when I did.
-- I'm working on fixes but these may still be weeks away. Sorry.
-```
+The <b>Clipper2</b> library performs **intersection**, **union**, **difference** and **XOR** boolean operations on both simple and complex polygons. It also performs **polygon offsetting**. This is a major update of my original <a href="https://sourceforge.net/projects/polyclipping/"><b>Clipper</b></a> library that was written about 15 years ago. That library I'm now calling <b>Clipper1</b>, and while it still works very well, Clipper2 is just [better](https://www.angusj.com/clipper2/Docs/Changes.htm).
 
 ### Compilers
 <b>Clipper2</b> can be compiled using any one of three supported programming languages: C++, or C#, or Delphi Pascal. The library can also be accessed from other languages by dynamically linking to exported functions in the [C++ compiled Clipper2 library](https://github.com/AngusJohnson/Clipper2/tree/main/DLL). (The C++ compiled code is [measurably](https://www.angusj.com/clipper2/Docs/Changes.htm) faster so, where performance is critical, even C# and Delphi developers may prefer this approach in application development.) 
@@ -65,33 +63,6 @@ https://github.com/AngusJohnson/Clipper2/blob/fa7add77364eb3877dd1b8caf9b3cbd548
 
 ![rabbit](https://github.com/user-attachments/assets/a0f2f43c-f0a3-45ec-887d-d9ca34256088)
 ![rabbit_offset](https://github.com/user-attachments/assets/ca05688e-293f-4596-86ab-df529694e778)
-
-**Constrained Delaunay Triangulation**<br>
-
-<details open>
-  <summary><b>C++</b></summary>
-https://github.com/AngusJohnson/Clipper2/blob/fa7add77364eb3877dd1b8caf9b3cbd5486347f6/CPP/Examples/Triangulation/Triangulation.cpp#L135-L138
-</details>
-
-<details>
-  <summary><b>C#</b></summary>
-https://github.com/AngusJohnson/Clipper2/blob/fa7add77364eb3877dd1b8caf9b3cbd5486347f6/CSharp/Clipper2Lib.Examples/Triangulation/Main.cs#L110-L115
-</details>
- 
-<details>
-  <summary><b>Delphi</b></summary>
-https://github.com/AngusJohnson/Clipper2/blob/fa7add77364eb3877dd1b8caf9b3cbd5486347f6/Delphi/Examples/Triangulation/ClipperTri.dpr#L28-L33
-</details>
-
-![coral3](https://github.com/user-attachments/assets/78e88382-f772-442b-a09c-c14d8906fb21)
-![coral3t](https://github.com/user-attachments/assets/c329ef2a-4833-4092-8415-145400fba8b0)
-
-<details open>
-  <summary><b>C++</b></summary>
-https://github.com/AngusJohnson/Clipper2/blob/2970649befb89af85e2132e5242a7d6926cbfa11/CPP/Examples/UsingZ/UsingZ.cpp#L173-L184
-</details>
-
-![coral3_t2](https://github.com/user-attachments/assets/fc1c8741-e033-4dc6-869a-c0d7da550cfa)
 
 <hr>
 
