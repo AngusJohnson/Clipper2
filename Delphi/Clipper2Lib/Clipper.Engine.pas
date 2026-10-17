@@ -198,6 +198,7 @@ type
   TClipperBase = class
   {$IFDEF STRICT}strict{$ENDIF} private
     FBotY               : Int64;
+    FCurrXAtTop         : Boolean; // every active edge's currX is already TopX(topY)
     FScanLine           : PScanLine;
     FCurrentLocMinIdx   : Integer;
     FClipType           : TClipType;
@@ -242,7 +243,7 @@ type
     procedure IntersectEdges(e1, e2: PActive; pt: TPoint64);
     procedure DeleteEdges(var e: PActive);
     procedure DeleteFromAEL(e: PActive);
-    procedure AdjustCurrXAndCopyToSEL(topY: Int64);
+    function AdjustCurrXAndCopyToSEL(topY: Int64): Boolean;
     procedure ConvertHorzSegsToJoins;
     procedure ProcessHorzJoins;
     procedure DoIntersections(const topY: Int64);
@@ -2823,10 +2824,14 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-procedure TClipperBase.AdjustCurrXAndCopyToSEL(topY: Int64);
+function TClipperBase.AdjustCurrXAndCopyToSEL(topY: Int64): Boolean;
 var
   e: PActive;
+  x, prevX: Int64;
 begin
+  // returns true when the edges are still sorted by currX (ie no intersections)
+  Result := true;
+  prevX := Low(Int64);
   FSel := FActives;
   e := FActives;
   while Assigned(e) do
@@ -2836,7 +2841,10 @@ begin
     e.jump := e.nextInSEL;
     // it is safe to ignore 'joined' edges here because
     // if necessary they will be split in IntersectEdges()
-    e.currX := TopX(e, topY);
+    x := TopX(e, topY);
+    e.currX := x;
+    if x < prevX then Result := false;
+    prevX := x;
     e := e.nextInAEL;
   end;
 end;
@@ -3133,6 +3141,7 @@ end;
 
 procedure TClipperBase.DoIntersections(const topY: Int64);
 begin
+  FCurrXAtTop := false;
   if BuildIntersectList(topY) then
   try
     ProcessIntersectList;
@@ -3221,7 +3230,13 @@ begin
 
   // Calculate edge positions at the top of the current scanbeam, and from this
   // we will determine the intersections required to reach these new positions.
-  AdjustCurrXAndCopyToSEL(topY);
+  // If the edges are still in order there are no intersections, so the merge
+  // sort (which always does log2(n) passes over the edges) can be skipped.
+  if AdjustCurrXAndCopyToSEL(topY) then
+  begin
+    FCurrXAtTop := true;
+    Exit;
+  end;
 
   // Find all edge intersections in the current scanbeam using a stable merge
   // sort that ensures only adjacent edges are intersecting. Intersect info is
@@ -3604,7 +3619,8 @@ begin
         if IsHorizontal(e) then
           PushHorz(e);
       end;
-    end else
+    end
+    else if not FCurrXAtTop then // i.e. not the top of the edge
       e.currX := TopX(e, Y);
     e := e.nextInAEL;
   end;

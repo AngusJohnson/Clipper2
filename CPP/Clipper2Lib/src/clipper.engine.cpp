@@ -2099,10 +2099,13 @@ namespace Clipper2Lib {
   }
 
 
-  inline void ClipperBase::AdjustCurrXAndCopyToSEL(const int64_t top_y)
+  // returns true when the edges are still sorted by curr_x (ie no intersections)
+  inline bool ClipperBase::AdjustCurrXAndCopyToSEL(const int64_t top_y)
   {
     Active* e = actives_;
     sel_ = e;
+    bool sorted = true;
+    int64_t prev_x = std::numeric_limits<int64_t>::min();
     while (e)
     {
       e->prev_in_sel = e->prev_in_ael;
@@ -2110,9 +2113,13 @@ namespace Clipper2Lib {
       e->jump = e->next_in_sel;
       // it is safe to ignore 'joined' edges here because
       // if necessary they will be split in IntersectEdges()
-      e->curr_x = TopX(*e, top_y);
+      int64_t x = TopX(*e, top_y);
+      e->curr_x = x;
+      if (x < prev_x) sorted = false;
+      prev_x = x;
       e = e->next_in_ael;
     }
+    return sorted;
   }
 
   bool ClipperBase::ExecuteInternal(ClipType ct, FillRule fillrule, bool use_polytrees)
@@ -2335,6 +2342,7 @@ namespace Clipper2Lib {
 
   void ClipperBase::DoIntersections(const int64_t top_y)
   {
+    curr_x_at_top_ = false;
     if (BuildIntersectList(top_y))
     {
       ProcessIntersectList();
@@ -2382,7 +2390,13 @@ namespace Clipper2Lib {
 
     //Calculate edge positions at the top of the current scanbeam, and from this
     //we will determine the intersections required to reach these new positions.
-    AdjustCurrXAndCopyToSEL(top_y);
+    //If the edges are still in order there are no intersections, so the merge
+    //sort (which always does log2(n) passes over the edges) can be skipped.
+    if (AdjustCurrXAndCopyToSEL(top_y))
+    {
+      curr_x_at_top_ = true;
+      return false;
+    }
     //Find all edge intersections in the current scanbeam using a stable merge
     //sort that ensures only adjacent edges are intersecting. Intersect info is
     //stored in FIntersectList ready to be processed in ProcessIntersectList.
@@ -2718,7 +2732,7 @@ namespace Clipper2Lib {
             PushHorz(*e);  // horizontals are processed later
         }
       }
-      else // i.e. not the top of the edge
+      else if (!curr_x_at_top_) // i.e. not the top of the edge
         e->curr_x = TopX(*e, y);
 
       e = e->next_in_ael;
