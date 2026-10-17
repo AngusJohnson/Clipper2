@@ -10,6 +10,7 @@
 #include "clipper2/clipper.engine.h"
 #include "clipper2/clipper.h"
 #include <stdexcept>
+#include <cmath>
 
 // https://github.com/AngusJohnson/Clipper2/discussions/334
 // #discussioncomment-4248602
@@ -485,6 +486,139 @@ namespace Clipper2Lib {
     outrec->owner = new_owner;
   }
 
+  int StripeIndex::YToStripe(int64_t y) const
+  {
+    const int64_t s = (y - y_min_) / stripe_height_;
+
+    if (s < 0) return 0;
+    if (s >= stripe_count_) return stripe_count_ - 1;
+
+    return static_cast<int>(s);
+  }
+
+  void StripeIndex::Build(std::vector<StripeEdge>&& edges)
+  {
+    edges_ = std::move(edges);
+    stripes_.clear();
+
+    if (edges_.empty())
+    {
+      y_min_ = 0;
+      stripe_height_ = 1;
+      stripe_count_ = 1;
+      return;
+    }
+
+    y_min_ = edges_[0].a.y;
+    int64_t y_max = edges_[0].a.y;
+
+    for (const StripeEdge& e : edges_)
+    {
+      y_min_ = std::min(y_min_, std::min(e.a.y, e.b.y));
+      y_max = std::max(y_max, std::max(e.a.y, e.b.y));
+    }
+
+    stripe_count_ = static_cast<int>(std::sqrt(static_cast<double>(edges_.size())));
+    if (stripe_count_ < 1) stripe_count_ = 1;
+    if (stripe_count_ > 65536) stripe_count_ = 65536;
+
+    const int64_t y_range = y_max - y_min_;
+    stripe_height_ = (y_range <= 0) ? 1 : (y_range + stripe_count_ - 1) / stripe_count_;
+
+    // Decline rings whose edges each span many stripes (tall "comb" edges); indexing
+    // loses to brute force there. Empty edges_ signals the fallback to callers.
+    int64_t total_refs = 0;
+
+    for (const StripeEdge& e : edges_)
+      total_refs += YToStripe(std::max(e.a.y, e.b.y)) - YToStripe(std::min(e.a.y, e.b.y)) + 1;
+
+    if (total_refs > static_cast<int64_t>(edges_.size()) * 8)
+    {
+      edges_.clear();
+      return;
+    }
+
+    stripes_.resize(stripe_count_);
+
+    for (size_t i = 0; i < edges_.size(); ++i)
+    {
+      const StripeEdge& e = edges_[i];
+      const int s_min = YToStripe(std::min(e.a.y, e.b.y));
+      const int s_max = YToStripe(std::max(e.a.y, e.b.y));
+
+      for (int s = s_min; s <= s_max; ++s)
+        stripes_[s].push_back(static_cast<int32_t>(i));
+    }
+  }
+
+  void StripeIndex::BuildFromPath(const Path64& path)
+  {
+    std::vector<StripeEdge> edges;
+
+    if (path.size() >= 3)
+    {
+      edges.reserve(path.size());
+
+      for (size_t i = 0, j = path.size() - 1; i < path.size(); j = i++)
+        if (path[j].x != path[i].x || path[j].y != path[i].y)
+          edges.push_back({ path[j], path[i] });
+    }
+
+    Build(std::move(edges));
+  }
+
+  void StripeIndex::BuildFromRing(const OutPt* op)
+  {
+    std::vector<StripeEdge> edges;
+
+    if (op && op->next != op && op->prev != op->next)
+    {
+      const OutPt* cur = op;
+
+      do
+      {
+        const OutPt* nxt = cur->next;
+
+        if (cur->pt.x != nxt->pt.x || cur->pt.y != nxt->pt.y)
+          edges.push_back({ cur->pt, nxt->pt });
+
+        cur = nxt;
+      } while (cur != op);
+    }
+
+    Build(std::move(edges));
+  }
+
+  PointInPolygonResult StripeIndex::PointInPolygon(const Point64& pt) const
+  {
+    if (edges_.empty()) return PointInPolygonResult::IsOutside;
+
+    const std::vector<int32_t>& stripe = stripes_[YToStripe(pt.y)];
+    bool inside = false;
+
+    for (int32_t idx : stripe)
+    {
+      const StripeEdge& e = edges_[idx];
+      const int cross = CrossProductSign(e.a, e.b, pt);
+
+      // On-segment needs the bbox check; collinear (cross == 0) alone catches points
+      // on the edge's infinite line but off the segment.
+      if (cross == 0 &&
+        pt.x >= std::min(e.a.x, e.b.x) && pt.x <= std::max(e.a.x, e.b.x) &&
+        pt.y >= std::min(e.a.y, e.b.y) && pt.y <= std::max(e.a.y, e.b.y))
+        return PointInPolygonResult::IsOn;
+
+      // Half-open crossing so horizontal edges never affect parity (IsOn only).
+      if ((e.a.y > pt.y) != (e.b.y > pt.y))
+      {
+        if (e.b.y > pt.y ? cross > 0 : cross < 0)
+          inside = !inside;
+      }
+    }
+
+    return inside ? PointInPolygonResult::IsInside : PointInPolygonResult::IsOutside;
+  }
+
   static PointInPolygonResult PointInOpPolygon(const Point64& pt, OutPt* op)
   {
     if (op == op->next || op->prev == op->next)
@@ -596,6 +730,50 @@ namespace Clipper2Lib {
     } while (op != op1);
     // result unclear, so try again using cleaned paths
     return Path2ContainsPath1(GetCleanPath(op1), GetCleanPath(op2)); // (#973)
+  }
+
+  // Path2ContainsPath1 variant using a StripeIndex cached on the owner. Small owners
+  // and the ambiguity fallback defer to the brute-force overload, so results match.
+  static bool Path2ContainsPath1Indexed(OutPt* op1, OutRec* owner, size_t index_threshold)
+  {
+    if (owner->path.size() <= index_threshold)
+      return Path2ContainsPath1(op1, owner->pts);
+
+    if (!owner->pip_index)
+    {
+      // Build into a local first so a throw cannot cache a partial index.
+      auto index = std::make_unique<StripeIndex>();
+      index->BuildFromRing(owner->pts);
+      owner->pip_index = std::move(index);
+    }
+
+    // Empty means the index declined this ring (see StripeIndex::Build).
+    if (owner->pip_index->Empty())
+      return Path2ContainsPath1(op1, owner->pts);
+
+    PointInPolygonResult pip = PointInPolygonResult::IsOn;
+    OutPt* op = op1;
+
+    do
+    {
+      switch (owner->pip_index->PointInPolygon(op->pt))
+      {
+      case PointInPolygonResult::IsOutside:
+        if (pip == PointInPolygonResult::IsOutside) return false;
+        pip = PointInPolygonResult::IsOutside;
+        break;
+      case PointInPolygonResult::IsInside:
+        if (pip == PointInPolygonResult::IsInside) return true;
+        pip = PointInPolygonResult::IsInside;
+        break;
+      default: break;
+      }
+
+      op = op->next;
+    } while (op != op1);
+
+    // ambiguous, defer to the exact cleaned-path test
+    return Path2ContainsPath1(GetCleanPath(op1), GetCleanPath(owner->pts)); // (#973)
   }
 
   void AddLocMin(LocalMinimaList& list,
@@ -2943,7 +3121,7 @@ namespace Clipper2Lib {
         return true;    
 
       if (!CheckBounds(split) || !split->bounds.Contains(outrec->bounds) ||
-        !Path2ContainsPath1(outrec->pts, split->pts)) continue;
+        !Path2ContainsPath1Indexed(outrec->pts, split, pip_index_threshold_)) continue;
      
       if (!IsValidOwner(outrec, split)) // split is owned by outrec! (#957)
           split->owner = outrec->owner;
@@ -2966,7 +3144,7 @@ namespace Clipper2Lib {
       if (outrec->owner->splits && CheckSplitOwner(outrec, outrec->owner->splits)) break;
       if (outrec->owner->pts && CheckBounds(outrec->owner) &&
         outrec->owner->bounds.Contains(outrec->bounds) &&
-        Path2ContainsPath1(outrec->pts, outrec->owner->pts)) break;
+        Path2ContainsPath1Indexed(outrec->pts, outrec->owner, pip_index_threshold_)) break;
       outrec->owner = outrec->owner->owner;
     }
 
