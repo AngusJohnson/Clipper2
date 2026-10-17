@@ -698,3 +698,72 @@ TEST(Clipper2Tests, TestOffsets13) // see #965
   const auto area2 = std::abs(Area(solution2));
   EXPECT_EQ(area2, 122);
 }
+
+TEST(Clipper2Tests, TestOffsetMultipleRoundPolygons)
+{
+  const Paths64 subjects = {
+    MakePath({0, 0, 10, 0, 10, 10, 0, 10}),
+    MakePath({30, 0, 40, 0, 40, 10, 30, 10})
+  };
+  ClipperOffset offset;
+  offset.AddPaths(subjects, JoinType::Round, EndType::Polygon);
+  Paths64 solution;
+
+  offset.Execute(2, solution);
+
+  ASSERT_EQ(solution.size(), 2);
+  EXPECT_EQ(GetBounds(solution), Rect64(-2, -2, 42, 12));
+  EXPECT_GT(std::abs(Area(solution)), 200);
+}
+
+TEST(Clipper2Tests, TestOffsetOpenJoinedPath)
+{
+  const Paths64 subject = {
+    MakePath({0, 0, 20, 0, 20, 20, 0, 20})
+  };
+  ClipperOffset offset;
+  offset.AddPaths(subject, JoinType::Round, EndType::Joined);
+  Paths64 solution;
+
+  offset.Execute(2, solution);
+
+  ASSERT_FALSE(solution.empty());
+  EXPECT_EQ(GetBounds(solution), Rect64(-2, -2, 22, 22));
+  EXPECT_GT(std::abs(Area(solution)), 0);
+}
+
+TEST(Clipper2Tests, TestOffsetMultipleOpenPathsWithRoundCaps)
+{
+  const Paths64 subjects = {
+    MakePath({0, 0, 20, 0}),
+    MakePath({0, 20, 20, 20})
+  };
+  ClipperOffset offset;
+  offset.AddPaths(subjects, JoinType::Round, EndType::Round);
+  Paths64 solution;
+
+  offset.Execute(2, solution);
+
+  ASSERT_EQ(solution.size(), 2);
+  EXPECT_EQ(GetBounds(solution), Rect64(-2, -2, 22, 22));
+  for (const auto& path : solution)
+    EXPECT_GT(path.size(), 4);
+}
+
+TEST(Clipper2Tests, TestOffsetSinglePointRoundAndSquare)
+{
+  const Paths64 subject = {{{0, 0}}};
+  const Paths64 round_solution = InflatePaths(
+    subject, 10, JoinType::Round, EndType::Polygon);
+  const Paths64 square_solution = InflatePaths(
+    subject, 10, JoinType::Square, EndType::Polygon);
+
+  ASSERT_EQ(round_solution.size(), 1);
+  EXPECT_GT(round_solution[0].size(), 4);
+  EXPECT_EQ(GetBounds(round_solution), Rect64(-10, -10, 10, 10));
+
+  ASSERT_EQ(square_solution.size(), 1);
+  EXPECT_EQ(square_solution[0].size(), 4);
+  EXPECT_EQ(GetBounds(square_solution), Rect64(-10, -10, 10, 10));
+  EXPECT_EQ(std::abs(Area(square_solution)), 400);
+}

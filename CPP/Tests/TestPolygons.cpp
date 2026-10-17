@@ -1,4 +1,5 @@
 #include <gtest/gtest.h>
+#include <algorithm>
 #include "clipper2/clipper.h"
 #include "ClipFileLoad.h"
 inline Clipper2Lib::PathD MakeRandomPath(int width, int height, unsigned vertCnt)
@@ -122,4 +123,41 @@ TEST(Clipper2Tests, TestCollinearOnMacOs) //#777
   ASSERT_EQ(solution.size(), 1);
   EXPECT_EQ(solution[0].size(), 3);
   EXPECT_EQ(IsPositive(subject[0]), IsPositive(solution[0]));
+}
+
+TEST(Clipper2Tests, TestScanbeamWithSortedCurrX)
+{
+  // These active vertical edges retain their left-to-right order at the top
+  // of the scanbeam, so no intersection sorting is needed.
+  const Clipper2Lib::Paths64 subject = {
+    Clipper2Lib::MakePath({0, 0, 10, 0, 10, 10, 0, 10}),
+    Clipper2Lib::MakePath({20, 0, 30, 0, 30, 10, 20, 10})
+  };
+
+  const Clipper2Lib::Paths64 solution = Clipper2Lib::Union(
+    subject, Clipper2Lib::FillRule::NonZero);
+
+  EXPECT_EQ(solution.size(), 2);
+  EXPECT_EQ(std::abs(Clipper2Lib::Area(solution)), 200);
+}
+
+TEST(Clipper2Tests, TestScanbeamWithUnsortedCurrX)
+{
+  // The two diagonal edges exchange their left-to-right order inside the
+  // scanbeam. They must still be sorted and intersected at (5, 5).
+  const Clipper2Lib::Paths64 subject = {
+    Clipper2Lib::MakePath({0, 0, 10, 10, 0, 10, 10, 0})
+  };
+
+  const Clipper2Lib::Paths64 solution = Clipper2Lib::Union(
+    subject, Clipper2Lib::FillRule::EvenOdd);
+
+  ASSERT_EQ(solution.size(), 2);
+  EXPECT_EQ(std::abs(Clipper2Lib::Area(solution)), 50);
+  const Clipper2Lib::Point64 intersection(5, 5);
+  for (const auto& path : solution)
+  {
+    EXPECT_EQ(path.size(), 3);
+    EXPECT_NE(std::find(path.begin(), path.end(), intersection), path.end());
+  }
 }

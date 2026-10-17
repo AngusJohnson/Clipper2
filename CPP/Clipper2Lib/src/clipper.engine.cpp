@@ -2099,10 +2099,14 @@ namespace Clipper2Lib {
   }
 
 
-  inline void ClipperBase::AdjustCurrXAndCopyToSEL(const int64_t top_y)
+  inline void ClipperBase::AdjustCurrXAndCopyToSEL(const int64_t top_y,
+    bool& is_curr_x_sorted)
   {
     Active* e = actives_;
     sel_ = e;
+    // detect whether projected edges retain their AEL order
+    is_curr_x_sorted = true;
+    int64_t prev_x = INT64_MIN;
     while (e)
     {
       e->prev_in_sel = e->prev_in_ael;
@@ -2111,6 +2115,8 @@ namespace Clipper2Lib {
       // it is safe to ignore 'joined' edges here because
       // if necessary they will be split in IntersectEdges()
       e->curr_x = TopX(*e, top_y);
+      if (e->curr_x < prev_x) is_curr_x_sorted = false;
+      prev_x = e->curr_x;
       e = e->next_in_ael;
     }
   }
@@ -2382,7 +2388,11 @@ namespace Clipper2Lib {
 
     //Calculate edge positions at the top of the current scanbeam, and from this
     //we will determine the intersections required to reach these new positions.
-    AdjustCurrXAndCopyToSEL(top_y);
+    //When edges are already sorted on curr_x at the top of the scanbeam, no
+    //edges have crossed inside it, so there are no intersections to process.
+    bool is_curr_x_sorted;
+    AdjustCurrXAndCopyToSEL(top_y, is_curr_x_sorted);
+    if (is_curr_x_sorted) return false;
     //Find all edge intersections in the current scanbeam using a stable merge
     //sort that ensures only adjacent edges are intersecting. Intersect info is
     //stored in FIntersectList ready to be processed in ProcessIntersectList.

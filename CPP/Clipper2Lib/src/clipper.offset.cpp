@@ -372,9 +372,11 @@ void ClipperOffset::OffsetPoint(Group& group, const Path64& path, size_t j, size
 void ClipperOffset::OffsetPolygon(Group& group, const Path64& path)
 {
 	path_out.clear();
+	// reserve a conservative baseline; joins may add additional points
+	path_out.reserve(path.size());
 	for (Path64::size_type j = 0, k = path.size() - 1; j < path.size(); k = j, ++j)
-		OffsetPoint(group, path, j, k);	
-    solution->emplace_back(path_out);
+		OffsetPoint(group, path, j, k);
+    solution->emplace_back(std::move(path_out));
 }
 
 void ClipperOffset::OffsetOpenJoined(Group& group, const Path64& path)
@@ -394,6 +396,9 @@ void ClipperOffset::OffsetOpenJoined(Group& group, const Path64& path)
 
 void ClipperOffset::OffsetOpenPath(Group& group, const Path64& path)
 {
+	// open paths offset both sides but joins and caps may add more points
+	path_out.reserve(path.size() * 2);
+
 	// do the line start cap
 	if (deltaCallback64_) group_delta_ = deltaCallback64_(path, norms, 0, 0);
 
@@ -449,7 +454,7 @@ void ClipperOffset::OffsetOpenPath(Group& group, const Path64& path)
 
 	for (size_t j = highI -1, k = highI; j > 0; k = j, --j)
 		OffsetPoint(group, path, j, k);
-    solution->emplace_back(path_out);
+    solution->emplace_back(std::move(path_out));
 }
 
 void ClipperOffset::DoGroupOffset(Group& group)
@@ -523,7 +528,7 @@ void ClipperOffset::DoGroupOffset(Group& group)
 #endif
 			}
 
-            solution->emplace_back(path_out);
+            solution->emplace_back(std::move(path_out));
 			continue;
 		} // end of offsetting a single point
 

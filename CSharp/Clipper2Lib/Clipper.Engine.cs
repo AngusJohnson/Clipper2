@@ -1856,10 +1856,13 @@ namespace Clipper2Lib
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private void AdjustCurrXAndCopyToSEL(long topY)
+    private void AdjustCurrXAndCopyToSEL(long topY, out bool isCurrXSorted)
     {
       Active? ae = _actives;
       _sel = ae;
+      // detect whether projected edges retain their AEL order
+      isCurrXSorted = true;
+      long prevX = long.MinValue;
       while (ae != null)
       {
         ae.prevInSEL = ae.prevInAEL;
@@ -1868,6 +1871,8 @@ namespace Clipper2Lib
         // it is safe to ignore 'joined' edges here because
         // if necessary they will be split in IntersectEdges()
         ae.curX = TopX(ae, topY);
+        if (ae.curX < prevX) isCurrXSorted = false;
+        prevX = ae.curX;
         // NB don't update ae.curr.Y yet (see AddNewIntersectNode)
         ae = ae.nextInAEL;
       }
@@ -1984,7 +1989,10 @@ namespace Clipper2Lib
 
       // Calculate edge positions at the top of the current scanbeam, and from this
       // we will determine the intersections required to reach these new positions.
-      AdjustCurrXAndCopyToSEL(topY);
+      // When edges are already sorted on curX at the top of the scanbeam, no
+      // edges have crossed inside it, so there are no intersections to process.
+      AdjustCurrXAndCopyToSEL(topY, out bool isCurrXSorted);
+      if (isCurrXSorted) return false;
 
       // Find all edge intersections in the current scanbeam using a stable merge
       // sort that ensures only adjacent edges are intersecting. Intersect info is

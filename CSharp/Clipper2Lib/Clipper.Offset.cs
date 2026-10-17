@@ -581,7 +581,8 @@ namespace Clipper2Lib
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private void OffsetPolygon(Group group, Path64 path)
     {
-      pathOut = new Path64();
+      // reserve a conservative baseline; joins may add additional points
+      pathOut = new Path64(path.Count);
       int cnt = path.Count, prev = cnt - 1;
       for (int i = 0; i < cnt; i++)
         OffsetPoint(group, path, i, ref prev);
@@ -599,7 +600,8 @@ namespace Clipper2Lib
 
     private void OffsetOpenPath(Group group, Path64 path)
     {
-      pathOut = new Path64();
+      // open paths offset both sides but joins and caps may add more points
+      pathOut = new Path64(path.Count * 2);
       int highI = path.Count - 1;
 
       if (DeltaCallback != null) 
