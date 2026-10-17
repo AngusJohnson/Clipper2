@@ -1403,13 +1403,10 @@ end;
 //------------------------------------------------------------------------------
 
 function TClipperBase.ClearSolutionOnly: Boolean;
-var
-  dummy: Int64;
 begin
   try
     // in case of exceptions ...
     DeleteEdges(FActives);
-    while assigned(FScanLine) do PopScanLine(dummy);
     DisposeIntersectNodes;
     DisposeScanLineList;
     FOutRecList.Clear;
@@ -1433,8 +1430,6 @@ end;
 //------------------------------------------------------------------------------
 
 procedure TClipperBase.Reset;
-var
-  i: Integer;
 begin
   if not FLocMinListSorted then
   begin
@@ -1442,8 +1437,8 @@ begin
     FLocMinListSorted := true;
   end;
 
-  for i := FLocMinList.Count -1 downto 0 do
-    InsertScanLine(PLocalMinima(FLocMinList.UnsafeGet(i)).vertex.pt.Y);
+  // the local minima aren't added to the scanline list since they're already
+  // sorted, instead PopScanLine merges them with the scanline list
   FCurrentLocMinIdx := 0;
   FActives := nil;
   FSel := nil;
@@ -1495,10 +1490,10 @@ var
 begin
   // The scanline list is a single-linked list of all the Y coordinates of
   // subject and clip vertices in the clipping operation (sorted descending).
-  // However, only scanline Y's at Local Minima are inserted before clipping
-  // starts. While scanlines are removed sequentially during the sweep operation,
-  // new scanlines are only inserted whenever edge bounds are updated. This keeps
-  // the scanline list relatively short, optimising performance.
+  // However, the scanline Y's at Local Minima aren't inserted at all (they're
+  // merged in by PopScanLine), and while scanlines are removed sequentially
+  // during the sweep operation, new scanlines are only inserted whenever edge
+  // bounds are updated. This keeps the scanline list short, optimising performance.
   if not Assigned(FScanLine) then
   begin
     new(newSl);
@@ -1528,9 +1523,20 @@ end;
 function TClipperBase.PopScanLine(out Y: Int64): Boolean;
 var
   sl: PScanLine;
+  hasLocMin: Boolean;
 begin
-  Result := assigned(FScanLine);
-  if not Result then Exit;
+  // the next scanline is the larger of the next local minima's Y (local
+  // minima are sorted by descending Y) and the first scanline list Y
+  hasLocMin := FCurrentLocMinIdx < FLocMinList.Count;
+  if hasLocMin then
+    Y := PLocalMinima(FLocMinList.UnsafeGet(FCurrentLocMinIdx)).vertex.pt.Y;
+  if not Assigned(FScanLine) then
+  begin
+    Result := hasLocMin;
+    Exit;
+  end;
+  Result := true;
+  if hasLocMin and (Y > FScanLine.y) then Exit;
   Y := FScanLine.y;
   sl := FScanLine;
   FScanLine := FScanLine.next;
