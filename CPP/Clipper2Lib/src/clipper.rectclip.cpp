@@ -112,7 +112,13 @@ namespace Clipper2Lib {
     if ((res3 > 0) == (res4 > 0)) return false;
 
     // segments must intersect to get here
-    return GetLineIntersectPt(p1, p2, p3, p4, ip);
+    if (!GetLineIntersectPt(p1, p2, p3, p4, ip)) return false;
+
+    // All callers in this unit intersect against rectangle sides, so keep
+    // the constrained coordinate exact and leave the free coordinate as-is.
+    if (p3.x == p4.x) ip.x = p3.x;
+    else if (p3.y == p4.y) ip.y = p3.y;
+    return true;
   }
 
   inline bool GetIntersection(const Path64& rectPath,
