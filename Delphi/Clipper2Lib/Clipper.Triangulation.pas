@@ -647,11 +647,11 @@ begin
     end;
   end;
 
-  // InCircleTest reqires edge.triangleA to be a valid triangle
+  // InCircleTest requires edge.triangleA to be a valid triangle
   // if IsEmptyTriangle(edge.triangleA) then Exit; // slower
   if CrossProductIsZero(vertA.pt, edge.vL.pt, edge.vR.pt) then Exit;
 
-  // ictResult - result sign is dependant on triangleA's orientation
+  // ictResult - result sign is dependent on triangleA's orientation
   ictResult := InCircleTest(vertA.pt, edge.vL.pt, edge.vR.pt, vertB.pt);
   if (ictResult = 0) or // if on or out of circle then exit
     (RightTurning(vertA, edge.vL, edge.vR) = (ictResult < 0)) then
@@ -738,7 +738,7 @@ end;
 
 procedure TDelaunay.AddEdgeToActives(edge: PEdge);
 begin
-  // nb: on occassions this method can get called twice for a given edge
+  // nb: occasionally this method can get called twice for a given edge
   // This is because, in the Triangulate() method where vertex 'edges'
   // arrays are being parsed, edges can can be removed from the array
   // which changes the index of following edges.
@@ -866,7 +866,7 @@ procedure TDelaunay.MergeDupOrCollinearVertices;
     len := Length(newT.edges);
     SetLength(newT.edges, len + 1);
     newT.edges[len] := longEdge;
-    // and create a new edge betweem newV, oldT
+    // and create a new edge between newV, oldT
     CreateEdge(newT, oldT, longEdge.kind);
   end;
 

@@ -61,9 +61,9 @@ static uint32_t ByteToRainbowColor(uint8_t b)
     //129..171
   case 3: b2 = (171 - b) * 6; return 0xFF0000FF | (b2 << 8);  // 0xFF00FFFF -> 0xFF0000FF (aqua..blue)  
     //172..214
-  case 4: b2 = (b - 172) * 6; return 0xFF0000FF | (b2 << 16); // 0xFF0000FF -> 0xFFFF00FF (blue..fuschia)     
+  case 4: b2 = (b - 172) * 6; return 0xFF0000FF | (b2 << 16); // 0xFF0000FF -> 0xFFFF00FF (blue..fuchsia)     
     //215..255
-  default: b2 = (255 - b) * 6; return 0xFFFF0000 | b2;        // 0xFF0000FF -> 0xFFFF00FF (fuschia..red)     
+  default: b2 = (255 - b) * 6; return 0xFFFF0000 | b2;        // 0xFF0000FF -> 0xFFFF00FF (fuchsia..red)     
   }
 }
 
@@ -176,7 +176,7 @@ void Test2_Double()
   PointD mp = r.MidPoint();
   double d = (mp.y - r.top) / 255;
   // for each point in subject, set its 'z' as a 
-  // relative distance fron 'mp' (scaled to 255)
+  // relative distance from 'mp' (scaled to 255)
   for (PathD& path : subject)
     for (PointD& pt : path)
       pt.z = Distance(pt, mp) / d;
