@@ -706,6 +706,30 @@ namespace Clipper2Lib
         (double) (pt2.Y + pt3.Y) * (pt2.X - pt3.X);
     }
 
+    // returns true when the triangle's centroid has a non-zero winding number
+    // relative to the closed path at op (the centroid is kept in doubles so that
+    // it isn't rounded outside a very thin triangle)
+    private static bool TriangleInsidePath(OutPt op, Point64 pt1, Point64 pt2, Point64 pt3)
+    {
+      double x = ((double) pt1.X + pt2.X + pt3.X) / 3;
+      double y = ((double) pt1.Y + pt2.Y + pt3.Y) / 3;
+      int winding = 0;
+      OutPt op2 = op;
+      do
+      {
+        Point64 p = op2.pt;
+        Point64 q = op2.next!.pt;
+        double cross = (double) (q.X - p.X) * (y - p.Y) - (x - p.X) * (q.Y - p.Y);
+        if (p.Y <= y)
+        {
+          if (q.Y > y && cross > 0) winding++;
+        }
+        else if (q.Y <= y && cross < 0) winding--;
+        op2 = op2.next;
+      } while (op2 != op);
+      return winding != 0;
+    }
+
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static OutRec? GetRealOutRec(OutRec? outRec)
     {
@@ -2930,9 +2954,14 @@ private void DoHorizontal(Active horz)
       // So the only way for these areas to have the same sign is if
       // the split triangle is larger than the path containing prevOp or
       // if there's more than one self=intersection.
+      // A smaller split of opposite orientation is usually a spurious twist and
+      // is discarded. However, when it lies inside the remaining path it is a
+      // hole that the remaining path already covers, and discarding it would
+      // fill that hole. So such a split is kept as a separate path.
       if (!(absArea2 > 1) ||
           (!(absArea2 > absArea1) &&
-           ((area2 > 0) != (area1 > 0)))) return;
+           ((area2 > 0) != (area1 > 0)) &&
+           !TriangleInsidePath(prevOp, ip, splitOp.pt, splitOp.next.pt))) return;
       OutRec newOutRec = NewOutRec();
       newOutRec.owner = outrec.owner;
       splitOp.outrec = newOutRec;

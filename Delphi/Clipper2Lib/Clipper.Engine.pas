@@ -1289,6 +1289,34 @@ begin
 end;
 //------------------------------------------------------------------------------
 
+function TriangleInsidePath(op: POutPt; const pt1, pt2, pt3: TPoint64): Boolean;
+var
+  op2: POutPt;
+  x, y, cross: double;
+  winding: integer;
+begin
+  // returns true when the triangle's centroid has a non-zero winding number
+  // relative to the closed path at op (the centroid is kept in doubles so
+  // that it isn't rounded outside a very thin triangle)
+  x := pt1.X / 3 + pt2.X / 3 + pt3.X / 3;
+  y := pt1.Y / 3 + pt2.Y / 3 + pt3.Y / 3;
+  winding := 0;
+  op2 := op;
+  repeat
+    cross := (op2.next.pt.X - op2.pt.X) * (y - op2.pt.Y) -
+      (x - op2.pt.X) * (op2.next.pt.Y - op2.pt.Y);
+    if op2.pt.Y <= y then
+    begin
+      if (op2.next.pt.Y > y) and (cross > 0) then inc(winding);
+    end
+    else if (op2.next.pt.Y <= y) and (cross < 0) then
+      dec(winding);
+    op2 := op2.next;
+  until op2 = op;
+  Result := winding <> 0;
+end;
+//------------------------------------------------------------------------------
+
 function OutrecIsAscending(hotEdge: PActive): Boolean;
   {$IFDEF INLINING} inline; {$ENDIF}
 begin
@@ -2189,9 +2217,14 @@ begin
   // negative areas), and given area2 is the area of a new triangle containing
   // splitOp, splitOp.next and the intesect pt, if area1 and area2 have the
   // same sign then area2 must be the larger of the splits.
+  // A smaller split of opposite orientation is usually a spurious twist and
+  // is discarded. However, when it lies inside the remaining path it is a
+  // hole that the remaining path already covers, and discarding it would
+  // fill that hole. So such a split is kept as a separate path.
 
   if (absArea2 < 1) or
-    ((absArea2 < absArea1) and ((area2 > 0) <> (area1 > 0))) then
+    ((absArea2 < absArea1) and ((area2 > 0) <> (area1 > 0)) and
+    not TriangleInsidePath(prevOp, ip, splitOp.pt, splitOp.next.pt)) then
   begin
     Dispose(splitOp.next);
     Dispose(splitOp);
