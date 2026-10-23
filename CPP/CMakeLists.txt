@@ -17,6 +17,7 @@ option(CLIPPER2_HI_PRECISION "Caution: enabling this will compromise performance
 option(CLIPPER2_UTILS "Build utilities" ON)
 option(CLIPPER2_EXAMPLES "Build examples" ON)
 option(CLIPPER2_TESTS "Build tests" ON)
+option(CLIPPER2_NO_IOSTREAM "Disable iostream-using header overloads" OFF)
 option(USE_EXTERNAL_GTEST "Use system-wide installed GoogleTest" OFF)
 option(USE_EXTERNAL_GBENCHMARK "Use the googlebenchmark" OFF)
 option(BUILD_SHARED_LIBS "Build shared libs" OFF)
@@ -69,6 +70,7 @@ if (NOT (CLIPPER2_USINGZ STREQUAL "ONLY"))
     Clipper2 PUBLIC
       CLIPPER2_MAX_DECIMAL_PRECISION=${CLIPPER2_MAX_DECIMAL_PRECISION}
       $<$<BOOL:${CLIPPER2_HI_PRECISION}>:CLIPPER2_HI_PRECISION>
+      $<$<BOOL:${CLIPPER2_NO_IOSTREAM}>:CLIPPER2_NO_IOSTREAM>
   )
 
   target_include_directories(
@@ -102,6 +104,7 @@ if (NOT (CLIPPER2_USINGZ STREQUAL "OFF"))
       USINGZ
       CLIPPER2_MAX_DECIMAL_PRECISION=${CLIPPER2_MAX_DECIMAL_PRECISION}
       $<$<BOOL:${CLIPPER2_HI_PRECISION}>:CLIPPER2_HI_PRECISION>
+      $<$<BOOL:${CLIPPER2_NO_IOSTREAM}>:CLIPPER2_NO_IOSTREAM>
   )
   target_include_directories(
     Clipper2Z PUBLIC 
@@ -129,6 +132,26 @@ set_target_properties(${CLIPPER2_LIBS} PROPERTIES FOLDER Libraries
                                          SOVERSION ${PROJECT_VERSION_MAJOR}
                                          PUBLIC_HEADER "${CLIPPER2_INC}"
 )
+
+# Compiles the public headers with CLIPPER2_NO_IOSTREAM defined against
+# each shipped library variant. Fails if any iostream usage creeps in
+# outside the macro guards. Always-on (independent of CLIPPER2_NO_IOSTREAM
+# itself); the targets just inherit each library's other PUBLIC
+# definitions (USINGZ, CLIPPER2_HI_PRECISION, ...) via target_link_libraries.
+foreach(_lib IN LISTS CLIPPER2_LIBS)
+  set(_check ${_lib}_no_iostream_check)
+  add_library(${_check} OBJECT Tests/no_iostream_check.cpp)
+  target_link_libraries(${_check} PRIVATE ${_lib})
+  if(NOT CLIPPER2_NO_IOSTREAM)
+    target_compile_definitions(${_check} PRIVATE CLIPPER2_NO_IOSTREAM)
+  endif()
+  if(CMAKE_CXX_COMPILER_FRONTEND_VARIANT STREQUAL "MSVC")
+    target_compile_options(${_check} PRIVATE /W4 /WX)
+  elseif(CMAKE_CXX_COMPILER_FRONTEND_VARIANT STREQUAL "GNU")
+    target_compile_options(${_check} PRIVATE -Wall -Wextra -Wpedantic -Werror)
+  endif()
+  set_target_properties(${_check} PROPERTIES FOLDER Libraries)
+endforeach()
 
 if(CLIPPER2_UTILS OR CLIPPER2_TESTS OR CLIPPER2_EXAMPLES)
   set(CLIPPER2_UTILS_INC

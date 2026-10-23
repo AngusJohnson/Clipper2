@@ -309,6 +309,7 @@ namespace Clipper2Lib {
       return true;
     }
 
+#ifndef CLIPPER2_NO_IOSTREAM
     static void OutlinePolyPath(std::ostream& os,
       size_t idx, bool isHole, size_t count, const std::string& preamble)
     {
@@ -338,6 +339,7 @@ namespace Clipper2Lib {
         if (pp.Child(i)->Count())
           details::OutlinePolyPathD(os, *pp.Child(i), i, preamble + "  ");
     }
+#endif
 
     template<typename T, typename U>
     inline constexpr void MakePathGeneric(const T an_array,
@@ -377,6 +379,7 @@ namespace Clipper2Lib {
 
   } // end details namespace
 
+#ifndef CLIPPER2_NO_IOSTREAM
   inline std::ostream& operator<< (std::ostream& os, const PolyTree64& pp)
   {
     std::string plural = (pp.Count() == 1) ? " polygon." : " polygons.";
@@ -399,6 +402,7 @@ namespace Clipper2Lib {
     if (!pp.Level()) os << std::endl;
     return os;
   }
+#endif
 
   inline Paths64 PolyTreeToPaths64(const PolyTree64& polytree)
   {

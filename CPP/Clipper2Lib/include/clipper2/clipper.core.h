@@ -14,7 +14,9 @@
 #include <cstdint>
 #include <vector>
 #include <string>
+#ifndef CLIPPER2_NO_IOSTREAM
 #include <iostream>
+#endif
 #include <algorithm>
 #include <numeric>
 #include <cmath>
@@ -166,11 +168,13 @@ namespace Clipper2Lib
 
     void SetZ(const z_type z_value) { z = z_value; }
 
+#ifndef CLIPPER2_NO_IOSTREAM
     friend std::ostream& operator<<(std::ostream& os, const Point& point)
     {
       os << point.x << "," << point.y << "," << point.z;
       return os;
     }
+#endif
 
 #else
 
@@ -203,11 +207,13 @@ namespace Clipper2Lib
       return Point(x * scale, y * scale);
     }
 
+#ifndef CLIPPER2_NO_IOSTREAM
     friend std::ostream& operator<<(std::ostream& os, const Point& point)
     {
       os << point.x << "," << point.y;
       return os;
     }
+#endif
 #endif
 
     friend bool operator==(const Point& a, const Point& b)
@@ -396,10 +402,12 @@ namespace Clipper2Lib
       return result;
     }
 
+#ifndef CLIPPER2_NO_IOSTREAM
     friend std::ostream& operator<<(std::ostream& os, const Rect<T>& rect) {
       os << "(" << rect.left << "," << rect.top << "," << rect.right << "," << rect.bottom << ") ";
       return os;
     }
+#endif
   };
 
   template <typename T1, typename T2>
@@ -498,6 +506,7 @@ namespace Clipper2Lib
     return Rect<T>(xmin, ymin, xmax, ymax);
   }
 
+#ifndef CLIPPER2_NO_IOSTREAM
   template <typename T>
   std::ostream& operator << (std::ostream& outstream, const Path<T>& path)
   {
@@ -518,6 +527,7 @@ namespace Clipper2Lib
       outstream << p;
     return outstream;
   }
+#endif
 
 
   template <typename T1, typename T2>
