@@ -176,7 +176,7 @@ TEST(Clipper2Tests, TestTriangulateCollinear) //#1076
 }
 
 
-// Delaunay triangulation maximizes angles so we should split a rohombus on the short diagonal
+// Delaunay triangulation maximizes angles so we should split a rhombus on the short diagonal
 TEST(Clipper2Tests, TestTriangulateRhombusDelaunay) //#1076
 {
   Clipper2Lib::Paths64 subject = { Clipper2Lib::MakePath({100,0, 50,200, 100,400, 150,200}) };
