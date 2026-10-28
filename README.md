@@ -1,7 +1,21 @@
 # Clipper2
 
-## <a href="https://github.com/AngusJohnson/Clipper2/discussions/1118">Why there haven’t been any updates in the last 6 months</a>
-<br>
+<mark>**The future of Clipper development is now [here](https://github.com/PolyClipping/Clipper2).**</mark><br>
+
+<mark>**The bad news:** As of now I’m retiring from Clipper2 development. While this Clipper2 repository will remain, it will not be updated. So please don't post new Issues or Pull Requests here.</mark><br>
+<mark>**The good news:** I’m delighted to announce that **[Seth Hillibrand](https://github.com/sethhillbrand)** has agreed to take over Clipper maintenance and development, and this will continue at the link above.</mark><br>
+
+**<mark>The long version:</mark>**<br>
+<mark>Software development has been a wonderful hobby of mine for almost 50 years. I started Clipper more than 15 years ago, and it has been 15 years of fun and challenge. But over the last few months I’ve come to realise that the challenge has gone, and it has just become a responsibility.</mark><br>
+<mark>So I’m passing the baton. And I’m delighted to announce [Seth Hillibrand](https://github.com/sethhillbrand) has agreed to pick it up and will be taking over Clipper’s ongoing maintenance and development. Seth is the founder and lead developer of KiCad Services, and has used Clipper almost from the beginning. I’m extremely confident that he has the skills and temperament to see Clipper continue to improve. But Clipper will, however, become a C++ only library; it will be up to third parties to translate Clipper into other languages, or to use it as a dynamic linked library.</mark>
+
+**<mark>Transitioning to the new Clipper2 repository:</mark>**<br>
+<mark>I suggest that those who have contributed Pull Requests do so again [here](https://github.com/PolyClipping/Clipper2).</mark><br>
+<mark>And I suggest that those who have raised Issues also resubmit them [here](https://github.com/PolyClipping/Clipper2) or, even better, consider converting them into Pull Requests if you are able to do the debugging.</mark><br>
+
+<mark>Finally, as I said above, creating and developing Clipper has been a lot of fun. I have learned so much from you, the library’s users, and from your code contributions. And that has been enormously encouraging. Thank you.</mark>
+
+<hr>
 
 ### A Polygon <a href="https://en.wikipedia.org/wiki/Clipping_(computer_graphics)">Clipping</a>, <a href="https://en.wikipedia.org/wiki/Parallel_curve">Offsetting</a> library (in C++, C# &amp; Delphi)<br>
 [![GitHub Actions C++ status](https://github.com/AngusJohnson/Clipper2/actions/workflows/actions_cpp.yml/badge.svg)](https://github.com/AngusJohnson/Clipper2/actions/workflows/actions_cpp.yml)&nbsp;[![C#](https://github.com/AngusJohnson/Clipper2/actions/workflows/actions_csharp.yml/badge.svg)](https://github.com/AngusJohnson/Clipper2/actions/workflows/actions_csharp.yml)&nbsp;[![License](https://img.shields.io/badge/License-Boost_1.0-lightblue.svg)](https://www.boost.org/LICENSE_1_0.txt)
