@@ -1,7 +1,7 @@
 # Clipper2
 ### A Polygon Clipping, Offsetting, and Triangulation library (in C++, C# &amp; Delphi)
 [![License](https://img.shields.io/badge/License-Boost_1.0-lightblue.svg)](https://www.boost.org/LICENSE_1_0.txt)
-[![documentation](https://user-images.githubusercontent.com/5280692/187832279-b2a43890-da80-4888-95fe-793f092be372.svg)](http://www.angusj.com/clipper2/Docs/Overview.htm)
+[![documentation](https://user-images.githubusercontent.com/5280692/187832279-b2a43890-da80-4888-95fe-793f092be372.svg)](https://github.com/PolyClipping/Clipper2/wiki)
 
 **Clipper2** is a major update of my original [**Clipper library**](https://sourceforge.net/projects/polyclipping/) which I'm now calling **Clipper1**. Clipper1 was written 15 years ago and still works very well, but Clipper2 is better.
 

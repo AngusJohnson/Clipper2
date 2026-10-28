@@ -85,7 +85,7 @@ namespace Clipper2Lib
     // an arc tolerance (ie leaves alone the 0 default value), the calculated
     // default arc tolerance (offset_radius / 500) generally produces good (smooth)
     // arc approximations without producing excessively small segment lengths.
-    // See also: https://www.angusj.com/clipper2/Docs/Trigonometry.htm
+    // See also: https://github.com/PolyClipping/Clipper2/wiki/Trigonometry
     private const double arc_const = 0.002; // <-- 1/500
 
     private readonly List<Group> _groupList = new List<Group>();

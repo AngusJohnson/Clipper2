@@ -9,10 +9,10 @@
     <Description>Polygon Clipping and Offsetting Library</Description>
     <Title>Clipper2</Title>
     <PackageId>Clipper2</PackageId>
-    <PackageProjectUrl>https://www.angusj.com/clipper2/Docs/Overview.htm</PackageProjectUrl>
+    <PackageProjectUrl>https://github.com/PolyClipping/Clipper2/wiki</PackageProjectUrl>
     <Copyright>Copyright © 2010-2025</Copyright>
     <RepositoryType>git</RepositoryType>
-    <RepositoryUrl>https://github.com/AngusJohnson/Clipper2</RepositoryUrl>
+    <RepositoryUrl>https://github.com/PolyClipping/Clipper2</RepositoryUrl>
     <PackageReleaseNotes>Release ver. 2.0.0
 This release adds a new Triangulation module to the library.
 It also includes a number of bugfixes (see GitHub issues  #980 .. #1045)</PackageReleaseNotes>

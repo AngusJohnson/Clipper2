@@ -23,7 +23,7 @@ option(BUILD_SHARED_LIBS "Build shared libs" OFF)
 set(CLIPPER2_USINGZ "ON" CACHE STRING "Build Clipper2Z, either \"ON\" or \"OFF\" or \"ONLY\"")
 # CLIPPER2_MAX_DECIMAL_PRECISION: maximum decimal precision when scaling PathsD to Paths64.
 # Caution: excessive scaling will increase the likelihood of integer overflow errors.
-# See https://www.angusj.com/clipper2/Docs/Overview.htm#coord_range for more info.
+# See https://github.com/PolyClipping/Clipper2/wiki/Overview#coord_range for more info.
 set(CLIPPER2_MAX_DECIMAL_PRECISION 8 CACHE STRING "Maximum decimal precision range")
 
 ##########################################################################
