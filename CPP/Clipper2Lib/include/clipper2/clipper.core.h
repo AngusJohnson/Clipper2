@@ -237,6 +237,10 @@ namespace Clipper2Lib
 
     inline void Negate() { x = -x; y = -y; }
 
+#if __cpp_impl_three_way_comparison >= 201907L
+    constexpr auto operator<=>(const Point&) const = default;
+#endif
+
   };
 
   //nb: using 'using' here (instead of typedef) as they can be used in templates
@@ -400,6 +404,9 @@ namespace Clipper2Lib
       os << "(" << rect.left << "," << rect.top << "," << rect.right << "," << rect.bottom << ") ";
       return os;
     }
+#if __cpp_impl_three_way_comparison >= 201907L
+    constexpr auto operator<=>(const Rect&) const = default;
+#endif
   };
 
   template <typename T1, typename T2>
