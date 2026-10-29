@@ -790,10 +790,8 @@ namespace Clipper2Lib {
       std::stable_sort(minima_list_.begin(), minima_list_.end(), LocMinSorter()); //#594
       minima_list_sorted_ = true;
     }
-    LocalMinimaList::const_reverse_iterator i;
-    for (i = minima_list_.rbegin(); i != minima_list_.rend(); ++i)
-      InsertScanline((*i)->vertex->pt.y);
-
+    // the local minima aren't added to scanline_list_ since they're already
+    // sorted, instead PopScanline() merges them with scanline_list_
     current_locmin_iter_ = minima_list_.begin();
     actives_ = nullptr;
     sel_ = nullptr;
@@ -862,9 +860,18 @@ namespace Clipper2Lib {
 
   bool ClipperBase::PopScanline(int64_t& y)
   {
-    if (scanline_list_.empty()) return false;
+    // the next scanline is the larger of the next local minima's y (local
+    // minima are sorted by descending y) and the top of scanline_list_
+    bool has_locmin = current_locmin_iter_ != minima_list_.end();
+    if (scanline_list_.empty())
+    {
+      if (!has_locmin) return false;
+      y = (*current_locmin_iter_)->vertex->pt.y;
+      return true;
+    }
     y = scanline_list_.top();
-    scanline_list_.pop();
+    if (has_locmin && (*current_locmin_iter_)->vertex->pt.y > y)
+      y = (*current_locmin_iter_)->vertex->pt.y;
     while (!scanline_list_.empty() && y == scanline_list_.top())
       scanline_list_.pop();  // Pop duplicates.
     return true;
