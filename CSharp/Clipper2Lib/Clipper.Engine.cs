@@ -367,6 +367,7 @@ namespace Clipper2Lib
     private readonly OutPtPoolList _outPtPool;
     private int _currentLocMin;
     private long _currentBotY;
+    private bool _currXAtTop; // every active edge's curX is already TopX(topY)
     private bool _isSortedMinimaList;
     private bool _hasOpenPaths;
     internal bool _using_polytree;
@@ -1855,11 +1856,14 @@ namespace Clipper2Lib
       return ae;
     }
 
+    // returns true when the edges are still sorted by curX (ie no intersections)
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private void AdjustCurrXAndCopyToSEL(long topY)
+    private bool AdjustCurrXAndCopyToSEL(long topY)
     {
       Active? ae = _actives;
       _sel = ae;
+      bool sorted = true;
+      long prevX = long.MinValue;
       while (ae != null)
       {
         ae.prevInSEL = ae.prevInAEL;
@@ -1867,10 +1871,14 @@ namespace Clipper2Lib
         ae.jump = ae.nextInSEL;
         // it is safe to ignore 'joined' edges here because
         // if necessary they will be split in IntersectEdges()
-        ae.curX = TopX(ae, topY);
+        long x = TopX(ae, topY);
+        ae.curX = x;
+        if (x < prevX) sorted = false;
+        prevX = x;
         // NB don't update ae.curr.Y yet (see AddNewIntersectNode)
         ae = ae.nextInAEL;
       }
+      return sorted;
     }
 
     protected void ExecuteInternal(ClipType ct, FillRule fillRule)
@@ -1903,6 +1911,7 @@ namespace Clipper2Lib
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private void DoIntersections(long topY)
     {
+      _currXAtTop = false;
       if (!BuildIntersectList(topY)) return;
       ProcessIntersectList();
       DisposeIntersectNodes();
@@ -1984,7 +1993,13 @@ namespace Clipper2Lib
 
       // Calculate edge positions at the top of the current scanbeam, and from this
       // we will determine the intersections required to reach these new positions.
-      AdjustCurrXAndCopyToSEL(topY);
+      // If the edges are still in order there are no intersections, so the merge
+      // sort (which always does log2(n) passes over the edges) can be skipped.
+      if (AdjustCurrXAndCopyToSEL(topY))
+      {
+        _currXAtTop = true;
+        return false;
+      }
 
       // Find all edge intersections in the current scanbeam using a stable merge
       // sort that ensures only adjacent edges are intersecting. Intersect info is
@@ -2331,7 +2346,7 @@ private void DoHorizontal(Active horz)
           if (IsHorizontal(ae))
             PushHorz(ae); // horizontals are processed later
         }
-        else // i.e. not the top of the edge
+        else if (!_currXAtTop) // i.e. not the top of the edge
           ae.curX = TopX(ae, y);
 
         ae = ae.nextInAEL;
