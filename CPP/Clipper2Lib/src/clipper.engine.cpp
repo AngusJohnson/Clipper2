@@ -858,29 +858,41 @@ namespace Clipper2Lib {
   }
 
 
+  bool ClipperBase::PeekLocMinY(int64_t& y) const
+  {
+    if (current_locmin_iter_ == minima_list_.end()) return false;
+
+    y = (*current_locmin_iter_)->vertex->pt.y;
+    return true;
+  }
+
+
   bool ClipperBase::PopScanline(int64_t& y)
   {
     // the next scanline is the larger of the next local minima's y (local
     // minima are sorted by descending y) and the top of scanline_list_
-    bool has_locmin = current_locmin_iter_ != minima_list_.end();
-    if (scanline_list_.empty())
-    {
-      if (!has_locmin) return false;
-      y = (*current_locmin_iter_)->vertex->pt.y;
-      return true;
-    }
-    y = scanline_list_.top();
-    if (has_locmin && (*current_locmin_iter_)->vertex->pt.y > y)
-      y = (*current_locmin_iter_)->vertex->pt.y;
+    int64_t locmin_y = 0;
+    const bool has_locmin = PeekLocMinY(locmin_y);
+
+    if (!has_locmin && scanline_list_.empty()) return false;
+
+    y = has_locmin ? locmin_y : scanline_list_.top();
+
+    if (!scanline_list_.empty() && scanline_list_.top() > y) y = scanline_list_.top();
+
     while (!scanline_list_.empty() && y == scanline_list_.top())
       scanline_list_.pop();  // Pop duplicates.
+
     return true;
   }
 
 
   bool ClipperBase::PopLocalMinima(int64_t y, LocalMinima*& local_minima)
   {
-    if (current_locmin_iter_ == minima_list_.end() || (*current_locmin_iter_)->vertex->pt.y != y) return false;
+    int64_t locmin_y = 0;
+
+    if (!PeekLocMinY(locmin_y) || locmin_y != y) return false;
+
     local_minima = (current_locmin_iter_++)->get();
     return true;
   }

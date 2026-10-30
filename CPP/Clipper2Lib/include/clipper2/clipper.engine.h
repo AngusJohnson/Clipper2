@@ -213,6 +213,9 @@ namespace Clipper2Lib {
 		std::vector<HorzJoin> horz_join_list_;
 		void Reset();
 		inline void InsertScanline(int64_t y);
+		inline bool PeekLocMinY(int64_t &y) const;
+		// A y that comes from a local minima isn't consumed here. It stays pending
+		// until PopLocalMinima, so InsertLocalMinimaIntoAEL must run before the next pop.
 		inline bool PopScanline(int64_t &y);
 		inline bool PopLocalMinima(int64_t y, LocalMinima*& local_minima);
 		void DisposeAllOutRecs();
