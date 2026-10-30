@@ -22,3 +22,16 @@ TEST(Clipper2Tests, TestPolyTreeIntersection)
     ASSERT_EQ(solution.Count(), 1);
     EXPECT_EQ(solution[0]->Polygon().size(), 4);
 }
+
+TEST(Clipper2Tests, TestPolyTreeCyclicSplits)
+{
+    // emptied OutRecs whose splits form a cycle used to recurse forever in CheckSplitOwner
+    Paths64 clip;
+    clip.push_back(MakePath({ 3,0, 3,5, 0,3, 5,3, 0,5, 5,3, 0,3, 0,0, 0,3, 5,3, 0,0, 3,3, 2,3 }));
+    Clipper64 clipper;
+    clipper.PreserveCollinear(false);
+    clipper.AddClip(clip);
+    PolyTree64 solution;
+    Paths64 open_paths;
+    EXPECT_TRUE(clipper.Execute(ClipType::Xor, FillRule::EvenOdd, solution, open_paths));
+}
