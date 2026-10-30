@@ -784,6 +784,13 @@ namespace Clipper2Lib {
     for (i = minima_list_.rbegin(); i != minima_list_.rend(); ++i)
       InsertScanline((*i)->vertex->pt.y);
 
+    // size the pools' first chunks to suit the number of local minima
+    // (each has 2 bounds and starts an OutRec), so that small clipping
+    // operations only allocate what they need
+    const size_t locmin_cnt = minima_list_.size();
+    active_pool_.SetFirstChunkSize(locmin_cnt * 2);
+    outrec_pool_.SetFirstChunkSize(locmin_cnt);
+    outpt_pool_.SetFirstChunkSize(locmin_cnt * 4);
     current_locmin_iter_ = minima_list_.begin();
     actives_ = nullptr;
     sel_ = nullptr;

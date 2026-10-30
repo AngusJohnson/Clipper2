@@ -30,6 +30,10 @@ namespace Clipper2Lib {
 		ObjectPool& operator=(const ObjectPool&) = delete;
 		~ObjectPool() { Clear(); }
 
+		// sets the size of the first chunk (when the pool is empty), so that
+		// small clipping operations don't allocate more than they need
+		void SetFirstChunkSize(size_t n) { first_chunk_size_ = n; }
+
 		template <typename... Args>
 		T* New(Args&&... args)
 		{
@@ -39,24 +43,42 @@ namespace Clipper2Lib {
 
 		void Clear()
 		{
-			for (T* chunk : chunks_) ::operator delete(chunk);
-			chunks_.clear();
+			while (last_chunk_)
+			{
+				Chunk* prev = last_chunk_->prev;
+				::operator delete(last_chunk_);
+				last_chunk_ = prev;
+			}
+			last_chunk_size_ = 0;
 			next_ = nullptr;
 			end_ = nullptr;
 		}
 
 	private:
-		std::vector<T*> chunks_;
+		// each chunk starts with a link to the previous one, followed by its objects
+		struct Chunk { Chunk* prev; };
+		static constexpr size_t header_size_ =
+			(sizeof(Chunk) + alignof(T) - 1) / alignof(T) * alignof(T);
+		static constexpr size_t max_chunk_size_ = 4096;
+		Chunk* last_chunk_ = nullptr;
+		size_t first_chunk_size_ = 32;
+		size_t last_chunk_size_ = 0;
 		T* next_ = nullptr;
 		T* end_ = nullptr;
 
 		void AddChunk()
 		{
-			// chunks grow from 32 to 4096 objects
-			size_t n = size_t(32) << (chunks_.size() < 7 ? chunks_.size() : 7);
-			chunks_.push_back(nullptr); // so a failed allocation can't leak
-			chunks_.back() = static_cast<T*>(::operator new(n * sizeof(T)));
-			next_ = chunks_.back();
+			// the first chunk is sized by SetFirstChunkSize, and later chunks
+			// double in size (from 32 to max_chunk_size_ objects)
+			size_t n = last_chunk_size_ ? last_chunk_size_ * 2 : first_chunk_size_;
+			if (last_chunk_size_ && n < 32) n = 32;
+			else if (n < 1) n = 1;
+			if (n > max_chunk_size_) n = max_chunk_size_;
+			Chunk* chunk = static_cast<Chunk*>(::operator new(header_size_ + n * sizeof(T)));
+			chunk->prev = last_chunk_;
+			last_chunk_ = chunk;
+			last_chunk_size_ = n;
+			next_ = reinterpret_cast<T*>(reinterpret_cast<char*>(chunk) + header_size_);
 			end_ = next_ + n;
 		}
 	};

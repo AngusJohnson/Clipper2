@@ -192,14 +192,19 @@ type
   // managed types (strings, dynamic arrays, interfaces etc).
   TObjectPool = class
   private
-    FItemSize : Integer;
-    FChunks   : TList;
-    FNext     : PAnsiChar;
-    FEnd      : PAnsiChar;
+    FItemSize       : Integer;
+    FLastChunk      : Pointer; // each chunk starts with a link to the previous one
+    FFirstChunkSize : Integer;
+    FLastChunkSize  : Integer;
+    FNext           : PAnsiChar;
+    FEnd            : PAnsiChar;
     procedure AddChunk;
   public
     constructor Create(itemSize: Integer);
     destructor Destroy; override;
+    // sets the size of the first chunk (when the pool is empty), so that
+    // small clipping operations don't allocate more than they need
+    procedure SetFirstChunkSize(n: Integer);
     function Alloc: Pointer; {$IFDEF INLINING} inline; {$ENDIF}
     procedure Clear;
   end;
@@ -589,32 +594,52 @@ end;
 // TObjectPool methods ...
 //------------------------------------------------------------------------------
 
+const
+  ChunkHeaderSize = 16; // keeps the records as aligned as GetMem's memory
+  MaxChunkSize = 4096;
+
 constructor TObjectPool.Create(itemSize: Integer);
 begin
   FItemSize := itemSize;
-  FChunks := TList.Create;
+  FFirstChunkSize := 32;
 end;
 //------------------------------------------------------------------------------
 
 destructor TObjectPool.Destroy;
 begin
   Clear;
-  FChunks.Free;
   inherited;
 end;
 //------------------------------------------------------------------------------
 
+procedure TObjectPool.SetFirstChunkSize(n: Integer);
+begin
+  FFirstChunkSize := n;
+end;
+
 procedure TObjectPool.AddChunk;
 var
   n: Integer;
+  chunk: PAnsiChar;
 begin
-  // chunks grow from 32 to 4096 records
-  if FChunks.Count < 7 then
-    n := 32 shl FChunks.Count else
-    n := 4096;
-  FChunks.Add(nil); // so a failed allocation can't leak
-  GetMem(FNext, n * FItemSize);
-  FChunks[FChunks.Count -1] := FNext;
+  // the first chunk is sized by SetFirstChunkSize (16 records at least),
+  // and later chunks double in size (from 32 to MaxChunkSize records)
+  if FLastChunkSize > 0 then
+  begin
+    n := FLastChunkSize * 2;
+    if n < 32 then n := 32;
+  end else
+  begin
+    n := FFirstChunkSize;
+    // nb: much smaller chunks are slower with FPC's memory manager
+    if n < 16 then n := 16;
+  end;
+  if n > MaxChunkSize then n := MaxChunkSize;
+  GetMem(chunk, ChunkHeaderSize + n * FItemSize);
+  PPointer(chunk)^ := FLastChunk;
+  FLastChunk := chunk;
+  FLastChunkSize := n;
+  FNext := chunk + ChunkHeaderSize;
   FEnd := FNext + n * FItemSize;
 end;
 //------------------------------------------------------------------------------
@@ -629,11 +654,15 @@ end;
 
 procedure TObjectPool.Clear;
 var
-  i: Integer;
+  prev: Pointer;
 begin
-  for i := 0 to FChunks.Count -1 do
-    FreeMem(FChunks[i]);
-  FChunks.Clear;
+  while Assigned(FLastChunk) do
+  begin
+    prev := PPointer(FLastChunk)^;
+    FreeMem(FLastChunk);
+    FLastChunk := prev;
+  end;
+  FLastChunkSize := 0;
   FNext := nil;
   FEnd := nil;
 end;
@@ -1519,6 +1548,11 @@ begin
 
   for i := FLocMinList.Count -1 downto 0 do
     InsertScanLine(PLocalMinima(FLocMinList.UnsafeGet(i)).vertex.pt.Y);
+  // size the pools' first chunks to suit the number of local minima
+  // (each has 2 bounds and starts an OutRec), so that small clipping
+  // operations only allocate what they need
+  FActivePool.SetFirstChunkSize(FLocMinList.Count * 2);
+  FOutPtPool.SetFirstChunkSize(FLocMinList.Count * 4);
   FCurrentLocMinIdx := 0;
   FActives := nil;
   FSel := nil;
