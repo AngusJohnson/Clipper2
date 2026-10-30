@@ -782,6 +782,14 @@ namespace Clipper2Lib {
     }
     // the local minima aren't added to scanline_list_ since they're already
     // sorted, instead PopScanline() merges them with scanline_list_
+
+    // size the pools' first chunks to suit the number of local minima
+    // (each has 2 bounds and starts an OutRec), so that small clipping
+    // operations only allocate what they need
+    const size_t locmin_cnt = minima_list_.size();
+    active_pool_.SetFirstChunkSize(locmin_cnt * 2);
+    outrec_pool_.SetFirstChunkSize(locmin_cnt);
+    outpt_pool_.SetFirstChunkSize(locmin_cnt * 4);
     current_locmin_iter_ = minima_list_.begin();
     actives_ = nullptr;
     sel_ = nullptr;
