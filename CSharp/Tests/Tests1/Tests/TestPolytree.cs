@@ -61,7 +61,7 @@ namespace Tests1.Tests
     {
       Paths64 subject = new(), subjectOpen = new(), clip = new();
 
-      Assert.IsTrue(ClipperFileIO.LoadTestNum("..\\..\\..\\..\\..\\..\\Tests\\PolytreeHoleOwner2.txt",
+      Assert.IsTrue(ClipperFileIO.LoadTestNum("../../../../../../Tests/PolytreeHoleOwner2.txt",
         1, subject, subjectOpen, clip, out ClipType cliptype, out FillRule fillrule, 
         out _, out _, out _),
           "Unable to read PolytreeHoleOwner2.txt");

@@ -70,6 +70,7 @@ type
   PHorzSegment  = ^THorzSegment;
   PHorzJoin     = ^THorzJoin;
   PActive       = ^TActive;
+  TStripeIndex  = class;
   TPolyPathBase = class;
   TPolyTree64   = class;
   TPolyTreeD    = class;
@@ -87,6 +88,33 @@ type
   TOutRecArray  = array of POutRec;
   THorzPosition = (hpBottom, hpMiddle, hpTop);
 
+  // Buckets a ring's edges into sqrt(n) horizontal Y stripes so a PIP query only
+  // scans the stripe spanning pt.Y. Amortizes over the many child-vertex tests
+  // of PolyTree nesting (after KiCad's POLY_YSTRIPES_INDEX).
+  TStripeEdge = record
+    a, b: TPoint64;
+  end;
+  TStripeEdgeArray = array of TStripeEdge;
+  TInt32Array = array of Int32;
+  TStripeArray = array of TInt32Array;
+
+  TStripeIndex = class
+  {$IFDEF STRICT}strict{$ENDIF} private
+    FEdges       : TStripeEdgeArray;
+    FStripes     : TStripeArray;
+    FYMin        : Int64;
+    FStripeHeight: Int64;
+    FStripeCount : Integer;
+    function  YToStripe(y: Int64): Integer;
+    procedure Build(const edges: TStripeEdgeArray; edgeCount: Integer);
+  public
+    procedure BuildFromPath(const path: TPath64);
+    procedure BuildFromRing(op: POutPt);
+    function  PointInPolygon(const pt: TPoint64): TPointInPolygonResult;
+    function  EdgeCount: Integer;
+    function  IsEmpty: Boolean;
+  end;
+
   // OutRec: path data structure for clipping solutions
   TOutRec = record
     idx      : Integer;
@@ -100,6 +128,9 @@ type
     bounds   : TRect64;
     path     : TPath64;
     isOpen   : Boolean;
+    // Lazy PIP accelerator, built during nesting; valid only while pts is stable.
+    // Owned here, freed in DisposeOutPts and TOutRecList.Clear.
+    pipIndex : TStripeIndex;
   end;
 
   TOutRecList = class(TListEx)
@@ -218,6 +249,9 @@ type
     FLocMinListSorted   : Boolean;
     FSucceeded          : Boolean;
     FReverseSolution    : Boolean;
+    // Owner ring vertex count above which nesting builds a StripeIndex instead
+    // of walking edges per vertex.
+    FPipIndexThreshold  : Integer;
   {$IFDEF USINGZ}
     fDefaultZ           : Ztype;
     fZCallback          : TZCallback64;
@@ -271,6 +305,7 @@ type
     procedure FixSelfIntersects(outrec: POutRec);
     function  CheckBounds(outrec: POutRec): Boolean;
     function  CheckSplitOwner(outrec: POutRec; const splits: TOutRecArray): Boolean;
+    function  Path1InsidePath2Indexed(op1: POutPt; owner: POutRec): Boolean;
     procedure RecursiveCheckOwners(outrec: POutRec; polytree: TPolyPathBase);
   protected
     FUsingPolytree : Boolean;
@@ -299,6 +334,10 @@ type
       FPreserveCollinear write FPreserveCollinear;
     property ReverseSolution: Boolean read
       FReverseSolution write FReverseSolution;
+    // Owner vertex count above which nesting builds a StripeIndex. Exposed so
+    // tests can force the indexed or brute-force path; default 64.
+    property PipIndexThreshold: Integer read
+      FPipIndexThreshold write FPipIndexThreshold;
   end;
 
   TClipper64 = class(TClipperBase) // for integer coordinates
@@ -470,6 +509,8 @@ begin
   for i := 0 to Count -1 do
   begin
     por := UnsafeGet(i);
+    if Assigned(por.pipIndex) then
+      por.pipIndex.Free;
     if Assigned(por.pts) then
     begin
       op := por.pts;
@@ -868,6 +909,228 @@ begin
   end;
   SetLength(Result, cnt);
 end;
+
+//------------------------------------------------------------------------------
+// TStripeIndex
+//------------------------------------------------------------------------------
+
+function TStripeIndex.YToStripe(y: Int64): Integer;
+var
+  s: Int64;
+begin
+  s := (y - FYMin) div FStripeHeight;
+  if s < 0 then Result := 0
+  else if s >= FStripeCount then Result := FStripeCount - 1
+  else Result := Integer(s);
+end;
+//------------------------------------------------------------------------------
+
+procedure TStripeIndex.Build(const edges: TStripeEdgeArray; edgeCount: Integer);
+var
+  i, s, sMin, sMax: Integer;
+  yMax, yRange, totalRefs: Int64;
+  e: TStripeEdge;
+  counts: array of Integer;
+begin
+  SetLength(FEdges, edgeCount);
+  for i := 0 to edgeCount - 1 do
+    FEdges[i] := edges[i];
+  FStripes := nil;
+
+  if edgeCount = 0 then
+  begin
+    FYMin := 0;
+    FStripeHeight := 1;
+    FStripeCount := 1;
+    Exit;
+  end;
+
+  FYMin := FEdges[0].a.Y;
+  yMax := FEdges[0].a.Y;
+  for i := 0 to edgeCount - 1 do
+  begin
+    e := FEdges[i];
+    FYMin := Min(FYMin, Min(e.a.Y, e.b.Y));
+    yMax := Max(yMax, Max(e.a.Y, e.b.Y));
+  end;
+
+  FStripeCount := Trunc(Sqrt(edgeCount));
+  if FStripeCount < 1 then FStripeCount := 1;
+  if FStripeCount > 65536 then FStripeCount := 65536;
+
+  yRange := yMax - FYMin;
+  if yRange <= 0 then FStripeHeight := 1
+  else FStripeHeight := (yRange + FStripeCount - 1) div FStripeCount;
+
+  // Decline rings whose edges each span many stripes (tall "comb" edges) where
+  // indexing loses to brute force. Empty FEdges signals callers to fall back.
+  totalRefs := 0;
+  for i := 0 to edgeCount - 1 do
+  begin
+    e := FEdges[i];
+    totalRefs := totalRefs +
+      (YToStripe(Max(e.a.Y, e.b.Y)) - YToStripe(Min(e.a.Y, e.b.Y)) + 1);
+  end;
+
+  if totalRefs > Int64(edgeCount) * 8 then
+  begin
+    FEdges := nil;
+    Exit;
+  end;
+
+  // Two-pass fill (count then place) so each stripe is sized once, not grown
+  // per element (O(n^2)).
+  SetLength(FStripes, FStripeCount);
+  SetLength(counts, FStripeCount);
+
+  for i := 0 to edgeCount - 1 do
+  begin
+    e := FEdges[i];
+    sMin := YToStripe(Min(e.a.Y, e.b.Y));
+    sMax := YToStripe(Max(e.a.Y, e.b.Y));
+    for s := sMin to sMax do
+      Inc(counts[s]);
+  end;
+
+  for s := 0 to FStripeCount - 1 do
+  begin
+    SetLength(FStripes[s], counts[s]);
+    counts[s] := 0; // reuse as a write cursor
+  end;
+
+  for i := 0 to edgeCount - 1 do
+  begin
+    e := FEdges[i];
+    sMin := YToStripe(Min(e.a.Y, e.b.Y));
+    sMax := YToStripe(Max(e.a.Y, e.b.Y));
+    for s := sMin to sMax do
+    begin
+      FStripes[s][counts[s]] := Int32(i);
+      Inc(counts[s]);
+    end;
+  end;
+end;
+//------------------------------------------------------------------------------
+
+procedure TStripeIndex.BuildFromPath(const path: TPath64);
+var
+  edges: TStripeEdgeArray;
+  i, j, cnt: Integer;
+begin
+  cnt := 0;
+  if Length(path) >= 3 then
+  begin
+    SetLength(edges, Length(path));
+    j := Length(path) - 1;
+    for i := 0 to Length(path) - 1 do
+    begin
+      if (path[j].X <> path[i].X) or (path[j].Y <> path[i].Y) then
+      begin
+        edges[cnt].a := path[j];
+        edges[cnt].b := path[i];
+        inc(cnt);
+      end;
+      j := i;
+    end;
+  end;
+  Build(edges, cnt);
+end;
+//------------------------------------------------------------------------------
+
+procedure TStripeIndex.BuildFromRing(op: POutPt);
+var
+  edges: TStripeEdgeArray;
+  cur, nxt: POutPt;
+  cnt, cap: Integer;
+begin
+  cnt := 0;
+  if Assigned(op) and (op.next <> op) and (op.prev <> op.next) then
+  begin
+    cap := 8;
+    SetLength(edges, cap);
+    cur := op;
+    repeat
+      nxt := cur.next;
+      if (cur.pt.X <> nxt.pt.X) or (cur.pt.Y <> nxt.pt.Y) then
+      begin
+        if cnt = cap then
+        begin
+          cap := cap * 2;
+          SetLength(edges, cap);
+        end;
+        edges[cnt].a := cur.pt;
+        edges[cnt].b := nxt.pt;
+        inc(cnt);
+      end;
+      cur := nxt;
+    until cur = op;
+  end;
+  Build(edges, cnt);
+end;
+//------------------------------------------------------------------------------
+
+function TStripeIndex.PointInPolygon(const pt: TPoint64): TPointInPolygonResult;
+var
+  i, idx, cross: Integer;
+  inside: Boolean;
+  stripe: TInt32Array;
+  e: TStripeEdge;
+begin
+  if Length(FEdges) = 0 then
+  begin
+    Result := pipOutside;
+    Exit;
+  end;
+
+  stripe := FStripes[YToStripe(pt.Y)];
+  inside := false;
+
+  for i := 0 to High(stripe) do
+  begin
+    idx := stripe[i];
+    e := FEdges[idx];
+    cross := CrossProductSign(e.a, e.b, pt);
+
+    // On-segment needs the bbox check too; collinear alone is not enough since a
+    // stripe can hold edges collinear with pt's line but off the actual segment.
+    if (cross = 0) and
+      (pt.X >= Min(e.a.X, e.b.X)) and (pt.X <= Max(e.a.X, e.b.X)) and
+      (pt.Y >= Min(e.a.Y, e.b.Y)) and (pt.Y <= Max(e.a.Y, e.b.Y)) then
+    begin
+      Result := pipOn;
+      Exit;
+    end;
+
+    // Half-open crossing so horizontal edges never flip parity. cross <> 0 here,
+    // so a straddling edge is a genuine crossing, not a touch.
+    if (e.a.Y > pt.Y) <> (e.b.Y > pt.Y) then
+    begin
+      if (e.b.Y > pt.Y) then
+      begin
+        if cross > 0 then inside := not inside;
+      end
+      else
+      begin
+        if cross < 0 then inside := not inside;
+      end;
+    end;
+  end;
+
+  if inside then Result := pipInside else Result := pipOutside;
+end;
+//------------------------------------------------------------------------------
+
+function TStripeIndex.EdgeCount: Integer;
+begin
+  Result := Length(FEdges);
+end;
+//------------------------------------------------------------------------------
+
+function TStripeIndex.IsEmpty: Boolean;
+begin
+  Result := Length(FEdges) = 0;
+end;
+//------------------------------------------------------------------------------
 
 function PointInOpPolygon(const pt: TPoint64; op: POutPt): TPointInPolygonResult;
 var
@@ -1386,6 +1649,7 @@ begin
   FHorzJoinList     := THorzJoinList.Create;
   FPreserveCollinear  := true;
   FReverseSolution    := false;
+  FPipIndexThreshold  := 64;
 end;
 //------------------------------------------------------------------------------
 
@@ -2076,6 +2340,12 @@ procedure DisposeOutPts(outrec: POutRec); {$IFDEF INLINING} inline; {$ENDIF}
 var
   op, tmpOp: POutPt;
 begin
+  // Index is tied to this ring; disposing the ring invalidates it, so free it here.
+  if Assigned(outrec.pipIndex) then
+  begin
+    outrec.pipIndex.Free;
+    outrec.pipIndex := nil;
+  end;
   op := outrec.pts;
   op.prev.next := nil;
   while Assigned(op) do
@@ -3732,6 +4002,64 @@ begin
 end;
 //------------------------------------------------------------------------------
 
+function TClipperBase.Path1InsidePath2Indexed(op1: POutPt; owner: POutRec): Boolean;
+var
+  op  : POutPt;
+  pip : TPointInPolygonResult;
+  idx : TStripeIndex;
+begin
+  // Indexed variant of Path1InsidePath2 using a StripeIndex cached on owner.
+  // Same ambiguity fallback, so nesting results are unchanged.
+  if Length(owner.path) <= FPipIndexThreshold then
+  begin
+    Result := Path1InsidePath2(op1, owner.pts);
+    Exit;
+  end;
+
+  if not Assigned(owner.pipIndex) then
+  begin
+    // Build into a local first so a mid-build throw leaves no partial index cached.
+    idx := TStripeIndex.Create;
+    try
+      idx.BuildFromRing(owner.pts);
+    except
+      idx.Free;
+      raise;
+    end;
+    owner.pipIndex := idx;
+  end;
+
+  // Index declines adversarial rings (see TStripeIndex.Build); brute force then.
+  if owner.pipIndex.IsEmpty then
+  begin
+    Result := Path1InsidePath2(op1, owner.pts);
+    Exit;
+  end;
+
+  Result := false;
+  pip := pipOn;
+  op := op1;
+  repeat
+    case owner.pipIndex.PointInPolygon(op.pt) of
+      pipOutside:
+      begin
+        if (pip = pipOutside) then Exit;
+        pip := pipOutside;
+      end;
+      pipInside:
+      begin
+        if (pip = pipInside) then begin Result := true; Exit; end;
+        pip := pipInside;
+      end;
+    end;
+    op := op.next;
+  until (op = op1);
+
+  // result unclear, so defer to the exact cleaned-path authority
+  Result := Path2ContainsPath1(GetCleanPath(op1), GetCleanPath(owner.pts)); // (#973)
+end;
+//------------------------------------------------------------------------------
+
 function TClipperBase.CheckSplitOwner(outrec: POutRec; const splits: TOutRecArray): Boolean;
 var
   i     : integer;
@@ -3759,7 +4087,7 @@ begin
 
     if not CheckBounds(split) or
       not split.bounds.Contains(outrec.bounds) or
-      not Path1InsidePath2(outrec.pts, split.pts) then Continue;
+      not Path1InsidePath2Indexed(outrec.pts, split) then Continue;
 
     if not IsValidOwner(outrec, split) then // split is owned by outrec (#957)
       split.owner := outrec.owner;
@@ -3787,7 +4115,7 @@ begin
     if Assigned(outrec.owner.pts) and
       CheckBounds(outrec.owner) and
       (outrec.owner.bounds.Contains(outrec.bounds) and
-      Path1InsidePath2(outrec.pts, outrec.owner.pts)) then break;
+      Path1InsidePath2Indexed(outrec.pts, outrec.owner)) then break;
     outrec.owner := outrec.owner.owner;
   end;
 

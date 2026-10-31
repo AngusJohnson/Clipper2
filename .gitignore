@@ -1,1 +1,8 @@
 .*
+
+# Free Pascal / Delphi build artifacts
+*.ppu
+*.rsj
+Delphi/**/*.o
+Delphi/Tests/StripeIndexQA/out/
+Delphi/Tests/StripeIndexQA/StripeIndexQA

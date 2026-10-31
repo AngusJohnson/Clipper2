@@ -156,6 +156,163 @@ namespace Clipper2Lib
     public bool isOpen;
     public List<int>? splits;
     public OutRec? recursiveSplit;
+    // Lazy PIP accelerator, valid only once pts is stable (tree-building phase).
+    public StripeIndex? pipIndex;
+  }
+
+  // PIP accelerator for one closed ring. Buckets edges into sqrt(n) Y stripes so a
+  // query scans only its stripe, O(n) -> ~O(sqrt n). After KiCad's POLY_YSTRIPES_INDEX.
+  public class StripeIndex
+  {
+    private struct StripeEdge
+    {
+      public Point64 a;
+      public Point64 b;
+    }
+
+    private StripeEdge[] _edges = Array.Empty<StripeEdge>();
+    private List<int>[] _stripes = Array.Empty<List<int>>();
+    private long _yMin;
+    private long _stripeHeight = 1;
+    private int _stripeCount = 1;
+
+    public int EdgeCount => _edges.Length;
+    public bool Empty => _edges.Length == 0;
+
+    private int YToStripe(long y)
+    {
+      long s = (y - _yMin) / _stripeHeight;
+
+      if (s < 0) return 0;
+      if (s >= _stripeCount) return _stripeCount - 1;
+
+      return (int) s;
+    }
+
+    private void Build(List<StripeEdge> edges)
+    {
+      _edges = edges.ToArray();
+      _stripes = Array.Empty<List<int>>();
+
+      if (_edges.Length == 0)
+      {
+        _yMin = 0;
+        _stripeHeight = 1;
+        _stripeCount = 1;
+        return;
+      }
+
+      _yMin = _edges[0].a.Y;
+      long yMax = _edges[0].a.Y;
+
+      foreach (StripeEdge e in _edges)
+      {
+        _yMin = Math.Min(_yMin, Math.Min(e.a.Y, e.b.Y));
+        yMax = Math.Max(yMax, Math.Max(e.a.Y, e.b.Y));
+      }
+
+      _stripeCount = (int) Math.Sqrt(_edges.Length);
+      if (_stripeCount < 1) _stripeCount = 1;
+      if (_stripeCount > 65536) _stripeCount = 65536;
+
+      long yRange = yMax - _yMin;
+      _stripeHeight = (yRange <= 0) ? 1 : (yRange + _stripeCount - 1) / _stripeCount;
+
+      // Decline rings whose edges each span many stripes (tall "comb" edges); building
+      // costs O(n*sqrt n) but queries still scan most edges. Empty index = brute force.
+      long totalRefs = 0;
+
+      foreach (StripeEdge e in _edges)
+        totalRefs += YToStripe(Math.Max(e.a.Y, e.b.Y)) - YToStripe(Math.Min(e.a.Y, e.b.Y)) + 1;
+
+      if (totalRefs > (long) _edges.Length * 8)
+      {
+        _edges = Array.Empty<StripeEdge>();
+        return;
+      }
+
+      _stripes = new List<int>[_stripeCount];
+      for (int s = 0; s < _stripeCount; s++)
+        _stripes[s] = new List<int>();
+
+      for (int i = 0; i < _edges.Length; i++)
+      {
+        StripeEdge e = _edges[i];
+        int sMin = YToStripe(Math.Min(e.a.Y, e.b.Y));
+        int sMax = YToStripe(Math.Max(e.a.Y, e.b.Y));
+
+        for (int s = sMin; s <= sMax; s++)
+          _stripes[s].Add(i);
+      }
+    }
+
+    public void BuildFromPath(Path64 path)
+    {
+      List<StripeEdge> edges = new List<StripeEdge>();
+
+      if (path.Count >= 3)
+      {
+        edges.Capacity = path.Count;
+
+        for (int i = 0, j = path.Count - 1; i < path.Count; j = i++)
+          if (path[j].X != path[i].X || path[j].Y != path[i].Y)
+            edges.Add(new StripeEdge { a = path[j], b = path[i] });
+      }
+
+      Build(edges);
+    }
+
+    internal void BuildFromRing(OutPt? op)
+    {
+      List<StripeEdge> edges = new List<StripeEdge>();
+
+      if (op != null && op.next != op && op.prev != op.next)
+      {
+        OutPt cur = op;
+
+        do
+        {
+          OutPt nxt = cur.next!;
+
+          if (cur.pt.X != nxt.pt.X || cur.pt.Y != nxt.pt.Y)
+            edges.Add(new StripeEdge { a = cur.pt, b = nxt.pt });
+
+          cur = nxt;
+        } while (cur != op);
+      }
+
+      Build(edges);
+    }
+
+    public PointInPolygonResult PointInPolygon(Point64 pt)
+    {
+      if (_edges.Length == 0) return PointInPolygonResult.IsOutside;
+
+      List<int> stripe = _stripes[YToStripe(pt.Y)];
+      bool inside = false;
+
+      foreach (int idx in stripe)
+      {
+        StripeEdge e = _edges[idx];
+        int cross = InternalClipper.CrossProductSign(e.a, e.b, pt);
+
+        // On-segment needs the bbox check too; a stripe can hold edges collinear with
+        // pt's line yet off the actual segment.
+        if (cross == 0 &&
+          pt.X >= Math.Min(e.a.X, e.b.X) && pt.X <= Math.Max(e.a.X, e.b.X) &&
+          pt.Y >= Math.Min(e.a.Y, e.b.Y) && pt.Y <= Math.Max(e.a.Y, e.b.Y))
+          return PointInPolygonResult.IsOn;
+
+        // Half-open crossing, so horizontal edges never affect parity (they reach IsOn only).
+        if ((e.a.Y > pt.Y) != (e.b.Y > pt.Y))
+        {
+          if (e.b.Y > pt.Y ? cross > 0 : cross < 0)
+            inside = !inside;
+        }
+      }
+
+      return inside ? PointInPolygonResult.IsInside : PointInPolygonResult.IsOutside;
+    }
   }
 
   internal class HorzSegment
@@ -373,6 +530,10 @@ namespace Clipper2Lib
     internal bool _succeeded;
     public bool PreserveCollinear { get; set; }
     public bool ReverseSolution { get; set; }
+
+    // Owner rings above this vertex count use the StripeIndex during nesting; below it
+    // a brute-force walk is cheaper than building. Public so tests can force/disable.
+    public int PipIndexThreshold { get; set; } = 64;
 
 #if USINGZ
     public delegate void ZCallback64(Point64 bot1, Point64 top1,
@@ -2734,6 +2895,49 @@ private void DoHorizontal(Active horz)
       return InternalClipper.Path2ContainsPath1(GetCleanPath(op1), GetCleanPath(op2)); // (#973)
     }
 
+    // StripeIndex-accelerated variant of Path1InsidePath2, cached on the owner. Same
+    // ambiguity fallback, so nesting is unchanged.
+    private bool Path1InsidePath2Indexed(OutRec inner, OutRec owner)
+    {
+      if (owner.path.Count <= PipIndexThreshold)
+        return Path1InsidePath2(inner.pts!, owner.pts!);
+
+      if (owner.pipIndex == null)
+      {
+        // Build into a local so a throw mid-build can't cache a partial index.
+        StripeIndex index = new StripeIndex();
+        index.BuildFromRing(owner.pts);
+        owner.pipIndex = index;
+      }
+
+      // Empty means the index declined an adversarial ring; brute force instead.
+      if (owner.pipIndex.Empty)
+        return Path1InsidePath2(inner.pts!, owner.pts!);
+
+      PointInPolygonResult pip = PointInPolygonResult.IsOn;
+      OutPt op = inner.pts!;
+
+      do
+      {
+        switch (owner.pipIndex.PointInPolygon(op.pt))
+        {
+          case PointInPolygonResult.IsOutside:
+            if (pip == PointInPolygonResult.IsOutside) return false;
+            pip = PointInPolygonResult.IsOutside;
+            break;
+          case PointInPolygonResult.IsInside:
+            if (pip == PointInPolygonResult.IsInside) return true;
+            pip = PointInPolygonResult.IsInside;
+            break;
+          default: break;
+        }
+        op = op.next!;
+      } while (op != inner.pts);
+
+      // result is unclear, so defer to the exact cleaned-path authority
+      return InternalClipper.Path2ContainsPath1(GetCleanPath(inner.pts!), GetCleanPath(owner.pts!)); // (#973)
+    }
+
     private static void MoveSplits(OutRec fromOr, OutRec toOr)
     {
       if (fromOr.splits == null) return;
@@ -3083,7 +3287,7 @@ private void DoHorizontal(Active horz)
 
         if (!CheckBounds(split) ||
             !split.bounds.Contains(outrec.bounds) ||
-            !Path1InsidePath2(outrec.pts!, split.pts!)) continue;
+            !Path1InsidePath2Indexed(outrec, split)) continue;
 
         if (!IsValidOwner(outrec, split)) // split is owned by outrec (#957)
           split.owner = outrec.owner;
@@ -3105,7 +3309,7 @@ private void DoHorizontal(Active horz)
         if (outrec.owner.splits != null && 
           CheckSplitOwner(outrec, outrec.owner.splits)) break; 
         if (outrec.owner.pts != null && CheckBounds(outrec.owner) &&
-          Path1InsidePath2(outrec.pts!, outrec.owner.pts!)) break;
+          Path1InsidePath2Indexed(outrec, outrec.owner)) break;
         outrec.owner = outrec.owner.owner;
       }
 
