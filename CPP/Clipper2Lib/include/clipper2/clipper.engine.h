@@ -14,8 +14,74 @@
 #include <queue>
 #include <functional>
 #include <memory>
+#include <new>
 
 namespace Clipper2Lib {
+
+	// Allocates objects from larger chunks of memory so that they can all be
+	// released together (by Clear) instead of being allocated and deleted
+	// one at a time. Clear doesn't call destructors, so any objects that need
+	// destroying must be destroyed by their owner first.
+	template <typename T>
+	class ObjectPool {
+	public:
+		ObjectPool() = default;
+		ObjectPool(const ObjectPool&) = delete;
+		ObjectPool& operator=(const ObjectPool&) = delete;
+		~ObjectPool() { Clear(); }
+
+		// sets the size of the first chunk (when the pool is empty), so that
+		// small clipping operations don't allocate more than they need
+		void SetFirstChunkSize(size_t n) { first_chunk_size_ = n; }
+
+		template <typename... Args>
+		T* New(Args&&... args)
+		{
+			if (next_ == end_) AddChunk();
+			return new (next_++) T(std::forward<Args>(args)...);
+		}
+
+		void Clear()
+		{
+			while (last_chunk_)
+			{
+				Chunk* prev = last_chunk_->prev;
+				::operator delete(last_chunk_);
+				last_chunk_ = prev;
+			}
+			last_chunk_size_ = 0;
+			next_ = nullptr;
+			end_ = nullptr;
+		}
+
+	private:
+		// each chunk starts with a link to the previous one, followed by its objects
+		struct Chunk { Chunk* prev; };
+		static constexpr size_t header_size_ =
+			(sizeof(Chunk) + alignof(T) - 1) / alignof(T) * alignof(T);
+		static constexpr size_t max_chunk_size_ = 4096;
+		Chunk* last_chunk_ = nullptr;
+		size_t first_chunk_size_ = 32;
+		size_t last_chunk_size_ = 0;
+		T* next_ = nullptr;
+		T* end_ = nullptr;
+
+		void AddChunk()
+		{
+			// the first chunk is sized by SetFirstChunkSize, and later chunks
+			// double in size (from 32 to max_chunk_size_ objects)
+			size_t n = last_chunk_size_ ? last_chunk_size_ * 2 : first_chunk_size_;
+			if (last_chunk_size_ && n < 32) n = 32;
+			else if (n < 1) n = 1;
+			if (n > max_chunk_size_) n = max_chunk_size_;
+			Chunk* chunk = static_cast<Chunk*>(::operator new(header_size_ + n * sizeof(T)));
+			chunk->prev = last_chunk_;
+			last_chunk_ = chunk;
+			last_chunk_size_ = n;
+			next_ = reinterpret_cast<T*>(reinterpret_cast<char*>(chunk) + header_size_);
+			end_ = next_ + n;
+		}
+	};
 
 	struct Scanline;
 	struct IntersectNode;
@@ -262,6 +328,17 @@ namespace Clipper2Lib {
 		bool has_open_paths_ = false;
 		bool succeeded_ = true;
 		OutRecList outrec_list_; //pointers in case list memory reallocated
+		// all OutPt, OutRec and Active objects are owned by these and released
+		// in CleanUp
+		ObjectPool<OutPt> outpt_pool_;
+		ObjectPool<OutRec> outrec_pool_;
+		ObjectPool<Active> active_pool_;
+		std::vector<Active*> free_actives_; // deleted actives, ready for reuse
+		std::vector<OutPt*> recheck_list_; // used by CleanCollinear
+		OutPt* NewOutPt(const Point64& pt, OutRec* outrec) { return outpt_pool_.New(pt, outrec); }
+		inline Active* NewActive();
+		inline void PoolDeletedActive(Active& e);
+		OutPt* DuplicateOp(OutPt* op, bool insert_after);
 		bool ExecuteInternal(ClipType ct, FillRule ft, bool use_polytrees);
 		void CleanCollinear(OutRec* outrec);
 		bool CheckBounds(OutRec* outrec);

@@ -357,6 +357,7 @@ namespace Clipper2Lib
     private Active? _actives;
     private Active? _sel;
     private Stack<Active> _freeActives;
+    private readonly List<OutPt> _recheckList = new List<OutPt>(); // used by CleanCollinear
     private readonly List<LocalMinima> _minimaList;
     private readonly List<IntersectNode> _intersectList;
     private readonly VertexPoolList _vertexList;
@@ -2854,8 +2855,18 @@ private void DoHorizontal(Active horz)
         return;
       }
 
+      // The first lap checks every vertex. Removing a vertex can only make its
+      // two neighbours removable. The next one is checked straight away, but
+      // the previous one would have to wait for another full lap of the path.
+      // So instead of doing more full laps, only those previous vertices are
+      // rechecked (in the same order that more full laps would reach them),
+      // which gives exactly the same result.
       OutPt startOp = outrec.pts!;
       OutPt? op2 = startOp;
+      OutPt firstOp = startOp;
+      bool isFirstLap = true;
+      _recheckList.Clear();
+      int recheckIdx = 0;
       for (; ; )
       {
         // NB if preserveCollinear == true, then only remove 180 deg. spikes
@@ -2865,17 +2876,33 @@ private void DoHorizontal(Active horz)
         {
           if (op2 == outrec.pts)
             outrec.pts = op2.prev;
+          bool isFirstOp = isFirstLap && op2 == firstOp;
+          if (_recheckList.Count == 0 || _recheckList[_recheckList.Count - 1] != op2.prev)
+            _recheckList.Add(op2.prev);
           op2 = DisposeOutPt(op2);
           if (!IsValidClosedPath(op2))
           {
             outrec.pts = null;
             return;
           }
+          if (isFirstOp) firstOp = op2!;
+          else if (isFirstLap && op2 == firstOp) isFirstLap = false;
           startOp = op2!;
           continue;
         }
-        op2 = op2.next;
-        if (op2 == startOp) break;
+        if (isFirstLap)
+        {
+          op2 = op2.next;
+          if (op2 == startOp) break;
+          if (op2 != firstOp) continue;
+          isFirstLap = false;
+        }
+        // skip to the next vertex that needs rechecking (ignoring any that
+        // have since been removed, ie whose next no longer links back to them)
+        while (recheckIdx < _recheckList.Count &&
+          _recheckList[recheckIdx].next!.prev != _recheckList[recheckIdx]) ++recheckIdx;
+        if (recheckIdx == _recheckList.Count) break;
+        op2 = _recheckList[recheckIdx++];
       }
       FixSelfIntersects(outrec);
     }
